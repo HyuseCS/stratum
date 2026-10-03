@@ -3,6 +3,9 @@
   "owner": {
     "name": "HyuseCS"
   },
+  "metadata": {
+    "description": "Stratum agent harness for Claude Code."
+  },
   "plugins": [
     {
       "name": "stratum",
