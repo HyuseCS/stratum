@@ -11,7 +11,7 @@ keeps its original license. Full license texts are in `licenses/`. Pinned upstre
 | ponytail | Copyright (c) 2026 DietrichGebert | MIT | `skills/st-ponytail*`, `hooks/ponytail/` | `licenses/ponytail.MIT.txt` |
 | mattpocock/skills (grilling, grill-me) | Copyright (c) 2026 Matt Pocock | MIT | `skills/st-grill` | `licenses/mattpocock-skills.MIT.txt` |
 | ui-ux-pro-max | Copyright (c) 2024 Next Level Builder | MIT | `skills/st-ui-ux` | `licenses/ui-ux-pro-max.MIT.txt` |
-| impeccable | impeccable authors (pbakaus/impeccable) | Apache-2.0 | `skills/st-impeccable` | `licenses/impeccable.Apache-2.0.txt`, `licenses/impeccable.NOTICE.md` |
+| impeccable | Copyright 2025 Paul Bakaus | Apache-2.0 | `skills/st-impeccable` | `licenses/impeccable.Apache-2.0.txt`, `licenses/impeccable.NOTICE.md` |
 | frontend-design | anthropics/claude-plugins-official authors | Apache-2.0 | `skills/st-frontend-design` | `licenses/frontend-design.Apache-2.0.txt` |
 | graphify skill | Copyright 2026 Safi Shamsi and the Graphify contributors | Apache-2.0 (earlier parts MIT) | `skills/st-graphify` | `licenses/graphify.Apache-2.0.txt`, `licenses/graphify.NOTICE.txt`, `licenses/graphify.MIT.txt` |
 | Token Weather | anthropics/claude-code-playground authors | Apache-2.0 | `hooks/token-weather.mjs` | `licenses/claude-code-playground.Apache-2.0.txt` |
