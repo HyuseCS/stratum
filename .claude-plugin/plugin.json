@@ -1,0 +1,9 @@
+{
+  "name": "stratum",
+  "description": "Agent harness for Claude Code: spec-driven lanes, an orchestrator with st-* subagents, commit guard, handoff, and forked design and navigation tools.",
+  "version": "0.1.0",
+  "author": {
+    "name": "HyuseCS"
+  },
+  "hooks": "./hooks/commands.json"
+}

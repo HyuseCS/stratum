@@ -1,0 +1,12 @@
+{
+  "spec-kit": { "repo": "github/spec-kit", "ref": "v1.1.0", "commit": "f1d3a4f8337ebbd3ae22760a9c12e3352b93a175", "license": "MIT" },
+  "vibecode-pro-max-kit": { "repo": "withkynam/vibecode-pro-max-kit", "ref": "main", "commit": "3bcb2f9891308fcaa305e2b64027bd0a7dc8251e", "license": "MIT" },
+  "ponytail": { "repo": "DietrichGebert/ponytail", "ref": "main", "commit": "c982cd411abb53323c4baa1baa3c2f020b8d0b08", "version": "4.10.3", "license": "MIT" },
+  "mattpocock-skills": { "repo": "mattpocock/skills", "ref": "main", "commit": "d81f3a183412e71a5b1e84ca21bc1a35eea03a60", "license": "MIT" },
+  "ui-ux-pro-max": { "repo": "nextlevelbuilder/ui-ux-pro-max-skill", "ref": "main", "commit": "09170eec67eefd46a7ae85de61b40c194020f997", "license": "MIT" },
+  "impeccable": { "repo": "pbakaus/impeccable", "ref": "main", "commit": "e103efe779e2dd01274dabae83531fef00bf2563", "license": "Apache-2.0" },
+  "frontend-design": { "repo": "anthropics/claude-plugins-official", "ref": "main", "commit": "d182ca456ca09d31d139f7d3818d1d333b103cce", "path": "plugins/frontend-design", "license": "Apache-2.0" },
+  "graphify": { "repo": "Graphify-Labs/graphify", "ref": "main", "commit": "0b60d47e6cd9338c51143f39f35b6c45c8453385", "path": "graphify/skill.md", "program": "graphifyy 0.9.74", "license": "Apache-2.0" },
+  "token-weather": { "repo": "anthropics/claude-code-playground", "ref": "main", "commit": "569c5283d9a0a7ee7938df85bb32e4f48cbb8c86", "path": "claude-code/mods/token-weather", "license": "Apache-2.0" },
+  "synced": "2026-10-03"
+}

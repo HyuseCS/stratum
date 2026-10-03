@@ -1,0 +1,13 @@
+{
+  "name": "stratum",
+  "owner": {
+    "name": "HyuseCS"
+  },
+  "plugins": [
+    {
+      "name": "stratum",
+      "source": "./",
+      "description": "Agent harness for Claude Code: spec-driven lanes, an orchestrator with st-* subagents, commit guard, and handoff."
+    }
+  ]
+}
