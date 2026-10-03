@@ -1,0 +1,22 @@
+{
+  "theme": "rose-pine",
+  "style": "powerline",
+  "display": {
+    "lines": [
+      {
+        "segments": {
+          "model": { "enabled": true },
+          "directory": { "enabled": true },
+          "git": { "enabled": true },
+          "context": { "enabled": false },
+          "block": { "enabled": false },
+          "session": { "enabled": false },
+          "today": { "enabled": false },
+          "metrics": { "enabled": true, "showResponseTime": false, "showLastResponseTime": false, "showDuration": true, "showMessageCount": false, "showLinesAdded": false, "showLinesRemoved": false },
+          "version": { "enabled": false },
+          "tmux": { "enabled": false }
+        }
+      }
+    ]
+  }
+}
