@@ -1,2 +1,6 @@
 tsconfig.json
 .claude-plugin/types/
+.stratum/commit-mode
+.stratum/handoff.md
+.claude/settings.local.json
+graphify-out/
