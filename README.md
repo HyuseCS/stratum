@@ -147,9 +147,10 @@ copy for that project only.
 - **Session handoff.** `st-handoff` writes the goal, decisions, open questions, and next step. A
   hook adds a facts block (branch, phase, tasks done, last commits, uncommitted files) at session
   end and before compaction. The next session starts by reading it.
-- **Statusline.** One powerline: model, directory, git branch, session length, ponytail level,
-  `SR-OPUS-5`, and commit mode. It fits the terminal width: segments get shorter, then drop, and
-  the commit mode always stays. See [Statusline colors](#statusline-colors).
+- **Statusline.** A powerline in three lines: `Stratum`, project folder, git branch, and session
+  length; then ponytail level and commit mode; then the model. Each line fits the terminal width:
+  segments get shorter, then drop. The branch and commit mode always stay. See
+  [Statusline colors](#statusline-colors).
 - **Token Weather.** A context forecast above the prompt, from ☀ Clear to ↯ Compact soon.
 - **Parallel sessions.** `scripts/st-worktree.sh <branch> <name>` makes a sibling worktree that
   shares this project's local settings, commit mode, and Claude memory.
@@ -175,15 +176,15 @@ Or set your own colors. Keys you leave out keep the rose-pine color.
     "custom": {
       "git": { "bg": "#1f1d2e", "fg": "#9ccfd8" },
       "ponytail": { "bg": "#2a273f", "fg": "#eb6f92" },
-      "srOpus": { "bg": "#26233a", "fg": "#c4a7e7" },
+      "stratum": { "bg": "#191724", "fg": "#ebbcba" },
       "commit": { "bg": "#1f1d2e", "auto": "#9ccfd8", "ask": "#f6c177", "deny": "#eb6f92" }
     }
   }
 }
 ```
 
-Powerline segment keys are `model`, `directory`, `git`, and `metrics` (session length). The
-segment list and other powerline options from the
+Other keys: `directory` (project folder), `model`, and `metrics` (session length). The `stratum`
+label uses the `model` colors unless you set it. Other color options from the
 [claude-powerline docs](https://github.com/Owloops/claude-powerline) also work here.
 
 ## Duplicate installs

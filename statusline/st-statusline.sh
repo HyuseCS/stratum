@@ -65,56 +65,54 @@ if shutil.which("bunx"):
         line = subprocess.run(["bunx", "@owloops/claude-powerline@1.30.3", f"--config={f.name}"],
                               input=raw, capture_output=True, text=True).stdout
 
-segs = []
+segs = {}
 for bg, fg, text in re.findall(r"\x1b\[48;2;([\d;]+)m\x1b\[38;2;([\d;]+)m([^\x1b]+)", line):
     text = text.strip()
-    if not text or text == ARROW:
-        continue
-    kind = {"✱": "model", "⎇": "git", "⧖": "time"}.get(text[0], "dir")
-    short = text.rstrip("/").rsplit("/", 1)[-1] if kind == "dir" else text
-    segs.append({"kind": kind, "bg": bg, "fg": fg, "text": text, "short": short})
+    kind = {"✱": "model", "⎇": "git", "⧖": "time"}.get(text[:1])
+    if kind:
+        segs[kind] = {"bg": bg, "fg": fg, "text": text, "short": text}
 
+label = palette.get("stratum", palette["model"])
+folder = os.path.basename(cwd.rstrip("/")) or cwd
 pt = palette.get("ponytail", palette["block"])
-sr = palette.get("srOpus", {"bg": palette["tmux"]["bg"], "fg": palette["version"]["fg"]})
 commit = palette.get("commit", {})
 commit_bg = commit.get("bg", palette["git"]["bg"])
 commit_fg = commit.get(mode, {"auto": palette["git"]["fg"], "ask": palette["contextWarning"]["bg"],
                               "deny": palette["contextCritical"]["bg"]}[mode])
-segs += [
-    {"kind": "ponytail", "bg": rgb(pt["bg"]), "fg": rgb(pt["fg"]), "text": f"ponytail {level}", "short": f"pt {level}"},
-    {"kind": "sr", "bg": rgb(sr["bg"]), "fg": rgb(sr["fg"]), "text": "SR-OPUS-5", "short": "SR5"},
-    {"kind": "commit", "bg": rgb(commit_bg), "fg": rgb(commit_fg), "text": f"commit {mode}", "short": mode},
-]
+segs["stratum"] = {"bg": rgb(label["bg"]), "fg": rgb(label["fg"]), "text": "Stratum", "short": "Stratum"}
+if folder:
+    segs["dir"] = {"bg": rgb(palette["directory"]["bg"]), "fg": rgb(palette["directory"]["fg"]), "text": folder, "short": folder}
+segs["ponytail"] = {"bg": rgb(pt["bg"]), "fg": rgb(pt["fg"]), "text": f"ponytail {level}", "short": f"pt {level}"}
+segs["commit"] = {"bg": rgb(commit_bg), "fg": rgb(commit_fg), "text": f"commit {mode}", "short": mode}
 
 
 def cells(s):
     return sum(2 if unicodedata.east_asian_width(c) in "WF" else 1 for c in s)
 
 
-def fits(limit):
-    return sum(cells(s["text"]) + 3 for s in segs) <= limit
-
-
 try:
     limit = int(os.environ["ST_WIDTH"]) - 1
 except ValueError:
     limit = 0
-steps = [("dir", "short"), ("sr", "short"), ("commit", "short"), ("ponytail", "short"),
-         ("time", "drop"), ("sr", "drop"), ("model", "drop"), ("ponytail", "drop"), ("git", "drop"), ("dir", "drop")]
-for kind, action in steps:
-    if limit <= 0 or fits(limit):
-        break
-    for s in segs:
-        if s["kind"] == kind:
-            s["text"] = s["short"]
-    if action == "drop":
-        segs = [s for s in segs if s["kind"] != kind]
-
-out, prev = "", None
-for s in segs:
-    if prev:
-        out += f"\x1b[48;2;{s['bg']}m\x1b[38;2;{prev}m{ARROW}"
-    out += f"\x1b[48;2;{s['bg']}m\x1b[38;2;{s['fg']}m {s['text']} "
-    prev = s["bg"]
-print(f"{out}\x1b[0m\x1b[38;2;{prev}m{ARROW}\x1b[0m")
+steps = [("commit", "short"), ("ponytail", "short"), ("time", "drop"), ("stratum", "drop"), ("dir", "drop"),
+         ("ponytail", "drop"), ("git", "drop")]
+for kinds in (["stratum", "dir", "git", "time"], ["ponytail", "commit"], ["model"]):
+    row = [k for k in kinds if k in segs]
+    for kind, action in steps:
+        if limit <= 0 or sum(cells(segs[k]["text"]) + 3 for k in row) <= limit:
+            break
+        if kind in row:
+            segs[kind]["text"] = segs[kind]["short"]
+            if action == "drop":
+                row.remove(kind)
+    if not row:
+        continue
+    out, prev = "", None
+    for k in row:
+        s = segs[k]
+        if prev:
+            out += f"\x1b[48;2;{s['bg']}m\x1b[38;2;{prev}m{ARROW}"
+        out += f"\x1b[48;2;{s['bg']}m\x1b[38;2;{s['fg']}m {s['text']} "
+        prev = s["bg"]
+    print(f"{out}\x1b[0m\x1b[38;2;{prev}m{ARROW}\x1b[0m")
 PY

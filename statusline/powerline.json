@@ -6,7 +6,7 @@
       {
         "segments": {
           "model": { "enabled": true },
-          "directory": { "enabled": true },
+          "directory": { "enabled": false },
           "git": { "enabled": true },
           "context": { "enabled": false },
           "block": { "enabled": false },

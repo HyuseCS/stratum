@@ -23,19 +23,22 @@ plain() { sed $'s/\e\\[[0-9;]*m//g'; }
 cols() { python3 -c 'import sys; print(len(sys.stdin.read().rstrip("\n")))'; }
 
 wide=$(run 200 | plain)
-check "wide: one line" '[ "$(run 200 | wc -l)" = 1 ]'
-check "wide: all segments" 'grep -q "Opus 5.5" <<<"$wide" && grep -q "~/Desktop/stratum" <<<"$wide" && grep -q "12m" <<<"$wide" && grep -q "ponytail full" <<<"$wide" && grep -q "SR-OPUS-5" <<<"$wide" && grep -q "commit deny" <<<"$wide"'
-for w in 100 80 60 40 20; do
+l1=$(sed -n 1p <<<"$wide"); l2=$(sed -n 2p <<<"$wide"); l3=$(sed -n 3p <<<"$wide")
+check "wide: three lines" '[ "$(wc -l <<<"$wide")" = 3 ]'
+check "line 1: Stratum, folder, branch, time in order" '[[ "$l1" == " Stratum "*" proj "*"⎇ main"*"⧖ 12m"* ]]'
+check "line 2: ponytail, commit" '[[ "$l2" == " ponytail full "*" commit deny "* ]]'
+check "line 3: model" '[[ "$l3" == " ✱ Opus 5.5 "* ]]'
+check "no SR-OPUS-5" '! grep -q "SR" <<<"$wide"'
+for w in 40 30 20; do
   out=$(run $w | plain)
-  check "width $w: fits ($(cols <<<"$out") cols)" '[ "$(cols <<<"$out")" -lt '$w' ]'
-  check "width $w: commit mode kept" 'grep -q "deny" <<<"$out"'
+  check "width $w: every line fits" '[ "$(while read -r l; do cols <<<"$l"; done <<<"$out" | sort -n | tail -1)" -lt '$w' ]'
+  check "width $w: branch and commit mode kept" 'grep -q "main" <<<"$out" && grep -q "deny" <<<"$out"'
 done
-mid=$(run 60 | plain)
-check "width 60: dir shortened, git kept" 'grep -q " stratum " <<<"$mid" && ! grep -q "~/Desktop" <<<"$mid" && grep -q "main" <<<"$mid"'
+check "width 30: time dropped first" '! grep -q "12m" <<<"$(run 30 | plain)" && grep -q "Stratum" <<<"$(run 30 | plain)"'
 mkdir -p "$tmp/nobunx"
 for c in bash python3 cat stty cut dirname ps tr; do ln -s "$(command -v $c)" "$tmp/nobunx/$c"; done
 nob=$(printf '%s' "$input" | PATH="$tmp/nobunx" HOME="$tmp/home" CLAUDE_CONFIG_DIR= COLUMNS=80 "$tmp/nobunx/bash" "$root/statusline/st-statusline.sh" | plain)
-check "no bunx: own segments only" 'grep -q "ponytail full" <<<"$nob" && grep -q "commit deny" <<<"$nob" && ! grep -q "Opus" <<<"$nob"'
+check "no bunx: own segments only" 'grep -q "Stratum" <<<"$nob" && grep -q " proj " <<<"$nob" && grep -q "ponytail full" <<<"$nob" && grep -q "commit deny" <<<"$nob" && ! grep -q "Opus" <<<"$nob"'
 
 rgb() { python3 -c 'import sys; h=sys.argv[1].lstrip("#"); print(";".join(str(int(h[i:i+2],16)) for i in (0,2,4)))' "$1"; }
 check "default: rose-pine commit-deny color" 'run 200 | grep -qF "38;2;$(rgb eb6f92)m commit deny"'
