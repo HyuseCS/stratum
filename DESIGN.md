@@ -160,8 +160,9 @@ second file or touches any area above text and docs.
 
 ## 6. Display, comms, and safety
 
-- **D14. Statusline.** powerline (model, directory, git branch, session length), then
-  `[PONYTAIL <level>] [SR-OPUS-5] commit:<mode>`. The ponytail level is read from its state file.
+- **D14. Statusline.** One rose-pine powerline: model, directory, git branch, session length, then
+  ponytail level, `SR-OPUS-5`, and commit mode as segments drawn by the script (they also draw
+  without bunx). The ponytail level is read from its state file.
 - **D15. Token Weather.** The context forecast above the prompt. It replaces the powerline context
   and token segments.
 - **D16. SR-OPUS-5.** Ships as `sr-opus-5.md`. A SessionStart hook prints it only if it differs

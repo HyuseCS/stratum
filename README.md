@@ -147,8 +147,8 @@ copy for that project only.
 - **Session handoff.** `st-handoff` writes the goal, decisions, open questions, and next step. A
   hook adds a facts block (branch, phase, tasks done, last commits, uncommitted files) at session
   end and before compaction. The next session starts by reading it.
-- **Statusline.** Model, directory, git branch, and session length, then
-  `[PONYTAIL <level>] [SR-OPUS-5] commit:<mode>`.
+- **Statusline.** One powerline: model, directory, git branch, session length, ponytail level,
+  `SR-OPUS-5`, and commit mode.
 - **Token Weather.** A context forecast above the prompt, from ☀ Clear to ↯ Compact soon.
 - **Parallel sessions.** `scripts/st-worktree.sh <branch> <name>` makes a sibling worktree that
   shares this project's local settings, commit mode, and Claude memory.
