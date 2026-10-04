@@ -175,12 +175,8 @@ second file or touches any area above text and docs.
   Stratum's segments take theme colors from `statusline/themes.json`, copied from claude-powerline.
 - **D15. Token Weather.** The context forecast, drawn as the statusline's third line. It replaces
   the powerline context and token segments. The fill comes from the statusline input
-  (`context_window`). The mod `hooks/token-weather.mjs` only measures: each turn it writes
-  `.stratum/weather.json` (auto-compact threshold, mean growth), because the statusline cannot read
-  the threshold or keep a history. The mod's session id differs from the statusline's, so the file
-  is not keyed by session. The line shows a fill bar and the turns left before
-  auto-compaction, from the mean growth of the last 5 growing turns and `autoCompactThreshold` (the
-  full window when it is off), in the statusline theme.
+  (`context_window`): forecast, fill bar and percent on the left, tokens used on the right, in the
+  statusline theme. When narrow, the bar drops first, then the tokens.
 - **D16. SR-OPUS-5.** Ships as `sr-opus-5.md`. A SessionStart hook prints it only if it differs
   from the user's global copy, so it never loads twice.
 - **D17. Commit guard (`st-git-guard`).** A PreToolUse hook on Bash:

@@ -14,17 +14,16 @@ keeps its original license. Full license texts are in `licenses/`. Pinned upstre
 | impeccable | Copyright 2025 Paul Bakaus | Apache-2.0 | `skills/st-impeccable` | `licenses/impeccable.Apache-2.0.txt`, `licenses/impeccable.NOTICE.md` |
 | frontend-design | anthropics/claude-plugins-official authors | Apache-2.0 | `skills/st-frontend-design` | `licenses/frontend-design.Apache-2.0.txt` |
 | graphify skill | Copyright 2026 Safi Shamsi and the Graphify contributors | Apache-2.0 (earlier parts MIT) | `skills/st-graphify` | `licenses/graphify.Apache-2.0.txt`, `licenses/graphify.NOTICE.txt`, `licenses/graphify.MIT.txt` |
-| Token Weather | anthropics/claude-code-playground authors | Apache-2.0 | `hooks/token-weather.mjs` | `licenses/claude-code-playground.Apache-2.0.txt` |
+| Token Weather | anthropics/claude-code-playground authors | Apache-2.0 | `statusline/st-statusline.sh` (third line) | `licenses/claude-code-playground.Apache-2.0.txt` |
 | claude-powerline theme colors | Copyright (c) 2025 Owloops | MIT | `statusline/themes.json` | `licenses/claude-powerline.MIT.txt` |
 
 ## Changes made by Stratum (Apache-2.0 section 4(b))
 
 - **impeccable, frontend-design, ui-ux-pro-max, graphify skill:** renamed to `st-*` skill names and
   given Stratum's navigation and reporting rules. The design guidance itself is unchanged.
-- **Token Weather:** moved into the Stratum plugin's hooks module list. It now writes its readings
-  to `.stratum/weather.json` and the statusline draws them as its third line, in the statusline
-  theme. The turn chart is replaced by a fill bar and an estimate of turns left before
-  auto-compaction. Forecast bands unchanged.
+- **Token Weather:** the plugin mod is replaced by the statusline's third line, which keeps its
+  forecast bands and icons. It reads the fill from the statusline input, in the statusline theme,
+  and shows a fill bar instead of the turn chart.
 - **Spec Kit:** paths changed from `.specify/` to `.stratum/` and the plugin folder; commands merged
   into Stratum's phase skills.
 - **vibecode-pro-max-kit agents:** rewritten to read Spec Kit-style `specs/` files instead of the

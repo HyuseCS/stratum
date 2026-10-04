@@ -48,18 +48,13 @@ for c in bash python3 cat stty cut dirname ps tr; do ln -s "$(command -v $c)" "$
 nob=$(printf '%s' "$input" | PATH="$tmp/nobunx" HOME="$tmp/home" CLAUDE_CONFIG_DIR= COLUMNS=80 "$tmp/nobunx/bash" "$root/statusline/st-statusline.sh" | plain)
 check "no bunx: own segments only" 'grep -q "Stratum" <<<"$nob" && grep -q " ~/proj " <<<"$nob" && grep -q "Ponytail" <<<"$nob" && grep -q "commit: deny" <<<"$nob" && ! grep -q "Opus" <<<"$nob"'
 
-wfile="$tmp/home/proj/.stratum/weather.json"
 ctx() { printf '{%s,"context_window":{"total_input_tokens":%s,"context_window_size":1000000,"used_percentage":%s}}' "$ws" "$1" "$2"; }
-printf '{"compactAt":800000,"growth":50000}' > "$wfile"
 w3=$(runi 120 "$(ctx 600000 60)" | plain | sed -n 3p)
-check "weather: line 3 with bar, percent, tokens, turns" '[ "$w3" = "☂ Showers ━━━━━━━━━━━━──────── 60% 600k/1M · about 4 turns left" ]'
-check "weather: narrow drops tokens and bar first" '[ "$(runi 45 "$(ctx 600000 60)" | plain | sed -n 3p)" = "☂ Showers 60% · about 4 turns left" ]'
-check "weather: past threshold says compact now" 'runi 120 "$(ctx 850000 85)" | plain | sed -n 3p | grep -q "☇ Storm.*compact now"'
-printf '{"compactAt":800000,"growth":null}' > "$wfile"
-check "weather: no growth yet, no turns" '[ "$(runi 120 "$(ctx 100000 10)" | plain | sed -n 3p)" = "☀ Clear ━━────────────────── 10% 100k/1M" ]'
-rm "$wfile"
-check "weather: no file, no turns, line still shows" '[ "$(runi 120 "$(ctx 100000 10)" | plain | sed -n 3p)" = "☀ Clear ━━────────────────── 10% 100k/1M" ]'
-check "weather: no file, growth unknown, threshold falls back to window" 'printf "{\"growth\":100000}" > "$wfile"; out=$(runi 120 "$(ctx 600000 60)" | plain | sed -n 3p); rm "$wfile"; grep -q "about 4 turns left" <<<"$out"'
+check "weather: bar and percent left, tokens right" '[[ "$w3" == "☂ Showers ━━━━━━━━━━━━──────── 60% "*" 600k/1M" ]] && [ "$(cols <<<"$w3")" = 112 ]'
+check "weather: no turns text" '! runi 120 "$(ctx 600000 60)" | plain | grep -q "turn"'
+check "weather: narrow drops the bar first" '[[ "$(runi 40 "$(ctx 600000 60)" | plain | sed -n 3p)" == "☂ Showers 60% "*" 600k/1M" ]]'
+check "weather: very narrow drops the tokens" '[ "$(runi 25 "$(ctx 600000 60)" | plain | sed -n 3p)" = "☂ Showers 60%" ]'
+check "weather: past 90% is Compact soon" 'runi 120 "$(ctx 950000 95)" | plain | sed -n 3p | grep -q "↯ Compact soon"'
 check "weather: token counts round without .0" 'runi 120 "$(ctx 335956 34)" | plain | sed -n 3p | grep -q " 336k/1M" && runi 120 "$(ctx 1500 0)" | plain | sed -n 3p | grep -q " 1.5k/1M"'
 check "weather: no context in input, no line 3" '[ "$(run 120 | wc -l)" = 2 ]'
 

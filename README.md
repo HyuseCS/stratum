@@ -36,7 +36,6 @@ for this project, offers to upgrade graphify, installs its post-commit hook, and
 
 | Tool | Used for |
 |------|----------|
-| Claude Code 2.1.287 or later | plugin mods (Token Weather) |
 | `git`, `python3` | commit guard, scripts |
 | `node` | ponytail hooks |
 | `bunx` (Bun) | statusline bar (falls back to markers only) |
@@ -155,8 +154,8 @@ copy for that project only.
   get shorter, then drop. The branch and commit mode always stay. See
   [Statusline colors](#statusline-colors).
 - **Token Weather.** A context forecast as the statusline's third line, from ☀ Clear to ↯ Compact
-  soon, with a fill bar and the turns left before auto-compaction:
-  `☂ Showers ━━━━━━━━━━━━──────── 60% 600k/1M · about 4 turns left`.
+  soon, with a fill bar and percent on the left and tokens used on the right:
+  `☂ Showers ━━━━━━━━━━━━──────── 60%            600k/1M`.
 - **Parallel sessions.** `scripts/st-worktree.sh <branch> <name>` makes a sibling worktree that
   shares this project's local settings, commit mode, and Claude memory.
 
@@ -220,7 +219,6 @@ ports, and waits for review before updating `vendor.lock`.
 python3 tests/test_git_guard.py
 bash tests/test_session_hooks.sh
 bash tests/test_statusline.sh
-node tests/test_token_weather.mjs
 claude plugin validate .claude-plugin/plugin.json
 ```
 

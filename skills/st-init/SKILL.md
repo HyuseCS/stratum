@@ -12,7 +12,7 @@ overwrite an existing file; report it and move on.
    `{"feature_directory": null, "phase": null, "lane": null}`. Write `.stratum/commit-mode` as
    `ask`.
 2. **Git ignore.** Ensure `.gitignore` has these lines: `.stratum/commit-mode`,
-   `.stratum/handoff.md`, `.stratum/weather.json`, `graphify-out/`.
+   `.stratum/handoff.md`, `graphify-out/`.
 3. **Constitution.** If `.stratum/constitution.md` is missing, run `/stratum:st-constitution`: it
    starts from the plugin's constitution template and grills the user for the rules, one question
    at a time.
