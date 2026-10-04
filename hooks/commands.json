@@ -12,12 +12,12 @@
       {
         "matcher": "startup|resume|clear|compact",
         "hooks": [
-          { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/st-session-start.sh\"", "timeout": 10 },
+          { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/st-session-start.sh\"", "timeout": 10, "statusMessage": "Stratum · loading handoff" },
           {
             "type": "command",
             "command": "node -e \"require(require('node:path').join(process.env.CLAUDE_PLUGIN_ROOT.replaceAll(String.fromCharCode(92), '/'), 'hooks/ponytail/ponytail-activate.js'))\"",
             "timeout": 5,
-            "statusMessage": "Loading ponytail mode..."
+            "statusMessage": "Stratum · loading ponytail"
           }
         ]
       }
@@ -29,7 +29,7 @@
             "type": "command",
             "command": "node -e \"require(require('node:path').join(process.env.CLAUDE_PLUGIN_ROOT.replaceAll(String.fromCharCode(92), '/'), 'hooks/ponytail/ponytail-subagent.js'))\"",
             "timeout": 5,
-            "statusMessage": "Loading ponytail mode..."
+            "statusMessage": "Stratum · ponytail for subagent"
           }
         ]
       }
@@ -41,7 +41,7 @@
             "type": "command",
             "command": "node -e \"require(require('node:path').join(process.env.CLAUDE_PLUGIN_ROOT.replaceAll(String.fromCharCode(92), '/'), 'hooks/ponytail/ponytail-mode-tracker.js'))\"",
             "timeout": 5,
-            "statusMessage": "Tracking ponytail mode..."
+            "statusMessage": "Stratum · ponytail check"
           }
         ]
       }
@@ -49,14 +49,14 @@
     "SessionEnd": [
       {
         "hooks": [
-          { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/st-handoff-facts.sh\"", "timeout": 10 }
+          { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/st-handoff-facts.sh\"", "timeout": 10, "statusMessage": "Stratum · saving handoff facts" }
         ]
       }
     ],
     "PreCompact": [
       {
         "hooks": [
-          { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/st-handoff-facts.sh\"", "timeout": 10 }
+          { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/st-handoff-facts.sh\"", "timeout": 10, "statusMessage": "Stratum · saving handoff facts" }
         ]
       }
     ]
