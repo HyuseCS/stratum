@@ -41,7 +41,7 @@ graphify, installs its post-commit hook, and checks your tools.
 | `node` | ponytail hooks |
 | `bunx` (Bun) | statusline bar (falls back to markers only) |
 | `graphify` 0.9.74 or later (`uv tool install graphifyy`) | code navigation graph, Dart support |
-| `gh` | optional, for `st-issues` |
+| `gh` | optional, for `st-issues` and `st-pr` |
 
 ## Use
 
@@ -97,6 +97,7 @@ ponytail review, commit, drift fix.
 | `st-template <name>` | Copy a template into the project to edit it. |
 | `st-constitution` | Amend the project rules. |
 | `st-issues` | Turn tasks into GitHub issues. |
+| `st-pr [base]` | Open a draft PR from git facts and the spec; ready when CI passes. |
 | `st-sync` | Maintainers: port upstream changes into Stratum's forks. |
 | `st-grill` | Grilling interview, one question at a time. |
 | `st-ui-ux`, `st-impeccable`, `st-frontend-design` | Design build rules, design review, visual direction. |
