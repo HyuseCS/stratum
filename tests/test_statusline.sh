@@ -48,6 +48,19 @@ for c in bash python3 cat stty cut dirname ps tr; do ln -s "$(command -v $c)" "$
 nob=$(printf '%s' "$input" | PATH="$tmp/nobunx" HOME="$tmp/home" CLAUDE_CONFIG_DIR= COLUMNS=80 "$tmp/nobunx/bash" "$root/statusline/st-statusline.sh" | plain)
 check "no bunx: own segments only" 'grep -q "Stratum" <<<"$nob" && grep -q " ~/proj " <<<"$nob" && grep -q "Ponytail" <<<"$nob" && grep -q "commit: deny" <<<"$nob" && ! grep -q "Opus" <<<"$nob"'
 
+wfile="$tmp/home/proj/.stratum/weather.json"
+winput="{\"session_id\":\"S1\",$ws}"
+printf '{"session":"S1","tokens":600000,"window":1000000,"percent":60,"compactAt":800000,"growth":50000}' > "$wfile"
+w3=$(runi 120 "$winput" | plain | sed -n 3p)
+check "weather: line 3 with bar, percent, tokens, turns" '[ "$w3" = "☂ Showers ━━━━━━━━━━━━──────── 60% 600k/1M · about 4 turns left" ]'
+check "weather: narrow drops tokens and bar first" '[ "$(runi 45 "$winput" | plain | sed -n 3p)" = "☂ Showers 60% · about 4 turns left" ]'
+check "weather: other session, no line 3" '[ "$(runi 120 "{\"session_id\":\"S2\",$ws}" | wc -l)" = 2 ]'
+printf '{"session":"S1","tokens":850000,"window":1000000,"percent":85,"compactAt":800000,"growth":50000}' > "$wfile"
+check "weather: past threshold says compact now" 'runi 120 "$winput" | plain | sed -n 3p | grep -q "☇ Storm.*compact now"'
+printf '{"session":"S1","tokens":100000,"window":1000000,"percent":10,"compactAt":800000,"growth":null}' > "$wfile"
+check "weather: no growth yet, no turns" '[ "$(runi 120 "$winput" | plain | sed -n 3p)" = "☀ Clear ━━────────────────── 10% 100k/1M" ]'
+rm "$wfile"
+
 rgb() { python3 -c 'import sys; h=sys.argv[1].lstrip("#"); print(";".join(str(int(h[i:i+2],16)) for i in (0,2,4)))' "$1"; }
 check "default: rose-pine commit-deny color" 'run 200 | grep -qF "38;2;$(rgb eb6f92)m commit: deny"'
 echo '{"theme":"nord"}' > "$tmp/home/proj/.stratum/powerline.json"

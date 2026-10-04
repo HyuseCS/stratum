@@ -154,8 +154,8 @@ copy for that project only.
   commit mode on the right. Each line fits the terminal width: the path becomes the folder name, other segments
   get shorter, then drop. The branch and commit mode always stay. See
   [Statusline colors](#statusline-colors).
-- **Token Weather.** A context forecast above the prompt, from ☀ Clear to ↯ Compact soon, with a
-  fill bar and the turns left before auto-compaction:
+- **Token Weather.** A context forecast as the statusline's third line, from ☀ Clear to ↯ Compact
+  soon, with a fill bar and the turns left before auto-compaction:
   `☂ Showers ━━━━━━━━━━━━──────── 60% 600k/1M · about 4 turns left`.
 - **Parallel sessions.** `scripts/st-worktree.sh <branch> <name>` makes a sibling worktree that
   shares this project's local settings, commit mode, and Claude memory.
@@ -166,7 +166,7 @@ The defaults are in `statusline/powerline.json` (rose-pine). To change them for 
 create `.stratum/powerline.json`. Its keys merge over the defaults.
 
 Pick a theme: `rose-pine`, `nord`, `tokyo-night`, `gruvbox`, `dark`, or `light`. All segments
-and the Token Weather band follow it. Pick a shape: `arrow` (default), `rounded`, `slanted`, `blocks`, or `flat` (colored
+and the Token Weather line follow it. Pick a shape: `arrow` (default), `rounded`, `slanted`, `blocks`, or `flat` (colored
 text, no backgrounds). `arrow`, `rounded`, and `slanted` need a Nerd Font.
 `/stratum:st-shape <shape>` and `/stratum:st-theme <theme>` set them for you.
 

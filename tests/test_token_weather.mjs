@@ -1,10 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-
-const root = fileURLToPath(new URL("..", import.meta.url));
-let projectConfig = null;
-const seen = [];
 
 const tw = await import(fileURLToPath(new URL("../hooks/token-weather.mjs", import.meta.url)));
 const hooks = {};
@@ -21,19 +16,16 @@ function check(name, fn) {
   }
 }
 
+let written = null;
+let hasStratum = true;
 function fake(tokens, { window = 1_000_000, threshold = 800_000, auto = true } = {}) {
   return {
-    plugin: { root },
     fs: {
-      read: async (path) => {
-        if (path === ".stratum/powerline.json") {
-          if (projectConfig === null) throw new Error("missing");
-          return JSON.stringify(projectConfig);
-        }
-        return readFileSync(path, "utf8");
-      },
+      exists: async (path) => path === ".stratum" && hasStratum,
+      write: async (path, text) => (written = { path, state: JSON.parse(text) }),
     },
     session: {
+      id: async () => "S1",
       usage: async (args) => ({
         context: {
           tokens,
@@ -42,55 +34,40 @@ function fake(tokens, { window = 1_000_000, threshold = 800_000, auto = true } =
         },
       }),
     },
-    ui: {
-      invalidate() {},
-      resolve: () => ({ Text: (p) => (seen.push(p), p.children), Box: (p) => p.children.join("") }),
-    },
   };
 }
 
-async function band(seq, opts, columns = 100) {
+async function run(seq, opts) {
+  written = null;
   await hooks["session.start"](fake(0, opts), {}, async () => {});
-  let $;
   for (const t of seq) {
-    $ = fake(t, opts);
-    await hooks["turn.complete"]($, {}, async () => {});
+    await hooks["turn.complete"](fake(t, opts), {}, async () => {});
   }
-  return hooks["ui.render"]($, { bodyColumns: columns }, () => "none");
+  return written;
 }
 
-const grow = await band([100_000, 200_000, 300_000, 400_000, 500_000, 600_000]);
-check("bar fills to the percent", () => assert.match(grow, /━{12}─{8} 60%/));
-check("turns left from mean growth to threshold", () => assert.match(grow, /about 2 turns left/));
-check("tokens shown", () => assert.match(grow, /600k\/1M/));
+check("no drawing hook", () => assert.equal(hooks["ui.render"], undefined));
 
-const one = await band([100_000]);
-check("no growth yet: no turns text", () => assert.doesNotMatch(one, /turn/));
+const grow = await run([100_000, 200_000, 400_000]);
+check("writes .stratum/weather.json", () => assert.equal(grow.path, ".stratum/weather.json"));
+check("state has session, fill and threshold", () =>
+  assert.deepEqual(
+    { session: grow.state.session, tokens: grow.state.tokens, window: grow.state.window, percent: grow.state.percent, compactAt: grow.state.compactAt },
+    { session: "S1", tokens: 400_000, window: 1_000_000, percent: 40, compactAt: 800_000 },
+  ));
+check("growth is the mean of growing turns", () => assert.equal(grow.state.growth, 150_000));
 
-const off = await band([100_000, 200_000], { auto: false });
-check("auto-compact off: turns to a full window", () => assert.match(off, /about 8 turns left/));
+const one = await run([100_000]);
+check("one turn: no growth yet", () => assert.equal(one.state.growth, null));
 
-const over = await band([700_000, 850_000]);
-check("past threshold: compact now", () => assert.match(over, /compact now/));
+const off = await run([100_000, 200_000], { auto: false });
+check("auto-compact off: threshold is the window", () => assert.equal(off.state.compactAt, 1_000_000));
 
-const narrow = await band([100_000, 200_000], {}, 50);
-check("narrow: no bar", () => assert.doesNotMatch(narrow, /━|─/));
+const shrink = await run([300_000, 100_000, 200_000]);
+check("shrinking turns are left out of growth", () => assert.equal(shrink.state.growth, 100_000));
 
-async function showersColor() {
-  seen.length = 0;
-  await band([300_000, 600_000]);
-  return seen.find((p) => p.bold).color;
-}
-const themes = JSON.parse(readFileSync(`${root}/statusline/themes.json`, "utf8"));
-const def = await showersColor();
-check("no project file: rose-pine Showers color", () => assert.equal(def, "#c4a7e7"));
-check("rose-pine theme maps to the same colors", () => assert.equal(themes["rose-pine"].directory.fg, "#c4a7e7"));
-projectConfig = { theme: "nord" };
-const nord = await showersColor();
-check("nord theme: band follows it", () => assert.equal(nord, themes.nord.directory.fg));
-projectConfig = { theme: "custom", colors: { custom: { directory: { bg: "#000000", fg: "#123456" } } } };
-const custom = await showersColor();
-check("custom colors: band follows them", () => assert.equal(custom, "#123456"));
-projectConfig = null;
+hasStratum = false;
+const none = await run([100_000, 200_000]);
+check("no .stratum folder: nothing written", () => assert.equal(none, null));
 
 process.exit(fails);

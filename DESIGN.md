@@ -173,10 +173,12 @@ second file or touches any area above text and docs.
   commit mode always stay. SR-OPUS-5 is not shown. Colors come from a theme or custom
   colors in `statusline/powerline.json`, with `.stratum/powerline.json` merged over it per project.
   Stratum's segments take theme colors from `statusline/themes.json`, copied from claude-powerline.
-- **D15. Token Weather.** The context forecast above the prompt. It replaces the powerline context
-  and token segments. It shows a fill bar and the turns left before auto-compaction, from the mean
-  growth of the last 5 growing turns and `autoCompactThreshold` (the full window when it is off).
-  Its colors come from the statusline theme in `.stratum/powerline.json`, read each turn.
+- **D15. Token Weather.** The context forecast, drawn as the statusline's third line. It replaces
+  the powerline context and token segments. The mod `hooks/token-weather.mjs` only measures: each
+  turn it writes `.stratum/weather.json` (session, fill, threshold, growth), because the statusline
+  cannot read the threshold or keep a history. The line shows a fill bar and the turns left before
+  auto-compaction, from the mean growth of the last 5 growing turns and `autoCompactThreshold` (the
+  full window when it is off), in the statusline theme.
 - **D16. SR-OPUS-5.** Ships as `sr-opus-5.md`. A SessionStart hook prints it only if it differs
   from the user's global copy, so it never loads twice.
 - **D17. Commit guard (`st-git-guard`).** A PreToolUse hook on Bash:

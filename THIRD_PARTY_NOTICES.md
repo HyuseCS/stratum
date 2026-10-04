@@ -21,8 +21,9 @@ keeps its original license. Full license texts are in `licenses/`. Pinned upstre
 
 - **impeccable, frontend-design, ui-ux-pro-max, graphify skill:** renamed to `st-*` skill names and
   given Stratum's navigation and reporting rules. The design guidance itself is unchanged.
-- **Token Weather:** moved into the Stratum plugin's hooks module list. Colors follow the
-  statusline theme. The turn chart is replaced by a fill bar and an estimate of turns left before
+- **Token Weather:** moved into the Stratum plugin's hooks module list. It now writes its readings
+  to `.stratum/weather.json` and the statusline draws them as its third line, in the statusline
+  theme. The turn chart is replaced by a fill bar and an estimate of turns left before
   auto-compaction. Forecast bands unchanged.
 - **Spec Kit:** paths changed from `.specify/` to `.stratum/` and the plugin folder; commands merged
   into Stratum's phase skills.
