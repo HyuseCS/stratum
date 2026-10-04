@@ -165,7 +165,7 @@ for lkinds, rkinds in ((["stratum", "dir", "time"], ["git"]), (["model", "ponyta
 def short(n):
     for size, unit in ((1_000_000, "M"), (1_000, "k")):
         if n >= size:
-            return f"{n / size:.{0 if n % size == 0 else 1}f}{unit}"
+            return f"{n / size:.1f}".removesuffix(".0") + unit
     return str(n)
 
 

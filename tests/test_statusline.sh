@@ -60,6 +60,7 @@ check "weather: no growth yet, no turns" '[ "$(runi 120 "$(ctx 100000 10)" | pla
 rm "$wfile"
 check "weather: no file, no turns, line still shows" '[ "$(runi 120 "$(ctx 100000 10)" | plain | sed -n 3p)" = "☀ Clear ━━────────────────── 10% 100k/1M" ]'
 check "weather: no file, growth unknown, threshold falls back to window" 'printf "{\"growth\":100000}" > "$wfile"; out=$(runi 120 "$(ctx 600000 60)" | plain | sed -n 3p); rm "$wfile"; grep -q "about 4 turns left" <<<"$out"'
+check "weather: token counts round without .0" 'runi 120 "$(ctx 335956 34)" | plain | sed -n 3p | grep -q " 336k/1M" && runi 120 "$(ctx 1500 0)" | plain | sed -n 3p | grep -q " 1.5k/1M"'
 check "weather: no context in input, no line 3" '[ "$(run 120 | wc -l)" = 2 ]'
 
 rgb() { python3 -c 'import sys; h=sys.argv[1].lstrip("#"); print(";".join(str(int(h[i:i+2],16)) for i in (0,2,4)))' "$1"; }
