@@ -168,6 +168,10 @@ follow it. Pick a shape: `arrow` (default), `rounded`, `slanted`, `blocks`, or `
 text, no backgrounds). `arrow`, `rounded`, and `slanted` need a Nerd Font.
 `/stratum:st-shape <shape>` and `/stratum:st-theme <theme>` set them for you.
 
+Claude Code draws the statusline a few columns narrower than the terminal and cuts what does not
+fit with `…`. Each line leaves `reserve` columns free (default 8). If the right side is still cut,
+raise it: `{ "reserve": 10 }`.
+
 ```json
 { "theme": "nord", "shape": "rounded" }
 ```

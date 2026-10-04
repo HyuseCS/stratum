@@ -49,6 +49,7 @@ if theme == "custom":
 else:
     palette = {**themes.get(theme, themes["rose-pine"]), **custom}
 shape = cfg.pop("shape", "arrow")
+reserve = cfg.pop("reserve", 8)
 cfg.setdefault("display", {}).update({"autoWrap": False, "colorCompatibility": "truecolor"})
 cfg["style"] = "powerline"
 
@@ -131,7 +132,7 @@ def cells(s):
 
 
 try:
-    limit = int(os.environ["ST_WIDTH"]) - 1
+    limit = int(os.environ["ST_WIDTH"]) - int(reserve)
 except ValueError:
     limit = 0
 steps = [("dir", "short"), ("commit", "short"), ("ponytail", "short"), ("time", "drop"), ("model", "drop"),
