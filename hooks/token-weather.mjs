@@ -19,11 +19,11 @@ const BARS = "▁▂▃▄▅▆▇█";
 // Forecast bands, by percent of the window used.
 const FORECAST = [
 // Single-width text symbols, not emoji: they line up in every terminal font.
-  { upTo: 25, icon: "☀", word: "Clear", color: "yellow" },
-  { upTo: 50, icon: "☁", word: "Cloudy", color: "cyan" },
-  { upTo: 75, icon: "☂", word: "Showers", color: "blue" },
-  { upTo: 90, icon: "☇", word: "Storm", color: "magenta" },
-  { upTo: Infinity, icon: "↯", word: "Compact soon", color: "red" },
+  { upTo: 25, icon: "☀", word: "Clear", color: "#f6c177" },
+  { upTo: 50, icon: "☁", word: "Cloudy", color: "#9ccfd8" },
+  { upTo: 75, icon: "☂", word: "Showers", color: "#c4a7e7" },
+  { upTo: 90, icon: "☇", word: "Storm", color: "#ebbcba" },
+  { upTo: Infinity, icon: "↯", word: "Compact soon", color: "#eb6f92" },
 ];
 
 // Readings: { tokens, window, percent }, oldest first.
@@ -80,15 +80,16 @@ function band(Box, Text, columns) {
   const f = forecastFor(now.percent);
   const trend = trendWord();
   const parts = [
-    Text({ color: f.color, bold: true, children: `${f.icon}  ${f.word}` }),
-    Text({ children: `  ${now.percent}% of context` }),
-    Text({ dimColor: true, children: `  ${short(now.tokens)} / ${short(now.window)}` }),
+    Text({ color: f.color, bold: true, children: `${f.icon} ${f.word}` }),
+    Text({ color: "#6e6a86", children: " · " }),
+    Text({ color: "#e0def4", children: `${now.percent}%` }),
+    Text({ color: "#908caa", children: ` ${short(now.tokens)}/${short(now.window)}` }),
   ];
   if (columns >= 60) {
-    parts.push(Text({ dimColor: true, children: "   last turns " }));
+    parts.push(Text({ color: "#6e6a86", children: " · " }));
     parts.push(Text({ color: f.color, children: chart() }));
     if (trend) {
-      parts.push(Text({ dimColor: true, children: `  ${trend}` }));
+      parts.push(Text({ color: "#908caa", children: ` ${trend}` }));
     }
   }
   return Box({ flexDirection: "row", paddingX: 1, children: parts });
@@ -110,9 +111,9 @@ function trendWord() {
     return "";
   }
   const delta = readings[readings.length - 1].tokens - readings[readings.length - 2].tokens;
-  if (delta > 0) return `▲ +${short(delta)} last turn`;
-  if (delta < 0) return `▼ ${short(-delta)} last turn`;
-  return "steady";
+  if (delta > 0) return `▲ ${short(delta)}`;
+  if (delta < 0) return `▼ ${short(-delta)}`;
+  return "▬";
 }
 
 function short(n) {
