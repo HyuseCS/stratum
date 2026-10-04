@@ -18,8 +18,9 @@ try:
 except ValueError:
     data = {}
 cwd = data.get("workspace", {}).get("current_dir", "")
+proj = data.get("workspace", {}).get("project_dir") or cwd
 try:
-    mode = open(f"{cwd}/.stratum/commit-mode").read().strip()
+    mode = open(f"{proj}/.stratum/commit-mode").read().strip()
 except OSError:
     mode = ""
 if mode not in ("auto", "ask", "deny"):
@@ -39,8 +40,8 @@ def merge(base, over):
 
 
 cfg = json.load(open(f"{plugin}/statusline/powerline.json"))
-if os.path.isfile(f"{cwd}/.stratum/powerline.json"):
-    merge(cfg, json.load(open(f"{cwd}/.stratum/powerline.json")))
+if os.path.isfile(f"{proj}/.stratum/powerline.json"):
+    merge(cfg, json.load(open(f"{proj}/.stratum/powerline.json")))
 themes = json.load(open(f"{plugin}/statusline/themes.json"))
 theme = cfg.get("theme", "rose-pine")
 custom = cfg.get("colors", {}).get("custom", {})
@@ -171,7 +172,7 @@ def short(n):
 
 
 try:
-    weather = json.load(open(f"{cwd}/.stratum/weather.json"))
+    weather = json.load(open(f"{proj}/.stratum/weather.json"))
 except (OSError, ValueError):
     weather = {}
 ctx = data.get("context_window") or {}
