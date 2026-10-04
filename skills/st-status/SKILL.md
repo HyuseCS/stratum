@@ -20,5 +20,7 @@ block. Change nothing.
 5. **Duplicates:** list Stratum skills that also exist outside the plugin and could run twice or
    clash: `~/.claude/skills/{grill-me,grilling,impeccable,graphify,ui-ux-pro-max}`, the ponytail
    plugin in `~/.claude/settings.json` `enabledPlugins`, a token-weather plugin. Name them and say
-   which to turn off for this project. Never change global files.
+   which to turn off for this project. For each global `ponytail@ponytail` or token-weather plugin
+   that is on and not set to `false` in the project's `.claude/settings.json` `enabledPlugins`,
+   give the line to add: `"<key>": false`. Never change global files.
 6. **Upstream sync:** days since `synced` in `<plugin root>/vendor.lock`. Over 30 days: say so.

@@ -29,8 +29,8 @@ Then, in a new session in your project:
 ```
 
 `st-init` creates the project's `.stratum/` files and `specs/`, grills you for the project's
-rules (the constitution), sets the statusline, installs the graphify post-commit hook, and checks
-your tools.
+rules (the constitution), sets the statusline, turns off a global ponytail or Token Weather plugin
+for this project, installs the graphify post-commit hook, and checks your tools.
 
 ### Requirements
 
@@ -156,8 +156,9 @@ copy for that project only.
 ## Duplicate installs
 
 If ponytail, impeccable, ui-ux-pro-max, graphify's skill, or grilling are also installed globally,
-their hooks or skills can run twice. `st-status` lists them. Turn the global ones off for projects
-that use Stratum.
+their hooks or skills can run twice. `st-init` turns off a global ponytail or Token Weather plugin
+in the project's `.claude/settings.json`. `st-status` lists the rest. Turn the global ones off for
+projects that use Stratum.
 
 ## Maintaining the forks
 
