@@ -22,7 +22,8 @@ keeps its original license. Full license texts are in `licenses/`. Pinned upstre
 - **impeccable, frontend-design, ui-ux-pro-max, graphify skill:** renamed to `st-*` skill names and
   given Stratum's navigation and reporting rules. The design guidance itself is unchanged.
 - **Token Weather:** moved into the Stratum plugin's hooks module list. Colors changed to
-  rose-pine and the band text made shorter. Readings and forecast bands unchanged.
+  rose-pine. The turn chart is replaced by a fill bar and an estimate of turns left before
+  auto-compaction. Forecast bands unchanged.
 - **Spec Kit:** paths changed from `.specify/` to `.stratum/` and the plugin folder; commands merged
   into Stratum's phase skills.
 - **vibecode-pro-max-kit agents:** rewritten to read Spec Kit-style `specs/` files instead of the

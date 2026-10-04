@@ -7,14 +7,16 @@
 // from $.session.usage() (the same figures the status line shows) and keep
 // the last HISTORY readings.
 // session.start: take a first reading, so the band shows before any turn.
-// ui.render (AbovePrompt): one line: icon, forecast word, percent, tokens
-// used of the window, and a block-character chart of the recent turns.
+// ui.render (AbovePrompt): one line: icon, forecast word, a fill bar,
+// percent, tokens used of the window, and the turns left before
+// auto-compaction at the recent rate of growth.
 //
 // The host reads on(...) and $.noun.method(...) from source, so they are
 // spelled literally, and helpers that take $ are top-level functions.
 
 const HISTORY = 12;
-const BARS = "▁▂▃▄▅▆▇█";
+const BAR_CELLS = 20;
+const GROWTH_TURNS = 5;
 
 // Forecast bands, by percent of the window used.
 const FORECAST = [
@@ -26,7 +28,7 @@ const FORECAST = [
   { upTo: Infinity, icon: "↯", word: "Compact soon", color: "#eb6f92" },
 ];
 
-// Readings: { tokens, window, percent }, oldest first.
+// Readings: { tokens, window, percent, compactAt }, oldest first.
 let readings = [];
 
 export function register(on) {
@@ -63,9 +65,10 @@ async function takeReading($) {
     }
     const tokens = context.tokens ?? 0;
     const percent = Math.round(context.percent ?? (tokens / context.window) * 100);
+    const compactAt = await compactThreshold($, context.window);
     // The session.start reading is 0 before any response; drop it once real readings arrive.
     readings = readings.filter((r) => r.tokens > 0);
-    readings.push({ tokens, window: context.window, percent });
+    readings.push({ tokens, window: context.window, percent, compactAt });
     if (readings.length > HISTORY) {
       readings = readings.slice(-HISTORY);
     }
@@ -75,22 +78,35 @@ async function takeReading($) {
   }
 }
 
+async function compactThreshold($, window) {
+  try {
+    const { context } = await $.session.usage({ breakdown: "summary" });
+    const b = context.breakdown;
+    if (b?.isAutoCompactEnabled && b.autoCompactThreshold) {
+      return b.autoCompactThreshold;
+    }
+  } catch {
+    // No breakdown; count turns to a full window instead.
+  }
+  return window;
+}
+
 function band(Box, Text, columns) {
   const now = readings[readings.length - 1];
   const f = forecastFor(now.percent);
-  const trend = trendWord();
-  const parts = [
-    Text({ color: f.color, bold: true, children: `${f.icon} ${f.word}` }),
-    Text({ color: "#6e6a86", children: " · " }),
-    Text({ color: "#e0def4", children: `${now.percent}%` }),
-    Text({ color: "#908caa", children: ` ${short(now.tokens)}/${short(now.window)}` }),
-  ];
+  const parts = [Text({ color: f.color, bold: true, children: `${f.icon} ${f.word} ` })];
   if (columns >= 60) {
+    const filled = Math.min(BAR_CELLS, Math.round((now.percent / 100) * BAR_CELLS));
+    parts.push(Text({ color: f.color, children: "━".repeat(filled) }));
+    parts.push(Text({ color: "#524f67", children: "─".repeat(BAR_CELLS - filled) }));
+    parts.push(Text({ children: " " }));
+  }
+  parts.push(Text({ color: "#e0def4", children: `${now.percent}%` }));
+  parts.push(Text({ color: "#908caa", children: ` ${short(now.tokens)}/${short(now.window)}` }));
+  const left = turnsLeft();
+  if (left) {
     parts.push(Text({ color: "#6e6a86", children: " · " }));
-    parts.push(Text({ color: f.color, children: chart() }));
-    if (trend) {
-      parts.push(Text({ color: "#908caa", children: ` ${trend}` }));
-    }
+    parts.push(Text({ color: f.color, children: left }));
   }
   return Box({ flexDirection: "row", paddingX: 1, children: parts });
 }
@@ -99,21 +115,20 @@ function forecastFor(percent) {
   return FORECAST.find((band) => percent < band.upTo) ?? FORECAST[FORECAST.length - 1];
 }
 
-// Bars scale to the busiest reading shown, so growth shows at any fill level.
-function chart() {
-  const top = Math.max(...readings.map((r) => r.tokens), 1);
-  const bars = readings.map((r) => BARS[Math.min(BARS.length - 1, Math.floor((r.tokens / top) * (BARS.length - 1)))]);
-  return bars.join("");
-}
-
-function trendWord() {
-  if (readings.length < 2) {
-    return "";
+// Mean growth of the recent turns that grew; null until there is one.
+function turnsLeft() {
+  const recent = readings.slice(-(GROWTH_TURNS + 1));
+  const growth = recent.slice(1).map((r, i) => r.tokens - recent[i].tokens).filter((d) => d > 0);
+  if (growth.length === 0) {
+    return null;
   }
-  const delta = readings[readings.length - 1].tokens - readings[readings.length - 2].tokens;
-  if (delta > 0) return `▲ ${short(delta)}`;
-  if (delta < 0) return `▼ ${short(-delta)}`;
-  return "▬";
+  const now = readings[readings.length - 1];
+  const room = now.compactAt - now.tokens;
+  if (room <= 0) {
+    return "compact now";
+  }
+  const turns = Math.max(1, Math.round(room / (growth.reduce((a, b) => a + b, 0) / growth.length)));
+  return `about ${turns} turn${turns === 1 ? "" : "s"} left`;
 }
 
 function short(n) {
