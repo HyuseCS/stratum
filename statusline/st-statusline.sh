@@ -172,26 +172,27 @@ def short(n):
 try:
     weather = json.load(open(f"{cwd}/.stratum/weather.json"))
 except (OSError, ValueError):
-    weather = None
-if weather and weather.get("window") and weather.get("session") == data.get("session_id"):
+    weather = {}
+ctx = data.get("context_window") or {}
+if ctx.get("context_window_size") and ctx.get("used_percentage") is not None:
     forecast = [(25, "☀", "Clear"), (50, "☁", "Cloudy"), (75, "☂", "Showers"), (90, "☇", "Storm"),
                 (float("inf"), "↯", "Compact soon")]
     band_colors = [palette["contextWarning"]["bg"], palette["git"]["fg"], palette["directory"]["fg"],
                    palette["model"]["fg"], palette["contextCritical"]["bg"]]
-    pct, tokens = weather["percent"], weather["tokens"]
+    pct, tokens, window = ctx["used_percentage"], ctx.get("total_input_tokens", 0), ctx["context_window_size"]
     i = next(n for n, f in enumerate(forecast) if pct < f[0])
     color, faint = rgb(band_colors[i]), rgb(palette["metrics"]["bg"])
     filled = min(20, round(pct / 100 * 20))
     turns = None
     if weather.get("growth"):
-        room = weather["compactAt"] - tokens
+        room = weather.get("compactAt", window) - tokens
         n = max(1, round(room / weather["growth"]))
         turns = "compact now" if room <= 0 else f"about {n} turn{'' if n == 1 else 's'} left"
     parts = {
         "word": f"{fg(color)}\x1b[1m{forecast[i][1]} {forecast[i][2]}\x1b[22m ",
         "bar": f"{fg(color)}{'━' * filled}{fg(faint)}{'─' * (20 - filled)} ",
         "pct": f"{fg(rgb(palette['metrics']['fg']))}{pct}%",
-        "tokens": f"{fg(rgb(palette['tmux']['fg']))} {short(tokens)}/{short(weather['window'])}",
+        "tokens": f"{fg(rgb(palette['tmux']['fg']))} {short(tokens)}/{short(window)}",
         "turns": f"{fg(faint)} · {fg(color)}{turns}" if turns else "",
     }
     for drop in ("tokens", "bar", "turns"):

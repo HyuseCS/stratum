@@ -25,7 +25,6 @@ function fake(tokens, { window = 1_000_000, threshold = 800_000, auto = true } =
       write: async (path, text) => (written = { path, state: JSON.parse(text) }),
     },
     session: {
-      id: async () => "S1",
       usage: async (args) => ({
         context: {
           tokens,
@@ -50,12 +49,7 @@ check("no drawing hook", () => assert.equal(hooks["ui.render"], undefined));
 
 const grow = await run([100_000, 200_000, 400_000]);
 check("writes .stratum/weather.json", () => assert.equal(grow.path, ".stratum/weather.json"));
-check("state has session, fill and threshold", () =>
-  assert.deepEqual(
-    { session: grow.state.session, tokens: grow.state.tokens, window: grow.state.window, percent: grow.state.percent, compactAt: grow.state.compactAt },
-    { session: "S1", tokens: 400_000, window: 1_000_000, percent: 40, compactAt: 800_000 },
-  ));
-check("growth is the mean of growing turns", () => assert.equal(grow.state.growth, 150_000));
+check("state is threshold and mean growth", () => assert.deepEqual(grow.state, { compactAt: 800_000, growth: 150_000 }));
 
 const one = await run([100_000]);
 check("one turn: no growth yet", () => assert.equal(one.state.growth, null));

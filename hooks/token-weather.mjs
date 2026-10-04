@@ -8,10 +8,9 @@
 // from $.session.usage() (the same figures the status line shows) and keep
 // the last HISTORY readings.
 // session.start: take a first reading, so the line shows before any turn.
-// Each reading writes .stratum/weather.json: the session id, the latest
-// fill, the auto-compaction threshold, and the mean growth of the recent
-// growing turns. The statusline reads it; it cannot ask for the threshold
-// or keep a history itself.
+// Each reading writes .stratum/weather.json: the auto-compaction threshold
+// and the mean growth of the recent growing turns. The statusline takes the
+// fill from its own input; it cannot ask for the threshold or keep a history.
 //
 // The host reads on(...) and $.noun.method(...) from source, so they are
 // spelled literally, and helpers that take $ are top-level functions.
@@ -59,8 +58,7 @@ async function takeReading($) {
     if (readings.length > HISTORY) {
       readings = readings.slice(-HISTORY);
     }
-    const state = { session: await $.session.id(), tokens, window: context.window, percent, compactAt, growth: growth() };
-    await $.fs.write(STATE_FILE, JSON.stringify(state) + "\n");
+    await $.fs.write(STATE_FILE, JSON.stringify({ compactAt, growth: growth() }) + "\n");
   } catch {
     // No reading this turn; the file keeps the last one.
   }
