@@ -29,7 +29,11 @@ overwrite an existing file; report it and move on.
 5. **Statusline.** The statusline needs this machine's plugin path, so it goes in
    `.claude/settings.local.json` (not committed). Merge in
    `"statusLine": {"type": "command", "command": "bash <plugin root>/statusline/st-statusline.sh"}`
-   with the absolute plugin root. Keep every other key.
+   with the absolute plugin root. Keep every other key. If `.stratum/powerline.json` is missing,
+   ask the user in one question for a theme (`rose-pine` default, `nord`, `tokyo-night`,
+   `gruvbox`, `dark`, `light`) and a shape (`arrow` default, `rounded`, `slanted`, `blocks`,
+   `flat`; the first three need a Nerd Font). The Token Weather line follows the theme. Write
+   `.stratum/powerline.json` with the keys the user changed from the defaults, or `{}` if none.
 6. **Duplicate plugins.** Stratum ships its own ponytail and Token Weather hooks. For each plugin
    in `~/.claude/settings.json` `enabledPlugins` that is `ponytail@ponytail` or has `token-weather`
    in its name and is `true`, merge `"<key>": false` into `enabledPlugins` in the project's
