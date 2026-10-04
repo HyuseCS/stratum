@@ -87,8 +87,9 @@ if folder:
     home = os.path.expanduser("~")
     path = "~" + cwd[len(home):] if cwd == home or cwd.startswith(home + "/") else cwd
     segs["dir"] = {"bg": rgb(palette["directory"]["bg"]), "fg": rgb(palette["directory"]["fg"]), "text": path, "short": folder}
-segs["ponytail"] = {"bg": rgb(pt["bg"]), "fg": rgb(pt["fg"]), "text": f"ponytail {level}", "short": f"pt {level}"}
-segs["commit"] = {"bg": rgb(commit_bg), "fg": rgb(commit_fg), "text": f"commit {mode}", "short": mode}
+segs["ponytail"] = {"bg": rgb(pt["bg"]), "fg": rgb(pt["fg"]), "text": "Ponytail" if level == "full" else f"Ponytail {level}",
+                    "short": "PT" if level == "full" else f"PT {level}"}
+segs["commit"] = {"bg": rgb(commit_bg), "fg": rgb(commit_fg), "text": f"commit: {mode}", "short": mode}
 
 
 SEPS = {"arrow": ("\ue0b0", "\ue0b2"), "slanted": ("\ue0bc", "\ue0ba")}
