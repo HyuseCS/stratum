@@ -90,6 +90,7 @@ ponytail review, commit, drift fix.
 | `st-define`, `st-plan`, `st-check`, `st-build`, `st-close` | Run or resume one Full-lane phase. |
 | `st-status` | Feature, phase, lane, tasks done, commit mode, next gate, missing tools. |
 | `st-commit-mode auto\|ask\|deny` | Set the commit guard mode. |
+| `st-shape arrow\|rounded\|slanted\|blocks\|flat` | Set the statusline shape. |
 | `st-handoff` | Write the session handoff. |
 | `st-init` | Set up a project. |
 | `st-template <name>` | Copy a template into the project to edit it. |
@@ -164,6 +165,7 @@ create `.stratum/powerline.json`. Its keys merge over the defaults.
 Pick a theme: `rose-pine`, `nord`, `tokyo-night`, `gruvbox`, `dark`, or `light`. All segments
 follow it. Pick a shape: `arrow` (default), `rounded`, `slanted`, `blocks`, or `flat` (colored
 text, no backgrounds). `arrow`, `rounded`, and `slanted` need a Nerd Font.
+`/stratum:st-shape <shape>` sets the shape for you.
 
 ```json
 { "theme": "nord", "shape": "rounded" }
