@@ -91,7 +91,7 @@ ponytail review, commit, drift fix.
 | `st-status` | Feature, phase, lane, tasks done, commit mode, next gate, missing tools. |
 | `st-commit-mode auto\|ask\|deny` | Set the commit guard mode. |
 | `st-shape arrow\|rounded\|slanted\|blocks\|flat` | Set the statusline shape. |
-| `st-theme <name>` | Set the statusline color theme. |
+| `st-theme <name>` | Set the color theme of the statusline and Token Weather. |
 | `st-handoff` | Write the session handoff. |
 | `st-init` | Set up a project. |
 | `st-template <name>` | Copy a template into the project to edit it. |
@@ -166,7 +166,7 @@ The defaults are in `statusline/powerline.json` (rose-pine). To change them for 
 create `.stratum/powerline.json`. Its keys merge over the defaults.
 
 Pick a theme: `rose-pine`, `nord`, `tokyo-night`, `gruvbox`, `dark`, or `light`. All segments
-follow it. Pick a shape: `arrow` (default), `rounded`, `slanted`, `blocks`, or `flat` (colored
+and the Token Weather band follow it. Pick a shape: `arrow` (default), `rounded`, `slanted`, `blocks`, or `flat` (colored
 text, no backgrounds). `arrow`, `rounded`, and `slanted` need a Nerd Font.
 `/stratum:st-shape <shape>` and `/stratum:st-theme <theme>` set them for you.
 

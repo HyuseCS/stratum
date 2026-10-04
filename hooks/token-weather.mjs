@@ -7,6 +7,8 @@
 // from $.session.usage() (the same figures the status line shows) and keep
 // the last HISTORY readings.
 // session.start: take a first reading, so the band shows before any turn.
+// Colors follow the statusline theme: "theme" and "colors.custom" in the
+// project's .stratum/powerline.json, read on each reading.
 // ui.render (AbovePrompt): one line: icon, forecast word, a fill bar,
 // percent, tokens used of the window, and the turns left before
 // auto-compaction at the recent rate of growth.
@@ -21,11 +23,11 @@ const GROWTH_TURNS = 5;
 // Forecast bands, by percent of the window used.
 const FORECAST = [
 // Single-width text symbols, not emoji: they line up in every terminal font.
-  { upTo: 25, icon: "☀", word: "Clear", color: "#f6c177" },
-  { upTo: 50, icon: "☁", word: "Cloudy", color: "#9ccfd8" },
-  { upTo: 75, icon: "☂", word: "Showers", color: "#c4a7e7" },
-  { upTo: 90, icon: "☇", word: "Storm", color: "#ebbcba" },
-  { upTo: Infinity, icon: "↯", word: "Compact soon", color: "#eb6f92" },
+  { upTo: 25, icon: "☀", word: "Clear" },
+  { upTo: 50, icon: "☁", word: "Cloudy" },
+  { upTo: 75, icon: "☂", word: "Showers" },
+  { upTo: 90, icon: "☇", word: "Storm" },
+  { upTo: Infinity, icon: "↯", word: "Compact soon" },
 ];
 
 // Readings: { tokens, window, percent, compactAt }, oldest first.
@@ -57,7 +59,37 @@ export function register(on) {
   });
 }
 
+// One color per forecast band, then text colors; rose-pine until a theme loads.
+let colors = {
+  bands: ["#f6c177", "#9ccfd8", "#c4a7e7", "#ebbcba", "#eb6f92"],
+  text: "#e0def4",
+  muted: "#908caa",
+  faint: "#524f67",
+};
+
+async function loadColors($) {
+  try {
+    const themes = JSON.parse(await $.fs.read(`${$.plugin.root}/statusline/themes.json`));
+    let cfg = {};
+    try {
+      cfg = JSON.parse(await $.fs.read(".stratum/powerline.json"));
+    } catch {
+      // No project file; the default theme applies.
+    }
+    const p = { ...(themes[cfg.theme] ?? themes["rose-pine"]), ...(cfg.colors?.custom ?? {}) };
+    colors = {
+      bands: [p.contextWarning.bg, p.git.fg, p.directory.fg, p.model.fg, p.contextCritical.bg],
+      text: p.metrics.fg,
+      muted: p.tmux.fg,
+      faint: p.metrics.bg,
+    };
+  } catch {
+    // Keep the last colors.
+  }
+}
+
 async function takeReading($) {
+  await loadColors($);
   try {
     const { context } = await $.session.usage();
     if (!context || !context.window) {
@@ -94,19 +126,20 @@ async function compactThreshold($, window) {
 function band(Box, Text, columns) {
   const now = readings[readings.length - 1];
   const f = forecastFor(now.percent);
-  const parts = [Text({ color: f.color, bold: true, children: `${f.icon} ${f.word} ` })];
+  const color = colors.bands[FORECAST.indexOf(f)];
+  const parts = [Text({ color, bold: true, children: `${f.icon} ${f.word} ` })];
   if (columns >= 60) {
     const filled = Math.min(BAR_CELLS, Math.round((now.percent / 100) * BAR_CELLS));
-    parts.push(Text({ color: f.color, children: "━".repeat(filled) }));
-    parts.push(Text({ color: "#524f67", children: "─".repeat(BAR_CELLS - filled) }));
+    parts.push(Text({ color, children: "━".repeat(filled) }));
+    parts.push(Text({ color: colors.faint, children: "─".repeat(BAR_CELLS - filled) }));
     parts.push(Text({ children: " " }));
   }
-  parts.push(Text({ color: "#e0def4", children: `${now.percent}%` }));
-  parts.push(Text({ color: "#908caa", children: ` ${short(now.tokens)}/${short(now.window)}` }));
+  parts.push(Text({ color: colors.text, children: `${now.percent}%` }));
+  parts.push(Text({ color: colors.muted, children: ` ${short(now.tokens)}/${short(now.window)}` }));
   const left = turnsLeft();
   if (left) {
-    parts.push(Text({ color: "#6e6a86", children: " · " }));
-    parts.push(Text({ color: f.color, children: left }));
+    parts.push(Text({ color: colors.faint, children: " · " }));
+    parts.push(Text({ color, children: left }));
   }
   return Box({ flexDirection: "row", paddingX: 1, children: parts });
 }

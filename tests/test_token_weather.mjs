@@ -1,5 +1,10 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+
+const root = fileURLToPath(new URL("..", import.meta.url));
+let projectConfig = null;
+const seen = [];
 
 const tw = await import(fileURLToPath(new URL("../hooks/token-weather.mjs", import.meta.url)));
 const hooks = {};
@@ -18,6 +23,16 @@ function check(name, fn) {
 
 function fake(tokens, { window = 1_000_000, threshold = 800_000, auto = true } = {}) {
   return {
+    plugin: { root },
+    fs: {
+      read: async (path) => {
+        if (path === ".stratum/powerline.json") {
+          if (projectConfig === null) throw new Error("missing");
+          return JSON.stringify(projectConfig);
+        }
+        return readFileSync(path, "utf8");
+      },
+    },
     session: {
       usage: async (args) => ({
         context: {
@@ -29,7 +44,7 @@ function fake(tokens, { window = 1_000_000, threshold = 800_000, auto = true } =
     },
     ui: {
       invalidate() {},
-      resolve: () => ({ Text: (p) => p.children, Box: (p) => p.children.join("") }),
+      resolve: () => ({ Text: (p) => (seen.push(p), p.children), Box: (p) => p.children.join("") }),
     },
   };
 }
@@ -60,5 +75,22 @@ check("past threshold: compact now", () => assert.match(over, /compact now/));
 
 const narrow = await band([100_000, 200_000], {}, 50);
 check("narrow: no bar", () => assert.doesNotMatch(narrow, /━|─/));
+
+async function showersColor() {
+  seen.length = 0;
+  await band([300_000, 600_000]);
+  return seen.find((p) => p.bold).color;
+}
+const themes = JSON.parse(readFileSync(`${root}/statusline/themes.json`, "utf8"));
+const def = await showersColor();
+check("no project file: rose-pine Showers color", () => assert.equal(def, "#c4a7e7"));
+check("rose-pine theme maps to the same colors", () => assert.equal(themes["rose-pine"].directory.fg, "#c4a7e7"));
+projectConfig = { theme: "nord" };
+const nord = await showersColor();
+check("nord theme: band follows it", () => assert.equal(nord, themes.nord.directory.fg));
+projectConfig = { theme: "custom", colors: { custom: { directory: { bg: "#000000", fg: "#123456" } } } };
+const custom = await showersColor();
+check("custom colors: band follows them", () => assert.equal(custom, "#123456"));
+projectConfig = null;
 
 process.exit(fails);

@@ -83,7 +83,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 | `st-status` | Feature, phase, lane, tasks done, commit mode, next gate, missing tools, days since last sync. |
 | `st-commit-mode auto\|ask\|deny` | Set the commit mode. |
 | `st-shape arrow\|rounded\|slanted\|blocks\|flat` | Set the statusline shape. |
-| `st-theme <name>` | Set the statusline color theme. |
+| `st-theme <name>` | Set the color theme of the statusline and Token Weather. |
 | `st-init` | Set up a project: data files, constitution (grilled), tool check. |
 | `st-template <name>` | Copy a plugin template into `.stratum/templates/` to edit. |
 | `st-handoff` | Write the session handoff. |
@@ -176,6 +176,7 @@ second file or touches any area above text and docs.
 - **D15. Token Weather.** The context forecast above the prompt. It replaces the powerline context
   and token segments. It shows a fill bar and the turns left before auto-compaction, from the mean
   growth of the last 5 growing turns and `autoCompactThreshold` (the full window when it is off).
+  Its colors come from the statusline theme in `.stratum/powerline.json`, read each turn.
 - **D16. SR-OPUS-5.** Ships as `sr-opus-5.md`. A SessionStart hook prints it only if it differs
   from the user's global copy, so it never loads twice.
 - **D17. Commit guard (`st-git-guard`).** A PreToolUse hook on Bash:
