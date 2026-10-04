@@ -131,7 +131,9 @@ search, then read. Code-writing agents carry the ponytail rule and add no explan
 ├── state.json           current feature, phase, lane (committed)
 ├── templates/           optional overrides of plugin templates (committed)
 ├── handoff.md           session handoff (git-ignored)
-└── commit-mode          auto | ask | deny (git-ignored, per machine)
+├── commit-mode          auto | ask | deny (git-ignored, per machine)
+├── powerline.json       statusline theme, shape, colors (git-ignored, per machine)
+└── weather.json         Token Weather growth and compact point (git-ignored)
 specs/NNN-feature/       spec, plan, research, data model, contracts, quickstart, tasks, changes/
 AGENTS.md, CLAUDE.md     point every tool at the constitution
 ```
@@ -162,7 +164,8 @@ copy for that project only.
 ## Statusline colors
 
 The defaults are in `statusline/powerline.json` (rose-pine). To change them for one project,
-create `.stratum/powerline.json`. Its keys merge over the defaults.
+create `.stratum/powerline.json`. Its keys merge over the defaults. Git ignores it, so each person
+keeps their own look.
 
 Pick a theme: `rose-pine`, `nord`, `tokyo-night`, `gruvbox`, `dark`, or `light`. All segments
 and the Token Weather line follow it. Pick a shape: `arrow` (default), `rounded`, `slanted`, `blocks`, or `flat` (colored
