@@ -2,7 +2,6 @@
   "theme": "rose-pine",
   "style": "powerline",
   "display": {
-    "autoWrap": false,
     "lines": [
       {
         "segments": {

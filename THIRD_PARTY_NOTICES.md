@@ -15,12 +15,14 @@ keeps its original license. Full license texts are in `licenses/`. Pinned upstre
 | frontend-design | anthropics/claude-plugins-official authors | Apache-2.0 | `skills/st-frontend-design` | `licenses/frontend-design.Apache-2.0.txt` |
 | graphify skill | Copyright 2026 Safi Shamsi and the Graphify contributors | Apache-2.0 (earlier parts MIT) | `skills/st-graphify` | `licenses/graphify.Apache-2.0.txt`, `licenses/graphify.NOTICE.txt`, `licenses/graphify.MIT.txt` |
 | Token Weather | anthropics/claude-code-playground authors | Apache-2.0 | `hooks/token-weather.mjs` | `licenses/claude-code-playground.Apache-2.0.txt` |
+| claude-powerline theme colors | Copyright (c) 2025 Owloops | MIT | `statusline/themes.json` | `licenses/claude-powerline.MIT.txt` |
 
 ## Changes made by Stratum (Apache-2.0 section 4(b))
 
 - **impeccable, frontend-design, ui-ux-pro-max, graphify skill:** renamed to `st-*` skill names and
   given Stratum's navigation and reporting rules. The design guidance itself is unchanged.
-- **Token Weather:** moved into the Stratum plugin's hooks module list. Behavior unchanged.
+- **Token Weather:** moved into the Stratum plugin's hooks module list. Colors changed to
+  rose-pine and the band text made shorter. Readings and forecast bands unchanged.
 - **Spec Kit:** paths changed from `.specify/` to `.stratum/` and the plugin folder; commands merged
   into Stratum's phase skills.
 - **vibecode-pro-max-kit agents:** rewritten to read Spec Kit-style `specs/` files instead of the

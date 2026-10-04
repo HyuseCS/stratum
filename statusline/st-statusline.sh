@@ -1,12 +1,4 @@
 #!/usr/bin/env bash
-input=$(cat)
-plugin="$(cd "$(dirname "$0")/.." && pwd)"
-
-level=$(cat "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/.ponytail-active" 2>/dev/null)
-line=""
-if command -v bunx >/dev/null 2>&1; then
-  line=$(printf '%s' "$input" | bunx @owloops/claude-powerline@1.30.3 --style=powerline --theme=rose-pine --config="$plugin/statusline/powerline.json" 2>/dev/null)
-fi
 width=${COLUMNS:-}
 pid=$PPID
 while [ -z "$width" ] && [ "${pid:-1}" -gt 1 ]; do
@@ -15,12 +7,14 @@ while [ -z "$width" ] && [ "${pid:-1}" -gt 1 ]; do
   pid=$(ps -o ppid= -p "$pid" 2>/dev/null | tr -d ' ')
 done
 
-ST_INPUT="$input" ST_LINE="$line" ST_LEVEL="${level:-off}" ST_WIDTH="$width" exec python3 - <<'PY'
-import json, os, re, unicodedata
+ST_INPUT="$(cat)" ST_PLUGIN="$(cd "$(dirname "$0")/.." && pwd)" ST_WIDTH="$width" exec python3 - <<'PY'
+import json, os, re, shutil, subprocess, tempfile, unicodedata
 
 ARROW = ""
+plugin = os.environ["ST_PLUGIN"]
+raw = os.environ["ST_INPUT"]
 try:
-    cwd = json.loads(os.environ["ST_INPUT"]).get("workspace", {}).get("current_dir", "")
+    cwd = json.loads(raw).get("workspace", {}).get("current_dir", "")
 except ValueError:
     cwd = ""
 try:
@@ -29,9 +23,50 @@ except OSError:
     mode = ""
 if mode not in ("auto", "ask", "deny"):
     mode = "ask"
+try:
+    level = open(os.path.join(os.environ.get("CLAUDE_CONFIG_DIR") or os.path.expanduser("~/.claude"), ".ponytail-active")).read().strip()
+except OSError:
+    level = ""
+level = level or "off"
+
+
+
+def merge(base, over):
+    for k, v in over.items():
+        base[k] = merge(base[k], v) if isinstance(v, dict) and isinstance(base.get(k), dict) else v
+    return base
+
+
+cfg = json.load(open(f"{plugin}/statusline/powerline.json"))
+if os.path.isfile(f"{cwd}/.stratum/powerline.json"):
+    merge(cfg, json.load(open(f"{cwd}/.stratum/powerline.json")))
+themes = json.load(open(f"{plugin}/statusline/themes.json"))
+theme = cfg.get("theme", "rose-pine")
+custom = cfg.get("colors", {}).get("custom", {})
+if theme == "custom":
+    palette = {**themes["rose-pine"], **custom}
+    cfg.setdefault("colors", {})["custom"] = palette
+else:
+    palette = {**themes.get(theme, themes["rose-pine"]), **custom}
+cfg.setdefault("display", {}).update({"autoWrap": False, "colorCompatibility": "truecolor"})
+cfg["style"] = "powerline"
+
+
+def rgb(hex_color):
+    h = hex_color.lstrip("#")
+    return ";".join(str(int(h[i:i + 2], 16)) for i in (0, 2, 4))
+
+
+line = ""
+if shutil.which("bunx"):
+    with tempfile.NamedTemporaryFile("w", suffix=".json") as f:
+        json.dump(cfg, f)
+        f.flush()
+        line = subprocess.run(["bunx", "@owloops/claude-powerline@1.30.3", f"--config={f.name}"],
+                              input=raw, capture_output=True, text=True).stdout
 
 segs = []
-for bg, fg, text in re.findall(r"\x1b\[48;2;([\d;]+)m\x1b\[38;2;([\d;]+)m([^\x1b]+)", os.environ["ST_LINE"]):
+for bg, fg, text in re.findall(r"\x1b\[48;2;([\d;]+)m\x1b\[38;2;([\d;]+)m([^\x1b]+)", line):
     text = text.strip()
     if not text or text == ARROW:
         continue
@@ -39,12 +74,16 @@ for bg, fg, text in re.findall(r"\x1b\[48;2;([\d;]+)m\x1b\[38;2;([\d;]+)m([^\x1b
     short = text.rstrip("/").rsplit("/", 1)[-1] if kind == "dir" else text
     segs.append({"kind": kind, "bg": bg, "fg": fg, "text": text, "short": short})
 
-level = os.environ["ST_LEVEL"]
-mode_fg = {"auto": "156;207;216", "ask": "246;193;119", "deny": "235;111;146"}[mode]
+pt = palette.get("ponytail", palette["block"])
+sr = palette.get("srOpus", {"bg": palette["tmux"]["bg"], "fg": palette["version"]["fg"]})
+commit = palette.get("commit", {})
+commit_bg = commit.get("bg", palette["git"]["bg"])
+commit_fg = commit.get(mode, {"auto": palette["git"]["fg"], "ask": palette["contextWarning"]["bg"],
+                              "deny": palette["contextCritical"]["bg"]}[mode])
 segs += [
-    {"kind": "ponytail", "bg": "42;39;63", "fg": "235;111;146", "text": f"ponytail {level}", "short": f"pt {level}"},
-    {"kind": "sr", "bg": "38;35;58", "fg": "196;167;231", "text": "SR-OPUS-5", "short": "SR5"},
-    {"kind": "commit", "bg": "31;29;46", "fg": mode_fg, "text": f"commit {mode}", "short": mode},
+    {"kind": "ponytail", "bg": rgb(pt["bg"]), "fg": rgb(pt["fg"]), "text": f"ponytail {level}", "short": f"pt {level}"},
+    {"kind": "sr", "bg": rgb(sr["bg"]), "fg": rgb(sr["fg"]), "text": "SR-OPUS-5", "short": "SR5"},
+    {"kind": "commit", "bg": rgb(commit_bg), "fg": rgb(commit_fg), "text": f"commit {mode}", "short": mode},
 ]
 
 

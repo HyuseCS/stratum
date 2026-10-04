@@ -160,9 +160,12 @@ second file or touches any area above text and docs.
 
 ## 6. Display, comms, and safety
 
-- **D14. Statusline.** One rose-pine powerline: model, directory, git branch, session length, then
+- **D14. Statusline.** One powerline: model, directory, git branch, session length, then
   ponytail level, `SR-OPUS-5`, and commit mode as segments drawn by the script (they also draw
-  without bunx). The ponytail level is read from its state file.
+  without bunx). The ponytail level is read from its state file. It fits the terminal width by
+  shortening, then dropping segments; commit mode always stays. Colors come from a theme or custom
+  colors in `statusline/powerline.json`, with `.stratum/powerline.json` merged over it per project.
+  Stratum's segments take theme colors from `statusline/themes.json`, copied from claude-powerline.
 - **D15. Token Weather.** The context forecast above the prompt. It replaces the powerline context
   and token segments.
 - **D16. SR-OPUS-5.** Ships as `sr-opus-5.md`. A SessionStart hook prints it only if it differs

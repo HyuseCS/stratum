@@ -148,10 +148,43 @@ copy for that project only.
   hook adds a facts block (branch, phase, tasks done, last commits, uncommitted files) at session
   end and before compaction. The next session starts by reading it.
 - **Statusline.** One powerline: model, directory, git branch, session length, ponytail level,
-  `SR-OPUS-5`, and commit mode.
+  `SR-OPUS-5`, and commit mode. It fits the terminal width: segments get shorter, then drop, and
+  the commit mode always stays. See [Statusline colors](#statusline-colors).
 - **Token Weather.** A context forecast above the prompt, from ☀ Clear to ↯ Compact soon.
 - **Parallel sessions.** `scripts/st-worktree.sh <branch> <name>` makes a sibling worktree that
   shares this project's local settings, commit mode, and Claude memory.
+
+## Statusline colors
+
+The defaults are in `statusline/powerline.json` (rose-pine). To change them for one project,
+create `.stratum/powerline.json`. Its keys merge over the defaults.
+
+Pick a theme: `rose-pine`, `nord`, `tokyo-night`, `gruvbox`, `dark`, or `light`. All segments
+follow it.
+
+```json
+{ "theme": "nord" }
+```
+
+Or set your own colors. Keys you leave out keep the rose-pine color.
+
+```json
+{
+  "theme": "custom",
+  "colors": {
+    "custom": {
+      "git": { "bg": "#1f1d2e", "fg": "#9ccfd8" },
+      "ponytail": { "bg": "#2a273f", "fg": "#eb6f92" },
+      "srOpus": { "bg": "#26233a", "fg": "#c4a7e7" },
+      "commit": { "bg": "#1f1d2e", "auto": "#9ccfd8", "ask": "#f6c177", "deny": "#eb6f92" }
+    }
+  }
+}
+```
+
+Powerline segment keys are `model`, `directory`, `git`, and `metrics` (session length). The
+segment list and other powerline options from the
+[claude-powerline docs](https://github.com/Owloops/claude-powerline) also work here.
 
 ## Duplicate installs
 
@@ -171,12 +204,13 @@ ports, and waits for review before updating `vendor.lock`.
 ```bash
 python3 tests/test_git_guard.py
 bash tests/test_session_hooks.sh
+bash tests/test_statusline.sh
 claude plugin validate .claude-plugin/plugin.json
 ```
 
 ## Credits and license
 
 Stratum is MIT licensed. It contains modified copies of GitHub Spec Kit, vibecode-pro-max-kit,
-ponytail, mattpocock/skills, ui-ux-pro-max, impeccable, frontend-design, graphify's skill, and
-Token Weather, each under its own MIT or Apache-2.0 license. See
-[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and `licenses/`.
+ponytail, mattpocock/skills, ui-ux-pro-max, impeccable, frontend-design, graphify's skill, Token
+Weather, and the theme colors of claude-powerline, each under its own MIT or Apache-2.0 license.
+See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and `licenses/`.
