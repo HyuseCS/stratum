@@ -161,8 +161,8 @@ second file or touches any area above text and docs.
 - **D13. Worktrees.** Built-in worktrees for subagents inside a session. `st-worktree.sh` for the
   user's own parallel sessions (for example a big feature in one, ongoing work in another): it
   creates the worktree and branch and links shared settings and Claude memory. Worktrees and
-  branches stay on the machine until the user says to delete them. Agents never delete a remote
-  branch: the user does.
+  branches stay on the machine until the user says to delete them, even when merged, done, or
+  unused. Agents never delete a remote branch: the user does.
 
 ## 6. Display, comms, and safety
 

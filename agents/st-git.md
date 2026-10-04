@@ -43,6 +43,9 @@ If no file list is given, stop and ask for it. Do not guess scope from `git stat
 - No AI attribution: no `Co-Authored-By:` trailer, no "Generated with" line. The author is the user.
 - Never `--no-verify`, `--amend`, rebase, reset, or force anything.
 - Never push.
+- Leave every branch and worktree alone, even one that is merged, done, or looks useless.
+  Delete one only when the user says to delete it. Never delete a remote branch: the user does
+  that.
 - A commit hook fails or the commit guard denies: stop and report its exact text. Do not retry
   around it.
 

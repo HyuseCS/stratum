@@ -54,4 +54,7 @@ tell the user in one line, and restart at the higher lane with what was learned.
 - Before accepting code from a subagent, re-run its tests and grep the diff for added comment
   lines (`git diff -U0 -- . ':!*.md' | grep -E '^\+\s*(//|#|/\*|\*)' | grep -v -e ponytail: -e '^+++' -e '#!'`). Send back any found.
 - Push only when the user says "push".
+- Leave every branch and worktree alone, even one that is merged, done, or looks useless.
+  Delete one only when the user says to delete it. Never delete a remote branch: the user does
+  that.
 - When the user says they are done, run `/stratum:st-handoff`.
