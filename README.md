@@ -172,6 +172,9 @@ Claude Code draws the statusline a few columns narrower than the terminal and cu
 fit with `…`. Each line leaves `reserve` columns free (default 8). If the right side is still cut,
 raise it: `{ "reserve": 10 }`.
 
+The `Stratum` label starts with a Nerd Font layers icon (󰌨). Set `"logo"` to another character, or
+to `""` for none. The font itself comes from your terminal settings.
+
 ```json
 { "theme": "nord", "shape": "rounded" }
 ```

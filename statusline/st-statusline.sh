@@ -50,6 +50,7 @@ else:
     palette = {**themes.get(theme, themes["rose-pine"]), **custom}
 shape = cfg.pop("shape", "arrow")
 reserve = cfg.pop("reserve", 8)
+logo = cfg.pop("logo", "\U000f0328")
 cfg.setdefault("display", {}).update({"autoWrap": False, "colorCompatibility": "truecolor"})
 cfg["style"] = "powerline"
 
@@ -81,7 +82,7 @@ commit = palette.get("commit", {})
 commit_bg = commit.get("bg", palette["git"]["bg"])
 commit_fg = commit.get(mode, {"auto": palette["git"]["fg"], "ask": palette["contextWarning"]["bg"],
                               "deny": palette["contextCritical"]["bg"]}[mode])
-segs["stratum"] = {"bg": rgb(label["bg"]), "fg": rgb(label["fg"]), "text": "Stratum", "short": "Stratum"}
+segs["stratum"] = {"bg": rgb(label["bg"]), "fg": rgb(label["fg"]), "text": f"{logo} Stratum".strip(), "short": logo or "Stratum"}
 if folder:
     home = os.path.expanduser("~")
     path = "~" + cwd[len(home):] if cwd == home or cwd.startswith(home + "/") else cwd
@@ -136,7 +137,7 @@ try:
 except ValueError:
     limit = 0
 steps = [("dir", "short"), ("commit", "short"), ("ponytail", "short"), ("time", "drop"), ("model", "drop"),
-         ("stratum", "drop"), ("dir", "drop"), ("ponytail", "drop")]
+         ("stratum", "short"), ("stratum", "drop"), ("dir", "drop"), ("ponytail", "drop")]
 for lkinds, rkinds in ((["stratum", "dir", "time"], ["git"]), (["model", "ponytail"], ["commit"])):
     left = [k for k in lkinds if k in segs]
     right = [k for k in rkinds if k in segs]
