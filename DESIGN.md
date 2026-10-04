@@ -23,7 +23,6 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
   - `.stratum/constitution.md`: project rules.
   - `.stratum/state.json`: current feature, phase, lane.
   - `.stratum/handoff.md`: session handoff (not in git, one per worktree).
-  - `.stratum/commit-mode`: commit guard mode (not in git, one per machine).
   - `.stratum/templates/<name>.md`: optional overrides of plugin templates.
   - `specs/<NNN-feature>/`: spec, plan, research, data model, contracts, quickstart, tasks,
     and `changes/` for Fast-lane plans.
@@ -81,8 +80,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 | `st <task>` | Main entry. Picks the lane by impact area, states it in one line, runs it. |
 | `st-full`, `st-fast`, `st-quick` | Force a lane. |
 | `st-define`, `st-plan`, `st-check`, `st-build`, `st-close` | Run one Full-lane phase on the current feature, for resuming or redoing. |
-| `st-status` | Feature, phase, lane, tasks done, commit mode, next gate, missing tools, days since last sync. |
-| `st-commit-mode auto\|ask\|deny` | Set the commit mode. |
+| `st-status` | Feature, phase, lane, tasks done, git guard options, next gate, missing tools, days since last sync. |
 | `st-shape arrow\|rounded\|slanted\|blocks\|flat` | Set the statusline shape. |
 | `st-theme <name>` | Set the color theme of the statusline and Token Weather. |
 | `st-init` | Set up a project: data files, constitution (grilled), tool check. |
@@ -188,11 +186,13 @@ second file or touches any area above text and docs.
 - **D16. SR-OPUS-5.** Ships as `sr-opus-5.md`. A SessionStart hook prints it only if it differs
   from the user's global copy, so it never loads twice.
 - **D17. Commit guard (`st-git-guard`).** A PreToolUse hook on Bash:
-  - Commit mode from `.stratum/commit-mode`: `auto` allows, `ask` asks with a staged-file
-    summary, `deny` blocks with the summary. Missing file means `ask`.
-  - Push always asks.
-  - Always blocked: `git config`, `git add -A`, `git add .`, `--no-verify`.
-  - Always asks: destructive commands (`push --force`, `reset --hard`, and similar).
+  - One plugin option (`userConfig` in `plugin.json`) per command: `commit`, `worktree_remove`,
+    `worktree_prune`, `branch_delete`, `reset_hard`, `clean`, `discard` (`checkout .`,
+    `restore .`), `force_push`. Each is `auto` (allow), `ask`, or `deny`; the default is `ask`.
+    The user sets them in `/config` or `/plugin config`. The hook reads
+    `CLAUDE_PLUGIN_OPTION_<KEY>`. `commit` `ask` and `deny` show a staged-file summary.
+  - Push, `rebase`, and `commit --amend` always ask.
+  - Always blocked: `git config`, `git add -A`, `git add .`, `--no-verify`, remote branch delete.
 - **D18. Handoff.**
   - `st-handoff` writes `.stratum/handoff.md`: goal, decisions, lane, phase and task, open
     questions, blockers, exact next step.

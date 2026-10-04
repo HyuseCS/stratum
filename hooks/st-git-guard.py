@@ -102,16 +102,19 @@ def staged_summary(cwd):
     return "\n".join(out)
 
 
-def commit_mode(project):
-    try:
-        with open(os.path.join(project, ".stratum", "commit-mode")) as f:
-            mode = f.read().strip()
-    except OSError:
-        return "ask"
-    return mode if mode in ("auto", "ask", "deny") else "ask"
+def mode(key):
+    value = os.environ.get(f"CLAUDE_PLUGIN_OPTION_{key.upper()}", "").strip()
+    return value if value in ("auto", "ask", "deny") else "ask"
 
 
-def judge(sub, args, gitdir, project):
+def destructive(key, reason):
+    m = mode(key)
+    if m == "auto":
+        return None, ""
+    return m, f"DESTRUCTIVE ({key}: {m}): {reason}"
+
+
+def judge(sub, args, gitdir):
     if "--no-verify" in args:
         return "deny", "--no-verify is blocked: hooks must run."
     if sub == "config":
@@ -122,30 +125,30 @@ def judge(sub, args, gitdir, project):
             return "deny", "git add -A / --all / . is blocked: stage exact paths."
         return None, ""
     if sub == "commit":
-        mode = commit_mode(project)
+        m = mode("commit")
         amend = "--amend" in args
-        if mode == "auto" and not amend:
+        if m == "auto" and not amend:
             return None, ""
-        decision = "deny" if mode == "deny" else "ask"
-        head = f"git commit (commit-mode: {mode})" + (" with --amend rewrites the last commit" if amend else "")
+        decision = "deny" if m == "deny" else "ask"
+        head = f"git commit (commit: {m})" + (" with --amend rewrites the last commit" if amend else "")
         return decision, head + "\n" + staged_summary(gitdir)
     if sub == "push":
         if "--delete" in args or short_has(args, "d") or any(a.startswith(":") for a in args):
             return "deny", "Deleting a remote branch is blocked: the user deletes remote branches."
         if any(a in ("--force", "-f") or a.startswith("--force-with-lease") for a in args) \
                 or short_has(args, "f"):
-            return "ask", "DESTRUCTIVE: force push can overwrite remote history."
+            return destructive("force_push", "force push can overwrite remote history.")
         return "ask", "git push sends commits to the remote."
     if sub == "reset" and "--hard" in args:
-        return "ask", "DESTRUCTIVE: git reset --hard discards uncommitted changes."
+        return destructive("reset_hard", "git reset --hard discards uncommitted changes.")
     if sub == "clean" and ("--force" in args or short_has(args, "f")):
-        return "ask", "DESTRUCTIVE: git clean -f deletes untracked files."
+        return destructive("clean", "git clean -f deletes untracked files.")
     if sub in ("checkout", "restore") and "." in args:
-        return "ask", f"DESTRUCTIVE: git {sub} . discards working tree changes."
+        return destructive("discard", f"git {sub} . discards working tree changes.")
     if sub == "branch" and (short_has(args, "D") or short_has(args, "d") or "--delete" in args):
-        return "ask", "DESTRUCTIVE: deleting a local branch needs the user's OK."
+        return destructive("branch_delete", "deleting a local branch needs the user's OK.")
     if sub == "worktree" and args[:1] in (["remove"], ["prune"]):
-        return "ask", f"DESTRUCTIVE: git worktree {args[0]} deletes a worktree; it needs the user's OK."
+        return destructive(f"worktree_{args[0]}", f"git worktree {args[0]} deletes a worktree; it needs the user's OK.")
     if sub == "rebase":
         return "ask", "git rebase rewrites history."
     return None, ""
@@ -158,14 +161,13 @@ def main():
         return
     command = (data.get("tool_input") or {}).get("command") or ""
     cwd = data.get("cwd") or os.getcwd()
-    project = os.environ.get("CLAUDE_PROJECT_DIR") or cwd
     decision, reasons = None, []
     for seg in segments(command):
         parsed = parse_git(seg)
         if not parsed:
             continue
         sub, args, cdir = parsed
-        d, reason = judge(sub, args, os.path.join(cwd, cdir), project)
+        d, reason = judge(sub, args, os.path.join(cwd, cdir))
         if d:
             reasons.append(reason)
             if RANK[d] > RANK[decision]:

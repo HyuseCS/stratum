@@ -24,13 +24,14 @@ class GitGuardTest(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
-    def set_mode(self, mode):
-        os.makedirs(os.path.join(self.repo, ".stratum"), exist_ok=True)
-        with open(os.path.join(self.repo, ".stratum", "commit-mode"), "w") as f:
-            f.write(mode + "\n")
+    options = {}
+
+    def set_mode(self, mode, key="commit"):
+        self.options = {**self.options, f"CLAUDE_PLUGIN_OPTION_{key.upper()}": mode}
 
     def run_guard(self, command):
-        env = {**os.environ, "CLAUDE_PROJECT_DIR": self.repo}
+        env = {k: v for k, v in os.environ.items() if not k.startswith("CLAUDE_PLUGIN_OPTION_")}
+        env.update(self.options)
         payload = json.dumps({"tool_name": "Bash", "cwd": self.repo,
                               "tool_input": {"command": command}})
         r = subprocess.run([sys.executable, GUARD], input=payload, env=env,
@@ -104,6 +105,30 @@ class GitGuardTest(unittest.TestCase):
             self.assertEqual(self.run_guard(cmd)[0], "ask", cmd)
         self.assertEqual(self.run_guard("git worktree list"), (None, ""))
         self.assertEqual(self.run_guard("git branch -a"), (None, ""))
+
+    DESTRUCTIVE = {"reset_hard": "git reset --hard HEAD~1", "clean": "git clean -fd",
+                   "discard": "git restore .", "branch_delete": "git branch -D old",
+                   "worktree_remove": "git worktree remove ../wt",
+                   "worktree_prune": "git worktree prune", "force_push": "git push --force"}
+
+    def test_destructive_per_command(self):
+        for key, cmd in self.DESTRUCTIVE.items():
+            for m, want in (("auto", None), ("deny", "deny"), ("ask", "ask"), ("yolo", "ask")):
+                self.options = {}
+                self.set_mode(m, key)
+                self.assertEqual(self.run_guard(cmd)[0], want, (key, m))
+            others = [c for k, c in self.DESTRUCTIVE.items() if k != key]
+            self.set_mode("auto", key)
+            for c in others:
+                self.assertEqual(self.run_guard(c)[0], "ask", (key, c))
+        self.options = {}
+
+    def test_auto_keeps_fixed_rules(self):
+        for key in self.DESTRUCTIVE:
+            self.set_mode("auto", key)
+        self.assertEqual(self.run_guard("git rebase main")[0], "ask")
+        self.assertEqual(self.run_guard("git push origin main")[0], "ask")
+        self.assertEqual(self.run_guard("git push origin --delete old")[0], "deny")
 
     def test_remote_branch_delete_denied(self):
         for cmd in ("git push origin --delete old", "git push -d origin old",

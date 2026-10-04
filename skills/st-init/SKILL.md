@@ -9,11 +9,9 @@ Plugin root is two levels up from this skill's base directory. Run in the projec
 overwrite an existing file; report it and move on.
 
 1. **Data files.** Create `.stratum/` and `specs/`. Write `.stratum/state.json` as
-   `{"feature_directory": null, "phase": null, "lane": null}`. Write `.stratum/commit-mode` as
-   `ask`.
-2. **Git ignore.** Ensure `.gitignore` has these lines: `.stratum/commit-mode`,
-   `.stratum/handoff.md`, `.stratum/weather.json`, `.stratum/powerline.json`,
-   `graphify-out/`.
+   `{"feature_directory": null, "phase": null, "lane": null}`.
+2. **Git ignore.** Ensure `.gitignore` has these lines: `.stratum/handoff.md`,
+   `.stratum/weather.json`, `.stratum/powerline.json`, `graphify-out/`.
 3. **Constitution.** If `.stratum/constitution.md` is missing, run `/stratum:st-constitution`: it
    starts from the plugin's constitution template and grills the user for the rules, one question
    at a time.

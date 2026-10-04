@@ -19,14 +19,17 @@ except ValueError:
     data = {}
 cwd = data.get("workspace", {}).get("current_dir", "")
 proj = data.get("workspace", {}).get("project_dir") or cwd
+config_dir = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.expanduser("~/.claude")
 try:
-    mode = open(f"{proj}/.stratum/commit-mode").read().strip()
-except OSError:
-    mode = ""
+    plugins = json.load(open(os.path.join(config_dir, "settings.json"))).get("pluginConfigs") or {}
+except (OSError, ValueError):
+    plugins = {}
+mode = next((v.get("commit") for k, v in plugins.items()
+             if k.split("@")[0] == "stratum" and isinstance(v, dict)), None)
 if mode not in ("auto", "ask", "deny"):
     mode = "ask"
 try:
-    level = open(os.path.join(os.environ.get("CLAUDE_CONFIG_DIR") or os.path.expanduser("~/.claude"), ".ponytail-active")).read().strip()
+    level = open(os.path.join(config_dir, ".ponytail-active")).read().strip()
 except OSError:
     level = ""
 level = level or "off"

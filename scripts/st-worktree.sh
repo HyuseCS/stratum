@@ -16,7 +16,6 @@ fi
 
 link() { [ -e "$main/$1" ] && [ ! -e "$wt/$1" ] && mkdir -p "$(dirname "$wt/$1")" && ln -s "$main/$1" "$wt/$1" && echo "linked $1" || true; }
 link .claude/settings.local.json
-link .stratum/commit-mode
 
 mem="$HOME/.claude/projects/$(printf %s "$main" | tr -c 'A-Za-z0-9' '-')/memory"
 wtmem="$HOME/.claude/projects/$(printf %s "$wt" | tr -c 'A-Za-z0-9' '-')/memory"

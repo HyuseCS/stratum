@@ -38,8 +38,7 @@ If no file list is given, stop and ask for it. Do not guess scope from `git stat
 ## Rules
 
 - Never `git add -A`, `git add .`, or a directory or glob add.
-- Never stage `.env` files, secrets, keys, `graphify-out/`, or `.stratum/handoff.md` and
-  `.stratum/commit-mode`.
+- Never stage `.env` files, secrets, keys, `graphify-out/`, or `.stratum/handoff.md`.
 - No AI attribution: no `Co-Authored-By:` trailer, no "Generated with" line. The author is the user.
 - Never `--no-verify`, `--amend`, rebase, reset, or force anything.
 - Never push.

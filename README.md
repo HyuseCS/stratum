@@ -88,8 +88,7 @@ ponytail review, commit, drift fix.
 | `st <task>` | Main entry. Picks the lane and runs it. |
 | `st-full`, `st-fast`, `st-quick` | Force a lane. |
 | `st-define`, `st-plan`, `st-check`, `st-build`, `st-close` | Run or resume one Full-lane phase. |
-| `st-status` | Feature, phase, lane, tasks done, commit mode, next gate, missing tools. |
-| `st-commit-mode auto\|ask\|deny` | Set the commit guard mode. |
+| `st-status` | Feature, phase, lane, tasks done, git guard options, next gate, missing tools. |
 | `st-shape arrow\|rounded\|slanted\|blocks\|flat` | Set the statusline shape. |
 | `st-theme <name>` | Set the color theme of the statusline and Token Weather. |
 | `st-handoff` | Write the session handoff. |
@@ -133,7 +132,6 @@ search, then read. Code-writing agents carry the ponytail rule and add no explan
 ├── state.json           current feature, phase, lane (committed)
 ├── templates/           optional overrides of plugin templates (committed)
 ├── handoff.md           session handoff (git-ignored)
-├── commit-mode          auto | ask | deny (git-ignored, per machine)
 ├── powerline.json       statusline theme, shape, colors (git-ignored, per machine)
 └── weather.json         Token Weather growth and compact point (git-ignored)
 specs/NNN-feature/       spec, plan, research, data model, contracts, quickstart, tasks, changes/
@@ -145,11 +143,13 @@ copy for that project only.
 
 ## Built in
 
-- **Commit guard.** Commits follow `.stratum/commit-mode`: `auto` runs, `ask` asks with a
-  staged-file summary, `deny` blocks. The default is `ask`. Push always asks. `git config` writes,
-  `git add -A`, `git add .`, and `--no-verify` are always blocked. `reset --hard`, `clean -f`,
-  `rebase`, branch delete, `worktree remove` and `prune`, `commit --amend`, and force push always
-  ask. Remote branch delete is blocked: you delete remote branches yourself.
+- **Git guard.** Each of these has its own plugin option, set in `/config` or `/plugin config`:
+  `commit`, `worktree_remove`, `worktree_prune`, `branch_delete`, `reset_hard`, `clean`
+  (`clean -f`), `discard` (`checkout .`, `restore .`), and `force_push`. Each is `auto` (runs),
+  `ask`, or `deny` (blocked). The default is `ask`. A commit that asks or is blocked shows a
+  staged-file summary. Push, `rebase`, and `commit --amend` always ask. `git config` writes,
+  `git add -A`, `git add .`, and `--no-verify` are always blocked. Remote branch delete is
+  blocked: you delete remote branches yourself.
 - **Session handoff.** `st-handoff` writes the goal, decisions, open questions, and next step. A
   hook adds a facts block (branch, phase, tasks done, last commits, uncommitted files) at session
   end and before compaction. The next session starts by reading it.
@@ -162,7 +162,7 @@ copy for that project only.
   soon, with a fill bar and tokens used on the left and the turns left before auto-compaction on
   the right: `☂ Showers ━━━━━━━━━━━━──────── 600k/1M            about 4 turns left`.
 - **Parallel sessions.** `scripts/st-worktree.sh <branch> <name>` makes a sibling worktree that
-  shares this project's local settings, commit mode, and Claude memory. Worktrees and branches stay
+  shares this project's local settings and Claude memory. Worktrees and branches stay
   until you delete them.
 
 ## Statusline colors

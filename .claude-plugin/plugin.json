@@ -5,5 +5,95 @@
   "author": {
     "name": "HyuseCS"
   },
-  "hooks": "./hooks/commands.json"
+  "hooks": "./hooks/commands.json",
+  "userConfig": {
+    "commit": {
+      "type": "string",
+      "title": "git commit",
+      "description": "git commit (--amend always asks). auto runs, ask asks, deny blocks.",
+      "options": [
+        "auto",
+        "ask",
+        "deny"
+      ],
+      "default": "ask"
+    },
+    "worktree_remove": {
+      "type": "string",
+      "title": "git worktree remove",
+      "description": "Deletes a worktree. auto runs, ask asks, deny blocks.",
+      "options": [
+        "auto",
+        "ask",
+        "deny"
+      ],
+      "default": "ask"
+    },
+    "worktree_prune": {
+      "type": "string",
+      "title": "git worktree prune",
+      "description": "Removes stale worktree records. auto runs, ask asks, deny blocks.",
+      "options": [
+        "auto",
+        "ask",
+        "deny"
+      ],
+      "default": "ask"
+    },
+    "branch_delete": {
+      "type": "string",
+      "title": "git branch -d / -D",
+      "description": "Deletes a local branch. auto runs, ask asks, deny blocks.",
+      "options": [
+        "auto",
+        "ask",
+        "deny"
+      ],
+      "default": "ask"
+    },
+    "reset_hard": {
+      "type": "string",
+      "title": "git reset --hard",
+      "description": "Discards uncommitted changes. auto runs, ask asks, deny blocks.",
+      "options": [
+        "auto",
+        "ask",
+        "deny"
+      ],
+      "default": "ask"
+    },
+    "clean": {
+      "type": "string",
+      "title": "git clean -f",
+      "description": "Deletes untracked files. auto runs, ask asks, deny blocks.",
+      "options": [
+        "auto",
+        "ask",
+        "deny"
+      ],
+      "default": "ask"
+    },
+    "discard": {
+      "type": "string",
+      "title": "git checkout . / git restore .",
+      "description": "Discards working tree changes. auto runs, ask asks, deny blocks.",
+      "options": [
+        "auto",
+        "ask",
+        "deny"
+      ],
+      "default": "ask"
+    },
+    "force_push": {
+      "type": "string",
+      "title": "git push --force",
+      "description": "Can overwrite remote history. auto runs, ask asks, deny blocks.",
+      "options": [
+        "auto",
+        "ask",
+        "deny"
+      ],
+      "default": "ask"
+    }
+  }
 }
