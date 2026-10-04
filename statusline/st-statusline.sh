@@ -93,9 +93,8 @@ segs["ponytail"] = {"bg": rgb(pt["bg"]), "fg": rgb(pt["fg"]), "text": "Ponytail"
 effort = (data.get("effort") or {}).get("level")
 enabled = (data.get("thinking") or {}).get("enabled")
 think = "off" if enabled is False else effort or ("on" if enabled else None)
-if think:
-    tc = palette["thinking"]
-    segs["thinking"] = {"bg": rgb(tc["bg"]), "fg": rgb(tc["fg"]), "text": f"thinking: {think}", "short": think}
+if think and "model" in segs:
+    segs["model"]["text"] = segs["model"]["short"] = f"{segs['model']['text']} {think}"
 segs["commit"] = {"bg": rgb(commit_bg), "fg": rgb(commit_fg), "text": f"commit: {mode}", "short": mode}
 
 
@@ -144,9 +143,9 @@ try:
     limit = int(os.environ["ST_WIDTH"]) - int(reserve)
 except ValueError:
     limit = 0
-steps = [("dir", "short"), ("commit", "short"), ("ponytail", "short"), ("time", "drop"), ("thinking", "short"), ("model", "drop"),
+steps = [("dir", "short"), ("commit", "short"), ("ponytail", "short"), ("time", "drop"), ("model", "drop"),
          ("stratum", "short"), ("stratum", "drop"), ("dir", "drop"), ("ponytail", "drop")]
-for lkinds, rkinds in ((["stratum", "dir", "time"], ["git"]), (["model", "thinking", "ponytail"], ["commit"])):
+for lkinds, rkinds in ((["stratum", "dir", "time"], ["git"]), (["model", "ponytail"], ["commit"])):
     left = [k for k in lkinds if k in segs]
     right = [k for k in rkinds if k in segs]
     for kind, action in steps:

@@ -150,7 +150,7 @@ copy for that project only.
   hook adds a facts block (branch, phase, tasks done, last commits, uncommitted files) at session
   end and before compaction. The next session starts by reading it.
 - **Statusline.** A powerline in two lines. Line 1: `Stratum`, project path, and session length on
-  the left, git branch on the right. Line 2: model, thinking level, and ponytail on the left,
+  the left, git branch on the right. Line 2: model with its thinking level, and ponytail on the left,
   commit mode on the right. Each line fits the terminal width: the path becomes the folder name, other segments
   get shorter, then drop. The branch and commit mode always stay. See
   [Statusline colors](#statusline-colors).

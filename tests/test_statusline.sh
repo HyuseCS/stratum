@@ -32,9 +32,9 @@ check "width 48: path shortened to folder name, time kept" 'out=$(run 48 | plain
 check "ponytail off: level shown" 'echo off > "$tmp/home/.claude/.ponytail-active"; out=$(run 200 | plain); echo full > "$tmp/home/.claude/.ponytail-active"; grep -q "Ponytail off" <<<"$out"'
 runi() { printf '%s' "$2" | PATH="$tmp/bin:$PATH" HOME="$tmp/home" CLAUDE_CONFIG_DIR= COLUMNS="$1" bash "$root/statusline/st-statusline.sh"; }
 ws="\"workspace\":{\"current_dir\":\"$tmp/home/proj\"}"
-check "thinking level after model" '[[ "$(runi 200 "{$ws,\"effort\":{\"level\":\"xhigh\"},\"thinking\":{\"enabled\":true}}" | plain | sed -n 2p)" == " ✱ Opus 5.5 "*" thinking: xhigh "*" Ponytail "* ]]'
-check "thinking off" 'runi 200 "{$ws,\"effort\":{\"level\":\"high\"},\"thinking\":{\"enabled\":false}}" | plain | grep -q "thinking: off"'
-check "no thinking data: no segment" '! grep -q "thinking" <<<"$wide"'
+check "thinking level in the model segment" '[[ "$(runi 200 "{$ws,\"effort\":{\"level\":\"xhigh\"},\"thinking\":{\"enabled\":true}}" | plain | sed -n 2p)" == " ✱ Opus 5.5 xhigh "*" Ponytail "* ]]'
+check "thinking off" 'runi 200 "{$ws,\"effort\":{\"level\":\"high\"},\"thinking\":{\"enabled\":false}}" | plain | grep -q " ✱ Opus 5.5 off "'
+check "no thinking data: model alone" 'grep -q " ✱ Opus 5.5 " <<<"$wide" && ! grep -qE "Opus 5.5 (off|on|high)" <<<"$wide"'
 check "no SR-OPUS-5" '! grep -q "SR" <<<"$wide"'
 for w in 40 30 20; do
   out=$(run $w | plain)

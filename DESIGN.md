@@ -163,7 +163,7 @@ second file or touches any area above text and docs.
 ## 6. Display, comms, and safety
 
 - **D14. Statusline.** A powerline in two lines: `Stratum` label, project path (`~` for home) and
-  session length, with git branch on the right; model, thinking level and ponytail, with commit mode on the
+  session length, with git branch on the right; model with thinking level, ponytail, with commit mode on the
   right. Right-side segments are padded to the width less `reserve` columns (default 8), as Claude
   Code cuts the statusline short of `COLUMNS`. The label starts with a layers icon (`logo` key); when
   narrow, the label becomes the icon alone. The `shape` key picks `arrow`, `rounded`,
