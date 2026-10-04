@@ -41,7 +41,16 @@ tell the user in one line, and restart at the higher lane with what was learned.
 
 ## Always
 
-- Every decision goes to the user, one question at a time, with your recommended option.
+- Big decisions go to the user, one question at a time, with your recommended option. Big means
+  it changes the spec, the scope, or the plan's approach; touches privacy and access, the data
+  model, contracts, or dependencies; cannot be undone; reaches an audience; or costs a lot.
+- Small decisions you make yourself: problems found on the way, naming, placement, a fix inside
+  the files the work already touches. Do not stop for them. When the run is done, list each one:
+  what you found, what you did.
+- Findings from any agent or review are hypotheses. Before acting, check each one against the
+  source: the defect exists at that `file:line`, and the stated cause is the real one. Drop the
+  false ones. A real finding is a decision like any other: small ones get fixed, big ones go to
+  the user. The end-of-run list names what was fixed and what was dropped, and why.
 - Before accepting code from a subagent, re-run its tests and grep the diff for added comment
   lines (`git diff -U0 -- . ':!*.md' | grep -E '^\+\s*(//|#|/\*|\*)' | grep -v -e ponytail: -e '^+++' -e '#!'`). Send back any found.
 - Push only when the user says "push".

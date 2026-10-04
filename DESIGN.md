@@ -49,8 +49,9 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 ## 2. Roles
 
 - **D6. Orchestrator.** The main session. It runs Define itself (grilling needs the user), sends
-  phases 2 to 5 to subagents, checks every result, brings every decision to the user, and owns
-  merges. It routes and verifies. It does not implement.
+  phases 2 to 5 to subagents, checks every result, brings big decisions to the user, makes small
+  ones itself and lists them when the run ends, checks each finding against the source before
+  acting on it, and owns merges. It routes and verifies. It does not implement.
 - **D7. Agents.**
 
 | Agent | From | Model | Writes code | Job |
@@ -125,7 +126,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
    the orchestrator re-runs the test and checks the diff has no added comments → `st-git` commits.
 2. A test still red after 2 tries goes to `st-debug`.
 3. Per story: `st-review` and ponytail-review on the story's diff, impeccable for screens,
-   `st-build` fixes findings, then the story's quickstart steps run.
+   findings checked against the source, `st-build` fixes the real ones, then the story's quickstart steps run.
 4. `[P]` tasks run in parallel, each subagent in its own built-in worktree. The orchestrator
    checks each branch and merges it into `main`.
 

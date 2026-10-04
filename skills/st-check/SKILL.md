@@ -23,14 +23,16 @@ Plugin root (`<plugin root>`) is two levels up from this skill's base directory.
    After it returns, confirm `git status --porcelain` is unchanged.
 2. Start the `st-validate` subagent (`stratum:st-validate`) with the same paths and the
    st-check findings.
-3. **Findings.** Merge both reports. Findings that need a decision go to the user, one at a time,
-   each with your recommendation. Fixes to spec, plan or tasks go to the `st-plan` subagent
+3. **Findings.** Merge both reports. Check each finding against the source and drop the false
+   ones (see `/stratum:st`). Big decisions go to the user, one at a time, each with your
+   recommendation. Small ones you fix and list at the gate. Fixes to spec, plan or tasks go to the `st-plan` subagent
    (resume it with `SendMessage` if it is still alive); have `st-git` commit them.
 4. If any CRITICAL finding was fixed, run `st-check` once more.
 
 ## Gate: user OKs the build
 
-Show in short form: coverage, remaining findings by severity, and validate's verdict.
+Show in short form: coverage, remaining findings by severity, small fixes made, findings
+dropped, and validate's verdict.
 Ask: "OK to build?" Start `/stratum:st-build` only on yes.
 
 ## Always

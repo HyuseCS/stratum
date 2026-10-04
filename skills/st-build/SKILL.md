@@ -42,17 +42,19 @@ yourself. If the project is another repo, run `[P]` tasks one after another.
 1. `st-review` (`stratum:st-review`) on the story's diff.
 2. Run the `st-ponytail-review` skill on the same diff.
 3. For screen work, run the `st-impeccable` skill on the changed screens.
-4. Findings go to `st-build`; verify and commit them like a task.
+4. Check each finding against the source first (see `/stratum:st`). Send the real, small ones to
+   `st-build`; verify and commit them like a task. Big ones go to the user. Drop the false ones.
 5. Run the story's steps from `<feature>/quickstart.md`. Give the user exact steps for any
    step you cannot run.
 
 ## Stop only when
 
-- A subagent is blocked, or a decision falls outside the plan. Bring it to the user, one
-  question at a time, with your recommendation.
+- A subagent is blocked, or a big decision falls outside the plan (see `/stratum:st`). Bring it
+  to the user, one question at a time, with your recommendation. Decide small ones yourself.
 - Work touches a higher impact area than the lane allows: move up a lane.
 
-When all tasks are ticked, say so and name the next phase: `/stratum:st-close`.
+When all tasks are ticked, say so, list the small decisions and findings (fixed and dropped),
+and name the next phase: `/stratum:st-close`.
 
 ## Always
 
