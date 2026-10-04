@@ -8,7 +8,7 @@ Stratum merges two workflows and adds its own layer:
 
 - **GitHub Spec Kit:** the spec, plan, and tasks files, and their templates.
 - **vibecode-pro-max (RIPER-5):** role agents for validate, build, test, review, debug, and git.
-- **Stratum's own layer:** lane selection, the build loop, a commit guard, a session handoff, a
+- **Stratum's own layer:** lane selection, the build loop, a git guard, a session handoff, a
   statusline, and forked design and navigation tools, all shipped as one plugin.
 
 The full design and the reason for each choice are in [DESIGN.md](DESIGN.md).
@@ -37,7 +37,7 @@ graphify, installs its post-commit hook, and checks your tools.
 
 | Tool | Used for |
 |------|----------|
-| `git`, `python3` | commit guard, scripts |
+| `git`, `python3` | git guard, scripts |
 | `node` | ponytail hooks |
 | `bunx` (Bun) | statusline bar (falls back to markers only) |
 | `graphify` 0.9.74 or later (`uv tool install graphifyy`) | code navigation graph, Dart support |
@@ -155,8 +155,8 @@ copy for that project only.
   end and before compaction. The next session starts by reading it.
 - **Statusline.** A powerline in two lines. Line 1: `Stratum`, project path, and session length on
   the left, git branch on the right. Line 2: model with its thinking level, and ponytail on the left,
-  commit mode on the right. Each line fits the terminal width: the path becomes the folder name, other segments
-  get shorter, then drop. The branch and commit mode always stay. See
+  the `commit` option on the right. Each line fits the terminal width: the path becomes the folder name, other segments
+  get shorter, then drop. The branch and the `commit` option always stay. See
   [Statusline colors](#statusline-colors).
 - **Token Weather.** A context forecast as the statusline's third line, from ☀ Clear to ↯ Compact
   soon, with a fill bar and tokens used on the left and the turns left before auto-compaction on
