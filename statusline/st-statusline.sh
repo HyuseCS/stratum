@@ -48,6 +48,7 @@ if theme == "custom":
     cfg.setdefault("colors", {})["custom"] = palette
 else:
     palette = {**themes.get(theme, themes["rose-pine"]), **custom}
+shape = cfg.pop("shape", "arrow")
 cfg.setdefault("display", {}).update({"autoWrap": False, "colorCompatibility": "truecolor"})
 cfg["style"] = "powerline"
 
@@ -88,7 +89,44 @@ segs["ponytail"] = {"bg": rgb(pt["bg"]), "fg": rgb(pt["fg"]), "text": f"ponytail
 segs["commit"] = {"bg": rgb(commit_bg), "fg": rgb(commit_fg), "text": f"commit {mode}", "short": mode}
 
 
+SEPS = {"arrow": ("\ue0b0", "\ue0b2"), "slanted": ("\ue0bc", "\ue0ba")}
+CAPS = {"rounded": ("\ue0b6", "\ue0b4"), "blocks": ("", "")}
+if shape not in SEPS and shape not in CAPS and shape != "flat":
+    shape = "arrow"
+
+
+def fg(c):
+    return f"\x1b[38;2;{c}m"
+
+
+def bg(c):
+    return f"\x1b[48;2;{c}m"
+
+
+def render(row, right):
+    if not row:
+        return ""
+    if shape == "flat":
+        return " \x1b[2m│\x1b[22m ".join(f"{fg(segs[k]['fg'])}{segs[k]['text']}\x1b[0m" for k in row)
+    if shape in CAPS:
+        lcap, rcap = CAPS[shape]
+        return " ".join(f"{fg(segs[k]['bg'])}{lcap}{bg(segs[k]['bg'])}{fg(segs[k]['fg'])} {segs[k]['text']} \x1b[0m"
+                        f"{fg(segs[k]['bg'])}{rcap}\x1b[0m" for k in row)
+    sep = SEPS[shape][1 if right else 0]
+    out, prev = "", None
+    if right:
+        out += f"{fg(segs[row[0]]['bg'])}{sep}"
+    for k in row:
+        s = segs[k]
+        if prev:
+            out += f"{bg(prev)}{fg(s['bg'])}{sep}" if right else f"{bg(s['bg'])}{fg(prev)}{sep}"
+        out += f"{bg(s['bg'])}{fg(s['fg'])} {s['text']} "
+        prev = s["bg"]
+    return out + "\x1b[0m" + ("" if right else f"{fg(prev)}{sep}\x1b[0m")
+
+
 def cells(s):
+    s = re.sub(r"\x1b\[[\d;]*m", "", s)
     return sum(2 if unicodedata.east_asian_width(c) in "WF" else 1 for c in s)
 
 
@@ -97,24 +135,20 @@ try:
 except ValueError:
     limit = 0
 steps = [("dir", "short"), ("commit", "short"), ("ponytail", "short"), ("time", "drop"), ("model", "drop"),
-         ("stratum", "drop"), ("dir", "drop"), ("ponytail", "drop"), ("git", "drop")]
-for kinds in (["stratum", "dir", "git", "time"], ["model", "ponytail", "commit"]):
-    row = [k for k in kinds if k in segs]
+         ("stratum", "drop"), ("dir", "drop"), ("ponytail", "drop")]
+for lkinds, rkinds in ((["stratum", "dir", "time"], ["git"]), (["model", "ponytail"], ["commit"])):
+    left = [k for k in lkinds if k in segs]
+    right = [k for k in rkinds if k in segs]
     for kind, action in steps:
-        if limit <= 0 or sum(cells(segs[k]["text"]) + 3 for k in row) <= limit:
+        if limit <= 0 or cells(render(left, False)) + 1 + cells(render(right, True)) <= limit:
             break
-        if kind in row:
+        if kind in segs:
             segs[kind]["text"] = segs[kind]["short"]
             if action == "drop":
-                row.remove(kind)
-    if not row:
+                left = [k for k in left if k != kind]
+    lr, rr = render(left, False), render(right, True)
+    if not lr and not rr:
         continue
-    out, prev = "", None
-    for k in row:
-        s = segs[k]
-        if prev:
-            out += f"\x1b[48;2;{s['bg']}m\x1b[38;2;{prev}m{ARROW}"
-        out += f"\x1b[48;2;{s['bg']}m\x1b[38;2;{s['fg']}m {s['text']} "
-        prev = s["bg"]
-    print(f"{out}\x1b[0m\x1b[38;2;{prev}m{ARROW}\x1b[0m")
+    gap = limit - cells(lr) - cells(rr) if limit > 0 else 2
+    print(lr + " " * max(gap, 1) + rr)
 PY

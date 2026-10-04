@@ -25,9 +25,10 @@ cols() { python3 -c 'import sys; print(len(sys.stdin.read().rstrip("\n")))'; }
 wide=$(run 200 | plain)
 l1=$(sed -n 1p <<<"$wide"); l2=$(sed -n 2p <<<"$wide")
 check "wide: two lines" '[ "$(wc -l <<<"$wide")" = 2 ]'
-check "line 1: Stratum, folder path, branch, time in order" '[[ "$l1" == " Stratum "*" ~/proj "*"⎇ main"*"⧖ 12m"* ]]'
-check "line 2: model, ponytail, commit in order" '[[ "$l2" == " ✱ Opus 5.5 "*" ponytail full "*" commit deny "* ]]'
-check "width 37: path shortened to folder name, time kept" 'out=$(run 37 | plain); grep -q " proj " <<<"$out" && ! grep -q "~/proj" <<<"$out" && grep -q "12m" <<<"$out"'
+check "line 1: Stratum, path, time left; branch right" '[[ "$l1" == " Stratum "*" ~/proj "*"⧖ 12m "*" ⎇ main ● " ]]'
+check "line 2: model, ponytail left; commit right" '[[ "$l2" == " ✱ Opus 5.5 "*" ponytail full "*" commit deny " ]]'
+check "width 100: right side ends at the edge" '[ "$(run 100 | plain | head -1 | cols)" = 99 ] && [ "$(run 100 | plain | sed -n 2p | cols)" = 99 ]'
+check "width 39: path shortened to folder name, time kept" 'out=$(run 39 | plain); grep -q " proj " <<<"$out" && ! grep -q "~/proj" <<<"$out" && grep -q "12m" <<<"$out"'
 check "no SR-OPUS-5" '! grep -q "SR" <<<"$wide"'
 for w in 40 30 20; do
   out=$(run $w | plain)
@@ -49,6 +50,15 @@ echo '{"theme":"custom","colors":{"custom":{"git":{"bg":"#112233","fg":"#ffffff"
 check "custom: own key used" 'run 200 | grep -qF "38;2;$(rgb abcdef)m commit deny"'
 check "custom: git bg used for commit" 'run 200 | grep -qF "48;2;$(rgb 112233)m"$'"'"'\e'"'"'"[38;2;$(rgb abcdef)m commit deny"'
 check "custom: missing keys filled from rose-pine" 'python3 -c "import json,sys; c=json.load(open(sys.argv[1]))[\"colors\"][\"custom\"]; assert c[\"git\"][\"bg\"]==\"#112233\" and c[\"model\"][\"bg\"]==\"#191724\"" "$tmp/seen-config.json"'
+for pair in "arrow:\ue0b0" "rounded:\ue0b6" "slanted:\ue0bc" "flat:│" "bogus:\ue0b0"; do
+  echo "{\"shape\":\"${pair%%:*}\"}" > "$tmp/home/proj/.stratum/powerline.json"
+  glyph=$(printf "${pair#*:}")
+  check "shape ${pair%%:*}: draws its glyph" 'out=$(run 100); grep -qF "$glyph" <<<"$out" && [ "$(wc -l <<<"$out")" = 2 ]'
+done
+echo '{"shape":"flat"}' > "$tmp/home/proj/.stratum/powerline.json"
+check "shape flat: no backgrounds" '! run 100 | grep -qF "[48;2;"'
+echo '{"shape":"blocks"}' > "$tmp/home/proj/.stratum/powerline.json"
+check "shape blocks: no shaped edges" 'out=$(run 100); ! grep -qP "[\x{e0b0}-\x{e0bc}]" <<<"$out" && grep -qF "[48;2;" <<<"$out"'
 rm "$tmp/home/proj/.stratum/powerline.json"
 
 exit $fail

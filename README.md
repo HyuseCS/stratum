@@ -147,10 +147,10 @@ copy for that project only.
 - **Session handoff.** `st-handoff` writes the goal, decisions, open questions, and next step. A
   hook adds a facts block (branch, phase, tasks done, last commits, uncommitted files) at session
   end and before compaction. The next session starts by reading it.
-- **Statusline.** A powerline in two lines: `Stratum`, project path, git branch, and session
-  length; then model, ponytail level, and commit mode. Each line fits the terminal width: the path
-  becomes the folder name, other segments get shorter, then drop. The branch and commit mode
-  always stay. See
+- **Statusline.** A powerline in two lines. Line 1: `Stratum`, project path, and session length on
+  the left, git branch on the right. Line 2: model and ponytail level on the left, commit mode on
+  the right. Each line fits the terminal width: the path becomes the folder name, other segments
+  get shorter, then drop. The branch and commit mode always stay. See
   [Statusline colors](#statusline-colors).
 - **Token Weather.** A context forecast above the prompt, from ☀ Clear to ↯ Compact soon.
 - **Parallel sessions.** `scripts/st-worktree.sh <branch> <name>` makes a sibling worktree that
@@ -162,10 +162,11 @@ The defaults are in `statusline/powerline.json` (rose-pine). To change them for 
 create `.stratum/powerline.json`. Its keys merge over the defaults.
 
 Pick a theme: `rose-pine`, `nord`, `tokyo-night`, `gruvbox`, `dark`, or `light`. All segments
-follow it.
+follow it. Pick a shape: `arrow` (default), `rounded`, `slanted`, `blocks`, or `flat` (colored
+text, no backgrounds). `arrow`, `rounded`, and `slanted` need a Nerd Font.
 
 ```json
-{ "theme": "nord" }
+{ "theme": "nord", "shape": "rounded" }
 ```
 
 Or set your own colors. Keys you leave out keep the rose-pine color.
