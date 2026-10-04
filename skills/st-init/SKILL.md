@@ -32,7 +32,8 @@ overwrite an existing file; report it and move on.
    with the absolute plugin root. Keep every other key. If `.stratum/powerline.json` is missing,
    ask the user in one question for a theme (`rose-pine` default, `nord`, `tokyo-night`,
    `gruvbox`, `dark`, `light`) and a shape (`arrow` default, `rounded`, `slanted`, `blocks`,
-   `flat`; the first three need a Nerd Font). The Token Weather line follows the theme. Write
+   `flat`; the first three need a Nerd Font), and whether to show the Token Weather line (`yes`
+   default, `no` writes `"weather": false`). The Token Weather line follows the theme. Write
    `.stratum/powerline.json` with the keys the user changed from the defaults, or `{}` if none.
 6. **Duplicate plugins.** Stratum ships its own ponytail and Token Weather hooks. For each plugin
    in `~/.claude/settings.json` `enabledPlugins` that is `ponytail@ponytail` or has `token-weather`

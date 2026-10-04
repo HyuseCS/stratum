@@ -76,6 +76,8 @@ check "custom: git bg used for commit" 'run 200 | grep -qF "48;2;$(rgb 112233)m"
 check "custom: missing keys filled from rose-pine" 'python3 -c "import json,sys; c=json.load(open(sys.argv[1]))[\"colors\"][\"custom\"]; assert c[\"git\"][\"bg\"]==\"#112233\" and c[\"model\"][\"bg\"]==\"#191724\"" "$tmp/seen-config.json"'
 echo '{"logo":""}' > "$tmp/home/proj/.stratum/powerline.json"
 check "logo empty: plain Stratum label" '[[ "$(run 100 | plain | head -1)" == " Stratum "* ]]'
+echo '{"weather":false}' > "$tmp/home/proj/.stratum/powerline.json"
+check "weather false: no line 3, not passed on" '[ "$(runi 120 "$(ctx 600000 60)" | wc -l)" = 2 ] && ! grep -q weather "$tmp/seen-config.json"'
 echo '{"reserve":2}' > "$tmp/home/proj/.stratum/powerline.json"
 check "reserve 2: right side ends 2 from the edge" '[ "$(run 100 | plain | head -1 | cols)" = 98 ]'
 for pair in "arrow:\ue0b0" "rounded:\ue0b6" "slanted:\ue0bc" "flat:│" "bogus:\ue0b0"; do

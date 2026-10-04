@@ -52,6 +52,7 @@ else:
 shape = cfg.pop("shape", "arrow")
 reserve = cfg.pop("reserve", 8)
 logo = cfg.pop("logo", "\U000f0328")
+show_weather = cfg.pop("weather", True)
 cfg.setdefault("display", {}).update({"autoWrap": False, "colorCompatibility": "truecolor"})
 cfg["style"] = "powerline"
 
@@ -174,7 +175,7 @@ try:
 except (OSError, ValueError):
     weather = {}
 ctx = data.get("context_window") or {}
-if ctx.get("context_window_size") and ctx.get("used_percentage") is not None:
+if show_weather and ctx.get("context_window_size") and ctx.get("used_percentage") is not None:
     forecast = [(25, "☀", "Clear"), (50, "☁", "Cloudy"), (75, "☂", "Showers"), (90, "☇", "Storm"),
                 (float("inf"), "↯", "Compact soon")]
     band_colors = [palette["contextWarning"]["bg"], palette["git"]["fg"], palette["directory"]["fg"],

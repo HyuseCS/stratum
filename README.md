@@ -29,9 +29,9 @@ Then, in a new session in your project:
 ```
 
 `st-init` creates the project's `.stratum/` files and `specs/`, grills you for the project's
-rules (the constitution), sets the statusline and asks for its theme and shape, turns off a global
-ponytail or Token Weather plugin for this project, offers to upgrade graphify, installs its
-post-commit hook, and checks your tools.
+rules (the constitution), sets the statusline and asks for its theme, shape and Token Weather
+line, turns off a global ponytail or Token Weather plugin for this project, offers to upgrade
+graphify, installs its post-commit hook, and checks your tools.
 
 ### Requirements
 
@@ -176,6 +176,8 @@ text, no backgrounds). `arrow`, `rounded`, and `slanted` need a Nerd Font.
 Claude Code draws the statusline a few columns narrower than the terminal and cuts what does not
 fit with `…`. Each line leaves `reserve` columns free (default 8). If the right side is still cut,
 raise it: `{ "reserve": 10 }`.
+
+To hide the Token Weather line, set `{ "weather": false }`.
 
 The `Stratum` label starts with a Nerd Font layers icon (󰌨). Set `"logo"` to another character, or
 to `""` for none. The font itself comes from your terminal settings.
