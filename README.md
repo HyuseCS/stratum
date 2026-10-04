@@ -30,7 +30,7 @@ Then, in a new session in your project:
 
 `st-init` creates the project's `.stratum/` files and `specs/`, grills you for the project's
 rules (the constitution), sets the statusline, turns off a global ponytail or Token Weather plugin
-for this project, installs the graphify post-commit hook, and checks your tools.
+for this project, offers to upgrade graphify, installs its post-commit hook, and checks your tools.
 
 ### Requirements
 

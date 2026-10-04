@@ -33,8 +33,10 @@ overwrite an existing file; report it and move on.
    in `~/.claude/settings.json` `enabledPlugins` that is `ponytail@ponytail` or has `token-weather`
    in its name and is `true`, merge `"<key>": false` into `enabledPlugins` in the project's
    `.claude/settings.json`. Keep every other key. Never change global files.
-7. **Graphify.** If `graphify --version` is 0.9.74 or later, run `graphify hook install`. If it is
-   older or missing, tell the user: `uv tool install graphifyy` (or `pip install -U graphifyy`).
+7. **Graphify.** If `graphify --version` is older than 0.9.74 or missing, ask the user, then run
+   `uv tool install --force graphifyy` (or `pip install -U graphifyy` if `uv` is missing) and check
+   the version again. When it is 0.9.74 or later, run `graphify hook install` and confirm with
+   `graphify hook status`. If the user says no, list it under what they still need to do.
 8. **Tool check.** Run the checks from `/stratum:st-status` steps 4 and 5 and report missing tools
    and duplicate installs.
 9. **Report** in one block: files created, files skipped because they existed, what the user
