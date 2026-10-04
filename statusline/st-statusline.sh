@@ -14,9 +14,10 @@ ARROW = ""
 plugin = os.environ["ST_PLUGIN"]
 raw = os.environ["ST_INPUT"]
 try:
-    cwd = json.loads(raw).get("workspace", {}).get("current_dir", "")
+    data = json.loads(raw)
 except ValueError:
-    cwd = ""
+    data = {}
+cwd = data.get("workspace", {}).get("current_dir", "")
 try:
     mode = open(f"{cwd}/.stratum/commit-mode").read().strip()
 except OSError:
@@ -89,6 +90,12 @@ if folder:
     segs["dir"] = {"bg": rgb(palette["directory"]["bg"]), "fg": rgb(palette["directory"]["fg"]), "text": path, "short": folder}
 segs["ponytail"] = {"bg": rgb(pt["bg"]), "fg": rgb(pt["fg"]), "text": "Ponytail" if level == "full" else f"Ponytail {level}",
                     "short": "PT" if level == "full" else f"PT {level}"}
+effort = (data.get("effort") or {}).get("level")
+enabled = (data.get("thinking") or {}).get("enabled")
+think = "off" if enabled is False else effort or ("on" if enabled else None)
+if think:
+    tc = palette["thinking"]
+    segs["thinking"] = {"bg": rgb(tc["bg"]), "fg": rgb(tc["fg"]), "text": f"thinking: {think}", "short": think}
 segs["commit"] = {"bg": rgb(commit_bg), "fg": rgb(commit_fg), "text": f"commit: {mode}", "short": mode}
 
 
@@ -137,9 +144,9 @@ try:
     limit = int(os.environ["ST_WIDTH"]) - int(reserve)
 except ValueError:
     limit = 0
-steps = [("dir", "short"), ("commit", "short"), ("ponytail", "short"), ("time", "drop"), ("model", "drop"),
+steps = [("dir", "short"), ("commit", "short"), ("ponytail", "short"), ("time", "drop"), ("thinking", "short"), ("model", "drop"),
          ("stratum", "short"), ("stratum", "drop"), ("dir", "drop"), ("ponytail", "drop")]
-for lkinds, rkinds in ((["stratum", "dir", "time"], ["git"]), (["model", "ponytail"], ["commit"])):
+for lkinds, rkinds in ((["stratum", "dir", "time"], ["git"]), (["model", "thinking", "ponytail"], ["commit"])):
     left = [k for k in lkinds if k in segs]
     right = [k for k in rkinds if k in segs]
     for kind, action in steps:
