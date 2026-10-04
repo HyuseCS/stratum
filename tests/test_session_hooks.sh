@@ -10,7 +10,7 @@ proj="$tmp/proj"
 mkdir -p "$proj/.stratum" "$proj/specs/001-x"
 git -C "$proj" init -q
 git -C "$proj" -c user.name=t -c user.email=t@t commit -q --allow-empty -m "first commit"
-echo '{"feature":"001-x","phase":"implement","lane":"full","feature_directory":"specs/001-x"}' > "$proj/.stratum/state.json"
+echo '{"phase":"implement","lane":"full","feature_directory":"specs/001-x"}' > "$proj/.stratum/state.json"
 printf -- '- [x] T001 a\n- [X] T002 b\n- [ ] T003 c\nnot a task\n' > "$proj/specs/001-x/tasks.md"
 printf '# Handoff\n\nNext step: write tests.\n' > "$proj/.stratum/handoff.md"
 touch "$proj/dirty.txt"

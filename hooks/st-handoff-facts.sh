@@ -11,8 +11,8 @@ try:
     s = json.load(open(sys.argv[1]))
 except Exception:
     s = {}
-print(f"- Phase: {s.get('phase', '?')} | Lane: {s.get('lane', '?')} | Feature: {s.get('feature', '?')}")
 fd = s.get("feature_directory")
+print(f"- Phase: {s.get('phase', '?')} | Lane: {s.get('lane', '?')} | Feature: {fd.rstrip('/').split('/')[-1] if fd else '?'}")
 done = total = 0
 if fd:
     try:
