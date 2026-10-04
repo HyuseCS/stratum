@@ -160,8 +160,8 @@ second file or touches any area above text and docs.
 
 ## 6. Display, comms, and safety
 
-- **D14. Statusline.** A powerline in three lines: `Stratum` label, project folder, git branch,
-  session length; ponytail level and commit mode; model. Powerline gives branch, session length
+- **D14. Statusline.** A powerline in two lines: `Stratum` label, project path (`~` for home), git
+  branch, session length; model, ponytail level, and commit mode. Powerline gives branch, session length
   and model; the script draws the rest (also without bunx) and reads the ponytail level from its
   state file. Each line fits the terminal width by shortening, then dropping segments; branch and
   commit mode always stay. SR-OPUS-5 is not shown. Colors come from a theme or custom

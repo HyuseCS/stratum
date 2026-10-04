@@ -147,9 +147,10 @@ copy for that project only.
 - **Session handoff.** `st-handoff` writes the goal, decisions, open questions, and next step. A
   hook adds a facts block (branch, phase, tasks done, last commits, uncommitted files) at session
   end and before compaction. The next session starts by reading it.
-- **Statusline.** A powerline in three lines: `Stratum`, project folder, git branch, and session
-  length; then ponytail level and commit mode; then the model. Each line fits the terminal width:
-  segments get shorter, then drop. The branch and commit mode always stay. See
+- **Statusline.** A powerline in two lines: `Stratum`, project path, git branch, and session
+  length; then model, ponytail level, and commit mode. Each line fits the terminal width: the path
+  becomes the folder name, other segments get shorter, then drop. The branch and commit mode
+  always stay. See
   [Statusline colors](#statusline-colors).
 - **Token Weather.** A context forecast above the prompt, from ☀ Clear to ↯ Compact soon.
 - **Parallel sessions.** `scripts/st-worktree.sh <branch> <name>` makes a sibling worktree that

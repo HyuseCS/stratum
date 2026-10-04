@@ -81,7 +81,9 @@ commit_fg = commit.get(mode, {"auto": palette["git"]["fg"], "ask": palette["cont
                               "deny": palette["contextCritical"]["bg"]}[mode])
 segs["stratum"] = {"bg": rgb(label["bg"]), "fg": rgb(label["fg"]), "text": "Stratum", "short": "Stratum"}
 if folder:
-    segs["dir"] = {"bg": rgb(palette["directory"]["bg"]), "fg": rgb(palette["directory"]["fg"]), "text": folder, "short": folder}
+    home = os.path.expanduser("~")
+    path = "~" + cwd[len(home):] if cwd == home or cwd.startswith(home + "/") else cwd
+    segs["dir"] = {"bg": rgb(palette["directory"]["bg"]), "fg": rgb(palette["directory"]["fg"]), "text": path, "short": folder}
 segs["ponytail"] = {"bg": rgb(pt["bg"]), "fg": rgb(pt["fg"]), "text": f"ponytail {level}", "short": f"pt {level}"}
 segs["commit"] = {"bg": rgb(commit_bg), "fg": rgb(commit_fg), "text": f"commit {mode}", "short": mode}
 
@@ -94,9 +96,9 @@ try:
     limit = int(os.environ["ST_WIDTH"]) - 1
 except ValueError:
     limit = 0
-steps = [("commit", "short"), ("ponytail", "short"), ("time", "drop"), ("stratum", "drop"), ("dir", "drop"),
-         ("ponytail", "drop"), ("git", "drop")]
-for kinds in (["stratum", "dir", "git", "time"], ["ponytail", "commit"], ["model"]):
+steps = [("dir", "short"), ("commit", "short"), ("ponytail", "short"), ("time", "drop"), ("model", "drop"),
+         ("stratum", "drop"), ("dir", "drop"), ("ponytail", "drop"), ("git", "drop")]
+for kinds in (["stratum", "dir", "git", "time"], ["model", "ponytail", "commit"]):
     row = [k for k in kinds if k in segs]
     for kind, action in steps:
         if limit <= 0 or sum(cells(segs[k]["text"]) + 3 for k in row) <= limit:
