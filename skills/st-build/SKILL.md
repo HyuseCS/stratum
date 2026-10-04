@@ -35,7 +35,8 @@ subagent absolute paths: plugin root, project root, feature dir, and its task ID
 When the project is this session's own repo, run each `[P]` task of a phase in its own subagent
 with `isolation: "worktree"`, all started in one message. Each runs the per-task steps in its
 worktree. Then check each branch (tests green, no added comments) and merge it into `main`
-yourself. If the project is another repo, run `[P]` tasks one after another.
+yourself. Keep each worktree and branch after the merge. Delete one only when the user says so.
+Never delete a remote branch: the user does that. If the project is another repo, run `[P]` tasks one after another.
 
 ## Per story (after its last task)
 

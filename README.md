@@ -148,7 +148,8 @@ copy for that project only.
 - **Commit guard.** Commits follow `.stratum/commit-mode`: `auto` runs, `ask` asks with a
   staged-file summary, `deny` blocks. The default is `ask`. Push always asks. `git config` writes,
   `git add -A`, `git add .`, and `--no-verify` are always blocked. `reset --hard`, `clean -f`,
-  `rebase`, `branch -D`, `commit --amend`, and force push always ask.
+  `rebase`, branch delete, `worktree remove` and `prune`, `commit --amend`, and force push always
+  ask. Remote branch delete is blocked: you delete remote branches yourself.
 - **Session handoff.** `st-handoff` writes the goal, decisions, open questions, and next step. A
   hook adds a facts block (branch, phase, tasks done, last commits, uncommitted files) at session
   end and before compaction. The next session starts by reading it.
@@ -161,7 +162,8 @@ copy for that project only.
   soon, with a fill bar and tokens used on the left and the turns left before auto-compaction on
   the right: `☂ Showers ━━━━━━━━━━━━──────── 600k/1M            about 4 turns left`.
 - **Parallel sessions.** `scripts/st-worktree.sh <branch> <name>` makes a sibling worktree that
-  shares this project's local settings, commit mode, and Claude memory.
+  shares this project's local settings, commit mode, and Claude memory. Worktrees and branches stay
+  until you delete them.
 
 ## Statusline colors
 

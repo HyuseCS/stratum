@@ -130,6 +130,8 @@ def judge(sub, args, gitdir, project):
         head = f"git commit (commit-mode: {mode})" + (" with --amend rewrites the last commit" if amend else "")
         return decision, head + "\n" + staged_summary(gitdir)
     if sub == "push":
+        if "--delete" in args or short_has(args, "d") or any(a.startswith(":") for a in args):
+            return "deny", "Deleting a remote branch is blocked: the user deletes remote branches."
         if any(a in ("--force", "-f") or a.startswith("--force-with-lease") for a in args) \
                 or short_has(args, "f"):
             return "ask", "DESTRUCTIVE: force push can overwrite remote history."
@@ -140,8 +142,10 @@ def judge(sub, args, gitdir, project):
         return "ask", "DESTRUCTIVE: git clean -f deletes untracked files."
     if sub in ("checkout", "restore") and "." in args:
         return "ask", f"DESTRUCTIVE: git {sub} . discards working tree changes."
-    if sub == "branch" and (short_has(args, "D") or ("--force" in args and ("--delete" in args or short_has(args, "d")))):
-        return "ask", "DESTRUCTIVE: git branch -D deletes an unmerged branch."
+    if sub == "branch" and (short_has(args, "D") or short_has(args, "d") or "--delete" in args):
+        return "ask", "DESTRUCTIVE: deleting a local branch needs the user's OK."
+    if sub == "worktree" and args[:1] in (["remove"], ["prune"]):
+        return "ask", f"DESTRUCTIVE: git worktree {args[0]} deletes a worktree; it needs the user's OK."
     if sub == "rebase":
         return "ask", "git rebase rewrites history."
     return None, ""

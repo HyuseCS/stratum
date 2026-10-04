@@ -98,6 +98,18 @@ class GitGuardTest(unittest.TestCase):
                     "git restore .", "git branch -D old", "git rebase main"):
             self.assertEqual(self.run_guard(cmd)[0], "ask", cmd)
 
+    def test_local_branch_and_worktree_delete_asks(self):
+        for cmd in ("git branch -d old", "git branch --delete old", "git branch -D old",
+                    "git worktree remove ../wt", "git worktree prune"):
+            self.assertEqual(self.run_guard(cmd)[0], "ask", cmd)
+        self.assertEqual(self.run_guard("git worktree list"), (None, ""))
+        self.assertEqual(self.run_guard("git branch -a"), (None, ""))
+
+    def test_remote_branch_delete_denied(self):
+        for cmd in ("git push origin --delete old", "git push -d origin old",
+                    "git push origin :old"):
+            self.assertEqual(self.run_guard(cmd)[0], "deny", cmd)
+
     def test_chained(self):
         self.set_mode("deny")
         self.assertEqual(self.run_guard("echo hi && git commit -m x")[0], "deny")
