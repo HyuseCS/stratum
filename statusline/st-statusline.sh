@@ -169,6 +169,10 @@ def short(n):
     return str(n)
 
 
+try:
+    weather = json.load(open(f"{cwd}/.stratum/weather.json"))
+except (OSError, ValueError):
+    weather = {}
 ctx = data.get("context_window") or {}
 if ctx.get("context_window_size") and ctx.get("used_percentage") is not None:
     forecast = [(25, "☀", "Clear"), (50, "☁", "Cloudy"), (75, "☂", "Showers"), (90, "☇", "Storm"),
@@ -181,8 +185,12 @@ if ctx.get("context_window_size") and ctx.get("used_percentage") is not None:
     filled = min(20, round(pct / 100 * 20))
     word = f"{fg(color)}\x1b[1m{forecast[i][1]} {forecast[i][2]}\x1b[22m "
     bar = f"{fg(color)}{'━' * filled}{fg(faint)}{'─' * (20 - filled)} "
-    left = f"{fg(rgb(palette['metrics']['fg']))}{pct}%"
-    right = f"{fg(rgb(palette['tmux']['fg']))}{short(tokens)}/{short(window)}"
+    left = f"{fg(rgb(palette['tmux']['fg']))}{short(tokens)}/{short(window)}"
+    right = ""
+    if weather.get("growth"):
+        room = weather.get("compactAt", window) - tokens
+        n = max(1, round(room / weather["growth"]))
+        right = f"{fg(color)}{'compact now' if room <= 0 else f'about {n} turn' + ('' if n == 1 else 's') + ' left'}"
     for parts in ((word, bar, left, right), (word, "", left, right), (word, "", left, "")):
         lw, rw = cells("".join(parts[:3])), cells(parts[3])
         if limit <= 0 or lw + (rw and rw + 1) <= limit:
