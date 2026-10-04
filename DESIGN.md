@@ -83,6 +83,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 | `st-status` | Feature, phase, lane, tasks done, commit mode, next gate, missing tools, days since last sync. |
 | `st-commit-mode auto\|ask\|deny` | Set the commit mode. |
 | `st-shape arrow\|rounded\|slanted\|blocks\|flat` | Set the statusline shape. |
+| `st-theme <name>` | Set the statusline color theme. |
 | `st-init` | Set up a project: data files, constitution (grilled), tool check. |
 | `st-template <name>` | Copy a plugin template into `.stratum/templates/` to edit. |
 | `st-handoff` | Write the session handoff. |
