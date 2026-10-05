@@ -14,7 +14,7 @@ cp "${2#--config=}" "$(dirname "$0")/../seen-config.json"
 printf '\e[0m\e[48;2;25;23;36m\e[38;2;235;188;186m ✱ Opus 5.5 \e[0m\e[48;2;38;35;58m\e[38;2;25;23;36m\e[48;2;38;35;58m\e[38;2;196;167;231m ~/Desktop/stratum \e[0m\e[48;2;31;29;46m\e[38;2;38;35;58m\e[48;2;31;29;46m\e[38;2;156;207;216m ⎇ main ● \e[0m\e[48;2;82;79;103m\e[38;2;31;29;46m\e[48;2;82;79;103m\e[38;2;224;222;244m ⧖ 12m \e[0m\e[38;2;82;79;103m\e[0m\n'
 SH
 chmod +x "$tmp/bin/bunx"
-echo '{"pluginConfigs":{"stratum@stratum":{"commit":"deny"}}}' > "$tmp/home/.claude/settings.json"
+echo '{"pluginConfigs":{"stratum@stratum":{"options":{"commit":"deny"}}}}' > "$tmp/home/.claude/settings.json"
 echo full > "$tmp/home/.claude/.ponytail-active"
 input="{\"workspace\":{\"current_dir\":\"$tmp/home/proj\"}}"
 
