@@ -29,8 +29,14 @@ try:
     plugins = json.load(open(os.path.join(config_dir, "settings.json"))).get("pluginConfigs") or {}
 except (OSError, ValueError):
     plugins = {}
-mode = next(((v.get("options") or {}).get("commit") for k, v in plugins.items()
-             if k.split("@")[0] == "stratum" and isinstance(v, dict)), None)
+try:
+    guard = json.load(open(f"{proj}/.stratum/git-guard.json"))
+except (OSError, ValueError):
+    guard = {}
+mode = guard.get("commit") if isinstance(guard, dict) else None
+if mode not in ("auto", "ask", "deny"):
+    mode = next(((v.get("options") or {}).get("commit") for k, v in plugins.items()
+          if k.split("@")[0] == "stratum" and isinstance(v, dict)), None)
 if mode not in ("auto", "ask", "deny"):
     mode = "ask"
 try:

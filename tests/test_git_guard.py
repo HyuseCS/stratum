@@ -58,6 +58,31 @@ class GitGuardTest(unittest.TestCase):
     def test_commit_missing_mode(self):
         self.assertEqual(self.run_guard("git commit -m x")[0], "ask")
 
+    def write_guard_file(self, text, where=None):
+        d = os.path.join(where or self.repo, ".stratum")
+        os.makedirs(d, exist_ok=True)
+        with open(os.path.join(d, "git-guard.json"), "w") as f:
+            f.write(text)
+
+    def test_repo_file_beats_plugin_option(self):
+        self.set_mode("auto")
+        self.write_guard_file('{"commit": "deny"}')
+        self.assertEqual(self.run_guard("git commit -m x")[0], "deny")
+
+    def test_repo_file_found_from_subfolder(self):
+        self.set_mode("auto")
+        self.write_guard_file('{"commit": "deny"}')
+        self.repo = os.path.join(self.repo, "deep", "er")
+        os.makedirs(self.repo)
+        self.assertEqual(self.run_guard("git commit -m x")[0], "deny")
+
+    def test_repo_file_bad_value_falls_back(self):
+        self.set_mode("auto")
+        self.write_guard_file('{"commit": "maybe"}')
+        self.assertEqual(self.run_guard("git commit -m x"), (None, ""))
+        self.write_guard_file('not json')
+        self.assertEqual(self.run_guard("git commit -m x"), (None, ""))
+
     def test_commit_invalid_mode(self):
         self.set_mode("yolo")
         self.assertEqual(self.run_guard("git commit -m x")[0], "ask")

@@ -13,10 +13,11 @@ block. Change nothing.
 2. **Next gate:** Define → "you agree the spec"; Plan → "make GitHub issues?"; Check → "you OK the
    build"; Build → "none unless blocked"; Close → "push on your word"; Fast lane → "you OK the
    change plan".
-3. **Git guard:** each option under the `stratum@...` key of `pluginConfigs` in
-   `~/.claude/settings.json`: `commit`, `worktree_remove`, `worktree_prune`, `branch_delete`,
-   `reset_hard`, `clean`, `discard`, `force_push` (missing means `ask`). Change them in
-   `/config` or `/plugin config`.
+3. **Git guard:** for each of `commit`, `worktree_remove`, `worktree_prune`, `branch_delete`,
+   `reset_hard`, `clean`, `discard`, `force_push`: the value in `<project>/.stratum/git-guard.json`,
+   else the option under the `stratum@...` key of `pluginConfigs` in `~/.claude/settings.json`,
+   else `ask`. Show each mode and where it comes from (repo file, global option, default).
+   Change the repo file by hand, the global ones in `/config` or `/plugin config`.
 4. **Tools:** check each and name any missing or too old: `git`, `python3`, `node`, `bunx`
    (statusline), `graphify --version` (needs 0.9.74 or later for Dart), and whether the graphify
    post-commit hook is installed (`graphify hook status`). For graphify too old or missing, give

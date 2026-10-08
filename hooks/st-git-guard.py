@@ -102,8 +102,25 @@ def staged_summary(cwd):
     return "\n".join(out)
 
 
+def guard_file(cwd):
+    d = cwd
+    while not os.path.isdir(os.path.join(d, ".stratum")) and not os.path.exists(os.path.join(d, ".git")) \
+            and os.path.dirname(d) != d:
+        d = os.path.dirname(d)
+    try:
+        value = json.load(open(os.path.join(d, ".stratum", "git-guard.json")))
+    except (OSError, ValueError):
+        value = {}
+    return value if isinstance(value, dict) else {}
+
+
+GUARD = {}
+
+
 def mode(key):
-    value = os.environ.get(f"CLAUDE_PLUGIN_OPTION_{key.upper()}", "").strip()
+    value = GUARD.get(key)
+    if value not in ("auto", "ask", "deny"):
+        value = os.environ.get(f"CLAUDE_PLUGIN_OPTION_{key.upper()}", "").strip()
     return value if value in ("auto", "ask", "deny") else "ask"
 
 
@@ -161,6 +178,7 @@ def main():
         return
     command = (data.get("tool_input") or {}).get("command") or ""
     cwd = data.get("cwd") or os.getcwd()
+    GUARD.update(guard_file(cwd))
     decision, reasons = None, []
     for seg in segments(command):
         parsed = parse_git(seg)

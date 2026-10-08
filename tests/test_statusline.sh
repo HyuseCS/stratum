@@ -43,6 +43,11 @@ for w in 40 30 20; do
 done
 check "width 40: time dropped first" '! grep -q "12m" <<<"$(run 40 | plain)" && grep -q "Stratum" <<<"$(run 40 | plain)"'
 check "width 37: label becomes the logo only" 'out=$(run 37 | plain | head -1); grep -q "󰌨" <<<"$out" && ! grep -q "Stratum" <<<"$out"'
+echo '{"commit":"auto"}' > "$tmp/home/proj/.stratum/git-guard.json"
+check "repo git-guard.json beats the global option" 'run 200 | plain | grep -q "commit: auto"'
+echo '{"commit":"maybe"}' > "$tmp/home/proj/.stratum/git-guard.json"
+check "repo git-guard.json bad value: global option kept" 'run 200 | plain | grep -q "commit: deny"'
+rm "$tmp/home/proj/.stratum/git-guard.json"
 mkdir -p "$tmp/nobunx"
 for c in bash python3 cat stty cut dirname ps tr; do ln -s "$(command -v $c)" "$tmp/nobunx/$c"; done
 nob=$(printf '%s' "$input" | PATH="$tmp/nobunx" HOME="$tmp/home" CLAUDE_CONFIG_DIR= COLUMNS=80 "$tmp/nobunx/bash" "$root/statusline/st-statusline.sh" | plain)

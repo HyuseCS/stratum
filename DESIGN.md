@@ -189,8 +189,9 @@ second file or touches any area above text and docs.
   - One plugin option (`userConfig` in `plugin.json`) per command: `commit`, `worktree_remove`,
     `worktree_prune`, `branch_delete`, `reset_hard`, `clean`, `discard` (`checkout .`,
     `restore .`), `force_push`. Each is `auto` (allow), `ask`, or `deny`; the default is `ask`.
-    The user sets them in `/config` or `/plugin config`. The hook reads
-    `CLAUDE_PLUGIN_OPTION_<KEY>`. `commit` `ask` and `deny` show a staged-file summary.
+    The user sets them in `/config` or `/plugin config`; those are global to the machine. A
+    repo's `.stratum/git-guard.json` (git-ignored, written by `st-init`) overrides them key by
+    key. The hook reads the file, then `CLAUDE_PLUGIN_OPTION_<KEY>`. `commit` `ask` and `deny` show a staged-file summary.
   - Push, `rebase`, and `commit --amend` always ask.
   - Always blocked: `git config`, `git add -A`, `git add .`, `--no-verify`, remote branch delete.
 - **D18. Handoff.**

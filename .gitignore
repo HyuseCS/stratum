@@ -5,3 +5,4 @@ tsconfig.json
 .stratum/handoff.md
 .claude/settings.local.json
 graphify-out/
+.stratum/git-guard.json

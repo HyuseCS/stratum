@@ -133,6 +133,7 @@ search, then read. Code-writing agents carry the ponytail rule and add no explan
 ├── templates/           optional overrides of plugin templates (committed)
 ├── handoff.md           session handoff (git-ignored)
 ├── powerline.json       statusline theme, shape, colors (git-ignored, per machine)
+├── git-guard.json       git guard modes for this repo (git-ignored, per machine)
 └── weather.json         Token Weather growth and compact point (git-ignored)
 specs/NNN-feature/       spec, plan, research, data model, contracts, quickstart, tasks, changes/
 AGENTS.md, CLAUDE.md     point every tool at the constitution
@@ -143,10 +144,11 @@ copy for that project only.
 
 ## Built in
 
-- **Git guard.** Each of these has its own plugin option, set in `/config` or `/plugin config`:
-  `commit`, `worktree_remove`, `worktree_prune`, `branch_delete`, `reset_hard`, `clean`
-  (`clean -f`), `discard` (`checkout .`, `restore .`), and `force_push`. Each is `auto` (runs),
-  `ask`, or `deny` (blocked). The default is `ask`. A commit that asks or is blocked shows a
+- **Git guard.** One mode per command: `commit`, `worktree_remove`, `worktree_prune`,
+  `branch_delete`, `reset_hard`, `clean` (`clean -f`), `discard` (`checkout .`, `restore .`), and
+  `force_push`. Each is `auto` (runs), `ask`, or `deny` (blocked). The guard reads the repo's
+  `.stratum/git-guard.json` first (`st-init` writes it), then the plugin option of the same name
+  from `/config` or `/plugin config`, which is global to the machine. The default is `ask`. A commit that asks or is blocked shows a
   staged-file summary. Push, `rebase`, and `commit --amend` always ask. `git config` writes,
   `git add -A`, `git add .`, and `--no-verify` are always blocked. Remote branch delete is
   blocked: you delete remote branches yourself.
