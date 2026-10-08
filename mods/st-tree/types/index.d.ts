@@ -1,4 +1,4 @@
-export type LogRow = { t: string; who: string; text: string }
+export type LogRow = { id: string; t: string; who: string; text: string; done: boolean }
 
 declare module 'claude-code' {
   interface PluginState {
