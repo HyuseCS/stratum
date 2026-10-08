@@ -19,6 +19,11 @@ except ValueError:
     data = {}
 cwd = data.get("workspace", {}).get("current_dir", "")
 proj = data.get("workspace", {}).get("project_dir") or cwd
+root = proj
+while not os.path.isdir(f"{root}/.stratum") and not os.path.exists(f"{root}/.git") and os.path.dirname(root) != root:
+    root = os.path.dirname(root)
+if os.path.isdir(f"{root}/.stratum"):
+    proj = root
 config_dir = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.expanduser("~/.claude")
 try:
     plugins = json.load(open(os.path.join(config_dir, "settings.json"))).get("pluginConfigs") or {}

@@ -88,6 +88,7 @@ done
 echo '{"shape":"flat"}' > "$tmp/home/proj/.stratum/powerline.json"
 check "shape flat: no backgrounds" '! run 100 | grep -qF "[48;2;"'
 mkdir -p "$tmp/home/proj/sub"
+check "session started in a subfolder: project settings found" '! runi 100 "{\"workspace\":{\"current_dir\":\"$tmp/home/proj/sub\",\"project_dir\":\"$tmp/home/proj/sub\"}}" | grep -qF "[48;2;"'
 check "cd into a subfolder: project settings kept" '! runi 100 "{\"workspace\":{\"current_dir\":\"$tmp/home/proj/sub\",\"project_dir\":\"$tmp/home/proj\"}}" | grep -qF "[48;2;"'
 echo '{"shape":"blocks"}' > "$tmp/home/proj/.stratum/powerline.json"
 check "shape blocks: no shaped edges" 'out=$(run 100); ! grep -qP "[\x{e0b0}-\x{e0bc}]" <<<"$out" && grep -qF "[48;2;" <<<"$out"'
