@@ -1,0 +1,6 @@
+{
+  "name": "st-tree",
+  "version": "0.1.0",
+  "description": "Stratum agent tree pane: orchestrator, subagents with model and status, tool log.",
+  "types": "./types/index.d.ts"
+}
