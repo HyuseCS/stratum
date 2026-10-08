@@ -144,6 +144,10 @@ copy for that project only.
 
 ## Built in
 
+- **Advisor.** If you set one with `/advisor`, the orchestrator consults it at three points: on
+  the plan before the build gate, when a test fails twice, and on the full diff before calling
+  the build done. Its notes are checked against the source like any finding. No advisor, no
+  change.
 - **Git guard.** One mode per command: `commit`, `worktree_remove`, `worktree_prune`,
   `branch_delete`, `reset_hard`, `clean` (`clean -f`), `discard` (`checkout .`, `restore .`), and
   `force_push`. Each is `auto` (runs), `ask`, or `deny` (blocked). The guard reads the repo's

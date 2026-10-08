@@ -26,8 +26,9 @@ subagent absolute paths: plugin root, project root, feature dir, and its task ID
 3. **Verify.** Re-run the test yourself. Grep the diff for added comment lines:
    `git diff -U0 -- . ':!*.md' | grep -E '^\+\s*(//|#|/\*|\*)' | grep -v -e ponytail: -e '^+++' -e '#!'`
    Send any hit back to `st-build`.
-4. **Two tries.** If the test is still red after 2 `st-build` tries, start `st-debug`
-   (`stratum:st-debug`) with the task, the test, and both failure outputs.
+4. **Two tries.** If the test is still red after 2 `st-build` tries, consult the advisor if one
+   is set (`/advisor`): root cause or rabbit hole? Then start `st-debug` (`stratum:st-debug`)
+   with the task, the test, both failure outputs, and the advisor's answer.
 5. **Commit.** `st-git` (`stratum:st-git`) commits the exact paths of the task, with tasks.md.
 
 ## Parallel tasks `[P]`
@@ -54,8 +55,10 @@ Never delete a remote branch: the user does that. If the project is another repo
   to the user, one question at a time, with your recommendation. Decide small ones yourself.
 - Work touches a higher impact area than the lane allows: move up a lane.
 
-When all tasks are ticked, say so, list the small decisions and findings (fixed and dropped),
-and name the next phase: `/stratum:st-close`.
+When all tasks are ticked, consult the advisor if one is set (`/advisor`) on the feature's full
+diff: hidden regressions, broken rules from the constitution. Handle its notes like review
+findings. Then say so, list the small decisions and findings (fixed and dropped), and name the
+next phase: `/stratum:st-close`.
 
 ## Always
 
