@@ -79,7 +79,8 @@ section 5 reports both planted gaps with one agent start.
 
 ## Phase 5: User Story 3 - No trace of the old names (Priority: P2)
 
-**Goal**: Every reference says `inspect` / `st-inspect`, 10 agents everywhere, old files gone.
+**Goal**: Every reference says `inspect` / `st-inspect`, 10 agents everywhere, old files gone,
+and `README.md` matches the repo (FR-013).
 
 **Independent Test**: `git grep -nwE 'st-(check|validate)' -- . ':!specs'` prints nothing; all
 three test commands pass; quickstart sections 3 and 4.
@@ -111,12 +112,21 @@ three test commands pass; quickstart sections 3 and 4.
 
 **Checkpoint**: Every check of all three test files passes.
 
+### README matches the repo (FR-013)
+
+- [ ] T010 [US3] Add to `tests/test_inspect.sh` the README checks of `specs/002-merge-check-validate/contracts/st-inspect.md` section 5 (FR-013). Add `readme="${ST_INSPECT_README:-$root/README.md}"`. Compute each list of misses outside `check` and assert it is empty: (a) `README skills`; (b) `README agents` (model from the `model:` line, first letter upper case, row text `` | `<a>` | <Model> | ``); (c) `README paths` (backticked `agents/`, `hooks/`, `licenses/`, `procedures/`, `scripts/`, `skills/`, `statusline/`, `templates/`, `tests/` paths, `vendor.lock`, and `](<NAME>.md)` links); (d) `README tests` (both directions: named files exist, every `tests/test_*` is named); (e) `README themes` (keys of `statusline/themes.json`); (f) `README git guard` (`userConfig` keys of `.claude-plugin/plugin.json`). Read JSON with `python3 -c`. Add the three README phrase rows of section 5 to the heredoc with target `readme`. Run it: (a) to (f) are `ok` and the three phrase checks print FAIL. Then run the six controls of quickstart.md section 9: each turns only its own check red.
+- [ ] T011 [US3] Fix the README drift in `README.md` only (FR-013). Keep each phrase whole on one line (rule P1). Do not name the old agents (FR-007):
+  - Line 91, `st-status` row: the repo's skill (`skills/st-status/SKILL.md:3`) also shows duplicate installs, days since the last upstream sync and model overrides. New row: `` | `st-status` | Feature, phase, lane, tasks done, git guard options, next gate, missing tools, duplicate installs, days since the last upstream sync, model overrides. | ``
+  - Lines 31-34, `st-init` paragraph: `skills/st-init/SKILL.md` steps 3, 4 and 6 also ask for the git guard modes, ask for model overrides and write the pointers. New text: "`st-init` creates the project's `.stratum/` files and `specs/`, asks for the git guard modes and any model overrides, grills you for the project's rules (the constitution), writes the `AGENTS.md` and `CLAUDE.md` pointers, sets the statusline and asks for its theme, shape and Token Weather line, turns off a global ponytail or Token Weather plugin for this project, offers to upgrade graphify, installs its post-commit hook, and checks your tools."
+  - Line 40, Requirements row: `python3` also runs `hooks/st-models.py` and the Python inside `statusline/st-statusline.sh` and `hooks/st-handoff-facts.sh`. New row: `` | `git`, `python3` | git guard, model overrides hook, statusline, handoff facts, scripts | ``
+  - Run `bash tests/test_inspect.sh`: every check `ok`.
+
 ---
 
 ## Phase 6: Polish and Release
 
-- [ ] T010 Edit `.claude-plugin/plugin.json`: `"version": "0.1.26"` to `"version": "0.1.27"` (FR-011, research R3). Commit it alone. The commit message is `specs/002-merge-check-validate/contracts/st-inspect.md` section 4 word for word, with no `Co-Authored-By` or other trailer. FR-011 has no automated check (research R3); quickstart section 7 checks it by hand.
-- [ ] T011 Run `specs/002-merge-check-validate/quickstart.md` sections 1, 3, 4, 7 and 8 and report each result. Run the old-name controls of section 2 (the clone with a planted name, and the copy with no git repo: both must print the FAIL line of the old-name search). Run `claude plugin validate .claude-plugin/plugin.json` from the repo root: it must pass. Run section 5 (SC-004) in a scratch clone only, never on a tracked `specs/` dir, and section 6 if an advisor is set. Report the actual output, not a summary.
+- [ ] T012 Edit `.claude-plugin/plugin.json`: `"version": "0.1.26"` to `"version": "0.1.27"` (FR-011, research R3). Commit it alone. The commit message is `specs/002-merge-check-validate/contracts/st-inspect.md` section 4 word for word, with no `Co-Authored-By` or other trailer. FR-011 has no automated check (research R3); quickstart section 7 checks it by hand.
+- [ ] T013 Run `specs/002-merge-check-validate/quickstart.md` sections 1, 3, 4, 7, 8 and 9 and report each result. Run the README controls of section 9 and the old-name controls of section 2 (the clone with a planted name, and the copy with no git repo: both must print the FAIL line of the old-name search). Run `claude plugin validate .claude-plugin/plugin.json` from the repo root: it must pass. Run section 5 (SC-004) in a scratch clone only, never on a tracked `specs/` dir, and section 6 if an advisor is set. Report the actual output, not a summary.
 
 ---
 
@@ -126,9 +136,10 @@ three test commands pass; quickstart sections 3 and 4.
 - US2 (T004, T005) after T003: same skill file and test file.
 - US3: T006 after T005. T007 and T008 after T006, in parallel (test files only, both red until
   T009). T009 after T007 and T008, and only after T006 passed.
-- Polish: T010 after T009. T011 last.
+- README: T010 after T009, T011 after T010.
+- Polish: T012 after T011. T013 last.
 
-`tests/test_inspect.sh` order: T001, T004, T007. `skills/st-inspect/SKILL.md` order: T002, T005.
+`tests/test_inspect.sh` order: T001, T004, T007, T010. `skills/st-inspect/SKILL.md` order: T002, T005.
 
 ## Parallel Examples
 
@@ -143,7 +154,8 @@ No other task runs in parallel: T002 and T009 each change files that one test ch
 1. MVP: US1 (T001 to T003). The new agent and skill work next to the old ones.
 2. US2: the advisor asks for improvements.
 3. Capability gate T006, then US3: tests, then delete and renames in one task.
-4. Polish: version bump and its release note, then the quickstart run.
+4. README drift: T010 test, T011 fix.
+5. Polish: version bump and its release note, then the quickstart run.
 
 ## Notes
 
@@ -153,4 +165,4 @@ No other task runs in parallel: T002 and T009 each change files that one test ch
 - FR to task map: FR-001 T001/T002; FR-002 T001/T002; FR-003 T001/T002, quickstart 5; FR-004
   T001/T002; FR-005 T001/T002; FR-006 T004/T005; FR-007 T007/T009; FR-008 T007/T009; FR-009
   T007/T008/T009; FR-010 T008 plus the existing `test_deny_unknown_agent`, quickstart 4; FR-011
-  T010, quickstart 7 (by hand); FR-012 T001/T004/T006.
+  T012, quickstart 7 (by hand); FR-012 T001/T004/T006; FR-013 T010/T011, quickstart 9.

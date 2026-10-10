@@ -15,7 +15,9 @@ Grep, Glob, Bash and Edit. It writes only the `## Validate` section of `plan.md`
 agent and skill first, a test confirms each kept capability (C1-C10, V1-V6, S1-S6) by an exact
 phrase, and only then the old agents and skill are deleted. Every reference is renamed, the agent
 list drops to 10, and the version goes to 0.1.27. `hooks/st-models.py` needs no change: it reads
-the agent list from `agents/*.md` (`hooks/st-models.py:8-9`).
+the agent list from `agents/*.md` (`hooks/st-models.py:8-9`). FR-013 (added by the user) makes
+`README.md` match the repo: new checks in `tests/test_inspect.sh` read the skills, agents, paths,
+tests, themes and git guard options from the repo, and T011 fixes the 3 drifts found (research R11).
 
 ## Technical Context
 
@@ -46,12 +48,12 @@ passed, the user's ordering decision and the patterns of feature 001.
 
 | Gate | Status |
 |------|--------|
-| G1. Test first: each FR has a test that can fail, before its build task | Pass: T001, T004, T007, T008 come before their build tasks. Each check has a stated negative control (contracts/st-inspect.md, quickstart section 2) |
+| G1. Test first: each FR has a test that can fail, before its build task | Pass: T001, T004, T007, T008, T010 come before their build tasks. Each check has a stated negative control (contracts/st-inspect.md, quickstart section 2) |
 | G2. Build first, delete after (user decision, spec G2) | Pass: T002 creates, T006 runs the capability checks and their controls, T009 deletes and renames |
 | G3. Minimal diff, no new dependency, no comments | Pass: Markdown edits, one Bash test, no package |
 | G4. One source of truth for the agent list | Pass: the hook reads `agents/*.md`. `test_module_constants` pins the 10 names |
 | G5. A text check asserts a phrase the file must contain (lessons L1) | Pass: the phrase table in contracts/st-inspect.md. No phrase is shared by two items |
-| G6. Release: version bump last | Pass: T010 |
+| G6. Release: version bump last | Pass: T012 |
 
 Post-design re-check: all gates pass. No violations, so Complexity Tracking stays empty.
 
@@ -70,7 +72,7 @@ contract (the model file's allowed agent names).
 - **S2. Model file names (T008, T009).** After the delete, a `.stratum/models.json` that names an
   old agent blocks every Stratum agent start with "unknown agent" and the 10 names (FR-010, no
   special case). This is a breaking change for hand-edited files. Recovery: rename the entry to
-  `st-inspect` or drop it. The version bump commit message says so (T010). The template names
+  `st-inspect` or drop it. The version bump commit message says so (T012). The template names
   neither old agent (`templates/models.json`).
 - **S3. Cost.** `st-inspect` runs on opus. The old analysis ran on sonnet. One opus start replaces
   one sonnet start plus one opus start.
@@ -121,7 +123,7 @@ tests/
 ├── test_inspect.sh       # new
 ├── test_model_hook.py    # 10 names, st-inspect in place of the old name
 └── test_model_files.sh   # hook probe
-README.md                 # phase row, skills row, agent table, model note, test list
+README.md                 # phase row, skills row, agent table, model note, test list, FR-013 drift fixes
 DESIGN.md                 # D7 agent table, D9 skills row, Full lane row
 .claude-plugin/plugin.json # version 0.1.27
 ```

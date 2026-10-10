@@ -116,6 +116,7 @@ blocked with "unknown agent" and the 10 allowed names.
 - **FR-010**: A model file that names `st-check` or `st-validate` MUST be blocked like any unknown agent name. No special case.
 - **FR-011**: The plugin version MUST be bumped, and the release notes MUST name the renames and the model file action.
 - **FR-012**: The Inspect agent and `/stratum:st-inspect` MUST keep every capability listed under "Kept capabilities". A check MUST confirm each one is named in the new files.
+- **FR-013**: `README.md` MUST match the repo: it names every skill and every agent with its default model, every repo path and test file it names exists, every test file is listed, the theme and git guard option lists match the repo, and its skill and setup descriptions match the skills. A check MUST fail when the README drifts. (Added by the user during the Inspect phase.)
 
 ### Kept capabilities
 

@@ -165,3 +165,29 @@ The Full lane phase check is now inspect.
 A .stratum/models.json that names st-check or st-validate blocks every Stratum agent start.
 Rename that entry to st-inspect or drop it.
 ```
+
+## 5. README matches the repo (FR-013)
+
+`tests/test_inspect.sh` reads `readme="${ST_INSPECT_README:-$root/README.md}"`. Each check
+computes its list of misses outside `check` (no phrase goes through `eval`) and passes when the
+list is empty. The repo side is read from the repo, so the check fails when either side drifts.
+
+| Check | Rule | Negative control (on a README copy) |
+|-------|------|-------------------------------------|
+| `README skills` | every `skills/<n>/` with a `SKILL.md` is named as `` `<n>` `` or `` `<n> `` (name then a space, for `st <task>` style rows); a `st-ponytail-<x>` skill may be named `` `-<x>` `` | drop the line holding `` | `st-sync` | `` |
+| `README agents` | every `agents/<a>.md` has the row text `` | `<a>` | <Model> | `` where `<Model>` is its `model:` line with the first letter upper case | `` | `st-test` | Sonnet | `` to `` | `st-test` | Opus | `` |
+| `README paths` | every backticked token matching `(agents\|hooks\|licenses\|procedures\|scripts\|skills\|statusline\|templates\|tests)/...` or `vendor.lock`, and every `](<NAME>.md)` link, exists in the repo | append a line `` `scripts/nope.sh` `` |
+| `README tests` | every `tests/<file>` the README names exists, and every `tests/test_*` file is named | drop the line `node tests/test_token_weather.mjs` |
+| `README themes` | every key of `statusline/themes.json` is named as `` `<key>` `` | remove `` `gruvbox`, `` |
+| `README git guard` | every key of `userConfig` in `.claude-plugin/plugin.json` is named as `` `<key>` `` | remove `` `worktree_prune`, `` |
+
+Phrase table (heredoc target `readme`; rules P1 to P3 apply):
+
+| Check | Phrases (the first one is the control) |
+|-------|----------------------------------------|
+| README st-status | `missing tools, duplicate installs, days since the last upstream sync, model overrides` |
+| README st-init | `asks for the git guard modes and any model overrides` · `` writes the `AGENTS.md` and `CLAUDE.md` pointers `` |
+| README python3 | `git guard, model overrides hook, statusline, handoff facts` |
+
+The six rule checks were run against today's README with a scratch script: all pass, and each
+control turns only its own check red. The three phrase checks fail until T011.

@@ -12,7 +12,7 @@ python3 -m unittest tests/test_model_hook.py
 bash tests/test_model_files.sh
 ```
 
-Expected after T009: every line starts `ok`, unittest prints `OK`, each exits 0.
+Expected after T011: every line starts `ok`, unittest prints `OK`, each exits 0.
 
 Expected red states during the build (do not "fix" these by editing the tests):
 
@@ -21,6 +21,7 @@ Expected red states during the build (do not "fix" these by editing the tests):
 | T001 | every check in `test_inspect.sh` | new files missing |
 | T002 to T006 | `test_module_constants`; `test_docs_cover_feature`, `test_st_model_skill_matches_hook`; `test_model_files.sh` "st-model names every agent" | 12 agents; README and st-model do not name `st-inspect` yet |
 | T007, T008 | the above, plus the new US3 checks in `test_inspect.sh` | old files and names still there |
+| T010 | the three README phrase checks | README not fixed yet (T011) |
 
 ## 2. Negative controls for the phrase checks (FR-012, lessons L1)
 
@@ -62,7 +63,7 @@ EOF
 ```
 
 Expected: every line starts with the baseline plus 1. Baseline: `bash tests/test_inspect.sh |
-grep -c '^FAIL'` with no override (after T009 it is 0, so every line starts `1`). A line at the
+grep -c '^FAIL'` with no override (after T011 it is 0, so every line starts `1`). A line at the
 baseline means that check cannot fail. A line above baseline plus 1 means two checks share a
 line (contract rule P2).
 
@@ -81,7 +82,7 @@ ST_INSPECT_SKILL="$s/c" bash tests/test_inspect.sh | grep '^FAIL'
 Expected: each command prints one FAIL line more than the baseline: the frontmatter check
 twice, then the one-agent check.
 
-Old-name search control (after T009 is committed, so the baseline is 0):
+Old-name search control (after T011 is committed, so the baseline is 0):
 
 ```bash
 s=$(mktemp -d)
@@ -193,7 +194,7 @@ through `/stratum:st-inspect` and confirm the advisor is asked both kinds of que
 
 ## 7. Release note (FR-011)
 
-After T010:
+After T012:
 
 ```bash
 grep '"version"' .claude-plugin/plugin.json
@@ -207,3 +208,30 @@ for word, with no trailer.
 
 In a scratch project whose `.stratum/state.json` says `"phase": "check"`, run
 `/stratum:st-build`. Expected: one line that warns the order is unexpected, then the phase runs.
+
+## 9. README matches the repo (FR-013)
+
+Controls for the six README rule checks (contracts/st-inspect.md section 5). Run in T010 and
+T013:
+
+```bash
+s=$(mktemp -d)
+grep -vF '| `st-sync` |' README.md > "$s/r1"
+sed 's/| `st-test` | Sonnet |/| `st-test` | Opus |/' README.md > "$s/r2"
+{ cat README.md; echo '`scripts/nope.sh`'; } > "$s/r3"
+grep -vF 'node tests/test_token_weather.mjs' README.md > "$s/r4"
+sed 's/`gruvbox`, //' README.md > "$s/r5"
+sed 's/`worktree_prune`,//' README.md > "$s/r6"
+for i in 1 2 3 4 5 6; do
+  echo "== r$i"
+  ST_INSPECT_README="$s/r$i" bash tests/test_inspect.sh | grep '^FAIL'
+done
+```
+
+Expected: each block prints the baseline FAIL lines plus exactly one more: r1 `README skills`,
+r2 `README agents`, r3 `README paths`, r4 `README tests`, r5 `README themes`, r6
+`README git guard`. Baseline: `bash tests/test_inspect.sh | grep '^FAIL'` (in T010, the three
+README phrase checks; after T011, none).
+
+For the three README phrase checks, remove each first phrase from a copy in the same way
+(`grep -vF -- "<phrase>" README.md`) with `ST_INSPECT_README`: only that check turns red.

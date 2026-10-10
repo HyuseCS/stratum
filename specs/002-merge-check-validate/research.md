@@ -14,7 +14,7 @@
 
 ## R2. Release notes
 
-- Decision: The full release note is the body of the version bump commit (T010). README and the
+- Decision: The full release note is the body of the version bump commit (T012). README and the
   other tracked files outside `specs/` do not name the old agents.
 - Rationale: FR-011 needs a note that names `/stratum:st-check`, `st-check` and `st-validate`.
   FR-007 and SC-002 forbid those names in any tracked file outside `specs/`. A commit message is
@@ -101,3 +101,27 @@
 - Rationale: bash 5.3.20, python3 3.14.7, git 2.56.0, Claude Code 2.1.294. On the current tree
   `python3 -m unittest tests/test_model_hook.py` gives 32 OK and `bash tests/test_model_files.sh`
   passes every check.
+
+## R11. README matches the repo (FR-013)
+
+- Decision: Six rule checks read the repo side from the repo (skill folders, agent files and
+  their `model:` lines, named paths, `tests/test_*`, `statusline/themes.json` keys,
+  `.claude-plugin/plugin.json` `userConfig` keys) and the README side from `README.md`. Three
+  phrase checks hold the fixed descriptions. Contract section 5.
+- Rationale: Rules that read both sides fail when either side drifts, so they keep working after
+  this feature. Lesson L1: each rule asserts a backticked name or a full table row, not a word
+  that a path already holds. Each rule was run on today's README with a scratch script, and each
+  negative control turned only its own check red (quickstart section 9).
+- Drift found in today's `README.md` (besides the renames in T009):
+  - Line 91: the `st-status` row lacks duplicate installs, days since the last upstream sync and
+    model overrides (`skills/st-status/SKILL.md:3`).
+  - Lines 31-34: the `st-init` paragraph lacks the git guard question, the model question and the
+    `AGENTS.md` / `CLAUDE.md` pointers (`skills/st-init/SKILL.md` steps 3, 4, 6).
+  - Line 40: `python3` is listed for "git guard, scripts" only. It also runs `hooks/st-models.py`
+    and the Python in `statusline/st-statusline.sh` and `hooks/st-handoff-facts.sh`.
+- Checked and current: install commands match `.claude-plugin/marketplace.json` (name
+  `stratum`); every skill folder, agent and default model, theme, shape, git guard option, hook
+  event of the handoff (SessionEnd, PreCompact), path, link and test file named in the README.
+  `mods/` is not tracked, so the README does not name it.
+- Alternatives considered: a fixed list of paths in the test (misses new README paths and new
+  repo files).
