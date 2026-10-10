@@ -13,7 +13,7 @@ subagent absolute paths: plugin root, project root, feature dir, and its task ID
 
 1. Read `<project>/.stratum/state.json`. If there is no `feature_directory`, stop and tell the
    user to run `/stratum:st-define`.
-2. Order check: `phase` should be `check` or `build`. If not, warn once in one line, then run.
+2. Order check: `phase` should be `inspect` or `build`. If not, warn once in one line, then run.
 3. Set `phase` to `build` in state.json (keep the other keys).
 4. Read `<feature>/tasks.md`. Work on unticked tasks in order, phase by phase.
 

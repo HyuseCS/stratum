@@ -10,7 +10,7 @@ block. Change nothing.
 
 1. **Work:** from `<project>/.stratum/state.json`: feature dir, phase, lane. Tasks done and total
    from `<feature dir>/tasks.md` (lines `- [x]`/`- [X]` against all `- [ ]`/`- [x]` task lines).
-2. **Next gate:** Define → "you agree the spec"; Plan → "make GitHub issues?"; Check → "you OK the
+2. **Next gate:** Define → "you agree the spec"; Plan → "make GitHub issues?"; Inspect → "you OK the
    build"; Build → "none unless blocked"; Close → "push on your word"; Fast lane → "you OK the
    change plan".
 3. **Git guard:** for each of `commit`, `worktree_remove`, `worktree_prune`, `branch_delete`,
@@ -34,5 +34,5 @@ block. Change nothing.
    `model:` line in `<plugin root>/agents/<agent>.md`, effort `default`. Say the values come from
    `.stratum/models.json` and change with `/stratum:st-model` or by editing the file. No file or no
    entries: say every agent uses the plugin defaults. A bad file: say so and quote the problem.
-   To find the problem, run from the project root `echo '{"tool_input":{"subagent_type":"stratum:st-check"}}' | python3 <plugin root>/hooks/st-models.py`
+   To find the problem, run from the project root `echo '{"tool_input":{"subagent_type":"stratum:st-inspect"}}' | python3 <plugin root>/hooks/st-models.py`
    (read-only) and quote the reason it prints. Stratum agents will not start until it is fixed.

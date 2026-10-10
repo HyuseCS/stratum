@@ -96,7 +96,7 @@ three test commands pass; quickstart sections 3 and 4.
 
 ### Implementation for User Story 3
 
-- [ ] T009 [US3] Delete the old files and do every rename in one task. T007's old-name search is repo-wide, so no single file passes it alone. Steps:
+- [X] T009 [US3] Delete the old files and do every rename in one task. T007's old-name search is repo-wide, so no single file passes it alone. Steps:
   - Delete `agents/st-check.md`, `agents/st-validate.md` and `skills/st-check/SKILL.md` (and the empty `skills/st-check/` folder) (FR-007). Security: plan.md S2 (a model file that names an old agent now blocks every start).
   - Edit `skills/st/SKILL.md:32`: `/stratum:st-check` to `/stratum:st-inspect` (FR-008).
   - Edit `skills/st-full/SKILL.md`: description `(Define, Plan, Check, Build, Close)` to `(Define, Plan, Inspect, Build, Close)`; line 12 to `` 3. `/stratum:st-inspect` (gate: user OKs the build) `` (FR-008).

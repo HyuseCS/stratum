@@ -32,7 +32,7 @@ Plugin root (`<plugin root>`) is two levels up from this skill's base directory.
 ## Gate
 
 Ask: "Make GitHub issues from the tasks?" Run `/stratum:st-issues` only on yes.
-Next phase: `/stratum:st-check`.
+Next phase: `/stratum:st-inspect`.
 
 ## Always
 

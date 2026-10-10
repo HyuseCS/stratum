@@ -72,7 +72,7 @@ The lane follows the highest impact area the change touches.
 |---|-------|--------------|------|
 | 1 | Define | Grilling, then the spec, then clarify (if needed) and checklist | You agree the spec |
 | 2 | Plan | `st-plan` writes the plan and tasks. Open decisions come to you one at a time. | Asked: make GitHub issues? |
-| 3 | Check | `st-check` checks the files agree, `st-validate` checks the plan can be built | You OK the build |
+| 3 | Inspect | `st-inspect` checks the files agree and the plan can be built | You OK the build |
 | 4 | Build | Per task: failing test, build, check, commit. Per story: review, ponytail review, design review. | None unless blocked |
 | 5 | Close | Fix spec drift, optional gap report, proposed lessons | Push only when you say "push" |
 
@@ -87,7 +87,7 @@ ponytail review, commit, drift fix.
 |-------|--------------|
 | `st <task>` | Main entry. Picks the lane and runs it. |
 | `st-full`, `st-fast`, `st-quick` | Force a lane. |
-| `st-define`, `st-plan`, `st-check`, `st-build`, `st-close` | Run or resume one Full-lane phase. |
+| `st-define`, `st-plan`, `st-inspect`, `st-build`, `st-close` | Run or resume one Full-lane phase. |
 | `st-status` | Feature, phase, lane, tasks done, git guard options, next gate, missing tools. |
 | `st-shape arrow\|rounded\|slanted\|blocks\|flat` | Set the statusline shape. |
 | `st-theme <name>` | Set the color theme of the statusline and Token Weather. |
@@ -111,8 +111,7 @@ All skills are called as `/stratum:<name>`.
 | Agent | Model | Job |
 |-------|-------|-----|
 | `st-plan` | Opus | Plan, research, data model, contracts, quickstart, tasks |
-| `st-check` | Sonnet | Spec, plan, and tasks agree (read-only) |
-| `st-validate` | Opus | Setup, test coverage, breaking changes, security |
+| `st-inspect` | Opus | Spec, plan, and tasks agree; setup, test coverage, breaking changes, security |
 | `st-build` | Opus | Builds tasks; loads design rules for screens |
 | `st-test` | Sonnet | Writes each test and shows it fails first |
 | `st-review` | Opus | Reviews each finished story |
@@ -164,14 +163,14 @@ copy for that project only.
   blocked: you delete remote branches yourself.
 - **Model overrides.** `.stratum/models.json` maps an agent name to an optional `model` and
   `effort`, for example `{ "st-close": { "model": "haiku", "effort": "xhigh" } }`. Agents:
-  `st-build`, `st-check`, `st-close`, `st-debug`, `st-fast`, `st-git`, `st-plan`, `st-quick`,
-  `st-review`, `st-test`, `st-validate`. Models: `sonnet`, `opus`, `haiku`, `fable`. Efforts:
+  `st-build`, `st-close`, `st-debug`, `st-fast`, `st-git`, `st-inspect`, `st-plan`, `st-quick`,
+  `st-review`, `st-test`. Models: `sonnet`, `opus`, `haiku`, `fable`. Efforts:
   `low`, `medium`, `high`, `xhigh`, `max`. `st-init` writes it from `templates/models.json`:
   `st-build`, `st-debug`, `st-quick`, `st-plan`, `st-fast` on opus with effort high, and
-  `st-close`, `st-git`, `st-test` on haiku with effort xhigh. `st-check`, `st-review`, and
-  `st-validate` have no entry and keep the plugin default. A hook applies the file each time a
-  Stratum agent starts, so the next start picks up an edit. A bad file blocks every Stratum agent
-  start with a message that names the problem. Only Stratum agents are affected.
+  `st-close`, `st-git`, `st-test` on haiku with effort xhigh.
+  `st-inspect` and `st-review` have no entry and keep the plugin default. A hook applies the file
+  each time a Stratum agent starts, so the next start picks up an edit. A bad file blocks every
+  Stratum agent start with a message that names the problem. Only Stratum agents are affected.
   `CLAUDE_CODE_EFFORT_LEVEL` beats the file's effort.
   The per-call `effort` needs Claude Code 2.1.292 or later. On an older client, remove the
   `effort` keys from the file.
@@ -257,6 +256,7 @@ ports, and waits for review before updating `vendor.lock`.
 python3 tests/test_git_guard.py
 python3 tests/test_model_hook.py
 bash tests/test_model_files.sh
+bash tests/test_inspect.sh
 bash tests/test_session_hooks.sh
 bash tests/test_statusline.sh
 node tests/test_token_weather.mjs

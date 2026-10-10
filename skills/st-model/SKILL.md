@@ -7,8 +7,8 @@ description: Set the model or effort a Stratum agent uses in this project, saved
 
 Plugin root is two levels up from this skill's base directory.
 
-Agents: `st-build`, `st-check`, `st-close`, `st-debug`, `st-fast`, `st-git`, `st-plan`,
-`st-quick`, `st-review`, `st-test`, `st-validate`.
+Agents: `st-build`, `st-close`, `st-debug`, `st-fast`, `st-git`, `st-inspect`, `st-plan`,
+`st-quick`, `st-review`, `st-test`.
 
 | Value | Effect on the agent's entry |
 |-------|-----------------------------|
@@ -32,7 +32,7 @@ named means `default`.
 4. If the agent's entry exists and is not an object: change nothing, say why, and stop. Else apply
    the values to the entry. Remove the entry if it is left as `{}`. Keep every other entry and key.
 5. Write the file.
-6. From the project root, run `echo '{"tool_input":{"subagent_type":"stratum:st-check"}}' | python3 <plugin root>/hooks/st-models.py`.
+6. From the project root, run `echo '{"tool_input":{"subagent_type":"stratum:st-inspect"}}' | python3 <plugin root>/hooks/st-models.py`.
    If it prints a deny, show its reason instead of "Applies on the next start." below.
    If step 3 copied the template, say so and list its entries. Then reply in one line:
    `<agent>: model <model or "default (<frontmatter model>)">, effort <effort or "default">.

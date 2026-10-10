@@ -56,8 +56,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 | Agent | From | Model | Writes code | Job |
 |-------|------|-------|-------------|-----|
 | `st-plan` | Spec Kit plan + tasks | Opus | No | Plan, research, data model, contracts, quickstart, tasks. Returns open decisions as a list. |
-| `st-check` | Spec Kit analyze | Sonnet | No | Spec, plan and tasks agree. Read-only. |
-| `st-validate` | vc validate | Opus | No | Plan is buildable: setup, test coverage, breaking changes, security. |
+| `st-inspect` | Spec Kit analyze + vc validate | Opus | No | Spec, plan and tasks agree, and the plan is buildable: setup, test coverage, breaking changes, security. |
 | `st-build` | vc execute | Opus | Yes | Builds tasks. Loads the design skills for screen tasks. |
 | `st-test` | vc tester | Sonnet | Yes | Writes each test and shows it fails before the build. |
 | `st-review` | vc code-reviewer | Opus | No | Reviews each finished story. |
@@ -79,7 +78,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 |-------|-----|
 | `st <task>` | Main entry. Picks the lane by impact area, states it in one line, runs it. |
 | `st-full`, `st-fast`, `st-quick` | Force a lane. |
-| `st-define`, `st-plan`, `st-check`, `st-build`, `st-close` | Run one Full-lane phase on the current feature, for resuming or redoing. |
+| `st-define`, `st-plan`, `st-inspect`, `st-build`, `st-close` | Run one Full-lane phase on the current feature, for resuming or redoing. |
 | `st-status` | Feature, phase, lane, tasks done, git guard options, next gate, missing tools, days since last sync. |
 | `st-shape arrow\|rounded\|slanted\|blocks\|flat` | Set the statusline shape. |
 | `st-theme <name>` | Set the color theme of the statusline and Token Weather. |
@@ -116,7 +115,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 |---|-------|-------|------------|
 | 1 | Define (orchestrator) | grill → specify → clarify only if gaps remain → checklist | User agrees the spec |
 | 2 | Plan (`st-plan`) | plan → tasks. Open decisions return to the orchestrator and are grilled one at a time, then `st-plan` resumes. | Orchestrator asks: make GitHub issues? |
-| 3 | Check (`st-check`, `st-validate`) | analyze → validate. Findings that need a decision go to the user. | User OKs the build |
+| 3 | Inspect (`st-inspect`) | analyze and validate in one pass. Findings that need a decision go to the user. | User OKs the build |
 | 4 | Build | See the build loop | None unless blocked or a decision falls outside the plan |
 | 5 | Close (`st-close`) | Drift fixes, gap report, lessons, docs graph update | Push only on the user's "push" |
 

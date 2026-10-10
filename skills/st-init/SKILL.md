@@ -23,7 +23,7 @@ overwrite an existing file; report it and move on.
    question: "Change the model or effort for any agent?" (default no). No: copy
    `<plugin root>/templates/models.json` to `.stratum/models.json`. Yes: ask for the changes,
    apply them to the template with the rules of `/stratum:st-model` (allowed values,
-   `model default`, `effort default`, `default`), then write it. Show a table of the 11 agents:
+   `model default`, `effort default`, `default`), then write it. Show a table of the 10 agents:
    the default model from the `model:` line in `<plugin root>/agents/*.md`, and the model and
    effort from the file where set. Effort shows `default` where the file does not set it. Say how
    to change it later: `/stratum:st-model`, plain words such as "make st-close use opus", or edit
