@@ -3,7 +3,8 @@
 ## Model file
 
 Path: `<project>/.stratum/models.json`. Per project, per machine, git-ignored (D13). Read by the
-hook on every Stratum agent start. Written by `st-init`, `st-model`, or by hand.
+hook on every Stratum agent start. Written by `st-init`, `st-model`, or by hand. The hook reads
+the file as bytes: JSON decides the encoding, and a UTF-8 BOM is accepted.
 
 | Field | Type | Rule |
 |-------|------|------|

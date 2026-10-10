@@ -49,10 +49,14 @@ Same input with `"subagent_type": "Explore"`: no output.
 
 ```bash
 git check-ignore .stratum/models.json
+echo '{"tool_input":{"subagent_type":"stratum:st-check"}}' | python3 hooks/st-models.py
 python3 -c 'import json; assert json.load(open(".stratum/models.json")) == json.load(open("templates/models.json"))'
 ```
 
-Expected: the first prints `.stratum/models.json`, the second exits 0.
+Expected: the first prints `.stratum/models.json`, the second prints nothing (the file is valid and
+has no `st-check` entry), the third exits 0. The third is the FR-012 check, by hand:
+`tests/test_model_files.sh` only checks that the file passes the hook, because `st-model` edits
+this file.
 
 ## 4. End to end with Claude Code (FR-002, FR-004, SC-001, SC-003)
 
@@ -83,14 +87,18 @@ run; f=$(newest); grep -o '"model":"[^"]*"' "$f" | sort -u; grep -o '"effort":"[
 Expected: `claude-haiku-...` (`st-check`'s default is sonnet) and effort `low` where the
 transcript records effort.
 
+Recorded (T017, 2026-10-10, Claude Code 2.1.294): haiku, effort `low`.
+
 Run B (an edit applies on the next start, SC-003):
 
 ```bash
 echo '{"st-check": {"model": "opus", "effort": "high"}}' > .stratum/models.json
-run; f=$(newest); grep -o '"model":"[^"]*"' "$f" | sort -u
+run; f=$(newest); grep -o '"model":"[^"]*"' "$f" | sort -u; grep -o '"effort":"[^"]*"' "$f" | sort -u
 ```
 
-Expected: `claude-opus-...`, in a new transcript file.
+Expected: `claude-opus-...` and effort `high`, in a new transcript file.
+
+Recorded (T017, 2026-10-10, Claude Code 2.1.294): opus, effort `high`, on the next start.
 
 Run C (bad file blocks the start):
 
@@ -101,6 +109,8 @@ run
 
 Expected: the reply says the start was blocked, and the reason names `.stratum/models.json` and
 `gpt`. No new subagent transcript.
+
+Recorded (T017, 2026-10-10, Claude Code 2.1.294): blocked, with the reason naming `gpt`.
 
 Restore:
 

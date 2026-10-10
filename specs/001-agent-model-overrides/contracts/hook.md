@@ -31,6 +31,10 @@ It is a second entry in the `PreToolUse` array, next to the `Bash` git guard ent
 
 `tool_input` may hold more fields. The hook keeps every one of them.
 
+`cwd` is optional. Without it, the walk starts from the hook's working folder.
+
+Stdin and the model file are read as bytes, so JSON decides the encoding: UTF-8, with or without a BOM. The hook does not depend on the console code page, which on Windows can be cp1252.
+
 ## Steps
 
 1. Stdin is not valid JSON: exit 0, no output.
@@ -64,7 +68,9 @@ It is a second entry in the `PreToolUse` array, next to the `Bash` git guard ent
   "permissionDecisionReason": "<path>/.stratum/models.json: <problem>\n<problem>\nFix the file, then run the step again."}}
 ```
 
-Exit 0. One line per problem. Each problem names the bad item and the allowed values:
+Exit 0. One line per problem, at most 10, then one line `... and K more.`. Each problem names the bad
+item and the allowed values. Problems past the tenth are counted, not named: a known limit against
+FR-004 (research L5):
 
 | Case | Problem text must contain |
 |------|---------------------------|

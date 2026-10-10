@@ -73,7 +73,7 @@ The orchestrator ran these on Claude Code 2.1.294 with `claude -p --settings` an
 ### R6. Validate the whole file on every Stratum start
 
 - Decision: on every `stratum:` start, check every entry, not only the started agent's entry.
-  Report all problems in one message. Each bad key or value is quoted with `json.dumps` and cut
+  Report at most 10 problems in one message, then `... and K more.` (L5). Each bad key or value is quoted with `json.dumps` and cut
   to 80 characters.
 - Rationale: spec edge case "a bad entry for one agent blocks the start of every Stratum agent".
 - Alternatives: check only the started agent. Rejected by the spec.
@@ -131,12 +131,26 @@ The orchestrator ran these on Claude Code 2.1.294 with `claude -p --settings` an
   `<plugin root>/agents/*.md`.
 - Rationale: no second copy of the 11 defaults.
 
+### R13. Encoding and output size
+
+- Decision: the hook reads stdin and the model file as bytes (`json.load(sys.stdin.buffer)`,
+  `open(path, "rb")`). JSON decides the encoding, and a UTF-8 BOM is accepted. The deny lists at most
+  10 problems, then `... and K more.`.
+- Rationale: a Windows console can use cp1252, so a text read of a UTF-8 prompt gives the wrong text.
+  `test_non_ascii_prompt_under_cp1252` simulates it with `PYTHONIOENCODING=cp1252`. The cap bounds the
+  text a repo file can put into the model's context (plan S3).
+
 ## Known limits
 
 - **L1.** `CLAUDE_CODE_EFFORT_LEVEL`, when set, beats the file's effort (V5). The README says so.
 - **L1b.** The per-call `effort` parameter needs Claude Code 2.1.292 or later. On an older client,
-  remove `effort` keys from the file. The README says so (T016).
+  remove `effort` keys from the file. The README says so (T016). Source:
+  https://code.claude.com/docs/en/sub-agents. It says a per-invocation `effort` parameter overrides
+  the agent's `effort` field, and that it needs Claude Code v2.1.292 or later (fetched 2026-10-10).
 - **L2.** Haiku was checked with effort `low` (V2) and `xhigh` (the template, D15: a Haiku 5.5
   subagent started with effort `xhigh` and no error). `max` on Haiku is not verified.
 - **L3.** `haiku` started `claude-haiku-5-5` in V2, which answers CHK015.
 - **L4.** Subagents that start Stratum agents (CHK013) are covered by V4: the hook fires there too.
+- **L5.** The deny lists at most 10 problems. Problems 11 and up are counted, not named. FR-004
+  says the message MUST name the bad item, so this conflicts with FR-004. Open for the user: keep
+  the cap and reword FR-004, or drop the cap.

@@ -27,8 +27,9 @@ Agents: `st-build`, `st-check`, `st-close`, `st-debug`, `st-fast`, `st-git`, `st
 
 ## Steps
 
-1. Unknown agent, unknown value, or no value: change nothing, list the allowed agents, models,
-   efforts and the `default` forms, and stop.
+1. Unknown agent, unknown value, no value, or conflicting values (two models, two efforts, or
+   `default` with another value): change nothing, list the allowed agents, models, efforts and the
+   `default` forms, and stop.
 2. `<project>/.stratum/models.json` exists but is not valid JSON or not an object: change nothing,
    show the error, and stop. Never overwrite it.
 3. File missing: start from `templates/models.json`: copy `<plugin root>/templates/models.json`,
@@ -38,7 +39,7 @@ Agents: `st-build`, `st-check`, `st-close`, `st-debug`, `st-fast`, `st-git`, `st
    the values to the entry. Remove the entry if it is left as `{}`. Keep every other entry and key
    as it is.
 5. Write the file.
-6. From the project root, run `echo '{"tool_input":{"subagent_type":"stratum:st-check"}}' | python3 <plugin root>/hooks/st-models.py`.
+6. From the project root (the JSON has no `cwd`, so the hook uses the current folder), run `echo '{"tool_input":{"subagent_type":"stratum:st-check"}}' | python3 <plugin root>/hooks/st-models.py`.
    If it prints a deny, show its reason instead of "Applies on the next start." below.
    If step 3 copied the template, say so and list its entries. Then reply in one line: `<agent>: model <model or "default (<frontmatter model>)">, effort <effort or
    "default">. Applies on the next start.` The frontmatter model comes from the `model:` line in

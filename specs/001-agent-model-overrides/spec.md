@@ -151,7 +151,8 @@ listed.
   model and effort.
 - **FR-004**: The system MUST block the start of any Stratum agent when the model file is not
   valid JSON, is not an object, or holds an unknown agent name, an unknown key, an unknown model,
-  or an unknown effort. The message MUST name the bad item and the allowed values.
+  or an unknown effort. The message MUST name the bad items, up to 10, and the allowed values. Any
+  further bad items are counted as "... and K more.".
 - **FR-005**: Allowed agent names MUST be the 11 Stratum agents: st-build, st-check, st-close,
   st-debug, st-fast, st-git, st-plan, st-quick, st-review, st-test, st-validate. Allowed models:
   sonnet, opus, haiku, fable. Allowed efforts: low, medium, high, xhigh, max.

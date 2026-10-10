@@ -73,7 +73,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 
 ## 3. Skills
 
-- **D9.** Fifteen entry skills:
+- **D9.** Seventeen entry skills:
 
 | Skill | Job |
 |-------|-----|

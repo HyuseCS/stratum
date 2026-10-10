@@ -11,7 +11,7 @@ PreToolUse hook on the `Agent` tool (`hooks/st-models.py`) reads the file on eve
 `stratum:st-*` agent. It rewrites the call's `model` and `effort` through `updatedInput`, or it
 denies the start with a message when the file is bad. The plugin ships `templates/models.json`
 (D16: `st-build`, `st-debug`, `st-quick`, `st-plan`, `st-fast` on opus, effort high; `st-close`, `st-git`, `st-test` on haiku, effort xhigh). `st-init` writes it into new repos. A new
-skill `st-model` edits the file from plain words. `st-status` lists the overrides. The README
+skill `st-model` edits the file from plain words. `st-status` lists the overrides. Both run the hook to check the file. The README
 documents the file. Research confirmed the hook mechanism on Claude Code 2.1.294 (see
 [research.md](research.md) R1).
 
@@ -72,7 +72,7 @@ data model (a new config file), and contracts (hook I/O, file schema, command).
   commit it. Impact is limited: the hook parses it as JSON only, nothing runs, and it accepts only
   the allowlisted models and efforts. The worst case is a cost change (opus, max effort) or blocked
   starts. `st-status` shows the overrides so the user can see them. The deny reason quotes each
-  bad key or value with `json.dumps` and cuts it to 80 characters, so file content cannot flood
+  bad key or value with `json.dumps`, cuts it to 80 characters, and lists at most 10 problems, so file content cannot flood
   or inject text into the model's context.
 - **S4. Cost.** An override can move an agent to a more expensive model or effort. This is the
   feature. `st-model` replies with the new values so every change is visible.

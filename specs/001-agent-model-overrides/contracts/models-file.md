@@ -31,7 +31,9 @@ not json                                  cannot be read
 
 `templates/models.json` holds exactly the 8 entries in
 [data-model.md](../data-model.md), Model template. `st-init` copies it on "no" (D11, D12, D15, D16).
-This repo's `.stratum/models.json` holds the same content (FR-012).
+This repo's `.stratum/models.json` holds the same content (FR-012). Equality is checked by hand
+(quickstart section 3). `tests/test_model_files.sh` only checks that the file passes the hook,
+because `st-model` edits this file.
 
 ## Git
 
