@@ -110,19 +110,14 @@ rename DESIGN.md:119	DESIGN.md	| 3 | Inspect (`st-inspect`) | analyze and valida
 EOF
 d=$(grep -m1 "^description:" "$root/skills/st-full/SKILL.md")
 check "rename skills/st-full/SKILL.md:3" 'grep -qF -- "Full lane (Define, Plan, Inspect, Build, Close)" <<<"$d"'
-miss=""
-for d in "$root"/skills/*/; do
-  n=$(basename "$d"); [ -f "$d/SKILL.md" ] || continue
-  case $n in st-ponytail-*) p="-${n#st-ponytail-}" ;; *) p=$n ;; esac
-  grep -qF -e "\`$n\`" -e "\`$n " -e "\`$p\`" "$readme" || miss="$miss $n"
-done
+agrow='^\| `[^`]*` \| (Opus|Sonnet|Haiku|Fable) \|'
+miss=$(diff <(for d in "$root"/skills/*/; do [ -f "$d/SKILL.md" ] && basename "$d"; done | sort) \
+  <(grep -E '^\| `st' "$readme" | grep -vE "$agrow" | sed 's/ | .*//' | grep -oE '`(st[a-z-]*|-[a-z]+)' | tr -d '`' | sed 's/^-/st-ponytail-/' | sort -u))
 check "README skills" '[ -z "$miss" ]'
-miss=""
-for f in "$root"/agents/*.md; do
-  a=$(basename "$f" .md); m=$(sed -n 's/^model: //p' "$f")
-  m="$(echo "${m:0:1}" | tr a-z A-Z)${m:1}"
-  grep -qF -- "| \`$a\` | $m |" "$readme" || miss="$miss $a"
-done
+miss=$(diff <(for f in "$root"/agents/*.md; do
+    m=$(sed -n 's/^model: //p' "$f"); echo "$(basename "$f" .md) $(echo "${m:0:1}" | tr a-z A-Z)${m:1}"
+  done | sort) \
+  <(grep -E "$agrow" "$readme" | sed -E 's/^\| `([^`]*)` \| ([A-Za-z]+) \|.*/\1 \2/' | sort -u))
 check "README agents" '[ -z "$miss" ]'
 miss=""
 while read -r t; do

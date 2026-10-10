@@ -174,8 +174,8 @@ list is empty. The repo side is read from the repo, so the check fails when eith
 
 | Check | Rule | Negative control (on a README copy) |
 |-------|------|-------------------------------------|
-| `README skills` | every `skills/<n>/` with a `SKILL.md` is named as `` `<n>` `` or `` `<n> `` (name then a space, for `st <task>` style rows); a `st-ponytail-<x>` skill may be named `` `-<x>` `` | drop the line holding `` | `st-sync` | `` |
-| `README agents` | every `agents/<a>.md` has the row text `` | `<a>` | <Model> | `` where `<Model>` is its `model:` line with the first letter upper case | `` | `st-test` | Sonnet | `` to `` | `st-test` | Opus | `` |
+| `README skills` | rows starting `` | `st `` whose second cell is not a model are Skills rows. The set of `skills/<n>/` with a `SKILL.md` equals the set of names in those rows' first cells, both ways. A name is the first word of a backticked token (`` `st <task>` `` gives `st`); `` `-<x>` `` stands for `st-ponytail-<x>` | drop the line holding `` | `st-sync` | ``; drop the line holding `` | `st-handoff` | ``; append `` | `st-zzz` | ... | `` |
+| `README agents` | rows starting `` | `st `` whose second cell is `Opus`, `Sonnet`, `Haiku`, or `Fable` are Agents rows. The set of `<a> <Model>` pairs from `agents/<a>.md` (its `model:` line with the first letter upper case) equals the set from those rows, both ways | `` | `st-test` | Sonnet | `` to `` | `st-test` | Opus | ``; append `` | `st-zzz` | Opus | x | `` |
 | `README paths` | every backticked token matching `(agents\|hooks\|licenses\|procedures\|scripts\|skills\|statusline\|templates\|tests)/...` or `vendor.lock`, and every `](<NAME>.md)` link, exists in the repo | append a line `` `scripts/nope.sh` `` |
 | `README tests` | every `tests/<file>` the README names exists, and every `tests/test_*` file is named | drop the line `node tests/test_token_weather.mjs` |
 | `README themes` | every key of `statusline/themes.json` is named as `` `<key>` `` | remove `` `gruvbox`, `` |

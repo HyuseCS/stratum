@@ -141,7 +141,7 @@ search, then read. Code-writing agents carry the ponytail rule and add no explan
 ├── git-guard.json       git guard modes for this repo (git-ignored, per machine)
 ├── models.json         agent model and effort overrides (git-ignored, per machine)
 └── weather.json         Token Weather growth and compact point (git-ignored)
-specs/NNN-feature/       spec, plan, research, data model, contracts, quickstart, tasks, changes/
+specs/NNN-feature/       spec, plan, research, data model, contracts, quickstart, tasks, checklists/, changes/
 AGENTS.md, CLAUDE.md     point every tool at the constitution
 ```
 
@@ -151,9 +151,9 @@ copy for that project only.
 ## Built in
 
 - **Advisor.** If you set one with `/advisor`, the orchestrator consults it at three points: on
-  the plan before the build gate, when a test fails twice, and on the full diff before calling
-  the build done. Its notes are checked against the source like any finding. No advisor, no
-  change.
+  the plan before the build gate, for risks and improvements (a simpler approach, tasks to cut or
+  merge), when a test fails twice, and on the full diff before calling the build done. Its notes
+  are checked against the source like any finding. No advisor, no change.
 - **Git guard.** One mode per command: `commit`, `worktree_remove`, `worktree_prune`,
   `branch_delete`, `reset_hard`, `clean` (`clean -f`), `discard` (`checkout .`, `restore .`), and
   `force_push`. Each is `auto` (runs), `ask`, or `deny` (blocked). The guard reads the repo's

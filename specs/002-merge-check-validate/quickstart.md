@@ -222,7 +222,10 @@ sed 's/| `st-test` | Sonnet |/| `st-test` | Opus |/' README.md > "$s/r2"
 grep -vF 'node tests/test_token_weather.mjs' README.md > "$s/r4"
 sed 's/`gruvbox`, //' README.md > "$s/r5"
 sed 's/`worktree_prune`,//' README.md > "$s/r6"
-for i in 1 2 3 4 5 6; do
+grep -vF '| `st-handoff` |' README.md > "$s/r7"
+{ cat README.md; echo '| `st-zzz` | ... |'; } > "$s/r8"
+{ cat README.md; echo '| `st-zzz` | Opus | x |'; } > "$s/r9"
+for i in 1 2 3 4 5 6 7 8 9; do
   echo "== r$i"
   ST_INSPECT_README="$s/r$i" bash tests/test_inspect.sh | grep '^FAIL'
 done
@@ -230,8 +233,9 @@ done
 
 Expected: each block prints the baseline FAIL lines plus exactly one more: r1 `README skills`,
 r2 `README agents`, r3 `README paths`, r4 `README tests`, r5 `README themes`, r6
-`README git guard`. Baseline: `bash tests/test_inspect.sh | grep '^FAIL'` (in T010, the three
-README phrase checks; after T011, none).
+`README git guard`, r7 `README skills`, r8 `README skills`, r9 `README agents`. Baseline:
+`bash tests/test_inspect.sh | grep '^FAIL'` (in T010, the three README phrase checks; after
+T011, none).
 
 For the three README phrase checks, remove each first phrase from a copy in the same way
 (`grep -vF -- "<phrase>" README.md`) with `ST_INSPECT_README`: only that check turns red.
