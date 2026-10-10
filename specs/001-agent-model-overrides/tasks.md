@@ -101,12 +101,12 @@ pass; quickstart section 5 steps 4 to 7.
 
 ### Tests for User Story 4
 
-- [ ] T010 [US4] Add to `tests/test_model_files.sh` (FR-009): `skills/st-model/SKILL.md` exists; its frontmatter has `name: st-model`; its `description` line contains `make st-close use opus` and `put st-test on high effort`; the body contains `.stratum/models.json`, `model default`, `effort default` (D18 forms), `templates/models.json` (the missing-file case, D17), and `.gitignore` (V2: it adds the ignore line when it creates the file). Run it and confirm the new checks fail.
-- [ ] T011 [P] [US4] Add to `tests/test_model_hook.py` (CHK002 drift): load the hook with `importlib.util.spec_from_file_location`; assert every value in `AGENTS`, `MODELS` and `EFFORTS` appears in `skills/st-model/SKILL.md` wrapped in backticks (for example `` `max` ``), so words like `ui-ux-pro-max` or `follow` cannot satisfy it. Run it and confirm it fails.
+- [X] T010 [US4] Add to `tests/test_model_files.sh` (FR-009): `skills/st-model/SKILL.md` exists; its frontmatter has `name: st-model`; its `description` line contains `make st-close use opus` and `put st-test on high effort`; the body contains `.stratum/models.json`, `model default`, `effort default` (D18 forms), `templates/models.json` (the missing-file case, D17), and `.gitignore` (V2: it adds the ignore line when it creates the file). Run it and confirm the new checks fail.
+- [X] T011 [P] [US4] Add to `tests/test_model_hook.py` (CHK002 drift): load the hook with `importlib.util.spec_from_file_location`; assert every value in `AGENTS`, `MODELS` and `EFFORTS` appears in `skills/st-model/SKILL.md` wrapped in backticks (for example `` `max` ``), so words like `ui-ux-pro-max` or `follow` cannot satisfy it. Run it and confirm it fails.
 
 ### Implementation for User Story 4
 
-- [ ] T012 [US4] Create `skills/st-model/SKILL.md` per `specs/001-agent-model-overrides/contracts/st-model.md`, in the style of `skills/st-shape/SKILL.md`: frontmatter `name: st-model` and a `description` that names model, effort, Stratum agent, `.stratum/models.json` and the examples "make st-close use opus", "put st-test on high effort", "put st-close back on its default"; heading `# /stratum:st-model <agent> <value>...`; numbered steps 1 to 6 from the contract, with the full lists of the 11 agents, 4 models and 5 efforts written out, "Never overwrite" for a bad file, "Keep every other entry and key", "file missing: start from templates/models.json" (copy `<plugin root>/templates/models.json`, then apply the change, D17; say the template was copied and list its entries; if `.gitignore` lacks the line `.stratum/models.json`, add it, for repos set up before 0.1.26), and the one-line reply. Arguments follow D18 (`<agent> <value>...`). Run both test files: all pass.
+- [X] T012 [US4] Create `skills/st-model/SKILL.md` per `specs/001-agent-model-overrides/contracts/st-model.md`, in the style of `skills/st-shape/SKILL.md`: frontmatter `name: st-model` and a `description` that names model, effort, Stratum agent, `.stratum/models.json` and the examples "make st-close use opus", "put st-test on high effort", "put st-close back on its default"; heading `# /stratum:st-model <agent> <value>...`; numbered steps 1 to 6 from the contract, with the full lists of the 11 agents, 4 models and 5 efforts written out, "Never overwrite" for a bad file, "Keep every other entry and key", "file missing: start from templates/models.json" (copy `<plugin root>/templates/models.json`, then apply the change, D17; say the template was copied and list its entries; if `.gitignore` lacks the line `.stratum/models.json`, add it, for repos set up before 0.1.26), and the one-line reply. Arguments follow D18 (`<agent> <value>...`). Run both test files: all pass.
 
 **Checkpoint**: Users can change entries without editing JSON.
 
@@ -120,11 +120,11 @@ pass; quickstart section 5 steps 4 to 7.
 
 ### Tests for User Story 5
 
-- [ ] T013 [US5] Add to `tests/test_model_files.sh` (FR-010): `skills/st-status/SKILL.md` has a step starting `7.` whose block contains `.stratum/models.json`; its step `4.` is still `**Tools:**` (the `st-init` pointer depends on it). Run it and confirm the new checks fail.
+- [X] T013 [US5] Add to `tests/test_model_files.sh` (FR-010): `skills/st-status/SKILL.md` has a step starting `7.` whose block contains `.stratum/models.json`; its step `4.` is still `**Tools:**` (the `st-init` pointer depends on it). Run it and confirm the new checks fail.
 
 ### Implementation for User Story 5
 
-- [ ] T014 [US5] Edit `skills/st-status/SKILL.md`: add `model overrides` to the `description` list. Add step 7 after step 6: **Model overrides:** from `<project>/.stratum/models.json`, list each agent in the file with its model and effort; for a key the entry does not set, show the default (model from the `model:` line in `<plugin root>/agents/<agent>.md`, effort `default`). Say the values come from `.stratum/models.json` and change with `/stratum:st-model` or by editing the file. No file: say every agent uses the plugin defaults. A bad file: say so and quote the problem; Stratum agents will not start until it is fixed. Do not renumber steps 1 to 6. Run `bash tests/test_model_files.sh`: all pass.
+- [X] T014 [US5] Edit `skills/st-status/SKILL.md`: add `model overrides` to the `description` list. Add step 7 after step 6: **Model overrides:** from `<project>/.stratum/models.json`, list each agent in the file with its model and effort; for a key the entry does not set, show the default (model from the `model:` line in `<plugin root>/agents/<agent>.md`, effort `default`). Say the values come from `.stratum/models.json` and change with `/stratum:st-model` or by editing the file. No file: say every agent uses the plugin defaults. A bad file: say so and quote the problem; Stratum agents will not start until it is fixed. Do not renumber steps 1 to 6. Run `bash tests/test_model_files.sh`: all pass.
 
 **Checkpoint**: All stories done.
 

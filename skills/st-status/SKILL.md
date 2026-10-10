@@ -1,6 +1,6 @@
 ---
 name: st-status
-description: Show where Stratum work stands: feature, phase, lane, tasks done, git guard options, next gate, missing tools, duplicate installs, and days since the last upstream sync.
+description: Show where Stratum work stands: feature, phase, lane, tasks done, git guard options, next gate, missing tools, duplicate installs, days since the last upstream sync, and model overrides.
 ---
 
 # /stratum:st-status
@@ -29,3 +29,9 @@ block. Change nothing.
    that is on and not set to `false` in the project's `.claude/settings.json` `enabledPlugins`,
    give the line to add: `"<key>": false`. Never change global files.
 6. **Upstream sync:** days since `synced` in `<plugin root>/vendor.lock`. Over 30 days: say so.
+7. **Model overrides:** from `<project>/.stratum/models.json`, list each agent in the file with its
+   model and effort. For a key the entry does not set, show the default: the model from the
+   `model:` line in `<plugin root>/agents/<agent>.md`, effort `default`. Say the values come from
+   `.stratum/models.json` and change with `/stratum:st-model` or by editing the file. No file: say
+   every agent uses the plugin defaults. A bad file: say so and quote the problem. Stratum agents
+   will not start until it is fixed.

@@ -31,4 +31,21 @@ else
   echo "skip repo .stratum/models.json absent"
 fi
 
+sm="$root/skills/st-model/SKILL.md"
+check "st-model skill exists" '[ -f "$sm" ]'
+check "st-model frontmatter name" 'sed -n "1,/^---\$/p;" "$sm" | grep -qx "name: st-model"'
+check "st-model description names models.json" 'grep -m1 "^description:" "$sm" | grep -qF ".stratum/models.json"'
+check "st-model description has examples" 'd=$(grep -m1 "^description:" "$sm"); grep -qF "make st-close use opus" <<<"$d" && grep -qF "put st-test on high effort" <<<"$d" && grep -qF "put st-close back on its default" <<<"$d"'
+check "st-model description names model and effort" 'd=$(grep -m1 "^description:" "$sm"); grep -qw model <<<"$d" && grep -qw effort <<<"$d"'
+check "st-model names every agent" '(for a in $(ls "$root/agents" | sed "s/\.md$//"); do grep -qF "\`$a\`" "$sm" || exit 1; done)'
+check "st-model names default forms" 'grep -qF "model default" "$sm" && grep -qF "effort default" "$sm" && grep -qF "\`default\`" "$sm"'
+check "st-model uses template" 'grep -qF "templates/models.json" "$sm"'
+check "st-model adds gitignore line" 'grep -qF ".gitignore" "$sm"'
+check "st-model applies on next start" 'grep -qF "Applies on the next start." "$sm"'
+
+ss="$root/skills/st-status/SKILL.md"
+check "st-status step 4 is Tools" 'grep -q "^4\. \*\*Tools:\*\*" "$ss"'
+check "st-status has step 7" 'grep -q "^7\. " "$ss"'
+check "st-status step 7 names models.json" 'sed -n "/^7\. /,\$p" "$ss" | grep -qF ".stratum/models.json"'
+
 exit $fail
