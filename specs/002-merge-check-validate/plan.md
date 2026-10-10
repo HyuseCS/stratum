@@ -63,12 +63,15 @@ These tasks touch an access rule (the write limit of an agent), the tool set of 
 contract (the model file's allowed agent names).
 
 - **S1. Wider tools (T002, CHK013).** The analysis part ran read-only before (Read, Grep, Glob).
-  Now it runs inside an agent with Bash and Edit. Nothing sandboxes the agent. The only guards are
-  its instructions (`Never` section: edit nothing except the `## Validate` section of `plan.md`,
-  install nothing, run no migration, change no config, no `git add` or `git commit`) and the
-  orchestrator's `git status --porcelain` and `git diff` check after it returns (T002, S1 of the
-  spec). That check runs after the fact. A change outside `plan.md` is a finding, and the
-  orchestrator reverts it with the user. This is the same guard the old `st-validate` had.
+  Now it runs inside an agent with Bash and Edit. Nothing sandboxes the agent. The guards are its
+  instructions (`Never` section: edit nothing except the `## Validate` section of `plan.md`,
+  install nothing, run no migration, change no config, no `git add` or `git commit`; the Analysis
+  section says writing that `## Validate` section is the one allowed edit) and the orchestrator's
+  check. Before the agent starts, the orchestrator notes `git status --porcelain` and
+  `git diff -- plan.md`. After it returns, it compares both (T002, S1 of the spec): only `plan.md`
+  may change, and only its `## Validate` section. The check runs after the fact. A change outside
+  that section is a finding, handled as in the Findings step. This is the same guard the old
+  `st-validate` had. The diff check was made explicit in 163427e.
 - **S2. Model file names (T008, T009).** After the delete, a `.stratum/models.json` that names an
   old agent blocks every Stratum agent start with "unknown agent" and the 10 names (FR-010, no
   special case). This is a breaking change for hand-edited files. Recovery: rename the entry to
@@ -93,10 +96,12 @@ contract (the model file's allowed agent names).
 
 ```text
 specs/002-merge-check-validate/
+├── spec.md
 ├── plan.md
 ├── research.md
 ├── data-model.md
 ├── quickstart.md
+├── checklists/           # rename.md, requirements.md
 ├── contracts/
 │   └── st-inspect.md     # agent and skill contract, phrase table, rename table
 └── tasks.md
@@ -123,7 +128,7 @@ tests/
 ├── test_inspect.sh       # new
 ├── test_model_hook.py    # 10 names, st-inspect in place of the old name
 └── test_model_files.sh   # hook probe
-README.md                 # phase row, skills row, agent table, model note, test list, FR-013 drift fixes
+README.md                 # phase row, skills row, agent table, advisor bullet, model note, feature tree line (checklists/), test list, FR-013 drift fixes
 DESIGN.md                 # D7 agent table, D9 skills row, Full lane row
 .claude-plugin/plugin.json # version 0.1.27
 ```
@@ -149,3 +154,5 @@ Date: 2026-10-10. Verdict: CONDITIONAL
 F1. specs/002-merge-check-validate/quickstart.md:147-153 Severity medium. Section 5 refers to an "installed 0.1.26 copy". No such copy exists: this project has 0.1.24 installed, and the `mktemp` clone has no Stratum install. The step to load the built plugin is not exact. SC-004 and the FR-003 behavior check depend on this step. -> Replace the step with `cd "$s/p" && claude --plugin-dir /home/hyuse/Desktop/stratum`, then run `/stratum:st-inspect`. No user decision.
 F2. specs/002-merge-check-validate/quickstart.md:85-95 Severity low. No task runs the old-name clone control. T007 runs only the phrase loop and the frontmatter controls, and T022 runs sections 1, 3, 4, 7 and 8. T008 (a) is red before T010, so the match path is proven. The exit-128 path is not tested. -> Add the section 2 old-name control to T022 (tasks.md:116). No user decision.
 F3. specs/002-merge-check-validate/tasks.md:116 Severity low. T022 does not run `claude plugin validate .claude-plugin/plugin.json`. The README lists it as a test (README.md:263), and the build adds one agent and one skill and removes one skill. -> Add it to T022. No user decision.
+
+Note (Close, 2026-10-11): the task IDs above predate the renumber, and T022 is now T013. F1 is applied in quickstart.md section 5. F2 and F3 are applied in tasks.md T013.

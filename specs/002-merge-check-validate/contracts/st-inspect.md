@@ -34,7 +34,7 @@ Body sections, in order. Copy the shared lines (sr-opus-5 line, Inputs, Navigati
    plan against the real project. It writes only the `## Validate` section of plan.md, changes no
    code, never commits.
 2. `## Inputs`, `## Navigation`.
-3. `## Analysis`: "Follow `<plugin root>/procedures/analyze.md`." Then "Look for at least:" and
+3. `## Analysis`: "Follow `<plugin root>/procedures/analyze.md`." Then "It finds gaps, it does not fix them." Then "Its read-only rule covers the analysis. Writing the `## Validate` section of plan.md is the one allowed edit." Then "Look for at least:" and
    one bullet per item C1-C7, then the C10 line.
 4. `## Validate checks`: numbered checks 1-4 (V1-V4), then the V5 line.
 5. `## Output`: the V6 line, then the section format below.
@@ -100,7 +100,7 @@ Heading `# /stratum:st-inspect`. Same frame as `skills/st-check/SKILL.md` (orche
 `## 0. Start`, `## Steps`, `## Gate: user OKs the build`, `## Always`), with these changes:
 
 - Start step 2: the FR-005 order line. Start step 3: set `phase` to `inspect`.
-- Steps: one agent start (no second agent, no passing of findings), then findings (S2, S3), the
+- Steps: note `git status --porcelain` and `git diff` of plan.md, one agent start (no second agent, no passing of findings), compare both after it returns (S1), then findings (S2, S3), the
   rerun (S4), the advisor (S5). Gate (S6): "the verdict" in place of "validate's verdict".
 
 ### Phrase table: skill

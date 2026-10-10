@@ -23,6 +23,11 @@ Expected red states during the build (do not "fix" these by editing the tests):
 | T007, T008 | the above, plus the new US3 checks in `test_inspect.sh` | old files and names still there |
 | T010 | the three README phrase checks | README not fixed yet (T011) |
 
+Recorded (Close, 2026-10-11, Claude Code 2.1.294): `bash tests/test_inspect.sh` 57 ok, no FAIL.
+`python3 -m unittest tests/test_model_hook.py` 32 tests, OK. `bash tests/test_model_files.sh` 25 ok,
+no FAIL. Run with `PYTHONDONTWRITEBYTECODE=1`. `claude plugin validate .claude-plugin/plugin.json`:
+Validation passed.
+
 ## 2. Negative controls for the phrase checks (FR-012, lessons L1)
 
 Each check must go red alone when its first phrase is removed. Run in T006, before the delete:
@@ -106,6 +111,8 @@ bash "$s/n/tests/test_inspect.sh" | grep '^FAIL'
 
 Expected: `no git repo, as planted`, then one FAIL line, the old-name search.
 
+Recorded (T013, 2026-10-11, Claude Code 2.1.294): passed.
+
 ## 3. Rename and the 10 agents (US3)
 
 ```bash
@@ -116,6 +123,8 @@ ls agents
 Expected: the search prints nothing. `agents/` lists 10 files, `st-inspect.md` among them.
 Then reload the plugin (`/plugin` or a new session) and type `/stratum:st-`: `st-inspect` is in
 the list and `st-check` is not.
+
+Recorded (T013, 2026-10-11, Claude Code 2.1.294): passed.
 
 ## 4. A model file that names an old agent (FR-010)
 
@@ -133,6 +142,8 @@ Expected: the first two print `"permissionDecision": "deny"` with
 `unknown agent "st-check". Allowed agents: st-build, st-close, st-debug, st-fast, st-git, st-inspect, st-plan, st-quick, st-review, st-test.`
 (and the same for `st-validate`). The last one, the recovery, prints `updatedInput` with
 `"model": "opus"` and no deny.
+
+Recorded (T013, 2026-10-11, Claude Code 2.1.294): passed.
 
 ## 5. Planted gaps (SC-004, US1 acceptance 2 and 3, edge case 1)
 
@@ -180,9 +191,15 @@ Expected:
 - Exactly 1 agent started (the session's agent list), SC-001.
 - The report names FR-010 with no task (coverage gap, C5), and `zqlint` not installed with no
   setup task (setup check, V1). Line 1 has a verdict. The report has a coverage line.
-- `git status --porcelain` differs from `$s/before` only by ` M specs/900-planted/plan.md`.
+- `git status --porcelain` differs from `$s/before` only in two paths: `specs/900-planted/plan.md` (the agent's edit, now also unstaged) and `.stratum/state.json` (phase set to `inspect` by Start step 3, now also unstaged).
 - The `## Validate` count is still `1` (replaced, not appended).
 - `git diff` changes only lines inside the `## Validate` section.
+
+Recorded (T013, 2026-10-11, Claude Code 2.1.294): passed headless in a scratch clone, 1 subagent.
+Both planted gaps reported (zqlint missing, FR-010 no task). Validate replaced, not appended, and
+hunks only inside it. Deviation: the agent's Python test run left `hooks/__pycache__/` in the clone.
+The "only plan.md may change" check in the skill would flag it. The repo's `.gitignore` has no
+`__pycache__` rule, so this is not a clean pass.
 
 ## 6. Advisor step (US2)
 
@@ -204,10 +221,16 @@ git log -1 --format=%B
 Expected: `"version": "0.1.27"`, and the message equals contracts/st-inspect.md section 4 word
 for word, with no trailer.
 
+Recorded (T013, 2026-10-11, Claude Code 2.1.294): passed. Version 0.1.27. The commit body matches
+section 4.
+
 ## 8. Mid-feature project (edge case 3)
 
 In a scratch project whose `.stratum/state.json` says `"phase": "check"`, run
 `/stratum:st-build`. Expected: one line that warns the order is unexpected, then the phase runs.
+
+Recorded (T013, 2026-10-11, Claude Code 2.1.294): read only. `st-build` step 2 holds the order
+check (`inspect` or `build`) and warns once for `phase: check`. Not run in a scratch project.
 
 ## 9. README matches the repo (FR-013)
 
@@ -239,3 +262,5 @@ T011, none).
 
 For the three README phrase checks, remove each first phrase from a copy in the same way
 (`grep -vF -- "<phrase>" README.md`) with `ST_INSPECT_README`: only that check turns red.
+
+Recorded (T013, 2026-10-11, Claude Code 2.1.294): passed.

@@ -108,7 +108,7 @@ blocked with "unknown agent" and the 10 allowed names.
 - **FR-002**: The Inspect agent MUST run on opus with Read, Grep, Glob, Bash and Edit.
 - **FR-003**: The Inspect agent MUST change no file except the `## Validate` section of the feature's `plan.md`, replacing an older one if present. It never installs, migrates, changes config or commits.
 - **FR-004**: The Inspect agent's report MUST hold the analysis findings, the coverage line and the validate verdict with per-check results.
-- **FR-005**: `/stratum:st-inspect` MUST replace `/stratum:st-check`, start one agent, set `phase` to `inspect`, and confirm by `git status` that only `plan.md` changed.
+- **FR-005**: `/stratum:st-inspect` MUST replace `/stratum:st-check`, start one agent, set `phase` to `inspect`, and confirm by `git status` and `git diff` of `plan.md` that only `plan.md` changed, and only its `## Validate` section.
 - **FR-006**: The advisor step of `/stratum:st-inspect` MUST ask for improvements (a simpler or better approach, tasks to cut or merge) as well as risks, and treat the answers as findings.
 - **FR-007**: The `st-check` agent, the `st-validate` agent and the `/stratum:st-check` skill MUST be removed after `st-inspect` exists, and no tracked file outside `specs/` may name them.
 - **FR-008**: The phase name MUST be `inspect` everywhere it is named: the Full lane, the phase order checks of the next phase, status and its next-gate text, README and DESIGN.

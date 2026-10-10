@@ -1,5 +1,5 @@
 {
   "feature_directory": "specs/002-merge-check-validate",
-  "phase": "build",
+  "phase": "close",
   "lane": "full"
 }

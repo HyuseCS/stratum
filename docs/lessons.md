@@ -49,3 +49,33 @@
   `json.dumps` with an 80-character cut (`:17`). Each fix has a test.
 - Rule: Before build, check every plan input against the tool's real schema (optional fields) and
   against the threat (a committed file is untrusted input). Give each finding a test.
+
+## 2026-10-11: 002-merge-check-validate
+
+### L6. Two [P] tasks that share one test cannot each go green
+
+- What happened: The plan (9ee6163) ran T002 (agent) and T003 (skill) as parallel tasks.
+  `tests/test_inspect.sh` checks both files, so neither could pass alone. The plan check (ee6eb39)
+  merged them into one task (`tasks.md:55`). No worktree ran during the build, so the merge came
+  from the plan review, not from a red build. `tasks.md:99` (T009, a repo-wide search) and
+  `tasks.md:150` apply the same rule.
+- Rule: In a plan, merge two tasks that share one test file or one repo-wide check. A [P] task that
+  cannot go green alone is not parallel.
+
+### L7. A one-way README check misses stale rows
+
+- What happened: T010 (9a9a325) read the repo side only: every skill folder and agent file had to
+  have a README row. A row for a removed skill or agent passed. The US3 review (19c0520) made the
+  skills and agents checks two ways. Quickstart section 9 controls r8 and r9 add an extra row and
+  turn one check red each.
+- Rule: A check between two lists reads both sides. Prove it with a planted extra row and a planted
+  missing row, and watch each one go red.
+
+### L8. An "only X changed" check counts side effects of test runs
+
+- What happened: In the quickstart section 5 run (scratch clone), the agent ran the Python tests and
+  left `hooks/__pycache__/`. `.gitignore` has no `__pycache__` rule. This repo shows the same kind
+  of untracked cache (`skills/st-ui-ux/scripts/__pycache__/`). The skill's check "only plan.md may
+  change" counts it.
+- Rule: Keep test runs from writing into the repo (`PYTHONDONTWRITEBYTECODE=1`, or `python3 -B`), or
+  have the check ignore caches. A run with this side effect is not a clean pass.

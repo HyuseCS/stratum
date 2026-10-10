@@ -126,7 +126,7 @@ three test commands pass; quickstart sections 3 and 4.
 ## Phase 6: Polish and Release
 
 - [X] T012 Edit `.claude-plugin/plugin.json`: `"version": "0.1.26"` to `"version": "0.1.27"` (FR-011, research R3). Commit it alone. The commit message is `specs/002-merge-check-validate/contracts/st-inspect.md` section 4 word for word, with no `Co-Authored-By` or other trailer. FR-011 has no automated check (research R3); quickstart section 7 checks it by hand.
-- [ ] T013 Run `specs/002-merge-check-validate/quickstart.md` sections 1, 3, 4, 7, 8 and 9 and report each result. Run the README controls of section 9 and the old-name controls of section 2 (the clone with a planted name, and the copy with no git repo: both must print the FAIL line of the old-name search). Run `claude plugin validate .claude-plugin/plugin.json` from the repo root: it must pass. Run section 5 (SC-004) in a scratch clone only, never on a tracked `specs/` dir, and section 6 if an advisor is set. Report the actual output, not a summary.
+- [X] T013 Run `specs/002-merge-check-validate/quickstart.md` sections 1, 3, 4, 7, 8 and 9 and report each result. Run the README controls of section 9 and the old-name controls of section 2 (the clone with a planted name, and the copy with no git repo: both must print the FAIL line of the old-name search). Run `claude plugin validate .claude-plugin/plugin.json` from the repo root: it must pass. Run section 5 (SC-004) in a scratch clone only, never on a tracked `specs/` dir, and section 6 if an advisor is set. Report the actual output, not a summary.
 
 ---
 
