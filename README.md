@@ -91,6 +91,7 @@ ponytail review, commit, drift fix.
 | `st-status` | Feature, phase, lane, tasks done, git guard options, next gate, missing tools. |
 | `st-shape arrow\|rounded\|slanted\|blocks\|flat` | Set the statusline shape. |
 | `st-theme <name>` | Set the color theme of the statusline and Token Weather. |
+| `st-model <agent> <value>...` | Set an agent's model or effort for this project. Plain words work too: "make st-close use opus". |
 | `st-handoff` | Write the session handoff. |
 | `st-init` | Set up a project. |
 | `st-template <name>` | Copy a template into the project to edit it. |
@@ -121,6 +122,10 @@ All skills are called as `/stratum:<name>`.
 | `st-close` | Sonnet | Drift fixes, gap report, lessons |
 | `st-git` | Sonnet | Commits each finished task, exact paths only |
 
+The Model column is the plugin default. `st-init`'s template runs `st-build`, `st-debug`,
+`st-quick`, `st-plan`, and `st-fast` on Opus with effort high, and `st-close`, `st-git`, and
+`st-test` on Haiku with effort xhigh. See **Model overrides** under [Built in](#built-in).
+
 Every agent reads the SR-OPUS-5 communication contract first and finds files graph first, then
 search, then read. Code-writing agents carry the ponytail rule and add no explanatory comments.
 
@@ -134,6 +139,7 @@ search, then read. Code-writing agents carry the ponytail rule and add no explan
 ├── handoff.md           session handoff (git-ignored)
 ├── powerline.json       statusline theme, shape, colors (git-ignored, per machine)
 ├── git-guard.json       git guard modes for this repo (git-ignored, per machine)
+├── models.json         agent model and effort overrides (git-ignored, per machine)
 └── weather.json         Token Weather growth and compact point (git-ignored)
 specs/NNN-feature/       spec, plan, research, data model, contracts, quickstart, tasks, changes/
 AGENTS.md, CLAUDE.md     point every tool at the constitution
@@ -156,6 +162,23 @@ copy for that project only.
   staged-file summary. Push, `rebase`, and `commit --amend` always ask. `git config` writes,
   `git add -A`, `git add .`, and `--no-verify` are always blocked. Remote branch delete is
   blocked: you delete remote branches yourself.
+- **Model overrides.** `.stratum/models.json` maps an agent name to an optional `model` and
+  `effort`, for example `{ "st-close": { "model": "haiku", "effort": "xhigh" } }`. Agents:
+  `st-build`, `st-check`, `st-close`, `st-debug`, `st-fast`, `st-git`, `st-plan`, `st-quick`,
+  `st-review`, `st-test`, `st-validate`. Models: `sonnet`, `opus`, `haiku`, `fable`. Efforts:
+  `low`, `medium`, `high`, `xhigh`, `max`. `st-init` writes it from `templates/models.json`:
+  `st-build`, `st-debug`, `st-quick`, `st-plan`, `st-fast` on opus with effort high, and
+  `st-close`, `st-git`, `st-test` on haiku with effort xhigh. `st-check`, `st-review`, and
+  `st-validate` have no entry and keep the plugin default. A hook applies the file each time a
+  Stratum agent starts, so the next start picks up an edit. A bad file blocks every Stratum agent
+  start with a message that names the problem. Only Stratum agents are affected.
+  `CLAUDE_CODE_EFFORT_LEVEL` beats the file's effort.
+  The per-call `effort` needs Claude Code 2.1.292 or later. On an older client, remove the
+  `effort` keys from the file.
+  A linked worktree has no `models.json`: it is git-ignored and `scripts/st-worktree.sh` does not
+  link it, so agents there use the plugin defaults, as with `git-guard.json`.
+  To change an entry, run `/stratum:st-model st-close opus`, say it in plain words ("make
+  st-close use opus"), or edit the file.
 - **Session handoff.** `st-handoff` writes the goal, decisions, open questions, and next step. A
   hook adds a facts block (branch, phase, tasks done, last commits, uncommitted files) at session
   end and before compaction. The next session starts by reading it.
@@ -232,6 +255,8 @@ ports, and waits for review before updating `vendor.lock`.
 
 ```bash
 python3 tests/test_git_guard.py
+python3 tests/test_model_hook.py
+bash tests/test_model_files.sh
 bash tests/test_session_hooks.sh
 bash tests/test_statusline.sh
 node tests/test_token_weather.mjs

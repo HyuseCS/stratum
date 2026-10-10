@@ -205,6 +205,32 @@ class ModelHookTest(unittest.TestCase):
         cmds = [h["command"] for h in agent[0]["hooks"]]
         self.assertIn('python3 "${CLAUDE_PLUGIN_ROOT}/hooks/st-models.py"', cmds)
 
+    def test_st_model_skill_matches_hook(self):
+        spec = importlib.util.spec_from_file_location("st_models", HOOK)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        with open(os.path.join(ROOT, "skills", "st-model", "SKILL.md")) as f:
+            text = f.read()
+        for name in (*mod.AGENTS, *mod.MODELS, *mod.EFFORTS):
+            self.assertIn("`%s`" % name, text, name)
+
+    def test_docs_cover_feature(self):
+        spec = importlib.util.spec_from_file_location("st_models", HOOK)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        with open(os.path.join(ROOT, "README.md")) as f:
+            readme = f.read()
+        for s in (".stratum/models.json", "templates/models.json", "st-model",
+                  "CLAUDE_CODE_EFFORT_LEVEL", "2.1.292",
+                  "python3 tests/test_model_hook.py", "bash tests/test_model_files.sh"):
+            self.assertIn(s, readme, s)
+        for name in (*mod.AGENTS, *mod.MODELS, *mod.EFFORTS):
+            self.assertIn("`%s`" % name, readme, name)
+        with open(os.path.join(ROOT, "DESIGN.md")) as f:
+            design = f.read()
+        for s in ("st-model", "hooks/st-models.py"):
+            self.assertIn(s, design, s)
+
 
 if __name__ == "__main__":
     unittest.main()

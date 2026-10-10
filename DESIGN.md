@@ -73,7 +73,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 
 ## 3. Skills
 
-- **D9.** Fourteen entry skills:
+- **D9.** Fifteen entry skills:
 
 | Skill | Job |
 |-------|-----|
@@ -83,6 +83,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 | `st-status` | Feature, phase, lane, tasks done, git guard options, next gate, missing tools, days since last sync. |
 | `st-shape arrow\|rounded\|slanted\|blocks\|flat` | Set the statusline shape. |
 | `st-theme <name>` | Set the color theme of the statusline and Token Weather. |
+| `st-model <agent> <value>...` | Set an agent's model or effort in `.stratum/models.json`. |
 | `st-init` | Set up a project: data files, constitution (grilled), tool check. |
 | `st-template <name>` | Copy a plugin template into `.stratum/templates/` to edit. |
 | `st-handoff` | Write the session handoff. |
@@ -194,6 +195,14 @@ second file or touches any area above text and docs.
     key. The hook reads the file, then `CLAUDE_PLUGIN_OPTION_<KEY>`. `commit` `ask` and `deny` show a staged-file summary.
   - Push, `rebase`, and `commit --amend` always ask.
   - Always blocked: `git config`, `git add -A`, `git add .`, `--no-verify`, remote branch delete.
+- **D19. Model overrides (`st-models`).** A PreToolUse hook on `Agent`, `hooks/st-models.py`:
+  - On every `stratum:` agent start it reads the repo's `.stratum/models.json` (git-ignored,
+    written by `st-init` from `templates/models.json`). Each key is an agent name with an
+    optional `model` and `effort`.
+  - It sets only `model` and `effort` on the call. Other agents and other fields are untouched.
+    No file or no entry keeps the plugin default.
+  - A bad file (bad JSON, unknown agent, key, model, or effort) denies the start with a message.
+  - `st-model` edits the file. `st-status` shows the overrides.
 - **D18. Handoff.**
   - `st-handoff` writes `.stratum/handoff.md`: goal, decisions, lane, phase and task, open
     questions, blockers, exact next step.
