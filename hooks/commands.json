@@ -6,6 +6,12 @@
         "hooks": [
           { "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/st-git-guard.py\"", "timeout": 10 }
         ]
+      },
+      {
+        "matcher": "Agent",
+        "hooks": [
+          { "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/st-models.py\"", "timeout": 10 }
+        ]
       }
     ],
     "SessionStart": [
