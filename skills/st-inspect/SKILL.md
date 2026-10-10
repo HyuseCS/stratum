@@ -28,9 +28,11 @@ Plugin root (`<plugin root>`) is two levels up from this skill's base directory.
    Small ones you fix and list at the gate.
    Fixes to spec, plan or tasks go to the `st-plan` subagent (resume it with `SendMessage` if it is still alive); have `st-git` commit them.
 3. If any CRITICAL finding was fixed, run `st-inspect` once more. It replaces its older `## Validate` section.
-4. **Advisor.** If an advisor is set (`/advisor`), consult it on the plan before the gate: missed
-   auth invariants, schema or contract breaks, hidden breaking changes. Treat its notes as
-   findings: check each against the source, then fix or bring to the user.
+4. **Advisor.** If an advisor is set (`/advisor`), consult it on the plan before the gate.
+   Risks: missed auth invariants, schema or contract breaks, hidden breaking changes.
+   Improvements: a simpler or better approach, tasks to cut or merge. Treat its answers as
+   findings: check each against the source, fix the small ones,
+   and big ones go to the user before the gate.
 
 ## Gate: user OKs the build
 

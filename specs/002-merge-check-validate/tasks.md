@@ -69,11 +69,11 @@ section 5 reports both planted gaps with one agent start.
 
 ### Tests for User Story 2
 
-- [ ] T004 [US2] Add to `tests/test_inspect.sh` one check for the S5 row of the skill phrase table in `specs/002-merge-check-validate/contracts/st-inspect.md` section 2 (FR-006): `a simpler or better approach`, `tasks to cut or merge`, `missed auth invariants`, `big ones go to the user before the gate`, each with `grep -qF --` on `$skill`. Run it: the S5 check prints FAIL (T002 copied the risk-only step).
+- [X] T004 [US2] Add to `tests/test_inspect.sh` one check for the S5 row of the skill phrase table in `specs/002-merge-check-validate/contracts/st-inspect.md` section 2 (FR-006): `a simpler or better approach`, `tasks to cut or merge`, `missed auth invariants`, `big ones go to the user before the gate`, each with `grep -qF --` on `$skill`. Run it: the S5 check prints FAIL (T002 copied the risk-only step).
 
 ### Implementation for User Story 2
 
-- [ ] T005 [US2] In `skills/st-inspect/SKILL.md`, rewrite the Advisor step: "If an advisor is set (`/advisor`), consult it on the plan before the gate." Risks: missed auth invariants, schema or contract breaks, hidden breaking changes. Improvements: a simpler or better approach, tasks to cut or merge. "Treat its answers as findings: check each against the source, fix the small ones, and big ones go to the user before the gate." Keep each S5 phrase whole on one line. Run `bash tests/test_inspect.sh`: every check `ok`.
+- [X] T005 [US2] In `skills/st-inspect/SKILL.md`, rewrite the Advisor step: "If an advisor is set (`/advisor`), consult it on the plan before the gate." Risks: missed auth invariants, schema or contract breaks, hidden breaking changes. Improvements: a simpler or better approach, tasks to cut or merge. "Treat its answers as findings: check each against the source, fix the small ones, and big ones go to the user before the gate." Keep each S5 phrase whole on one line. Run `bash tests/test_inspect.sh`: every check `ok`.
 
 ---
 
