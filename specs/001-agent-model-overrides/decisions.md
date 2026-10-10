@@ -1,0 +1,9 @@
+# Decisions
+
+## Issue #8: project setting for subagent models and effort
+
+- D10 (Q5): O2. One PreToolUse hook on the Agent tool reads `.stratum/models.json` on every `stratum:st-*` call, sets `model` and `effort`, and blocks the call with a clear error if the file is bad. `st-init` sets the file up. The user can edit it at any time; the next agent call uses the new values. Rejected: O3 (each skill tells the model to read the file).
+- D11 (Q6): O4. `st-init` asks one question ("Change the model or effort for any agent?"), default no, and on no writes the plugin template (D12). It shows the default table and how to edit the file. Only real overrides go in the file, so plugin updates still reach the other agents. Rejected: O5 (write all 11 agents with their current model).
+- D12 (Q7): The plugin ships `templates/models.json` with `st-close`, `st-git`, `st-test` on haiku. `st-init` writes it into every new repo on "no" (amends D11: not `{}`). This repo gets the same file. Agent frontmatter defaults stay sonnet. The user accepts the st-test risk (a weaker test can pass on wrong code). Rejected: O7 (change agent frontmatter), O10 (this repo only), O11 (template only by `/stratum:st-template`).
+- D13 (Q8): O13. `.stratum/models.json` is git-ignored and per machine, like `git-guard.json`. `st-init` writes it from the template on "no". A clone without the file uses the agent frontmatter defaults until `st-init` runs. Rejected: O12 (track it in git).
+- D14 (gate): The user wants Claude Code to change a model when asked in plain words ("make st-close use opus"). Agent's choice: a `/stratum:st-model <agent> <model|default> [effort]` skill in the `st-shape` / `st-theme` pattern edits `.stratum/models.json`; its description lets Claude Code pick it from plain words. The hook stays as code and is not edited.

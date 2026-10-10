@@ -1,5 +1,5 @@
 {
-  "feature_directory": null,
-  "phase": null,
-  "lane": null
+  "feature_directory": "specs/001-agent-model-overrides",
+  "phase": "define",
+  "lane": "full"
 }
