@@ -4,6 +4,7 @@ root="$(cd "$(dirname "$0")/.." && pwd)"
 fail=0
 agent="${ST_INSPECT_AGENT:-$root/agents/st-inspect.md}"
 skill="${ST_INSPECT_SKILL:-$root/skills/st-inspect/SKILL.md}"
+readme="${ST_INSPECT_README:-$root/README.md}"
 check() { if eval "$2"; then echo "ok   $1"; else echo "FAIL $1"; fail=1; fi; }
 report() { if [ "$ok" = 1 ]; then echo "ok   $cur"; else echo "FAIL $cur"; fail=1; fi; }
 phrases() {
@@ -16,6 +17,7 @@ phrases() {
     case $target in
       agent) f=$agent ;;
       skill) f=$skill ;;
+      readme) f=$readme ;;
       *) f=$root/$target ;;
     esac
     grep -qF -- "$phrase" "$f" || ok=0
@@ -108,5 +110,46 @@ rename DESIGN.md:119	DESIGN.md	| 3 | Inspect (`st-inspect`) | analyze and valida
 EOF
 d=$(grep -m1 "^description:" "$root/skills/st-full/SKILL.md")
 check "rename skills/st-full/SKILL.md:3" 'grep -qF -- "Full lane (Define, Plan, Inspect, Build, Close)" <<<"$d"'
+miss=""
+for d in "$root"/skills/*/; do
+  n=$(basename "$d"); [ -f "$d/SKILL.md" ] || continue
+  case $n in st-ponytail-*) p="-${n#st-ponytail-}" ;; *) p=$n ;; esac
+  grep -qF -e "\`$n\`" -e "\`$n " -e "\`$p\`" "$readme" || miss="$miss $n"
+done
+check "README skills" '[ -z "$miss" ]'
+miss=""
+for f in "$root"/agents/*.md; do
+  a=$(basename "$f" .md); m=$(sed -n 's/^model: //p' "$f")
+  m="$(echo "${m:0:1}" | tr a-z A-Z)${m:1}"
+  grep -qF -- "| \`$a\` | $m |" "$readme" || miss="$miss $a"
+done
+check "README agents" '[ -z "$miss" ]'
+miss=""
+while read -r t; do
+  [ -e "$root/$t" ] || miss="$miss $t"
+done < <({ grep -oE '`(agents|hooks|licenses|procedures|scripts|skills|statusline|templates|tests)/[^` ]*`|`vendor\.lock`' "$readme"; grep -oE '\]\([^)]*\.md\)' "$readme"; } | tr -d '`' | sed -E 's/^\]\((.*)\)$/\1/')
+check "README paths" '[ -z "$miss" ]'
+miss=""
+while read -r t; do
+  [ -e "$root/$t" ] || miss="$miss $t"
+done < <(grep -oE 'tests/[A-Za-z0-9_.-]*[A-Za-z0-9_]' "$readme")
+for f in "$root"/tests/test_*; do
+  grep -qF -- "tests/$(basename "$f")" "$readme" || miss="$miss $(basename "$f")"
+done
+check "README tests" '[ -z "$miss" ]'
+miss=""
+keys=$(python3 -c 'import json,sys; print("\n".join(json.load(open(sys.argv[1]))))' "$root/statusline/themes.json")
+for k in $keys; do grep -qF -- "\`$k\`" "$readme" || miss="$miss $k"; done
+check "README themes" '[ -n "$keys" ] && [ -z "$miss" ]'
+miss=""
+keys=$(python3 -c 'import json,sys; print("\n".join(json.load(open(sys.argv[1]))["userConfig"]))' "$root/.claude-plugin/plugin.json")
+for k in $keys; do grep -qF -- "\`$k\`" "$readme" || miss="$miss $k"; done
+check "README git guard" '[ -n "$keys" ] && [ -z "$miss" ]'
+phrases <<'EOF'
+README st-status	readme	missing tools, duplicate installs, days since the last upstream sync, model overrides
+README st-init	readme	asks for the git guard modes and any model overrides
+README st-init	readme	writes the `AGENTS.md` and `CLAUDE.md` pointers
+README python3	readme	git guard, model overrides hook, statusline, handoff facts
+EOF
 
 exit $fail

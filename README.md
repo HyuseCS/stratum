@@ -28,16 +28,17 @@ Then, in a new session in your project:
 /stratum:st-init
 ```
 
-`st-init` creates the project's `.stratum/` files and `specs/`, grills you for the project's
-rules (the constitution), sets the statusline and asks for its theme, shape and Token Weather
-line, turns off a global ponytail or Token Weather plugin for this project, offers to upgrade
-graphify, installs its post-commit hook, and checks your tools.
+`st-init` creates the project's `.stratum/` files and `specs/`,
+asks for the git guard modes and any model overrides, grills you for the project's rules (the
+constitution), writes the `AGENTS.md` and `CLAUDE.md` pointers, sets the statusline and asks for its
+theme, shape and Token Weather line, turns off a global ponytail or Token Weather plugin for this
+project, offers to upgrade graphify, installs its post-commit hook, and checks your tools.
 
 ### Requirements
 
 | Tool | Used for |
 |------|----------|
-| `git`, `python3` | git guard, scripts |
+| `git`, `python3` | git guard, model overrides hook, statusline, handoff facts, scripts |
 | `node` | ponytail hooks |
 | `bunx` (Bun) | statusline bar (falls back to markers only) |
 | `graphify` 0.9.74 or later (`uv tool install graphifyy`) | code navigation graph, Dart support |
@@ -88,7 +89,7 @@ ponytail review, commit, drift fix.
 | `st <task>` | Main entry. Picks the lane and runs it. |
 | `st-full`, `st-fast`, `st-quick` | Force a lane. |
 | `st-define`, `st-plan`, `st-inspect`, `st-build`, `st-close` | Run or resume one Full-lane phase. |
-| `st-status` | Feature, phase, lane, tasks done, git guard options, next gate, missing tools. |
+| `st-status` | Feature, phase, lane, tasks done, git guard options, next gate, missing tools, duplicate installs, days since the last upstream sync, model overrides. |
 | `st-shape arrow\|rounded\|slanted\|blocks\|flat` | Set the statusline shape. |
 | `st-theme <name>` | Set the color theme of the statusline and Token Weather. |
 | `st-model <agent> <value>...` | Set an agent's model or effort for this project. Plain words work too: "make st-close use opus". |
