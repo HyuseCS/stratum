@@ -78,7 +78,7 @@ blocked with "unknown agent" and the 10 allowed names.
 **Acceptance Scenarios**:
 
 1. **Given** the updated plugin, **When** a user searches its tracked files outside `specs/` for
-   `st-check` or `st-validate`, **Then** there is no match.
+   the whole words `st-check` or `st-validate`, **Then** there is no match.
 2. **Given** a model file with an `st-check` or `st-validate` entry, **When** any Stratum agent
    starts, **Then** the start is blocked, and the message names the bad entry and lists the 10
    allowed agents, `st-inspect` among them.
@@ -159,7 +159,7 @@ From the old phase skill:
 ### Measurable Outcomes
 
 - **SC-001**: The Inspect phase starts 1 agent instead of 2.
-- **SC-002**: A search for `st-check` and `st-validate` in tracked files outside `specs/` finds 0 matches.
+- **SC-002**: A whole-word search for `st-check` and `st-validate` in tracked files outside `specs/` finds 0 matches. (A plain search hits the icon name `list-checks`; see research R1.)
 - **SC-003**: All existing model file tests pass with 10 agents.
 - **SC-004**: On a sample feature with a planted cross-artifact gap and a planted buildability gap, the Inspect phase reports both.
 
@@ -168,6 +168,6 @@ From the old phase skill:
 - `procedures/analyze.md` stays as it is. The validate checks move into the agent body, as they were in the old validate agent.
 - The `## Validate` section name in `plan.md` stays. It names the job, not the old agent.
 - The template `templates/models.json` names neither old agent, so only hand-edited model files hit FR-010.
-- Release notes are the version bump commit message and the README; Stratum has no CHANGELOG file.
+- Release notes are the body of the version bump commit. Stratum has no CHANGELOG file, and the README may not name the old agents (FR-007).
 - Old names in git history, `specs/001-*` and the ignored `.stratum/handoff.md` stay. They are history.
 - "Check" as a plain word (a test check, a tool check) stays. Only the phase, skill and agent names change.
