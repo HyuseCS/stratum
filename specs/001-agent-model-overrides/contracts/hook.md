@@ -34,8 +34,8 @@ It is a second entry in the `PreToolUse` array, next to the `Bash` git guard ent
 ## Steps
 
 1. Stdin is not valid JSON: exit 0, no output.
-2. `tool_input.subagent_type` does not start with `stratum:`: exit 0, no output. Do not read the
-   file.
+2. `tool_input.get("subagent_type") or ""` does not start with `stratum:` (the key is optional):
+   exit 0, no output. Do not read the file.
 3. Find the project folder: walk up from `cwd` to the first folder that has `.stratum/` or `.git`.
 4. `<project>/.stratum/models.json` does not exist: exit 0, no output.
 5. Read and check the whole file (all entries). Any problem, or any exception: deny.
@@ -50,8 +50,9 @@ It is a second entry in the `PreToolUse` array, next to the `Bash` git guard ent
                    "model": "haiku", "effort": "xhigh", "run_in_background": false}}}
 ```
 
-- `updatedInput` = a copy of `tool_input` with `model` and `effort` set from the entry. Only the
-  keys the entry has are set. A value the call already had is replaced. No key is removed.
+- `updatedInput` = a copy of `tool_input`, then `model` and `effort` copied from the entry where
+  the entry has them. Never merge the whole entry (`{**tool_input, **entry}` is wrong): only these
+  two keys may change. A value the call already had is replaced. No key is removed.
 - No `permissionDecision` key.
 - Exit 0.
 
@@ -75,7 +76,8 @@ Exit 0. One line per problem. Each problem names the bad item and the allowed va
 | Unknown model | the bad value, the agent name, and `sonnet`, `opus`, `haiku`, `fable` |
 | Unknown effort | the bad value, the agent name, and `low`, `medium`, `high`, `xhigh`, `max` |
 
-The reason always contains `.stratum/models.json`.
+The reason always contains `.stratum/models.json`. Each bad key or value in the reason is
+`json.dumps(value)` cut to 80 characters, so a long or odd value cannot flood the message.
 
 ## Module names (for the drift test)
 

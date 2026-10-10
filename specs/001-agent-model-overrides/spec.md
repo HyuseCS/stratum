@@ -6,7 +6,7 @@
 
 **Status**: Draft
 
-**Input**: User description: "GitHub issue #8 on HyuseCS/stratum: project setting for subagent models and effort (.stratum/models.json). Issue body is the source spec." Grilling decisions D10 to D14 are in `decisions.md`.
+**Input**: User description: "GitHub issue #8 on HyuseCS/stratum: project setting for subagent models and effort (.stratum/models.json). Issue body is the source spec." Decisions D10 to D18 are in `decisions.md`.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -197,8 +197,7 @@ listed.
 ## Assumptions
 
 - Claude Code lets a hook that runs before an agent starts change the start's model and effort, or
-  block the start with a message. The Plan phase must confirm this first. If it is not true, the
-  approach in D10 must change, and that goes back to the user.
+  block the start with a message. Confirmed on Claude Code 2.1.294 (research.md R1, V1 to V3).
 - The `haiku` model name starts the current Haiku model (Haiku 5.5).
 - The user accepts that `st-test` on Haiku may write weaker tests (D12).
 - Existing projects that already ran `st-init` get no model file until the user runs `st-init`

@@ -54,39 +54,79 @@ python3 -c 'import json; assert json.load(open(".stratum/models.json")) == json.
 
 Expected: the first prints `.stratum/models.json`, the second exits 0.
 
-## 4. End to end with Claude Code
+## 4. End to end with Claude Code (FR-002, FR-004, SC-001, SC-003)
 
-This proves the shipped hook is registered and changes the real subagent. The research runs used
-a temporary hook, not this one.
+This proves the real `hooks/st-models.py` changes a real subagent. It loads the hook through
+`--settings`, so it does not depend on which Stratum copy is installed. It uses `stratum:st-check`
+because that agent is read-only. Never use `st-git` here: it commits.
+
+Setup, from the repo root:
 
 ```bash
-tmp=$(mktemp -d); mkdir -p "$tmp/.stratum"; git -C "$tmp" init -q
-cp templates/models.json "$tmp/.stratum/models.json"
-cd "$tmp" && claude -p --plugin-dir /home/hyuse/Desktop/stratum \
-  "Start the stratum:st-close agent with the prompt 'Reply with the word done.' and show its reply."
+cd /home/hyuse/Desktop/stratum
+tmp=$(mktemp -d)
+cp .stratum/models.json "$tmp/models.backup.json"
+cat > "$tmp/settings.json" <<'EOF'
+{"hooks": {"PreToolUse": [{"matcher": "Agent", "hooks": [{"type": "command", "command": "python3 /home/hyuse/Desktop/stratum/hooks/st-models.py", "timeout": 10}]}]}}
+EOF
+run() { claude -p --settings "$tmp/settings.json" "Start the stratum:st-check agent with the prompt 'Reply with only your model ID. Do not read or change any file.' Then print its reply, or the exact error if the start fails."; }
+newest() { ls -t ~/.claude/projects/-home-hyuse-Desktop-stratum/*/subagents/agent-*.jsonl | head -1; }
 ```
 
-Expected: the subagent transcript shows a Haiku model. Find it under
-`~/.claude/projects/<tmp path with / as ->/<session id>/subagents/agent-*.jsonl` and run
-`grep -o '"model":"[^"]*"' <file> | sort -u`. Expect `claude-haiku-...`.
+Run A (override applies):
 
-Then write `{"st-close": {"model": "gpt"}}` to `$tmp/.stratum/models.json` and run the same
-command. Expect the start to be blocked with the message from the hook.
+```bash
+echo '{"st-check": {"model": "haiku", "effort": "low"}}' > .stratum/models.json
+run; f=$(newest); grep -o '"model":"[^"]*"' "$f" | sort -u; grep -o '"effort":"[^"]*"' "$f" | sort -u
+```
 
-If the installed Stratum plugin also loads, both copies of the hook may run. For a clean run, turn
-off the installed plugin for this session or check that the result still matches.
+Expected: `claude-haiku-...` (`st-check`'s default is sonnet) and effort `low` where the
+transcript records effort.
 
-## 5. Skills (manual, in a Claude Code session)
+Run B (an edit applies on the next start, SC-003):
 
-1. Fresh repo, `/stratum:st-init`, answer no to "Change the model or effort for any agent?".
-   Expect `.stratum/models.json` equal to `templates/models.json`, a defaults table, and
-   `git status` not listing the file.
-2. Say "make st-close use opus". Expect `"st-close": {"model": "opus", "effort": "xhigh"}` and the
-   other 7 entries unchanged.
-3. Say "put st-close back on its default". Expect the `st-close` entry gone.
-4. Say "make st-close use gpt". Expect no change and the allowed lists.
-   Then delete `.stratum/models.json` and say "make st-close use opus" again. Expect the 8 template
-   entries with `st-close` on opus, effort xhigh, and a reply that says the template was copied (D17).
-5. `/stratum:st-status`. Expect each override with its model and effort, and the source
+```bash
+echo '{"st-check": {"model": "opus", "effort": "high"}}' > .stratum/models.json
+run; f=$(newest); grep -o '"model":"[^"]*"' "$f" | sort -u
+```
+
+Expected: `claude-opus-...`, in a new transcript file.
+
+Run C (bad file blocks the start):
+
+```bash
+echo '{"st-check": {"model": "gpt"}}' > .stratum/models.json
+run
+```
+
+Expected: the reply says the start was blocked, and the reason names `.stratum/models.json` and
+`gpt`. No new subagent transcript.
+
+Restore:
+
+```bash
+cp "$tmp/models.backup.json" .stratum/models.json
+```
+
+## 5. Skills (manual, by the user, in a Claude Code session)
+
+Run these after the plugin update reaches the installed copy. Use a fresh repo:
+`mkdir -p /tmp/st-demo && git -C /tmp/st-demo init -q`, then start Claude Code in `/tmp/st-demo`.
+
+1. `/stratum:st-init`. Answer no to "Change the model or effort for any agent?". Expect
+   `.stratum/models.json` equal to `templates/models.json` (8 entries), a defaults table, and
+   `git status` not listing the file (US3 scenarios 1 and 4).
+2. Delete `.stratum/models.json`. Run `/stratum:st-init` and answer yes, then "put st-review on
+   opus". Expect the 8 template entries plus `"st-review": {"model": "opus"}` (US3 scenario 2).
+3. Run `/stratum:st-init` again. Expect no model question and `.stratum/models.json` unchanged
+   (US3 scenario 3).
+4. Say "make st-close use opus". Expect `"st-close": {"model": "opus", "effort": "xhigh"}` and the
+   other entries unchanged.
+5. Say "put st-close back on its default". Expect the `st-close` entry gone.
+6. Say "make st-close use gpt". Expect no change and the allowed lists.
+7. Delete `.stratum/models.json` and remove its line from `.gitignore`. Say "make st-close use
+   opus". Expect the 8 template entries with `st-close` on opus, effort xhigh, a reply that says
+   the template was copied (D17), and the `.gitignore` line back.
+8. `/stratum:st-status`. Expect each override with its model and effort, and the source
    `.stratum/models.json`. Delete the file and run it again: expect "every agent uses the plugin
    defaults".

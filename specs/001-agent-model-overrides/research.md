@@ -22,8 +22,11 @@ The orchestrator ran these on Claude Code 2.1.294 with `claude -p --settings` an
   model. Effort: per-call `effort` > frontmatter `effort`. `CLAUDE_CODE_EFFORT_LEVEL` beats both.
 - **V6.** The Agent tool accepts models `sonnet`, `opus`, `haiku`, `fable` and efforts `low`,
   `medium`, `high`, `xhigh`, `max`.
-- **V7.** `claude --help` on 2.1.294 lists `--plugin-dir <path>` to load a plugin from a folder for
-  one session. The quickstart uses it for the end-to-end run.
+- **V7.** `claude -p --settings <file>` with a PreToolUse `Agent` hook in that file runs the hook
+  for the session. The quickstart end-to-end run uses it with the real `hooks/st-models.py`, so it
+  does not depend on which plugin copy is installed.
+- **V8.** `tool_input.subagent_type` is optional on 2.1.294. The hook reads it as
+  `tool_input.get("subagent_type") or ""`.
 
 ## Decisions
 
@@ -70,7 +73,8 @@ The orchestrator ran these on Claude Code 2.1.294 with `claude -p --settings` an
 ### R6. Validate the whole file on every Stratum start
 
 - Decision: on every `stratum:` start, check every entry, not only the started agent's entry.
-  Report all problems in one message.
+  Report all problems in one message. Each bad key or value is quoted with `json.dumps` and cut
+  to 80 characters.
 - Rationale: spec edge case "a bad entry for one agent blocks the start of every Stratum agent".
 - Alternatives: check only the started agent. Rejected by the spec.
 
@@ -88,9 +92,12 @@ The orchestrator ran these on Claude Code 2.1.294 with `claude -p --settings` an
 
 - Decision: walk up from `cwd` to the first folder with `.stratum/` or `.git`, as `guard_file` in
   `hooks/st-git-guard.py` does. Copy those lines; the hooks stay separate scripts.
-- Rationale: same lookup as the git guard, so a subfolder or worktree finds the same file.
-- Alternatives: `CLAUDE_PROJECT_DIR`. Rejected: differs from the git guard, and a subagent's `cwd`
-  can be a worktree.
+- Rationale: same lookup as the git guard, so a subfolder finds the project's file.
+- Limit: a linked worktree has its own `.stratum/` (because `state.json` is tracked), so the walk
+  stops there. The git-ignored `models.json` is not in the worktree (`scripts/st-worktree.sh` links
+  only `.claude/settings.local.json`), so the override does not apply there. `git-guard.json`
+  behaves the same. The README says so (T016).
+- Alternatives: `CLAUDE_PROJECT_DIR`. Rejected: differs from the git guard.
 
 ### R9. `st-model` arguments (D18, refines D14)
 
@@ -127,6 +134,8 @@ The orchestrator ran these on Claude Code 2.1.294 with `claude -p --settings` an
 ## Known limits
 
 - **L1.** `CLAUDE_CODE_EFFORT_LEVEL`, when set, beats the file's effort (V5). The README says so.
+- **L1b.** The per-call `effort` parameter needs Claude Code 2.1.292 or later. On an older client,
+  remove `effort` keys from the file. The README says so (T016).
 - **L2.** Haiku was checked with effort `low` (V2) and `xhigh` (the template, D15: a Haiku 5.5
   subagent started with effort `xhigh` and no error). `max` on Haiku is not verified.
 - **L3.** `haiku` started `claude-haiku-5-5` in V2, which answers CHK015.
