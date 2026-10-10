@@ -14,7 +14,7 @@
 
 ## R2. Release notes
 
-- Decision: The full release note is the body of the version bump commit (T021). README and the
+- Decision: The full release note is the body of the version bump commit (T010). README and the
   other tracked files outside `specs/` do not name the old agents.
 - Rationale: FR-011 needs a note that names `/stratum:st-check`, `st-check` and `st-validate`.
   FR-007 and SC-002 forbid those names in any tracked file outside `specs/`. A commit message is
@@ -42,7 +42,7 @@
   lists every name in `agents/*.md`. The hands-on check with an old name is quickstart section 4,
   which is under `specs/`.
 - Rationale: A test that writes `st-check` or `st-validate` in `tests/` breaks FR-007.
-  `test_module_constants` fails today (11 names) and between T003 and T006 (12 names), so it can
+  `test_module_constants` fails today (11 names) and between T002 and T009 (12 names), so it can
   fail.
 - Alternatives considered: build the name by string joining in a test (hides the name from the
   search but still tests a special case the spec says does not exist).

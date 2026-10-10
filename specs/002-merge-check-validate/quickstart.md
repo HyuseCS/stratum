@@ -12,20 +12,19 @@ python3 -m unittest tests/test_model_hook.py
 bash tests/test_model_files.sh
 ```
 
-Expected after T020: every line starts `ok`, unittest prints `OK`, each exits 0.
+Expected after T009: every line starts `ok`, unittest prints `OK`, each exits 0.
 
 Expected red states during the build (do not "fix" these by editing the tests):
 
 | After | Red | Why |
 |-------|-----|-----|
 | T001 | every check in `test_inspect.sh` | new files missing |
-| T002 to T007 | `test_module_constants`; `test_docs_cover_feature`, `test_st_model_skill_matches_hook`; `test_model_files.sh` "st-model names every agent" | 12 agents; README and st-model do not name `st-inspect` yet |
-| T008, T009 | the above, plus the new US3 checks in `test_inspect.sh` | old files and names still there |
-| T010 | the above except `test_module_constants` and the agent count | references not renamed yet |
+| T002 to T006 | `test_module_constants`; `test_docs_cover_feature`, `test_st_model_skill_matches_hook`; `test_model_files.sh` "st-model names every agent" | 12 agents; README and st-model do not name `st-inspect` yet |
+| T007, T008 | the above, plus the new US3 checks in `test_inspect.sh` | old files and names still there |
 
 ## 2. Negative controls for the phrase checks (FR-012, lessons L1)
 
-Each check must go red alone when its first phrase is removed. Run in T007, before the delete:
+Each check must go red alone when its first phrase is removed. Run in T006, before the delete:
 
 ```bash
 s=$(mktemp -d)
@@ -51,7 +50,7 @@ ST_INSPECT_AGENT|agents/st-inspect.md|minors' data
 ST_INSPECT_AGENT|agents/st-inspect.md|PASS, CONCERN or FAIL
 ST_INSPECT_AGENT|agents/st-inspect.md|replace an older `## Validate` section
 ST_INSPECT_AGENT|agents/st-inspect.md|Edit anything except the `## Validate` section of `plan.md`
-ST_INSPECT_AGENT|agents/st-inspect.md|Line 1: the verdict and counts
+ST_INSPECT_AGENT|agents/st-inspect.md|Line 1: the net verdict (PASS, CONDITIONAL, BLOCKED) and counts
 ST_INSPECT_SKILL|skills/st-inspect/SKILL.md|Set `phase` to `inspect`
 ST_INSPECT_SKILL|skills/st-inspect/SKILL.md|only `plan.md` may change
 ST_INSPECT_SKILL|skills/st-inspect/SKILL.md|drop the false ones
@@ -63,11 +62,11 @@ EOF
 ```
 
 Expected: every line starts with the baseline plus 1. Baseline: `bash tests/test_inspect.sh |
-grep -c '^FAIL'` with no override (after T020 it is 0, so every line starts `1`). A line at the
+grep -c '^FAIL'` with no override (after T009 it is 0, so every line starts `1`). A line at the
 baseline means that check cannot fail. A line above baseline plus 1 means two checks share a
 line (contract rule P2).
 
-Frontmatter and one-agent controls (T007):
+Frontmatter and one-agent controls (T006):
 
 ```bash
 s=$(mktemp -d)
@@ -82,7 +81,7 @@ ST_INSPECT_SKILL="$s/c" bash tests/test_inspect.sh | grep '^FAIL'
 Expected: each command prints one FAIL line more than the baseline: the frontmatter check
 twice, then the one-agent check.
 
-Old-name search control (after T010 to T020 are committed, so the baseline is 0):
+Old-name search control (after T009 is committed, so the baseline is 0):
 
 ```bash
 s=$(mktemp -d)
@@ -93,6 +92,18 @@ bash "$s/c/tests/test_inspect.sh" | grep '^FAIL'
 ```
 
 Expected: one FAIL line, the old-name search.
+
+No git repo control (the check must fail when `git grep` exits 128):
+
+```bash
+s=$(mktemp -d)
+mkdir "$s/n"
+git archive HEAD | tar -x -C "$s/n"
+(cd "$s/n" && git rev-parse 2>/dev/null) || echo "no git repo, as planted"
+bash "$s/n/tests/test_inspect.sh" | grep '^FAIL'
+```
+
+Expected: `no git repo, as planted`, then one FAIL line, the old-name search.
 
 ## 3. Rename and the 10 agents (US3)
 
@@ -124,7 +135,7 @@ Expected: the first two print `"permissionDecision": "deny"` with
 
 ## 5. Planted gaps (SC-004, US1 acceptance 2 and 3, edge case 1)
 
-Needs T002 to T020 committed: the clone copies HEAD only. Build a scratch clone with a copy of
+Needs T002 to T009 committed: the clone copies HEAD only. Build a scratch clone with a copy of
 feature 001 that has one cross-artifact gap and one missing tool:
 
 ```bash
@@ -144,13 +155,14 @@ git status --porcelain > "$s/before"
 Expected: `zqlint missing, as planted`, and the count `1` (feature 001's plan already has a
 `## Validate` section). FR-010 of the copy now has no task (T013 and T014 removed).
 
-First confirm the session that runs the phase loads this repo's built plugin, not the installed
-0.1.26 copy: `/stratum:st-inspect` is in its skill list and `/stratum:st-check` is not. If it is
-not, load the repo as the plugin for that session before you go on.
+Start a session on the scratch project with this repo's plugin loaded:
 
-Run the phase with `$s/p` as the project: in a Claude Code session started in `$s/p`, run
-`/stratum:st-inspect`, or start the `stratum:st-inspect` subagent with plugin root
-`/home/hyuse/Desktop/stratum`, project root `$s/p`, feature dir `$s/p/specs/900-planted`.
+```bash
+cd "$s/p" && claude --plugin-dir /home/hyuse/Desktop/stratum
+```
+
+In that session, confirm `/stratum:st-inspect` is in the skill list and `/stratum:st-check` is
+not. Then run `/stratum:st-inspect`.
 
 Then:
 
@@ -181,7 +193,7 @@ through `/stratum:st-inspect` and confirm the advisor is asked both kinds of que
 
 ## 7. Release note (FR-011)
 
-After T021:
+After T010:
 
 ```bash
 grep '"version"' .claude-plugin/plugin.json

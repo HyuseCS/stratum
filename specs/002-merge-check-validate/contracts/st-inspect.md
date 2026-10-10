@@ -41,7 +41,12 @@ Body sections, in order. Copy the shared lines (sr-opus-5 line, Inputs, Navigati
 6. `## Never`: the FR-003 lines.
 7. `## Report`: the FR-004, C8 and C9 lines.
 
-Validate section format (unchanged from the old agent, research R6):
+Two verdict levels. The per-check verdict (PASS, CONCERN, FAIL) is given to each of the 4
+validate checks. The net verdict (PASS, CONDITIONAL, BLOCKED) comes from them by the V5 rule.
+
+Validate section format (unchanged from the old agent, research R6). The `Verdict:` line holds
+the net verdict (PASS, CONDITIONAL, BLOCKED). The table's Verdict column holds the per-check
+verdict (PASS, CONCERN, FAIL) of each check.
 
 ```text
 ## Validate
@@ -56,7 +61,9 @@ F1. <file:line> <finding> -> <fix or decision needed>
 
 Report: one finding list F1, F2... for the analysis and the validate checks. Each finding has a
 severity, `file:line`, its analysis category or validate check, what is wrong, and whether it
-needs a user decision. The net verdict comes from the 4 validate checks only (research R7).
+needs a user decision. Line 1 holds the net verdict (PASS, CONDITIONAL, BLOCKED). The report
+also lists the per-check verdict (PASS, CONCERN, FAIL) of each validate check. The net verdict
+comes from the 4 validate checks only (research R7).
 
 ### Phrase table: agent
 
@@ -79,7 +86,7 @@ needs a user decision. The net verdict comes from the 4 validate checks only (re
 | V5 | `PASS, CONCERN or FAIL` · `Any FAIL means BLOCKED. Only CONCERNs means CONDITIONAL.` |
 | V6 | `` replace an older `## Validate` section `` · `Date: YYYY-MM-DD. Verdict: PASS \| CONDITIONAL \| BLOCKED` |
 | FR-003 | `` Edit anything except the `## Validate` section of `plan.md` `` · `Install packages, run migrations, or change config` · `` Run `git add` or `git commit` `` |
-| FR-004 | `Line 1: the verdict and counts` · `The verdict of each validate check` |
+| FR-004 | `Line 1: the net verdict (PASS, CONDITIONAL, BLOCKED) and counts` · `the per-check verdict (PASS, CONCERN, FAIL) of each validate check` |
 
 (`\|` in the V6 row is a plain `|` in the file.)
 
