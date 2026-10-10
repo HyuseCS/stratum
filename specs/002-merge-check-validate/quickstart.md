@@ -200,6 +200,7 @@ Both planted gaps reported (zqlint missing, FR-010 no task). Validate replaced, 
 hunks only inside it. Deviation: the agent's Python test run left `hooks/__pycache__/` in the clone.
 The "only plan.md may change" check in the skill would flag it. The repo's `.gitignore` has no
 `__pycache__` rule, so this is not a clean pass.
+R1 fixed: `agents/st-inspect.md` now runs every command with `PYTHONDONTWRITEBYTECODE=1` set.
 
 ## 6. Advisor step (US2)
 

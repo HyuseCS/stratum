@@ -43,6 +43,8 @@ Offer each fix, never apply it. Say for each finding whether it needs a user dec
 
 ## Validate checks
 
+Run every command with `PYTHONDONTWRITEBYTECODE=1` set, so tests leave no files behind.
+
 1. **Setup and dependencies.** Every tool, package, SDK and service the plan uses is installed
    or has a setup task. Versions match what the plan assumes. Run read-only commands to prove
    it (version checks, dependency lists). Do not install anything.
