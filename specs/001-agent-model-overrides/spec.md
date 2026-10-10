@@ -64,19 +64,19 @@ start blocked with a message that names the bad key and the allowed values.
 
 When a user sets up Stratum in a new repo, `st-init` asks one question: "Change the model or effort
 for any agent?" The default answer is no. On no, it writes the plugin's model template into the
-repo: `st-close`, `st-git` and `st-test` on haiku. It shows the table of defaults and says how to
+repo: `st-close`, `st-git` and `st-test` on haiku with effort xhigh, and `st-build`, `st-debug`, `st-quick`, `st-plan`, `st-fast` on opus with effort high. It shows the table of defaults and says how to
 change them later. The file stays on this machine and git does not track it.
 
 **Why this priority**: The user wants every new repo to start with the Haiku setup. The override
 itself (Story 1) works without it.
 
 **Independent Test**: Run `st-init` in a fresh repo, answer no, and see the file written with the
-three Haiku entries and listed in `.gitignore`.
+8 template entries and listed in `.gitignore`.
 
 **Acceptance Scenarios**:
 
 1. **Given** a repo without a model file, **When** the user runs `st-init` and answers no,
-   **Then** the file holds `st-close`, `st-git` and `st-test` on haiku.
+   **Then** the file holds `st-close`, `st-git` and `st-test` on haiku with effort xhigh, and `st-build`, `st-debug`, `st-quick`, `st-plan`, `st-fast` on opus with effort high.
 2. **Given** a repo without a model file, **When** the user answers yes and names changes,
    **Then** the file holds the template entries plus or minus those changes.
 3. **Given** a repo that already has a model file, **When** the user runs `st-init`, **Then** the
@@ -117,7 +117,7 @@ the values come from.
 **Why this priority**: Required by the issue. It helps the user check the setup but is not needed
 for it to work.
 
-**Independent Test**: With the three Haiku entries in the file, run `st-status` and see them
+**Independent Test**: With the template entries in the file, run `st-status` and see them
 listed.
 
 **Acceptance Scenarios**:
@@ -158,7 +158,8 @@ listed.
 - **FR-006**: The override MUST apply only to Stratum agents. Other agents MUST start unchanged,
   whatever the model file holds.
 - **FR-007**: The plugin MUST ship a model template with `st-close`, `st-git` and `st-test` on
-  haiku. The plugin's own agent defaults MUST stay as they are.
+  haiku with effort xhigh (D15), and `st-build`, `st-debug`, `st-quick`,
+  `st-plan`, `st-fast` on opus with effort high (D16). The plugin's own agent defaults MUST stay as they are.
 - **FR-008**: `st-init` MUST ask one question about model changes when the repo has no model file,
   write the template on no (with the user's changes on yes), show the default table and how to
   change it, and add the file to `.gitignore`.
@@ -169,7 +170,7 @@ listed.
   all agents use the defaults.
 - **FR-011**: The README MUST document the model file, the allowed values, the template and how to
   change an entry.
-- **FR-012**: This repo MUST get a model file with the template's three Haiku entries.
+- **FR-012**: This repo MUST get a model file with the template's 8 entries (D15, D16).
 
 ### Key Entities
 
@@ -188,7 +189,7 @@ listed.
 - **SC-002**: Each of the 4 bad-file cases in User Story 2 blocks the start with a message that
   names the bad item. None falls back silently.
 - **SC-003**: A change to the model file takes effect on the very next agent start, with no reload.
-- **SC-004**: A fresh `st-init` with the default answer gives a model file with exactly 3 entries,
+- **SC-004**: A fresh `st-init` with the default answer gives a model file with exactly 8 entries,
   and `git status` does not list it.
 - **SC-005**: One plain-words request changes exactly one entry and leaves every other entry as it
   was.

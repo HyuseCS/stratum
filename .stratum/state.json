@@ -1,5 +1,5 @@
 {
   "feature_directory": "specs/001-agent-model-overrides",
-  "phase": "define",
+  "phase": "plan",
   "lane": "full"
 }
