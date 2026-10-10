@@ -32,6 +32,7 @@ block. Change nothing.
 7. **Model overrides:** from `<project>/.stratum/models.json`, list each agent in the file with its
    model and effort. For a key the entry does not set, show the default: the model from the
    `model:` line in `<plugin root>/agents/<agent>.md`, effort `default`. Say the values come from
-   `.stratum/models.json` and change with `/stratum:st-model` or by editing the file. No file: say
-   every agent uses the plugin defaults. A bad file: say so and quote the problem. Stratum agents
-   will not start until it is fixed.
+   `.stratum/models.json` and change with `/stratum:st-model` or by editing the file. No file or no
+   entries: say every agent uses the plugin defaults. A bad file: say so and quote the problem.
+   To find the problem, run from the project root `echo '{"tool_input":{"subagent_type":"stratum:st-check"}}' | python3 <plugin root>/hooks/st-models.py`
+   (read-only) and quote the reason it prints. Stratum agents will not start until it is fixed.

@@ -195,6 +195,13 @@ second file or touches any area above text and docs.
     key. The hook reads the file, then `CLAUDE_PLUGIN_OPTION_<KEY>`. `commit` `ask` and `deny` show a staged-file summary.
   - Push, `rebase`, and `commit --amend` always ask.
   - Always blocked: `git config`, `git add -A`, `git add .`, `--no-verify`, remote branch delete.
+- **D18. Handoff.**
+  - `st-handoff` writes `.stratum/handoff.md`: goal, decisions, lane, phase and task, open
+    questions, blockers, exact next step.
+  - A SessionEnd and PreCompact hook always appends a facts block: branch, phase, tasks done,
+    last 5 commits, uncommitted files.
+  - The SessionStart hook prints the handoff into each new session, and the orchestrator starts
+    from it.
 - **D19. Model overrides (`st-models`).** A PreToolUse hook on `Agent`, `hooks/st-models.py`:
   - On every `stratum:` agent start it reads the repo's `.stratum/models.json` (git-ignored,
     written by `st-init` from `templates/models.json`). Each key is an agent name with an
@@ -203,13 +210,6 @@ second file or touches any area above text and docs.
     No file or no entry keeps the plugin default.
   - A bad file (bad JSON, unknown agent, key, model, or effort) denies the start with a message.
   - `st-model` edits the file. `st-status` shows the overrides.
-- **D18. Handoff.**
-  - `st-handoff` writes `.stratum/handoff.md`: goal, decisions, lane, phase and task, open
-    questions, blockers, exact next step.
-  - A SessionEnd and PreCompact hook always appends a facts block: branch, phase, tasks done,
-    last 5 commits, uncommitted files.
-  - The SessionStart hook prints the handoff into each new session, and the orchestrator starts
-    from it.
 
 ## 7. Project Pool move
 

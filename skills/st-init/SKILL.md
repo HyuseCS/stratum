@@ -25,8 +25,9 @@ overwrite an existing file; report it and move on.
    apply them to the template with the rules of `/stratum:st-model` (allowed values,
    `model default`, `effort default`, `default`), then write it. Show a table of the 11 agents:
    the default model from the `model:` line in `<plugin root>/agents/*.md`, and the model and
-   effort from the file where set. Say how to change it later: `/stratum:st-model`, plain words
-   such as "make st-close use opus", or edit the file.
+   effort from the file where set. Effort shows `default` where the file does not set it. Say how
+   to change it later: `/stratum:st-model`, plain words such as "make st-close use opus", or edit
+   the file.
 5. **Constitution.** If `.stratum/constitution.md` is missing, run `/stratum:st-constitution`: it
    starts from the plugin's constitution template and grills the user for the rules, one question
    at a time.

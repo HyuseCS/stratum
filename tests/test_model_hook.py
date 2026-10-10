@@ -1,11 +1,14 @@
+import contextlib
 import glob
 import importlib.util
+import io
 import json
 import os
 import subprocess
 import sys
 import tempfile
 import unittest
+import unittest.mock
 
 sys.dont_write_bytecode = True
 
@@ -106,7 +109,7 @@ class ModelHookTest(unittest.TestCase):
         self.assertEqual(out["permissionDecision"], "deny")
         self.assertNotIn("updatedInput", out)
         reason = out["permissionDecisionReason"]
-        self.assertIn(".stratum/models.json", reason)
+        self.assertIn("models.json", reason)
         self.assertIn("Fix the file, then run the step again.", reason)
         return reason
 
@@ -126,12 +129,12 @@ class ModelHookTest(unittest.TestCase):
 
     def test_deny_entry_not_object(self):
         r = self.deny('{"st-close": "haiku"}')
-        for w in ("st-close", "model", "effort"):
-            self.assertIn(w, r)
+        self.assertIn("st-close", r)
+        self.assertIn("optional keys model, effort.", r)
 
     def test_deny_unknown_key(self):
         r = self.deny('{"st-close": {"modle": "haiku"}}')
-        for w in ("modle", "st-close", "model", "effort"):
+        for w in ("modle", "st-close", "Allowed keys: model, effort."):
             self.assertIn(w, r)
 
     def test_deny_unknown_model(self):
@@ -154,7 +157,11 @@ class ModelHookTest(unittest.TestCase):
         self.assertIn("st-b", r)
         lines = r.split("\n")
         self.assertEqual(len(lines), 3)
-        self.assertTrue(lines[0].count("st-") >= 1)
+
+    def test_deny_many_problems_capped(self):
+        r = self.deny(json.dumps({"st-x%d" % i: {} for i in range(500)}))
+        self.assertLess(len(r), 3000)
+        self.assertIn("and 490 more", r)
 
     def test_deny_long_value_cut(self):
         r = self.deny('{"st-close": {"model": "%s"}}' % ("x" * 500))
@@ -192,10 +199,39 @@ class ModelHookTest(unittest.TestCase):
         spec = importlib.util.spec_from_file_location("st_models", HOOK)
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
-        self.assertEqual(set(mod.AGENTS), set(AGENT_NAMES))
-        self.assertEqual(len(AGENT_NAMES), 11)
-        self.assertEqual(set(mod.MODELS), {"sonnet", "opus", "haiku", "fable"})
-        self.assertEqual(set(mod.EFFORTS), {"low", "medium", "high", "xhigh", "max"})
+        self.assertEqual(mod.AGENTS, ["st-build", "st-check", "st-close", "st-debug", "st-fast", "st-git",
+                                      "st-plan", "st-quick", "st-review", "st-test", "st-validate"])
+        self.assertEqual(mod.MODELS, ["sonnet", "opus", "haiku", "fable"])
+        self.assertEqual(mod.EFFORTS, ["low", "medium", "high", "xhigh", "max"])
+
+    def test_non_ascii_prompt_under_cp1252(self):
+        self.write_models('{"st-close": {"model": "haiku"}}')
+        ti = self.call(prompt="a \u2014 b \u00e9")
+        payload = json.dumps({"cwd": self.proj, "tool_name": "Agent", "tool_input": ti}, ensure_ascii=False)
+        r = subprocess.run([sys.executable, "-X", "utf8=0", HOOK], input=payload.encode("utf-8"),
+                           capture_output=True, env={**os.environ, "PYTHONIOENCODING": "cp1252"})
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(json.loads(r.stdout)["hookSpecificOutput"]["updatedInput"]["prompt"], "a \u2014 b \u00e9")
+
+    def test_models_file_with_bom(self):
+        with open(os.path.join(self.proj, ".stratum", "models.json"), "wb") as f:
+            f.write(b'\xef\xbb\xbf{"st-close": {"model": "haiku"}}')
+        self.assertEqual(self.rewrite(self.call())["updatedInput"]["model"], "haiku")
+
+    def test_entry_sets_only_model_and_effort(self):
+        self.write_models('{"st-close": {"model": "haiku", "prompt": "X"}}')
+        spec = importlib.util.spec_from_file_location("st_models", HOOK)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        mod.problems = lambda models: []
+        payload = json.dumps({"cwd": self.proj, "tool_name": "Agent", "tool_input": self.call()})
+        out = io.StringIO()
+        stdin = io.TextIOWrapper(io.BytesIO(payload.encode("utf-8")), encoding="utf-8")
+        with unittest.mock.patch("sys.stdin", stdin), contextlib.redirect_stdout(out):
+            mod.main()
+        updated = json.loads(out.getvalue())["hookSpecificOutput"]["updatedInput"]
+        self.assertEqual(updated["model"], "haiku")
+        self.assertEqual(updated["prompt"], "p")
 
     def test_hook_registered(self):
         with open(os.path.join(ROOT, "hooks", "commands.json")) as f:

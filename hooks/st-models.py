@@ -31,6 +31,8 @@ def problems(models):
 
 
 def deny(path, found):
+    if len(found) > 10:
+        found = found[:10] + [f"... and {len(found) - 10} more."]
     print(json.dumps({"hookSpecificOutput": {
         "hookEventName": "PreToolUse",
         "permissionDecision": "deny",
@@ -40,7 +42,7 @@ def deny(path, found):
 
 def main():
     try:
-        data = json.load(sys.stdin)
+        data = json.load(sys.stdin.buffer)
         tool_input = data.get("tool_input") or {}
         agent = tool_input.get("subagent_type") or ""
         if not agent.startswith("stratum:"):
@@ -53,7 +55,7 @@ def main():
         d = os.path.dirname(d)
     path = os.path.join(d, ".stratum", "models.json")
     try:
-        models = json.load(open(path))
+        models = json.load(open(path, "rb"))
     except FileNotFoundError:
         return
     except Exception as e:
