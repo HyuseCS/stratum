@@ -53,12 +53,12 @@ class ModelHookTest(unittest.TestCase):
         self.assertNotIn("effort", out["updatedInput"])
 
     def test_effort_only_keeps_model(self):
-        self.write_models('{"st-validate": {"effort": "high"}}')
-        ti = self.call(subagent_type="stratum:st-validate", model="sonnet")
+        self.write_models('{"st-inspect": {"effort": "high"}}')
+        ti = self.call(subagent_type="stratum:st-inspect", model="sonnet")
         out = self.rewrite(ti)["updatedInput"]
         self.assertEqual(out["effort"], "high")
         self.assertEqual(out["model"], "sonnet")
-        ti = self.call(subagent_type="stratum:st-validate")
+        ti = self.call(subagent_type="stratum:st-inspect")
         out = self.rewrite(ti)["updatedInput"]
         self.assertEqual(out["effort"], "high")
         self.assertNotIn("model", out)
@@ -199,8 +199,8 @@ class ModelHookTest(unittest.TestCase):
         spec = importlib.util.spec_from_file_location("st_models", HOOK)
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
-        self.assertEqual(mod.AGENTS, ["st-build", "st-check", "st-close", "st-debug", "st-fast", "st-git",
-                                      "st-plan", "st-quick", "st-review", "st-test", "st-validate"])
+        self.assertEqual(mod.AGENTS, ["st-build", "st-close", "st-debug", "st-fast", "st-git", "st-inspect",
+                                      "st-plan", "st-quick", "st-review", "st-test"])
         self.assertEqual(mod.MODELS, ["sonnet", "opus", "haiku", "fable"])
         self.assertEqual(mod.EFFORTS, ["low", "medium", "high", "xhigh", "max"])
 
