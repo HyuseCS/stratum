@@ -108,7 +108,7 @@ Heading `# /stratum:st-inspect`. Same frame as `skills/st-check/SKILL.md` (orche
 | Check | Phrases (all must be present; the first one is the control) |
 |-------|-------------------------------------------------------------|
 | FR-005 | `` Set `phase` to `inspect` `` · `` `phase` should be `plan` or `inspect` `` · `` Start the `st-inspect` subagent (`stratum:st-inspect`) `` |
-| S1 | `` only `plan.md` may change `` · `` touches only its `## Validate` section `` · `git status --porcelain` |
+| S1 | `` only `plan.md` may change `` · `` touches only its `## Validate` section `` · `` Note `git status --porcelain` `` |
 | S2 | `drop the false ones` · `one at a time` |
 | S3 | `` Fixes to spec, plan or tasks go to the `st-plan` subagent `` · `` have `st-git` commit them `` |
 | S4 | `` If any CRITICAL finding was fixed, run `st-inspect` once more `` |

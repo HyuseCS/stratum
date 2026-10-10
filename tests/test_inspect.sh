@@ -67,7 +67,7 @@ FR-005	skill	`phase` should be `plan` or `inspect`
 FR-005	skill	Start the `st-inspect` subagent (`stratum:st-inspect`)
 S1	skill	only `plan.md` may change
 S1	skill	touches only its `## Validate` section
-S1	skill	git status --porcelain
+S1	skill	Note `git status --porcelain`
 S2	skill	drop the false ones
 S2	skill	one at a time
 S3	skill	Fixes to spec, plan or tasks go to the `st-plan` subagent

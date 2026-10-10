@@ -28,6 +28,7 @@ Read:
 ## Analysis
 
 Follow `<plugin root>/procedures/analyze.md`. It finds gaps, it does not fix them.
+Its read-only rule covers the analysis. Writing the `## Validate` section of plan.md is the one allowed edit.
 
 Look for at least:
 - Duplicate requirements: two requirements that say the same thing.
@@ -47,7 +48,7 @@ Offer each fix, never apply it. Say for each finding whether it needs a user dec
    it (version checks, dependency lists). Do not install anything.
 2. **Test coverage per requirement.** Every requirement and acceptance criterion has a named test that can fail: it asserts on real behavior, not on a mock that ignores input.
    A requirement with no test task, or with no failing-capable check, is a finding.
-   Confirm the test command and its runner exist.
+   Name the test command. Confirm the test command and its runner exist.
 3. **Breaking changes.** Changes to public API, contracts, data model, stored data, or shared
    code used by other features. Name each caller that breaks. Migrations need a rollback note.
 4. **Security and privacy.** Access rules, sign-in, secrets, personal or minors' data, input

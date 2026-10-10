@@ -17,11 +17,11 @@ Plugin root (`<plugin root>`) is two levels up from this skill's base directory.
 
 ## Steps
 
-1. Note `git status --porcelain`.
+1. Note `git status --porcelain` and `git diff -- <feature>/plan.md`.
    Start the `st-inspect` subagent (`stratum:st-inspect`) with absolute paths: plugin root, project root, feature dir.
    Tell it: follow `<plugin root>/procedures/analyze.md` (`<PLUGIN_ROOT>` is the plugin root), then its validate checks.
    After it returns, run `git status --porcelain` again: only `plan.md` may change.
-   Run `git diff` on `plan.md`: it touches only its `## Validate` section.
+   Run `git diff -- <feature>/plan.md` again and compare it with the noted diff: it touches only its `## Validate` section.
    Any other change is a finding.
 2. **Findings.** Check each finding against the source and drop the false ones (see `/stratum:st`).
    Big decisions go to the user, one at a time, each with your recommendation.
