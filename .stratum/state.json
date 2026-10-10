@@ -1,5 +1,5 @@
 {
-  "feature_directory": "specs/001-agent-model-overrides",
-  "phase": "close",
+  "feature_directory": "specs/002-merge-check-validate",
+  "phase": "define",
   "lane": "full"
 }
