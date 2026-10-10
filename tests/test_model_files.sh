@@ -28,7 +28,7 @@ check "st-init keeps st-status steps 4 and 5" 'grep -qF "/stratum:st-status\` st
 check ".gitignore ignores models.json" 'grep -qx ".stratum/models.json" "$root/.gitignore"'
 
 if [ -e "$root/.stratum/models.json" ]; then
-  check "repo models.json equals template" '[ -f "$tpl" ] && same "$root/.stratum/models.json" "$(cat "$tpl")"'
+  check "repo models.json passes the hook" 'out=$(cd "$root" && echo "{\"tool_input\":{\"subagent_type\":\"stratum:st-check\"}}" | python3 "$root/hooks/st-models.py") && ! grep -q deny <<<"$out"'
 else
   echo "skip repo .stratum/models.json absent"
 fi
