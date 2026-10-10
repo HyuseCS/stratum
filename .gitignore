@@ -6,3 +6,4 @@ tsconfig.json
 .claude/settings.local.json
 graphify-out/
 .stratum/git-guard.json
+.stratum/models.json

@@ -1,0 +1,10 @@
+{
+  "st-build": {"model": "opus", "effort": "high"},
+  "st-debug": {"model": "opus", "effort": "high"},
+  "st-quick": {"model": "opus", "effort": "high"},
+  "st-plan": {"model": "opus", "effort": "high"},
+  "st-fast": {"model": "opus", "effort": "high"},
+  "st-close": {"model": "haiku", "effort": "xhigh"},
+  "st-git": {"model": "haiku", "effort": "xhigh"},
+  "st-test": {"model": "haiku", "effort": "xhigh"}
+}
