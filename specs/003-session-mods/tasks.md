@@ -161,7 +161,7 @@ limit, and gives the D12 verdict.
 Each control proves one rule can go red. Run them on copies or on a marked dummy, never on the real
 report.
 
-- [ ] T027 Negative controls. Each row breaks one rule, runs `check.sh`, expects exit 1 with only the listed FAIL line, then restores. Report copies go in `d=$(mktemp -d)` (`cp specs/003-session-mods/research.md $d/r.md`, `cp specs/003-session-mods/quickstart.md $d/q.md`), never the real files. Run `check.sh` and `cleanup.sh` in Bash calls of their own (Rules). After the last row, `check.sh` prints `ok`. Remove `$d`.
+- [X] T027 Negative controls. Each row breaks one rule, runs `check.sh`, expects exit 1 with only the listed FAIL line, then restores. Report copies go in `d=$(mktemp -d)` (`cp specs/003-session-mods/research.md $d/r.md`, `cp specs/003-session-mods/quickstart.md $d/q.md`), never the real files. Run `check.sh` and `cleanup.sh` in Bash calls of their own (Rules). After the last row, `check.sh` prints `ok`. Remove `$d`.
 
   | Rule | Change made | Command | Expected FAIL line | Restore |
   |------|-------------|---------|--------------------|---------|
@@ -172,8 +172,8 @@ report.
   | R8 | Append the line `TOKEN=nc` to `$d/r.md` | `check.sh $d/r.md` | `FAIL R8` | none (copy) |
   | R9 | In `$d/q.md`, delete the `## 3. Hot reload answer` heading line | `check.sh specs/003-session-mods/research.md $d/q.md` | `FAIL R9` | none (copy) |
 
-- [ ] T028 Privacy review (FR-013). Read `specs/003-session-mods/research.md` and every file under `specs/003-session-mods/spikes/`. Only test prompts, replies and command output may be there. Run `grep -c "$CLAUDE_CODE_SESSION_ID" specs/003-session-mods/research.md`: `0` (the running session's id is not test text). Run `grep -rlF -f <(printenv CLAUDE_CODE_MESSAGING_TOKEN) specs/003-session-mods/` in bash: no output (the value goes in by file, never in argv or output; plan.md S4). Remove anything else that is not test text, then run `check.sh`: `ok`.
-- [ ] T029 Run `specs/003-session-mods/quickstart.md` section 8 and report the actual output of `check.sh` and `git status --porcelain`.
+- [X] T028 Privacy review (FR-013). Read `specs/003-session-mods/research.md` and every file under `specs/003-session-mods/spikes/`. Only test prompts, replies and command output may be there. Run `grep -c "$CLAUDE_CODE_SESSION_ID" specs/003-session-mods/research.md`: `0` (the running session's id is not test text). Run `grep -rlF -f <(printenv CLAUDE_CODE_MESSAGING_TOKEN) specs/003-session-mods/` in bash: no output (the value goes in by file, never in argv or output; plan.md S4). Remove anything else that is not test text, then run `check.sh`: `ok`.
+- [X] T029 Run `specs/003-session-mods/quickstart.md` section 8 and report the actual output of `check.sh` and `git status --porcelain`.
 
 ---
 

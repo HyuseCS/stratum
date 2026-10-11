@@ -58,6 +58,7 @@ test('(b) /spike-send sid:<uuid> resolves and addresses the session by id, not b
   await run($, `sid:${SID}`)
   expect(to).toHaveLength(1)
   expect(JSON.stringify(to[0])).not.toContain('sid:')
+  expect(JSON.stringify(to[0])).toContain(SID)
 })
 
 test('(c) a peer reply shows in the pane with its origin', async ($, on) => {

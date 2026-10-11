@@ -41,6 +41,7 @@ r1() {
   human="$(sec "$sct" "Human step")"
   case "$result" in yes|no) ;; *) fail 1 "Test $n Result back '$result' is not yes or no" ;; esac
   case "$stops" in yes|no) ;; *) fail 1 "Test $n Stops '$stops' is not yes or no" ;; esac
+  evidence="$(sed -E "s/exactly the text spk00[3]-t${n}[a-c]-ok//g" <<< "$evidence")"
   if [ "$result" = yes ] && ! [[ $evidence =~ spk00[3]-t${n}[a-c]-ok ]]; then
     fail 1 "Test $n Result back yes but Evidence lacks spk003-t${n}<a-c>-ok"
   fi
@@ -123,8 +124,8 @@ r4
 r5() {
   local n
   if command pgrep -f 'spk00[3]' >/dev/null; then fail 5 "a process matches spk00[3]"; fi
-  n="$(claude agents --json 2>/dev/null | jq '[.[] | select((.name // "") | test("spk00[3]"))] | length' 2>/dev/null)"
-  [ "$n" = 0 ] || fail 5 "claude agents --json lists '$n' spk003 session(s), expected 0"
+  n="$(claude agents --json --all 2>/dev/null | jq '[.[] | select((.name // "") | test("spk00[3]"))] | length' 2>/dev/null)"
+  [ "$n" = 0 ] || fail 5 "claude agents --json --all lists '$n' spk003 session(s), expected 0"
   if git -C "$root" worktree list --porcelain | grep -q 'spk00[3]'; then fail 5 "a worktree path matches spk00[3]"; fi
   if git -C "$root" branch --list | grep -q 'spk00[3]'; then fail 5 "a local branch matches spk00[3]"; fi
 }
@@ -152,8 +153,8 @@ r8() {
     find "$spk" -type f ! -name check.sh ! -path '*/.claude-plugin/types/*' -exec grep -HEn '(TOKEN|SECRET|KEY)=[^[:space:]]+' {} + 2>/dev/null)"
   if [ -n "$hits" ]; then fail 8 "a KEY-style assignment with a value at $(cut -d: -f1,2 <<< "$hits" | tr '\n' ' ')"; fi
   while IFS= read -r line; do
-    [[ $line == *spk003* || $line == *spike-* ]] || fail 8 "a sessionId row in the report holds neither spk003 nor spike-"
-  done < <(grep '"sessionId"' "$report" 2>/dev/null)
+    [[ $line == *spk003* || $line == *spike-* ]] || fail 8 "a session row in the report holds neither spk003 nor spike-"
+  done < <(grep -E '"sessionId"|"id":' "$report" 2>/dev/null)
 }
 r8
 

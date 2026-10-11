@@ -17,9 +17,8 @@ fi
 while IFS=$'\t' read -r sid name; do
   [ -n "$sid" ] || continue
   found=1
-  id="$sid"
-  claude stop "$id" || { id="$name"; claude stop "$id"; }
-  claude rm "$id" && echo "removed session $name $sid"
+  claude stop "$sid"
+  claude rm "$sid" && echo "removed session $name $sid"
 done < <(claude agents --json --all | jq -r '.[] | select((.name // "") | test("spk00[3]")) | [(.id // .sessionId), .name] | @tsv')
 
 while read -r path; do
@@ -27,7 +26,6 @@ while read -r path; do
   found=1
   git -C "$root" worktree remove --force "$path" && echo "removed worktree $path"
 done < <(git -C "$root" worktree list --porcelain | sed -n 's/^worktree //p' | grep 'spk00[3]')
-[ "$found" = 1 ] && git -C "$root" worktree prune
 
 while read -r branch; do
   [ -n "$branch" ] || continue
