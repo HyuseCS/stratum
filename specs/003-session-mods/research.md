@@ -156,10 +156,10 @@ Filled by the build. Format and rules: [data-model.md](data-model.md).
 
 ### Test 1. A mod sends a message to a second session and shows the reply
 
-- Outcome:
-- Approaches tried:
-- Evidence:
-- Limit:
+- Outcome: full pass
+- Approaches tried: A1: full pass; A2: not run, A1 passed; A3: not run, A1 passed
+- Evidence: A1. The user opened `claude -n spike-peer --model haiku` and `claude --plugin-dir specs/003-session-mods/spikes/spike-send -n spike-main --model haiku --debug`, then typed `/spike-send spike-peer`. The peer transcript got, at 14:56:50Z, `<cross-session-message ... from-name="spike-main" from-mode="prompting" from-plugin="spike-send">spk003 ping: reply to this message with SendMessage, text exactly spk003-pong</cross-session-message>`, so the mod sent it with `$.session.send` and the engine tagged the sending plugin. The peer model answered with SendMessage `spk003-pong` at 14:56:54Z. The pane in spike-main showed `sent: delivered`, `reply: <cross-session-message ... from-name="spike-peer" from-mode="prompting"> spk003-pong </cross-session-message>` and `origin: peer`. The `session.receive` hook gets the delivery with its `<cross-session-message>` frame in `e.text`, not the bare text. The delivery also went on to the spike-main model (`next(e)`). No session was started by the test. The user closed both sessions with `/exit`.
+- Limit: none
 
 ### Test 2. A mod starts a session and shows its status
 
