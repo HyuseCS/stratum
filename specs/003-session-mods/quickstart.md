@@ -36,10 +36,13 @@ To see marked processes by hand:
 
 ```text
 pgrep -af spk003
-claude agents --json | jq '[.[] | select((.name // "") | test("spk003"))]'
+claude agents --json | jq '[.[] | select((.name // "") | test("spk00[3]"))]'
 ```
 
 The first command also lists itself. Ignore the line that holds `pgrep`. The second must print `[]`.
+
+The test 1 peer session `spike-peer` (section 4) carries no marker on purpose, so `cleanup.sh`
+never closes it and `check.sh` never sees it. You close it yourself at the end of test 1.
 
 ## 2. Load a mod
 
@@ -66,11 +69,11 @@ type `/exit` and start the session again with the same command from section 2.
 Test 1 needs a second session, opened by you. In a second terminal:
 
 ```text
-claude -n spk003-peer --model haiku
+claude -n spike-peer --model haiku
 ```
 
-Leave it idle at its prompt. Do not type in it unless a step below says so. It must stay open until
-the test ends.
+Leave it idle at its prompt. Do not type in it unless a step below says so. Keep it open through
+every retry and every approach of test 1 (A1, A2, A3). Close it only in step 10 of section 5.
 
 ## 5. Test 1: a mod sends a message and shows the reply
 
@@ -80,7 +83,7 @@ the test ends.
 4. Terminal 1, at the prompt, type:
 
    ```text
-   /spike-send spk003-peer
+   /spike-send spike-peer
    ```
 
 5. A pane named `spike-send` opens. Its first row shows `sent: delivered` or `sent: not delivered`
@@ -88,7 +91,7 @@ the test ends.
 6. If the reason says nobody has that name, get the session id. In a third terminal:
 
    ```text
-   claude agents --json | jq -r '.[] | select(.name == "spk003-peer") | .sessionId'
+   claude agents --json | jq -r '.[] | select(.name == "spike-peer") | .sessionId'
    ```
 
    Then, in terminal 1, type `/spike-send sid:` followed by that id, with no space after the
@@ -98,16 +101,23 @@ the test ends.
    (`peer` or `peer-send-message`). If the pane shows nothing, look in the transcript for a dim
    line that names `spike-send` and a skipped hook or a refused pane. Copy it.
 9. Copy the pane text (select it with the mouse, or a screenshot) and give it to the model.
-10. Type `/exit` in terminal 2, then `/exit` in terminal 1.
-11. Run section 1.
+10. Only when the model says test 1 is over (no more approaches to try): type `/exit` in terminal
+    2, then `/exit` in terminal 1.
+11. Run section 1. Then check that the peer is gone:
 
-If the pane shows no reply after 2 minutes, tell the model. It tries A2, then A3, with the same
-steps.
+    ```text
+    claude agents --json | jq '[.[] | select(.name == "spike-peer")]'
+    ```
+
+    It must print `[]`.
+
+If the pane shows no reply after 2 minutes, tell the model. It tries A2, then A3. For each, repeat
+steps 3 to 9 with the peer still open: type `/exit` in terminal 1 only, and start it again.
 
 A3 (only if A1 and A2 fail): in step 4 type this instead of `/spike-send`:
 
 ```text
-Use SendMessage to send "spk003 ping: reply with SendMessage, text spk003-pong" to spk003-peer.
+Use SendMessage to send "spk003 ping: reply with SendMessage, text spk003-pong" to spike-peer.
 ```
 
 The pane shows the reply as in step 8. A3 is a partial pass at best.
@@ -128,7 +138,9 @@ The pane shows the reply as in step 8. A3 is a partial pass at best.
 6. Within 5 minutes the pane shows `done` and the reply `spk003-t2a-ok`, or `failed` with the exit
    code or signal and the last error text. If the pane shows nothing, look in the transcript for a
    dim line that names `spike-start` and a skipped hook or a refused pane. Copy it.
-7. Copy the pane text and give it to the model.
+7. Copy the pane text and give it to the model. Also tell it about any prompt or other step you
+   had to answer after typing `/spike-start` (it counts as a human step, D17). `/spike-start`
+   itself does not count.
 8. Type `/exit` in terminal 1.
 9. Run section 1.
 
@@ -138,8 +150,9 @@ repeat these steps with `/spike-start` again.
 ## 7. Test 3: the model starts a session
 
 No manual step. The model runs C1 and C2 through Bash (tasks.md Phase 3). If a permission prompt
-for the Bash call appears in your session, the model records it. Answer it as you like. An answered
-prompt counts as a human step for D12.
+for the Bash call appears in your session, the model records it in the `- Human step:` field.
+Answer it as you like. An answered prompt counts as a human step, and the test cannot `pass` with
+one (D17).
 
 ## 8. Final check
 

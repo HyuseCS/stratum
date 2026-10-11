@@ -146,14 +146,18 @@ a result. The verdict follows the D12 rule.
   holds if a session started in test 2 or test 3 returns its reply text to the first session. A
   pass in test 1 alone does not count, because nothing started that session. "Stops" holds if
   FR-006 holds for that same test.
-- **FR-012**: Sessions that a test starts MUST use Haiku, one short prompt, a limit of 3 turns, and
-  a time limit of 5 minutes.
+- **FR-012**: Sessions that a test starts MUST use Haiku, one short prompt, and a limit of 3 turns,
+  or no tools where the start method refuses a turn limit. The 5-minute stop always applies. The
+  report records which limit was used.
 - **FR-013**: The report and the test mods MUST hold only test text (the test prompts, replies and
   command output), and no other session content. Nothing leaves this machine except the normal
   model calls of the sessions.
 - **FR-014**: `quickstart.md` MUST give exact steps for every manual step (opening the second
   session, loading a mod, the hot reload answer, the process check).
 - **FR-015**: `research.md` MUST name the Claude Code version the tests ran on.
+- **FR-016**: Test 3 MUST record whether a started session shows in ListAgents and can receive a
+  SendMessage, and what this gives over the built-in Agent tool. Approach C2 (a background
+  session that stays alive) MUST always run for this, even when an earlier approach passed.
 
 ### Key Entities
 
@@ -166,7 +170,7 @@ a result. The verdict follows the D12 rule.
 
 ### Measurable Outcomes
 
-- **SC-001**: 3 of 3 tests end with a recorded outcome (pass, partial pass or blocked). None ends as
+- **SC-001**: 3 of 3 tests end with a recorded outcome (full pass, partial pass, pass or blocked). None ends as
   "unknown".
 - **SC-002**: 5 of 5 issue questions (Q1 to Q5) have an answer with at least one evidence item.
 - **SC-003**: After each test, 0 processes that the test started are alive.

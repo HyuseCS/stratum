@@ -168,6 +168,7 @@ Filled by the build. Format and rules: [data-model.md](data-model.md).
 - Limit:
 - Result back:
 - Stops:
+- Human step:
 
 ### Test 3. The model starts a session
 
@@ -177,14 +178,15 @@ Filled by the build. Format and rules: [data-model.md](data-model.md).
 - Limit:
 - Result back:
 - Stops:
+- Human step:
 - ListAgents:
 - SendMessage:
 - Over the Agent tool:
 
 ### Started sessions
 
-| Name | Test | Approach | Argv | Started | Stopped | Stopped by | Process check |
-|------|------|----------|------|---------|---------|------------|---------------|
+| Name | Test | Approach | Argv | Turn limit | Started | Stopped | Stopped by | Process check |
+|------|------|----------|------|------------|---------|---------|------------|---------------|
 
 ### Mod vs model
 

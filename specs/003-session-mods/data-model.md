@@ -29,9 +29,10 @@ Section `### Test <n>. <title>`.
 | Approaches tried | not empty. Approach IDs from plan.md: `A1`-`A3` (test 1), `B1`-`B3` (test 2), `C1`-`C3` (test 3). Each with its result, `;` between them. At most 3 distinct IDs, none above 3 |
 | Evidence | not empty |
 | Limit | `none` when the outcome is a pass. The exact error text or the missing feature when `blocked` or `partial pass` |
-| Result back | Test 2 and 3 only: `yes` or `no` (FR-005 definition in plan.md) |
+| Result back | Test 2 and 3 only: `yes` or `no` (FR-005 definition in plan.md). `yes` needs the raw reply quoted in Evidence: `spk003-t2<x>-ok` for test 2, `spk003-t3<x>-ok` for test 3, `<x>` in `a`-`c` |
+| Human step | Test 2 and 3 only: `none`, or what the human did after the start call and before the result (an answered permission prompt counts). For test 2 the user's `/spike-start` is the trigger and does not count (D17). `pass` needs `none` |
 | Stops | Test 2 and 3 only: `yes` or `no` (FR-006 held for this test) |
-| ListAgents | Test 3 only: `seen` or `not seen`, and which approach |
+| ListAgents | Test 3 only: `seen` or `not seen`, and which approach (FR-016) |
 | SendMessage | Test 3 only: `delivered` or `not delivered`, and what the receiver showed |
 | Over the Agent tool | Test 3 only: not empty |
 
@@ -43,13 +44,14 @@ not make the test `blocked`.
 
 One row per session a test starts, in the table under `### Started sessions`:
 
-`| Name | Test | Approach | Argv | Started | Stopped | Stopped by | Process check |`
+`| Name | Test | Approach | Argv | Turn limit | Started | Stopped | Stopped by | Process check |`
 
 | Field | Rule |
 |-------|------|
 | Name | holds `spk003` |
 | Argv | the exact command. Holds `haiku` (FR-012) |
-| Started, Stopped | clock times. Stopped minus Started is at most 300 seconds |
+| Turn limit | `--max-turns 3`, or `no tools` where the start method refused a turn limit (FR-012, D14). The Argv holds `--max-turns 3` or `--tools ""` to match |
+| Started, Stopped | clock times `HH:MM:SS`, same day. The Argv holds `timeout 300`, or Stopped minus Started is at most 300 seconds |
 | Stopped by | exit, `timeout`, `claude stop` + `claude rm`, module unload, or `cleanup.sh` |
 | Process check | the `check.sh` result with no `FAIL R5` |
 
@@ -81,18 +83,19 @@ A test 1 pass alone never makes a part `yes` (FR-011).
 
 ## check.sh rules
 
-`check.sh [research.md path]` reads the given file, default
-`specs/003-session-mods/research.md`. It prints `FAIL R<n>: <reason>` per broken rule and exits 1
+`check.sh [research.md path] [quickstart.md path]` reads the given files, defaults
+`specs/003-session-mods/research.md` and `specs/003-session-mods/quickstart.md`. The second
+argument exists for the R9 negative control. It prints `FAIL R<n>: <reason>` per broken rule and exits 1
 if any rule fails, else prints `ok` and exits 0.
 
 | Rule | Checks | FR |
 |------|--------|----|
-| R1 | Each test: Outcome in its label set, Approaches tried with 1 to 3 valid IDs, Evidence filled, Limit filled (`none` only on a pass), tests 2 and 3 have Result back and Stops as `yes` or `no` | FR-003, FR-005, FR-007, SC-001 |
+| R1 | Each test: Outcome in its label set, Approaches tried with 1 to 3 valid IDs, Evidence filled, Limit filled (`none` only on a pass). Tests 2 and 3: Result back and Stops are `yes` or `no`; Result back `yes` only when Evidence holds `spk003-t<n>[a-c]-ok` (`<n>` the test number); Human step filled, and `pass` only with Human step `none` | FR-003, FR-005, FR-007, SC-001, D17 |
 | R2 | Q1 to Q5: Answer and Evidence filled | FR-008, SC-002 |
 | R3 | Verdict parts equal the values computed from the tests as above. Failed part and Follow-up issue match. Compare, Cloud limit, Source and Version filled | FR-009, FR-010, FR-011, FR-015, SC-004 |
-| R4 | Started sessions table has at least 1 data row (the heading row and the separator row are skipped). Every data row holds `spk003` and `haiku` | FR-012 |
+| R4 | Started sessions table has at least 1 data row (the heading row and the separator row are skipped). Every data row: Name holds `spk003`; Argv holds `haiku`; Turn limit `--max-turns 3` with `--max-turns 3` in Argv, or `no tools` with `--tools ""` in Argv; Argv holds `timeout 300`, or Stopped minus Started is at most 300 seconds | FR-012 |
 | R5 | No process matches `spk00[3]`. `claude agents --json` lists no name matching it. No worktree path or local branch matches it | FR-006, SC-003 |
 | R6 | Every `git status --porcelain` path is under `specs/003-session-mods/` or is `.stratum/state.json`. Ignored by exact match: `.stratum/commit-mode`, `brag-output/`, `skills/st-ui-ux/scripts/__pycache__/` | FR-001, SC-005 |
-| R7 | Test 3 has ListAgents, SendMessage and Over the Agent tool filled | orchestrator point 5 |
-| R8 | No `TOKEN=`, `SECRET=` or `KEY=` followed by a value in the report or under `spikes/` (`check.sh` itself excluded). Every `"name":` line in the report holds `spk003` | FR-013 |
-| R9 | `quickstart.md` has the headings `Open the second session`, `Load a mod`, `Hot reload answer` and `Process check` | FR-014 |
+| R7 | Test 3 has ListAgents, SendMessage and Over the Agent tool filled | FR-016 |
+| R8 | No `TOKEN=`, `SECRET=` or `KEY=` followed by a value in the report or under `spikes/` (`check.sh` and the engine's `.claude-plugin/types/` folders excluded). Every report line holding `"sessionId"` (a session row copied from `claude agents --json` or ListAgents, one compact row per line) also holds `spk003` or `spike-` | FR-013 |
+| R9 | `quickstart.md` (second argument, or the default) has the headings `Open the second session`, `Load a mod`, `Hot reload answer` and `Process check` | FR-014 |
