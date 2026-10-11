@@ -1,8 +1,15 @@
+import type { On } from 'claude-code'
 import { expect, test, type Engine } from 'claude-code/testing'
 
 const SID = '6f1d2c3b-4a5e-4f70-8b9c-0d1e2f3a4b5c'
 
-const start = ($: Engine) => $.session.start({ cwd: '.', surface: 'terminal', isInteractive: true })
+const start = ($: Engine, on: On) => {
+  on('session.start', () => ({ cwd: '.' }))
+  on('command.register', (_, e) => ({ value: { command: e.name } }))
+  on('ui.open', () => ({ value: { isPlaced: true as const } }))
+  on('session.receive', (_, e) => ({ text: e.text }))
+  return $.session.start({ cwd: '.', surface: 'terminal', isInteractive: true })
+}
 
 const run = ($: Engine, args: string) =>
   $.command.run({
@@ -34,7 +41,7 @@ test('(a) /spike-send <name> sends one message with spk003 text to that session'
     sent.push({ to: e.to, text: e.text })
     return { isDelivered: true as const }
   })
-  await start($)
+  await start($, on)
   await run($, 'spike-peer')
   expect(sent).toHaveLength(1)
   expect(sent[0].to).toBe('spike-peer')
@@ -47,22 +54,22 @@ test('(b) /spike-send sid:<uuid> resolves and addresses the session by id, not b
     to.push(e.to)
     return { isDelivered: true as const }
   })
-  await start($)
+  await start($, on)
   await run($, `sid:${SID}`)
   expect(to).toHaveLength(1)
   expect(JSON.stringify(to[0])).not.toContain('sid:')
 })
 
-test('(c) a peer reply shows in the pane with its origin', async ($) => {
-  await start($)
+test('(c) a peer reply shows in the pane with its origin', async ($, on) => {
+  await start($, on)
   await $.session.receive({ origin: { kind: 'peer' }, text: 'spk003-pong' })
   const drawn = await mountPane($)
   expect(await drawn.find({ text: 'spk003-pong' })).toBeDefined()
   expect(await drawn.find({ text: 'peer' })).toBeDefined()
 })
 
-test('(d) a received text without spk003 is not shown', async ($) => {
-  await start($)
+test('(d) a received text without spk003 is not shown', async ($, on) => {
+  await start($, on)
   await $.session.receive({ origin: { kind: 'peer' }, text: 'unrelated note' })
   const drawn = await mountPane($)
   expect(await drawn.find({ text: 'unrelated note' })).toBeUndefined()
