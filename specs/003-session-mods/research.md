@@ -200,8 +200,8 @@ Filled by the build. Format and rules: [data-model.md](data-model.md).
 
 ### Cloud limit
 
-- Limit:
-- Source:
+- Limit: a cloud session can receive a message but cannot message any session back yet. Its answer must be read in its own transcript. No cloud session was started (D8).
+- Source: the ListAgents tool description as this main session sees it on 2.1.296: "your Claude sessions running in the cloud (when this session has cloud access; a cloud session receives your message but cannot message any session back yet — do not ask it to reply, read its answer in its own transcript)". The SendMessage tool description adds: "for a Remote Control, cloud or Claude Desktop session nothing reports back, so never treat silence as agreement." Issue #9 lead: "A cloud session cannot message back yet."
 
 ### Claude Code version
 
