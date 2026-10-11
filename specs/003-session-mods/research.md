@@ -163,13 +163,13 @@ Filled by the build. Format and rules: [data-model.md](data-model.md).
 
 ### Test 2. A mod starts a session and shows its status
 
-- Outcome:
-- Approaches tried:
-- Evidence:
-- Limit:
-- Result back:
-- Stops:
-- Human step:
+- Outcome: pass
+- Approaches tried: B1: pass; B2: not run, B1 passed; B3: not run, B1 passed
+- Evidence: B1. The user started `claude --plugin-dir specs/003-session-mods/spikes/spike-start -n spike-main --model haiku --debug` and typed `/spike-start` (the trigger). The transcript shows `spike-start: running spk003-t2a`. `pgrep -af spk003` while it ran: `timeout 300 claude -p --model haiku --max-turns 3 --tools  --strict-mcp-config --no-session-persistence -n spk003-t2a spk003-t2a: reply with exactly the text spk003-t2a-ok and nothing else.` and its child `/opt/claude-code/bin/claude -p ...` with the same argv. The pane then showed `status: done`, `name: spk003-t2a`, `reply: spk003-t2a-ok`, `detail:` (empty). The session ended so fast that the user ran `/spike-start` 3 times (15:03:02Z, 15:03:23Z, 15:03:42Z) to catch it running with pgrep. No prompt or question came after `/spike-start`. After the test, `cleanup.sh` printed `nothing to clean` and `check.sh` showed no `FAIL R5`.
+- Limit: none
+- Result back: yes
+- Stops: yes
+- Human step: none
 
 ### Test 3. The model starts a session
 
@@ -190,6 +190,9 @@ Filled by the build. Format and rules: [data-model.md](data-model.md).
 |------|------|----------|------|------------|---------|---------|------------|---------------|
 | spk003-t3a | 3 | C1 | `timeout 300 claude -p --output-format json --model haiku --max-turns 3 --tools "" --strict-mcp-config --no-session-persistence -n spk003-t3a "spk003-t3a: reply with exactly the text spk003-t3a-ok and nothing else."` | --max-turns 3 | 22:02:13 | 22:02:16 | exit | check.sh: no FAIL R5 |
 | spk003-t3b | 3 | C2 | `claude --bg --model haiku --max-turns 3 --tools "" --strict-mcp-config -n spk003-t3b "spk003-t3b: reply with exactly the text spk003-t3b-ok and nothing else."` | --max-turns 3 | 22:04:23 | 22:04:44 | claude stop, claude rm | check.sh: no FAIL R5 |
+| spk003-t2a | 2 | B1 | `timeout 300 claude -p --model haiku --max-turns 3 --tools "" --strict-mcp-config --no-session-persistence -n spk003-t2a "spk003-t2a: reply with exactly the text spk003-t2a-ok and nothing else."` | --max-turns 3 | 23:03:02 | 23:03:23 | exit (pane showed done before the next run) | check.sh: no FAIL R5 |
+| spk003-t2a | 2 | B1 | `timeout 300 claude -p --model haiku --max-turns 3 --tools "" --strict-mcp-config --no-session-persistence -n spk003-t2a "spk003-t2a: reply with exactly the text spk003-t2a-ok and nothing else."` | --max-turns 3 | 23:03:23 | 23:03:42 | exit (pane showed done before the next run) | check.sh: no FAIL R5 |
+| spk003-t2a | 2 | B1 | `timeout 300 claude -p --model haiku --max-turns 3 --tools "" --strict-mcp-config --no-session-persistence -n spk003-t2a "spk003-t2a: reply with exactly the text spk003-t2a-ok and nothing else."` | --max-turns 3 | 23:03:42 | 23:05:30 | exit (pane showed done before the next run) | check.sh: no FAIL R5 |
 
 ### Mod vs model
 
