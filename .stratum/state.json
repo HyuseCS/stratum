@@ -1,5 +1,5 @@
 {
   "feature_directory": "specs/003-session-mods",
-  "phase": "inspect",
+  "phase": "build",
   "lane": "full"
 }
