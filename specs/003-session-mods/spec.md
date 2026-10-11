@@ -129,8 +129,10 @@ a result. The verdict follows the D12 rule.
 - **FR-004**: Test 2 MUST have a mod start a local session with no human step after the user runs
   the mod's command, and show the session's status (running, done, failed) in a pane.
 - **FR-005**: Test 3 MUST have the model start a local session with no human step, and get the
-  session's result back by a message or a file. "Result back" means the exact reply text of the
-  short task reaches the first session.
+  session's result back. "Result back" means the exact reply text of the short task reaches the
+  first session, read in Bash output, `claude logs` or the pane (FR-011). No started session sent a
+  message back to the first session, because a started session had no tools (`--tools ""`). The
+  message path is untested (follow-up issue #11, sub-issue of #9).
 - **FR-006**: Every session that a test starts MUST be stopped by the end of that test, and every
   git worktree it made MUST be removed. After each test, a process list MUST show no process that
   the test started. If a test stops partway, this check MUST run before the next test.

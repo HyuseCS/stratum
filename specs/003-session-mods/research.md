@@ -216,4 +216,4 @@ Times are local (UTC+8). The Evidence lines use UTC (`Z`). A `≤` time is an up
 - Stops: yes
 - Verdict: yes
 - Failed part: none
-- Follow-up issue: Stratum: start Haiku worker sessions from a mod with $.process.spawn and claude -p
+- Follow-up issue: Stratum: orchestrator starts Haiku worker sessions with claude -p (#11)

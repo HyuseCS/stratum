@@ -27,7 +27,7 @@ until the report is complete, the verdict matches the D12 parts, no marked proce
 
 **Language/Version**: TypeScript/TSX for mods (the engine's own module runtime, no Node), Bash 5.3 for `check.sh` and `cleanup.sh`, Markdown for the report
 
-**Primary Dependencies**: Claude Code 2.1.296 (`claude --version`): `--plugin-dir`, `-p`, `--bg`, `agents --json`, `logs`, `stop`, `rm`, `-w`, hidden `--max-turns` (accepted, research R5), `plugin validate`, `plugin test`. jq 1.8.2, GNU coreutils `timeout` 9.12, procps `pgrep`/`pkill`, git. No new package.
+**Primary Dependencies**: Claude Code 2.1.296 (`claude --version`): `--plugin-dir`, `-p`, `--bg`, `agents --json --all`, `logs`, `stop`, `rm`, `-w`, hidden `--max-turns` (accepted, research R5), `plugin validate`, `plugin test`. jq 1.8.2, GNU coreutils `timeout` 9.12, procps `pgrep`/`pkill`, git. No new package.
 
 **Storage**: Files only. `research.md` is the report. Mod state is `$.state` (session only).
 
@@ -123,8 +123,7 @@ error, drops the flag and keeps `--tools ""` as the limit (FR-012, D14). The Tur
 the Started sessions table says which limit was used. Dropping the flag is a retry, not a new
 approach.
 
-T006 writes the argv that worked into the block above. That plan.md edit gets its own commit before
-T017 starts (D16).
+T006 ran the block as written, with `--output-format json` added after `-p` (test 3 C1, research.md). No flag was dropped and no `env -u` name was needed, so the block did not change and no D16 commit was made.
 
 "Result back" (FR-005, CHK009) holds when the reply text equals `spk003-<id>-ok` after trimming
 white space, as read in the first session (Bash output, `claude logs` output, or the pane). The
@@ -139,7 +138,7 @@ count. Tests 2 and 3 record it in a `- Human step:` field, and `pass` needs `non
 | Kind | Stopped when |
 |------|--------------|
 | `-p` (C1, B1) | `pgrep -f` finds no marked process |
-| `--bg` (C2, B2) | as above, and `claude agents --json` lists no session whose name holds the marker, and `claude rm <id>` exited 0 |
+| `--bg` (C2, B2) | as above, and `claude agents --json --all` lists no session whose name holds the marker, and `claude rm <id>` exited 0. `<id>` is the short `id` (for example `8ee8368d`), not the `sessionId` |
 | `-w` (B3, C3) | as above, and `git worktree list --porcelain` and `git branch --list` show no marked path or branch |
 | Hand-opened peer `spike-peer` (test 1, not marked) | the user typed `/exit` in it, and `claude agents --json` lists no `spike-peer` |
 
@@ -178,7 +177,7 @@ a secret in the environment, and the privacy of the user's other sessions.
 - **S5. The user's other sessions (T003, T007, T013, T022, T028).** `claude agents --json` and ListAgents list
   every session of the user, with names, folders and ids. The report copies only rows whose name
   holds `spk003` (`jq` select on the name), one compact row per line (`jq -c`). `check.sh` R8 fails
-  on any report line holding `"sessionId"` that holds neither `spk003` nor `spike-`.
+  on any report line holding `"sessionId"` or `"id":` that holds neither `spk003` nor `spike-`.
 - No sign-in change, no data model, no access rule, no minors' data. No cloud session (D8).
 
 ## Project Structure
@@ -230,6 +229,8 @@ No violations.
 ## Validate
 
 Date: 2026-10-11. Verdict: CONDITIONAL
+
+Status after the build: F1, F2, F3, F7, F8, F9 and F10 (listed below) are fixed. The fixes are in the docs (cb9b4a7) and in check.sh (e8f6350, 747e23b).
 
 | Check | Verdict | Findings |
 |-------|---------|----------|

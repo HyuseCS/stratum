@@ -90,7 +90,7 @@ if any rule fails, else prints `ok` and exits 0.
 
 | Rule | Checks | FR |
 |------|--------|----|
-| R1 | Each test: Outcome in its label set, Approaches tried with 1 to 3 valid IDs, Evidence filled, Limit filled (`none` only on a pass). Tests 2 and 3: Result back and Stops are `yes` or `no`; Result back `yes` only when Evidence holds `spk003-t<n>[a-c]-ok` (`<n>` the test number); Human step filled, and `pass` only with Human step `none` | FR-003, FR-005, FR-007, SC-001, D17 |
+| R1 | Each test: Outcome in its label set, Approaches tried with 1 to 3 valid IDs, Evidence filled, Limit filled (`none` only on a pass). Tests 2 and 3: Result back and Stops are `yes` or `no`; Result back `yes` only when Evidence holds `spk003-t<n>[a-c]-ok` (`<n>` the test number) after check.sh removes the prompt text `exactly the text spk003-t<n>[a-c]-ok` from Evidence; Human step filled, and `pass` only with Human step `none` | FR-003, FR-005, FR-007, SC-001, D17 |
 | R2 | Q1 to Q5: Answer and Evidence filled | FR-008, SC-002 |
 | R3 | Verdict parts equal the values computed from the tests as above. Failed part and Follow-up issue match. Compare, Cloud limit, Source and Version filled | FR-009, FR-010, FR-011, FR-015, SC-004 |
 | R4 | Started sessions table has at least 1 data row (the heading row and the separator row are skipped). Every data row: Name holds `spk003`; Argv holds `haiku`; Turn limit `--max-turns 3` with `--max-turns 3` in Argv, or `no tools` with `--tools ""` in Argv; Argv holds `timeout 300`, or Stopped minus Started is at most 300 seconds | FR-012 |

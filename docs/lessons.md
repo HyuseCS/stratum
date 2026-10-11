@@ -79,3 +79,39 @@
   change" counts it.
 - Rule: Keep test runs from writing into the repo (`PYTHONDONTWRITEBYTECODE=1`, or `python3 -B`), or
   have the check ignore caches. A run with this side effect is not a clean pass.
+
+## 2026-10-11: 003-session-mods
+
+### L9. A Bash command line with the kill marker kills its own shell
+
+- What happened: The marker `spk003` in a Bash command line makes the shell that runs it a marked
+  process. `cleanup.sh` then kills that shell, and the Bash call ends early. The orchestrator reports
+  that this happened twice in this build. No commit records it. The rule is in `tasks.md` (Rules),
+  and the scripts search with the pattern `spk00[3]`.
+- Rule: Keep the marker text out of Bash command lines. Run cleanup and check in a Bash call of their
+  own. Write a grep or pgrep pattern as `spk00[3]`, which does not match its own text.
+
+### L10. A mod test must answer every host call the mod makes
+
+- What happened: The mod test kit answers only `$.state` and `session.append`. The spike-send test
+  (a65c127) answers `session.start`, `command.register`, `ui.open` and `session.receive` itself. The
+  spike-start test (5138e25) also answers `process.spawn`.
+- Rule: Before the first red run, list every host call the mod makes, and answer each one in the
+  test. Then a red run points at the mod, not at a call the kit left unanswered.
+
+### L11. Op events answer `{ value }` in the test
+
+- What happened: The test answers for `command.register`, `ui.open` and `process.spawn` return
+  `{ value: ... }` (spike-send `hooks/register.test.tsx:8-9`, spike-start `hooks/register.test.tsx:12-13,
+  47, 62, 82`). The engine declaration defines op answers as `ValueOrDeny` of `OpValueOf` (d.ts 7205
+  and 14683). The answers for `session.send` and `session.receive` are plain objects, because those
+  events are not op events (d.ts 4652, 4660). No commit records a failure from a missing wrapper.
+- Rule: Before you write a test answer, check whether the event is in `OpValueOf`. An op event
+  answers `{ value }` or `{ deny }`. Any other event answers its own shape.
+
+### L12. A conditional task ticked without a run looks done
+
+- What happened: T008, T014 and T020 were ticked `[X]` with no note. Each one runs only when an
+  earlier approach fails, and none did. Only `research.md` recorded the skip.
+- Rule: When you tick a conditional task whose condition is false, write `Not run, <earlier result>
+  passed.` in the task text.

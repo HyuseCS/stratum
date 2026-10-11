@@ -36,10 +36,10 @@ To see marked processes by hand:
 
 ```text
 pgrep -af spk003
-claude agents --json | jq '[.[] | select((.name // "") | test("spk00[3]"))]'
+claude agents --json --all | jq '[.[] | select((.name // "") | test("spk00[3]"))]'
 ```
 
-The first command also lists itself. Ignore the line that holds `pgrep`. The second must print `[]`.
+The first command also lists itself. Ignore the line that holds `pgrep`. The second must print `[]`. `claude stop` and `claude rm` take the short `id` from that output (for example `8ee8368d`), not the `sessionId`.
 
 The test 1 peer session `spike-peer` (section 4) carries no marker on purpose, so `cleanup.sh`
 never closes it and `check.sh` never sees it. You close it yourself at the end of test 1.
