@@ -20,7 +20,7 @@ while IFS=$'\t' read -r sid name; do
   id="$sid"
   claude stop "$id" || { id="$name"; claude stop "$id"; }
   claude rm "$id" && echo "removed session $name $sid"
-done < <(claude agents --json --all | jq -r '.[] | select((.name // "") | test("spk00[3]")) | [.sessionId, .name] | @tsv')
+done < <(claude agents --json --all | jq -r '.[] | select((.name // "") | test("spk00[3]")) | [(.id // .sessionId), .name] | @tsv')
 
 while read -r path; do
   [ -n "$path" ] || continue

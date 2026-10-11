@@ -120,7 +120,8 @@ where the cited lines can be checked.
 
 - Decision: record, do not assume. This session sets `CLAUDECODE`, `CLAUDE_CODE_CHILD_SESSION`,
   `CLAUDE_CODE_ENTRYPOINT`, `CLAUDE_CODE_MESSAGING_SOCKET`, `CLAUDE_CODE_MESSAGING_TOKEN`,
-  `CLAUDE_CODE_SESSION_ID` and others (names from `env | cut -d= -f1`). A Bash child and a mod's
+  `CLAUDE_CODE_SESSION_ID`, `CLAUDE_CODE_EXECPATH`, `CLAUDE_CODE_SESSION_ATTENDED`, `CLAUDE_EFFORT`
+  and `CLAUDE_PID` (names from `env | cut -d= -f1 | grep -i claude`, T005). A Bash child and a mod's
   `$.process` child inherit them. If a nested `claude -p` refuses, the retry unsets the names the
   error points to. The token is a secret: names only, never values (plan.md S4).
 
@@ -172,21 +173,23 @@ Filled by the build. Format and rules: [data-model.md](data-model.md).
 
 ### Test 3. The model starts a session
 
-- Outcome:
-- Approaches tried:
-- Evidence:
-- Limit:
-- Result back:
-- Stops:
-- Human step:
-- ListAgents:
-- SendMessage:
-- Over the Agent tool:
+- Outcome: pass
+- Approaches tried: C1: pass; C2: pass; C3: not run, C1 passed
+- Evidence: C1: `timeout 300 claude -p --output-format json --model haiku --max-turns 3 --tools "" --strict-mcp-config --no-session-persistence -n spk003-t3a "spk003-t3a: reply with exactly the text spk003-t3a-ok and nothing else."` exit 0 in 3 s, no `env -u` needed, `-n` and `--max-turns` accepted. JSON keys: `type`, `subtype` (`success`), `is_error` (`false`), `result`, `session_id`, `num_turns` (`1`), `stop_reason` (`end_turn`), `terminal_reason` (`completed`), `permission_denials` (`[]`), `total_cost_usd` (`0.00265685`), `usage` (`input_tokens` 2, `output_tokens` 12, `cache_creation_input_tokens` 13181, `cache_read_input_tokens` 1445), `modelUsage` (`claude-haiku-5-5`, `costUSD` 0.00265685), `duration_ms` 1772, `duration_api_ms` 988, plus timing and `subagent_stats` fields. `"result": "spk003-t3a-ok"`, equal to `spk003-t3a-ok` after trimming. C2: `claude --bg --model haiku --max-turns 3 --tools "" --strict-mcp-config -n spk003-t3b "spk003-t3b: reply with exactly the text spk003-t3b-ok and nothing else."` printed `backgrounded · 8ee8368d · spk003-t3b` and exit 0; `--bg` accepted `-n` and `--max-turns`. `claude agents --json` row: `{"id":"8ee8368d","name":"spk003-t3b","kind":"background","status":"busy","state":"working"}` (other keys dropped), later `"status":"idle","state":"done"`. `claude logs 8ee8368d` showed the reply `spk003-t3b-ok`. The log also showed the started session loads the user's plugins and runs in `auto mode`. `claude stop 8ee8368d` printed `stopped 8ee8368d`, `claude rm 8ee8368d` printed `removed 8ee8368d`, both exit 0. `claude stop` takes the short `id` (`8ee8368d`), a key that `claude agents --json` shows for background sessions. C3: not run, C1 passed.
+- Limit: none
+- Result back: yes
+- Stops: yes
+- Human step: none
+- ListAgents: seen. This session listed `spk003-t3b [90f38e] · bg · idle · started 6s ago` under Peer sessions.
+- SendMessage: delivered. The tool returned `"success":true` with "in that session's inbox". The started session's log shows the ping and its answer `spk003-t3b-ping-ok`. The answer stayed in that session's own transcript: no message came back to this session, because the started session has `--tools ""` and so no SendMessage tool.
+- Over the Agent tool: a started session is its own process with its own model, and it loads the user's plugins. Other sessions can see it in ListAgents and `claude agents`, and can message it by name. A human can open it with `claude attach`, and it is stopped and removed by id. An Agent tool subagent runs inside this session and returns its answer straight to the caller. Not tested: whether a started session outlives the session that started it.
 
 ### Started sessions
 
 | Name | Test | Approach | Argv | Turn limit | Started | Stopped | Stopped by | Process check |
 |------|------|----------|------|------------|---------|---------|------------|---------------|
+| spk003-t3a | 3 | C1 | `timeout 300 claude -p --output-format json --model haiku --max-turns 3 --tools "" --strict-mcp-config --no-session-persistence -n spk003-t3a "spk003-t3a: reply with exactly the text spk003-t3a-ok and nothing else."` | --max-turns 3 | 22:02:13 | 22:02:16 | exit | check.sh: no FAIL R5 |
+| spk003-t3b | 3 | C2 | `claude --bg --model haiku --max-turns 3 --tools "" --strict-mcp-config -n spk003-t3b "spk003-t3b: reply with exactly the text spk003-t3b-ok and nothing else."` | --max-turns 3 | 22:04:23 | 22:04:44 | claude stop, claude rm | check.sh: no FAIL R5 |
 
 ### Mod vs model
 
@@ -199,7 +202,7 @@ Filled by the build. Format and rules: [data-model.md](data-model.md).
 
 ### Claude Code version
 
-- Version:
+- Version: 2.1.296
 
 ### Verdict
 
