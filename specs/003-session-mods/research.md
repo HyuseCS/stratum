@@ -131,28 +131,28 @@ Filled by the build. Format and rules: [data-model.md](data-model.md).
 
 ### Q1. Which mod hooks or APIs can reach other sessions? Can a mod call ListAgents / SendMessage, or only the model can?
 
-- Answer:
-- Evidence:
+- Answer: A mod sends with `$.session.send` and gets messages with the `session.receive` hook. Test 1 proved both with no model step in the sending session. A mod can call ListAgents and SendMessage only through `$.tool.call` (types only, not tested), and no `$` noun lists other sessions.
+- Evidence: Test 1 A1: the peer got `from-plugin="spike-send"` and the pane showed `spk003-pong` with `origin: peer`. d.ts 2883-2896 (`$.session.send`), 4344-4354 (`session.receive`), 3030 (`$.tool.call`), 11605-11610 (a plugin's `$.tool.call` of SendMessage is a plugin send), 16337-16342 (ListAgents input), 3186-3194 (`$.agent.list` lists only this session's subagents and teammates). `claude plugin validate --json specs/003-session-mods/spikes/spike-send`: calls `$.command.register, $.session.send, $.state.get, $.state.set, $.ui.open, $.ui.resolve`; hooks gatingHooks `[{module ./register.tsx, hook session.receive, hasCatch false}]`; manifest gatingHooks `[]`.
 
 ### Q2. Can a mod start a session (claude CLI subprocess, worktree session, cloud session)? What does it get back (id, transcript path, status)?
 
-- Answer:
-- Evidence:
+- Answer: Yes, but only as a host process: no `$` noun starts a session, and `$.agent.spawn` starts a subagent of this session. A mod's `$.process.spawn` of `claude -p` started a session with no human step and got its stdout (the reply) and its exit `{ code, signal }` (the status). From Bash, `--output-format json` adds `session_id`, `num_turns` and `total_cost_usd`, and `claude --bg` prints a short id for `claude agents`, `logs`, `stop` and `rm`. No transcript path was recorded, and no worktree or cloud session was started (B3 and C3 not run, D8).
+- Evidence: Test 2 B1: pane `status: done`, `reply: spk003-t2a-ok`. Test 3 C1 JSON keys and C2 `backgrounded · 8ee8368d · spk003-t3b`. d.ts 3505-3560 (`$.process.run`, `$.process.spawn`), 3175-3185 (`$.agent.spawn`). `claude plugin validate --json specs/003-session-mods/spikes/spike-start`: gatingHooks `[]` in manifest and hooks; calls `$.command.register, $.process.spawn, $.state.get, $.state.set, $.ui.open, $.ui.resolve`. No permission prompt came in test 2.
 
 ### Q3. Can a mod get events from a session it did not start (tool calls, stop, errors)?
 
-- Answer:
-- Evidence:
+- Answer: Only a little. It gets the messages that session sends to this one (`session.receive`), and it can read status by running `claude agents --json` with `$.process.run` (`busy`, then `idle`) or by SendMessage `notify_when_idle` through `$.tool.call` (one notice on idle or exit; both untested from a mod). No hook fires for another session's tool calls, stop or errors: every hook event in the types is this session's own.
+- Evidence: Test 1 A1: the hook got the delivery with its `<cross-session-message>` frame in `e.text`. d.ts 4344-4354 (`session.receive`), the hook events at d.ts 3962-4480 (`tool.*`, `ui.*`, `agent.*`, `prompt.*`, `command.*`, `session.*`, `turn.*`, none for a peer's tool calls), 16650-16651 (SendMessage `notify_when_idle`), 3030 (`$.tool.call`). Test 3 C2: `claude agents --json` row `"status":"busy"`, later `"status":"idle"`.
 
 ### Q4. How do sessions share state? Options: messages only, .stratum/ files, git worktrees.
 
-- Answer:
-- Evidence:
+- Answer: Only messages were tested: `$.session.send` or SendMessage text (test 1, test 3 C2) and a started child's stdout (test 2, test 3 C1). Shared `.stratum/` files need a started session with tools, and the spike gave none (`--tools ""`). Git worktrees were not tried (B3 and C3 not run).
+- Evidence: Test 1 A1, Test 2 B1, Test 3 C1 and C2. Every row in Started sessions has `--tools ""`. Test 3 SendMessage: delivered, but no message came back because the started session had no SendMessage tool. d.ts 11629-11649: `isDelivered: true` means the message reached the recipient's queue or inbox, not that it was read.
 
 ### Q5. What is the cost and risk? Token use, two sessions editing the same files, sessions that keep running after the parent stops.
 
-- Answer:
-- Evidence:
+- Answer: Token cost is small: one Haiku reply cost `total_cost_usd` 0.00265685. A `--bg` session loads the user's plugins and runs in auto mode, so a started session with tools could edit the same files as its parent. The spike gave none (`--tools ""`), and two sessions editing the same files was not tested. A `$.process.spawn` child dies with its loop or its module, but a `--bg` session runs on after its start command returns, until `claude stop` and `claude rm`. Whether it outlives the session that started it was not tested.
+- Evidence: Test 3 C1 JSON: `total_cost_usd` 0.00265685, `usage` input 2, output 12, cache creation 13181, cache read 1445. Test 3 C2: the log shows the user's plugins and `auto mode`; `backgrounded · 8ee8368d · spk003-t3b` exit 0 while `claude agents --json` showed `"status":"busy"`; `stopped 8ee8368d`, `removed 8ee8368d`. d.ts 3523-3560 (the loop is the child's life; module unload kills it). Started sessions: every row has `--max-turns 3`, `--tools ""` and a stop within 300 s or `timeout 300`, and `check.sh: no FAIL R5`.
 
 ### Test 1. A mod sends a message to a second session and shows the reply
 
@@ -196,7 +196,7 @@ Filled by the build. Format and rules: [data-model.md](data-model.md).
 
 ### Mod vs model
 
-- Compare:
+- Compare: Start effort: test 2 needs a mod (command, pane, state and a `$.process.spawn` loop) and the user's `/spike-start`. Test 3 is one Bash call. Result path: test 2 reads the reply from the child's stdout in the pane. Test 3 reads the JSON `result` field (C1) or `claude logs` (C2). Status: the test 2 pane shows `running`, `done` or `failed` from the stream and the exit. Test 3 reads the exit code (C1) or `claude agents --json` `busy` and `idle` (C2). Stop: the test 2 child ends at its exit, with its loop or with module unload (d.ts 3523-3560), `timeout 300` as backstop. Test 3 C1 ends at its exit, C2 needs `claude stop` and `claude rm`. Survival after the parent ends: the test 2 child cannot outlive its module per the d.ts (not tested live). The test 3 C2 session runs on after its start command returns. Whether it outlives the starting session was not tested. Cost: same argv and Haiku model, one reply each. Only C1 recorded a cost (0.00265685 USD). Test 3 also uses a turn of the starting model to run Bash, whose cost was not recorded. Test 2 uses no model turn to start.
 
 ### Cloud limit
 
@@ -209,9 +209,9 @@ Filled by the build. Format and rules: [data-model.md](data-model.md).
 
 ### Verdict
 
-- Starts:
-- Result back:
-- Stops:
-- Verdict:
-- Failed part:
-- Follow-up issue:
+- Starts: yes
+- Result back: yes
+- Stops: yes
+- Verdict: yes
+- Failed part: none
+- Follow-up issue: Stratum: start Haiku worker sessions from a mod with $.process.spawn and claude -p

@@ -148,11 +148,11 @@ limit, and gives the D12 verdict.
 
 **Independent Test**: `bash specs/003-session-mods/spikes/check.sh` prints `ok` and exits 0.
 
-- [ ] T022 [US4] Fill Q1 to Q5 in `specs/003-session-mods/research.md`. Each Answer is one to three sentences. Each Evidence names at least one d.ts line, a command and its output, or a spike file (data-model Question). Use research R1 to R10, the `claude plugin validate --json` output of T012 and T018 (Q1, Q2), T006 cost fields (Q5), and what T007 showed about sessions that outlive the parent (Q5). Q3: what a mod can see of a session it did not start (its own `session.receive` deliveries, `claude agents --json` status, SendMessage `notify_when_idle` per the tool input in the types file) and what it cannot (no hook fires for another session's tool calls). Copy only marked session rows, with `jq -c` (plan.md S5, R8).
+- [X] T022 [US4] Fill Q1 to Q5 in `specs/003-session-mods/research.md`. Each Answer is one to three sentences. Each Evidence names at least one d.ts line, a command and its output, or a spike file (data-model Question). Use research R1 to R10, the `claude plugin validate --json` output of T012 and T018 (Q1, Q2), T006 cost fields (Q5), and what T007 showed about sessions that outlive the parent (Q5). Q3: what a mod can see of a session it did not start (its own `session.receive` deliveries, `claude agents --json` status, SendMessage `notify_when_idle` per the tool input in the types file) and what it cannot (no hook fires for another session's tool calls). Copy only marked session rows, with `jq -c` (plan.md S5, R8).
 - [X] T023 [US4] MAIN. Fill `### Cloud limit` in `specs/003-session-mods/research.md`: quote the ListAgents tool description line about cloud sessions as the main session sees it, and the issue #9 lead. If neither the tool description nor the d.ts has a line on replies, write that the issue lead is the only source (research R9). Start no cloud session (D8).
-- [ ] T024 [US4] Fill `### Mod vs model` in `specs/003-session-mods/research.md`: test 2 against test 3 on start effort, result path, status, stop, survival after the parent ends, and cost, from the recorded evidence only.
-- [ ] T025 [US4] Fill `### Verdict` in `specs/003-session-mods/research.md` per the data-model Verdict table. For `yes`, the Follow-up issue line holds a proposed title. Do not open the issue (the owner decides).
-- [ ] T026 [US4] Run `bash specs/003-session-mods/spikes/check.sh`: prints `ok`, exit 0. Fix the report, not the script.
+- [X] T024 [US4] Fill `### Mod vs model` in `specs/003-session-mods/research.md`: test 2 against test 3 on start effort, result path, status, stop, survival after the parent ends, and cost, from the recorded evidence only.
+- [X] T025 [US4] Fill `### Verdict` in `specs/003-session-mods/research.md` per the data-model Verdict table. For `yes`, the Follow-up issue line holds a proposed title. Do not open the issue (the owner decides).
+- [X] T026 [US4] Run `bash specs/003-session-mods/spikes/check.sh`: prints `ok`, exit 0. Fix the report, not the script.
 
 ---
 
