@@ -187,12 +187,13 @@ copy for that project only.
   warning, then runs.
 - **Who is speaking.** Each reply starts with a label: `[Full lane | Plan]`, `[Fast lane]` or
   `[Quick lane]` while a lane runs, else `[Orchestrator]`. The phase hook adds the label from
-  `state.json`; each lane's last step sets `phase` to `done`. Each Agent call is named with the
+  `state.json`; each lane's last step sets `phase` to `done`. After you upgrade, a project whose
+  last feature is finished may still show its old phase: set `phase` to `done` once. Each Agent call is named with the
   same label, like `Full lane | Build · T004`, and each agent's report starts with its tag, like
   `[st-build]`.
 - **Verify in one call.** After a subagent builds, the orchestrator runs
-  `scripts/st-verify.sh '<test command>'`. It re-runs the test and greps the diff for added
-  comment lines, and prints one `ok` or `FAIL` line, so each check is one short call.
+  `scripts/st-verify.sh '<test command>' <files>`. It re-runs the test and checks the listed files
+  (new ones too) for added comment lines, and prints one `ok` or `FAIL` line, so each check is one short call.
 - **Statusline.** A powerline in two lines. Line 1: `Stratum`, project path, and session length on
   the left, git branch on the right. Line 2: model with its thinking level, and ponytail on the left,
   the `commit` option on the right. Each line fits the terminal width: the path becomes the folder name, other segments
