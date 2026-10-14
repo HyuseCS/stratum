@@ -92,10 +92,14 @@ HOME="$tmp/home" CLAUDE_PLUGIN_ROOT="$root" CLAUDE_PROJECT_DIR="$tmp/plain" bash
 phrases <<'EOF'
 FR-008 rule	hook	st-impeccable (an audit), st-ponytail-audit or st-ponytail-debt in the background
 FR-008 rule	hook	start the agent of the same name (stratum:<name>)
-FR-008 rule	hook	run git status --porcelain again
+FR-008 rule	hook	note git rev-parse HEAD and git status --porcelain --untracked-files=all
+FR-008 rule	hook	the project root and, for st-impeccable, the target
+FR-008 rule	hook	run both again: any difference is a finding to check
+FR-008 rule	hook	the main session may also have changed files
 FR-008 rule	hook	except st-handoff
 FR-008 rule	hook	it runs only in the main session
 EOF
+check "FR-008 plugin root" 'grep -qF "plugin root ($root)" "$tmp/hook.out"'
 check "FR-008 no rule outside Stratum" '! grep -qF "start the agent of the same name" "$tmp/nohook.out"'
 
 phrases <<'EOF'

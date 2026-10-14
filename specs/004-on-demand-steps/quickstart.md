@@ -35,8 +35,8 @@ Expected red states during the build. Do not "fix" them by editing a test:
 
 ## 2. Negative controls (each check can fail)
 
-Run in T009. Each control breaks one thing in a copy of the plugin and must turn exactly one check
-red. A control that leaves 0 `FAIL` lines is a check that cannot fail: fix the check.
+Run in T009. Each phrase control breaks one thing in a copy of the plugin and must turn exactly one
+check red. A structure control turns its named checks red (C2 to C4 turn two). A control that leaves 0 `FAIL` lines is a check that cannot fail: fix the check.
 
 ```bash
 export PYTHONDONTWRITEBYTECODE=1
@@ -68,7 +68,7 @@ EOF
 
 Expected: baseline `0`, then `1` on every line, each naming its own check.
 
-Structure controls, each on a fresh copy (`rm -rf "$s"`, then the `cp` line again):
+Structure controls, each on a fresh copy (`rm -rf "$s"`, `mkdir -p "$s"`, then the `cp` line again):
 
 | # | Break | Expected red |
 |---|-------|--------------|
