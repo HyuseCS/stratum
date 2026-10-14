@@ -226,7 +226,7 @@ second file or touches any area above text and docs.
   the test command, then check the listed files (tracked diff, or the whole file if new) for
   added comment lines. Prints the test's last
   20 lines on a red test, the comment lines on a hit, else one `ok` line. Exit 0 ok, 1 fail, 2
-  no command. St, st-build, st-fast and st-quick use it. The `[P]` branch check stays as it was.
+  no command or no files. St, st-build, st-fast and st-quick use it. The `[P]` branch check stays as it was.
 - **D23. Agent names.** The session-start rule says to set each Agent call's description to the
   reply label without brackets, then ` · ` and the task (`Full lane | Build · T004`), or only the
   task with no lane running, and to keep
