@@ -228,8 +228,8 @@ second file or touches any area above text and docs.
   20 lines on a red test, the comment lines on a hit, else one `ok` line. Exit 0 ok, 1 fail, 2
   no command or no files. St, st-build, st-fast and st-quick use it. The `[P]` branch check stays as it was.
 - **D23. Agent names.** The session-start rule says to set each Agent call's description to the
-  reply label without brackets, then ` · ` and the task (`Full lane | Build · T004`), or only the
-  task with no lane running, and to keep
+  task only (`US1 review`, `T004 test`), since the panel shows the agent's name and the reply
+  label shows the lane, and to keep
   a subagent's tag when relaying its report. Each agent file says to start its report with
   `[<agent name>]`.
 

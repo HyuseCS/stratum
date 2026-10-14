@@ -36,8 +36,7 @@ marker=$(grep -m1 -v '^\s*$' "$root/sr-opus-5.md")
 out=$(HOME="$tmp/home" bash "$root/hooks/st-session-start.sh")
 check "handoff printed" 'grep -q "Session handoff" <<<"$out" && grep -q "Next step: write tests." <<<"$out"'
 check "orchestrator label rule" 'grep -qF "Stratum rule: begin every reply with the label [Orchestrator]." <<<"$out"'
-check "agent description rule" 'grep -qF "Full lane | Build · T004" <<<"$out" && grep -qF "keep its [tag]" <<<"$out"'
-check "no Orchestrator prefix on agents" 'grep -qF "With no lane running, use only the task." <<<"$out"'
+check "agent description is the task only" 'grep -qF "Set each Agent call'"'"'s description to only the task, like \"US1 review\" or \"T004 test\"." <<<"$out" && ! grep -qF "Full lane | Build ·" <<<"$out" && grep -qF "keep its [tag]" <<<"$out"'
 for a in "$root"/agents/*.md; do
   n=$(basename "$a" .md)
   check "agents/$n.md starts its report with [$n]" 'grep -qF "Start your report with \`[$n]\` on its own line." "$a"'
