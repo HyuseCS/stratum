@@ -1,9 +1,17 @@
 ---
 name: st-handoff
-description: Write the session handoff to .stratum/handoff.md so the next session starts where this one stopped. Run at the end of a session or when the user says they are done.
+description: Write the session handoff to .stratum/handoff.md so the next session starts where this one stopped. Mid-session it runs in a background fork; when the user says they are done it runs in the main session.
 ---
 
 # /stratum:st-handoff
+
+## Where it runs
+
+- The user said they are done: write it here, in the main session, so it finishes before they leave.
+- Else start the Agent tool with `subagent_type: "fork"` and the description `Handoff`. A fork has this whole conversation and runs in the background. Prompt: "You are the fork. Write `.stratum/handoff.md` now as `/stratum:st-handoff` says after its Where it runs section. Do not start another agent." Tell the user in one line that a fork is writing it, and keep answering. When it reports, relay its next step in one line.
+- The fork cannot start: write it here and say so in one line.
+
+## Write it
 
 Write `<project>/.stratum/handoff.md`. Keep the facts block between `<!-- st-facts:start -->` and
 `<!-- st-facts:end -->` if one exists (a hook maintains it); replace everything above it.

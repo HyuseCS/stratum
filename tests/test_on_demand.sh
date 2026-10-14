@@ -98,4 +98,14 @@ FR-008 rule	hook	it runs only in the main session
 EOF
 check "FR-008 no rule outside Stratum" '! grep -qF "start the agent of the same name" "$tmp/nohook.out"'
 
+phrases <<'EOF'
+FR-009 handoff	skills/st-handoff/SKILL.md	The user said they are done: write it here, in the main session
+FR-009 handoff	skills/st-handoff/SKILL.md	subagent_type: "fork"
+FR-009 handoff	skills/st-handoff/SKILL.md	You are the fork.
+FR-009 handoff	skills/st-handoff/SKILL.md	Do not start another agent.
+FR-009 handoff	skills/st-handoff/SKILL.md	The fork cannot start: write it here
+EOF
+d=$(grep -m1 "^description:" "$root/skills/st-handoff/SKILL.md")
+check "FR-009 handoff description" 'grep -qF "background fork" <<<"$d"'
+
 exit $fail

@@ -112,11 +112,11 @@ L12.
 
 ### Tests for User Story 3
 
-- [ ] T007 [US3] Add the FR-009 check to `tests/test_on_demand.sh`: one check `FR-009 handoff` from the phrases of `specs/004-on-demand-steps/contracts/background.md` section 6 on `skills/st-handoff/SKILL.md`, plus `d=$(grep -m1 "^description:" "$root/skills/st-handoff/SKILL.md")` outside `check` and `check "FR-009 handoff description" 'grep -qF "background fork" <<<"$d"'`. Run it: both fail.
+- [X] T007 [US3] Add the FR-009 check to `tests/test_on_demand.sh`: one check `FR-009 handoff` from the phrases of `specs/004-on-demand-steps/contracts/background.md` section 6 on `skills/st-handoff/SKILL.md`, plus `d=$(grep -m1 "^description:" "$root/skills/st-handoff/SKILL.md")` outside `check` and `check "FR-009 handoff description" 'grep -qF "background fork" <<<"$d"'`. Run it: both fail.
 
 ### Implementation for User Story 3
 
-- [ ] T008 [US3] Make the handoff fork or main session (FR-009). Security: plan.md S3 (the fork has the whole conversation).
+- [X] T008 [US3] Make the handoff fork or main session (FR-009). Security: plan.md S3 (the fork has the whole conversation).
   - `skills/st-handoff/SKILL.md`: the description and the `## Where it runs` section from `specs/004-on-demand-steps/contracts/background.md` section 6, then a `## Write it` heading before the existing "Write `<project>/.stratum/handoff.md`." line. Keep the rest unchanged.
   - `README.md` **Session handoff** bullet: after its first sentence add `Mid-session it runs in a background fork that has the whole conversation, so you keep talking. When you say you are done, it runs in the main session.`
   - `DESIGN.md` D18: add the bullet `- Mid-session st-handoff starts an Agent with subagent_type "fork" (it inherits the conversation and runs in the background). When the user says they are done, it runs in the main session so it finishes before exit. If the fork cannot start, it runs in the main session.`
