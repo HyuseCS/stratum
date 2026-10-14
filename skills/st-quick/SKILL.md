@@ -5,7 +5,7 @@ description: Run a one-file, low-risk edit (text, typo, one-file visual fix) thr
 
 # /stratum:st-quick <edit>
 
-Plugin root is two levels up from this skill's base directory. Set `lane` to `quick` in
+Plugin root is two levels up from this skill's base directory. Set `lane` and `phase` to `quick` in
 `<project>/.stratum/state.json`.
 
 1. Start the `stratum:st-quick` subagent with: plugin root, project root, and the edit.
@@ -13,3 +13,4 @@ Plugin root is two levels up from this skill's base directory. Set `lane` to `qu
 3. Otherwise verify: re-run the tests it ran and grep the diff for added comment lines.
 4. `stratum:st-git` commits the one file.
 5. Tell the user what changed in one line. Push only on their "push".
+   Set `phase` to `done` in state.json.

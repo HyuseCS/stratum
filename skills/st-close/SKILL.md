@@ -31,6 +31,7 @@ Plugin root (`<plugin root>`) is two levels up from this skill's base directory.
    proposed constitution or harness change. Never apply one without their OK.
 6. **Docs graph.** Run the `st-graphify` skill once to update the docs graph.
 7. `st-git` commits the changed docs with exact paths.
+8. Set `phase` to `done` in state.json.
 
 ## Gate
 

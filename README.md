@@ -185,6 +185,9 @@ copy for that project only.
 - **Phase tracking.** A hook sets `phase` in `.stratum/state.json` when a phase skill starts,
   whether you type `/stratum:st-plan` or the orchestrator starts it. A phase out of order gets one
   warning, then runs.
+- **Who is speaking.** Each reply starts with a label: `[Full lane | Plan]`, `[Fast lane]` or
+  `[Quick lane]` while a lane runs, else `[Orchestrator]`. The phase hook adds the label from
+  `state.json`; each lane's last step sets `phase` to `done`.
 - **Statusline.** A powerline in two lines. Line 1: `Stratum`, project path, and session length on
   the left, git branch on the right. Line 2: model with its thinking level, and ponytail on the left,
   the `commit` option on the right. Each line fits the terminal width: the path becomes the folder name, other segments

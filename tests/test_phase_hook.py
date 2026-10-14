@@ -57,7 +57,8 @@ class PhaseHookTest(unittest.TestCase):
 
     def test_prompt_sets_phase_keeps_keys(self):
         self.write_state(feature_directory="specs/001-x", phase="define", lane="full")
-        self.assertEqual(self.prompt("/stratum:st-plan").strip(), "")
+        self.assertEqual(self.context(self.prompt("/stratum:st-plan"), "UserPromptSubmit"),
+                         "Start your reply with [Full lane | Plan].")
         self.assertEqual(self.read_state(), {"feature_directory": "specs/001-x", "phase": "plan", "lane": "full"})
 
     def test_skill_sets_phase(self):
@@ -74,7 +75,8 @@ class PhaseHookTest(unittest.TestCase):
     def test_out_of_order_warns_and_sets(self):
         self.write_state(feature_directory="specs/001-x", phase="plan", lane="full")
         w = self.context(self.prompt("/stratum:st-build add it"), "UserPromptSubmit")
-        self.assertIn("build", w)
+        self.assertTrue(w.startswith("Start your reply with [Full lane | Build]. "), w)
+        self.assertIn("out of order", w)
         self.assertIn("plan", w)
         self.assertEqual(self.read_state()["phase"], "build")
         self.write_state(feature_directory="specs/001-x", phase="define", lane="full")
@@ -83,7 +85,7 @@ class PhaseHookTest(unittest.TestCase):
 
     def test_define_never_warns(self):
         self.write_state(feature_directory="specs/001-x", phase="build", lane="full")
-        self.assertEqual(self.prompt("/stratum:st-define new thing").strip(), "")
+        self.assertNotIn("out of order", self.prompt("/stratum:st-define new thing"))
         self.assertEqual(self.read_state()["phase"], "define")
 
     def test_no_feature_leaves_state(self):
@@ -91,11 +93,11 @@ class PhaseHookTest(unittest.TestCase):
         before = self.raw()
         self.assertEqual(self.skill("stratum:st-plan").strip(), "")
         self.assertEqual(self.raw(), before)
-        self.assertEqual(self.prompt("/stratum:st-define x").strip(), "")
+        self.prompt("/stratum:st-define x")
         self.assertEqual(self.read_state()["phase"], "define")
 
     def test_non_phase_changes_nothing(self):
-        self.write_state(feature_directory="specs/001-x", phase="define", lane="full")
+        self.write_state(feature_directory="specs/001-x", phase="done", lane="full")
         before = self.raw()
         for text in ("/stratum:st-status", "/stratum:st", "/stratum:st-planner", "please run /stratum:st-build", "stratum:st-plan",
                      "/stratum:st-build-x", "hello", ""):
@@ -103,6 +105,34 @@ class PhaseHookTest(unittest.TestCase):
         for name in ("stratum:st-status", "stratum:st-fast", "st-close", "other:st-build", ""):
             self.assertEqual(self.skill(name).strip(), "", name)
         self.assertEqual(self.raw(), before)
+
+    def test_label_on_any_prompt_while_lane_runs(self):
+        for phase, label in (("define", "[Full lane | Define]"), ("build", "[Full lane | Build]"),
+                             ("close", "[Full lane | Close]"), ("fast", "[Fast lane]"), ("quick", "[Quick lane]")):
+            self.write_state(feature_directory="specs/001-x", phase=phase, lane="full")
+            before = self.raw()
+            self.assertEqual(self.context(self.prompt("what next?"), "UserPromptSubmit"),
+                             f"Start your reply with {label}.", phase)
+            self.assertEqual(self.raw(), before)
+
+    def test_no_label_when_no_lane_runs(self):
+        for phase in ("done", None, "implement"):
+            self.write_state(feature_directory="specs/001-x", phase=phase, lane="full")
+            self.assertEqual(self.prompt("what next?").strip(), "", phase)
+
+    def test_skill_event_never_labels(self):
+        self.write_state(feature_directory="specs/001-x", phase="build", lane="full")
+        self.assertEqual(self.skill("stratum:st-status").strip(), "")
+        self.assertEqual(self.skill("stratum:st-build").strip(), "")
+
+    def test_lanes_end_with_done(self):
+        for name, start in (("st-close", None), ("st-fast", "Set `lane` and `phase` to `fast`"),
+                            ("st-quick", "Set `lane` and `phase` to `quick`")):
+            with open(os.path.join(ROOT, "skills", name, "SKILL.md")) as f:
+                text = f.read()
+            self.assertIn("Set `phase` to `done` in state.json.", text, name)
+            if start:
+                self.assertIn(start, text, name)
 
     def test_found_from_subfolder(self):
         self.write_state(feature_directory="specs/001-x", phase="define", lane="full")

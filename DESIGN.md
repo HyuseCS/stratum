@@ -217,6 +217,11 @@ second file or touches any area above text and docs.
   - If the last phase is not the one that comes before it (or the same phase), it adds one warning line to
     the context. It never blocks. Define is never out of order.
   - No `state.json`, or no `feature_directory` for a phase after Define: it does nothing.
+- **D21. Reply label.** On each prompt, `st-phase` reads `phase` and adds one line: start the
+  reply with `[Full lane | <Phase>]`, `[Fast lane]` or `[Quick lane]`. St-fast and st-quick set
+  `phase` to `fast` or `quick` with `lane`. St-close, st-fast and st-quick end by setting `phase`
+  to `done`. With no lane running the hook adds nothing, and the session-start line says to
+  start with `[Orchestrator]`.
 
 ## 7. Project Pool move
 

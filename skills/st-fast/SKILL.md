@@ -5,7 +5,7 @@ description: Run a change through Stratum's Fast lane: short change plan, one ga
 
 # /stratum:st-fast <change>
 
-Plugin root is two levels up from this skill's base directory. Set `lane` to `fast` in
+Plugin root is two levels up from this skill's base directory. Set `lane` and `phase` to `fast` in
 `<project>/.stratum/state.json`. The change must sit inside an existing feature in `specs/`; if it
 needs a new user story or touches privacy and access, move up to `/stratum:st-full`.
 
@@ -22,5 +22,6 @@ needs a new user story or touches privacy and access, move up to `/stratum:st-fu
 6. `stratum:st-git` commits exact paths.
 7. Start `stratum:st-close` for the drift fix only (no gap report, no lessons unless something went wrong).
 8. List the small decisions and findings (fixed and dropped). Push only on the user's "push".
+   Set `phase` to `done` in state.json.
 
 If any agent reports the change needs a higher lane, stop and move up.

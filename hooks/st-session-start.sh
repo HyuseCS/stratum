@@ -12,4 +12,7 @@ if [ -f "$project/.stratum/handoff.md" ]; then
   echo
   cat "$project/.stratum/handoff.md"
 fi
+if [ -d "$project/.stratum" ]; then
+  echo "Stratum rule: begin every reply with the label [Orchestrator]. A Stratum hook line on a prompt can name a different label for that reply; use that one instead."
+fi
 exit 0
