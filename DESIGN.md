@@ -236,6 +236,7 @@ second file or touches any area above text and docs.
   label shows the lane, and to keep
   a subagent's tag when relaying its report. Each agent file says to start its report with
   `[<agent name>]`.
+- **D24. Background agents.** st-impeccable (audit only), st-ponytail-audit and st-ponytail-debt each have a read-only agent of the same name (no Edit or Write tool). The session-start rule starts it when the user asks for the skill in the background, compares git status --porcelain before and after, and says any other skill runs only in the main session.
 
 ## 7. Project Pool move
 

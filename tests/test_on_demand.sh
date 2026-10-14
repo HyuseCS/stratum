@@ -84,4 +84,18 @@ FR-007 never	agents/st-ponytail-debt.md	Ask the user a question.
 FR-007 ledger	agents/st-ponytail-debt.md	Write the ledger to a file
 EOF
 
+mkdir -p "$tmp/proj/.stratum" "$tmp/plain" "$tmp/home/.claude"
+cp "$root/sr-opus-5.md" "$tmp/home/.claude/sr-opus-5.md"
+HOME="$tmp/home" CLAUDE_PLUGIN_ROOT="$root" CLAUDE_PROJECT_DIR="$tmp/proj" bash "$root/hooks/st-session-start.sh" > "$tmp/hook.out"
+HOME="$tmp/home" CLAUDE_PLUGIN_ROOT="$root" CLAUDE_PROJECT_DIR="$tmp/plain" bash "$root/hooks/st-session-start.sh" > "$tmp/nohook.out"
+
+phrases <<'EOF'
+FR-008 rule	hook	st-impeccable (an audit), st-ponytail-audit or st-ponytail-debt in the background
+FR-008 rule	hook	start the agent of the same name (stratum:<name>)
+FR-008 rule	hook	run git status --porcelain again
+FR-008 rule	hook	except st-handoff
+FR-008 rule	hook	it runs only in the main session
+EOF
+check "FR-008 no rule outside Stratum" '! grep -qF "start the agent of the same name" "$tmp/nohook.out"'
+
 exit $fail
