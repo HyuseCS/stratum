@@ -3,6 +3,7 @@ import json
 import os
 import re
 import sys
+import tempfile
 
 BEFORE = {"plan": "define", "inspect": "plan", "build": "inspect", "close": "build"}
 LABEL = {p: f"[Full lane | {p.title()}]" for p in ("define", "plan", "inspect", "build", "close")}
@@ -34,8 +35,10 @@ def main():
     if m and (m.group(1) == "define" or state.get("feature_directory")):
         phase = m.group(1)
         state["phase"] = phase
-        with open(path, "w") as f:
+        fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path), prefix=".state-")
+        with os.fdopen(fd, "w") as f:
             f.write(json.dumps(state, indent=2) + "\n")
+        os.replace(tmp, path)
         if phase in BEFORE and old not in (BEFORE[phase], phase):
             notes.append(f"Stratum: phase {phase} started out of order (was {old}, expected "
                          f"{BEFORE[phase]} or {phase}). Warn the user once in one line, then run.")

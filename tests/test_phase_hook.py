@@ -134,6 +134,14 @@ class PhaseHookTest(unittest.TestCase):
             if start:
                 self.assertIn(start, text, name)
 
+    def test_write_replaces_file_atomically(self):
+        self.write_state(feature_directory="specs/001-x", phase="define", lane="full")
+        before = os.stat(self.state).st_ino
+        self.prompt("/stratum:st-plan")
+        self.assertEqual(self.read_state()["phase"], "plan")
+        self.assertNotEqual(os.stat(self.state).st_ino, before)
+        self.assertEqual(sorted(os.listdir(os.path.dirname(self.state))), ["state.json"])
+
     def test_found_from_subfolder(self):
         self.write_state(feature_directory="specs/001-x", phase="define", lane="full")
         sub = os.path.join(self.proj, "a", "b")
