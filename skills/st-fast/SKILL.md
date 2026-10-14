@@ -15,7 +15,7 @@ needs a new user story or touches privacy and access, move up to `/stratum:st-fu
 3. For each test in the change plan: `stratum:st-test` writes it and shows it fails; `stratum:st-build` makes it
    pass. A test still red after 2 tries goes to `stratum:st-debug`, with the advisor's answer
    first if one is set (`/advisor`): root cause or rabbit hole?
-4. Verify: re-run the tests and grep the diff for added comment lines (see `/stratum:st`). If an
+4. Verify with `bash <plugin root>/scripts/st-verify.sh '<test command>'` (see `/stratum:st`). If an
    advisor is set, consult it on the diff: hidden regressions? Handle its notes like findings.
 5. Run `/stratum:st-ponytail-review` on the change's diff. Check each finding against the source
    (see `/stratum:st`). Send the real, small ones to `stratum:st-build`; big ones go to the user.

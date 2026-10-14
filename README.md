@@ -188,6 +188,9 @@ copy for that project only.
 - **Who is speaking.** Each reply starts with a label: `[Full lane | Plan]`, `[Fast lane]` or
   `[Quick lane]` while a lane runs, else `[Orchestrator]`. The phase hook adds the label from
   `state.json`; each lane's last step sets `phase` to `done`.
+- **Verify in one call.** After a subagent builds, the orchestrator runs
+  `scripts/st-verify.sh '<test command>'`. It re-runs the test and greps the diff for added
+  comment lines, and prints one `ok` or `FAIL` line, so each check is one short call.
 - **Statusline.** A powerline in two lines. Line 1: `Stratum`, project path, and session length on
   the left, git branch on the right. Line 2: model with its thinking level, and ponytail on the left,
   the `commit` option on the right. Each line fits the terminal width: the path becomes the folder name, other segments
@@ -267,6 +270,7 @@ bash tests/test_model_files.sh
 bash tests/test_inspect.sh
 bash tests/test_session_hooks.sh
 bash tests/test_statusline.sh
+bash tests/test_verify.sh
 node tests/test_token_weather.mjs
 claude plugin validate .claude-plugin/plugin.json
 ```

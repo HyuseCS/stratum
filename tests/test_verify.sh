@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+set -u
+root="$(cd "$(dirname "$0")/.." && pwd)"
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+fail=0
+check() { if eval "$2"; then echo "ok   $1"; else echo "FAIL $1"; fail=1; fi; }
+
+proj="$tmp/proj"
+mkdir -p "$proj"
+git -C "$proj" init -q
+printf 'x = 1\n' > "$proj/a.py"
+printf '# Title\n' > "$proj/notes.md"
+git -C "$proj" add a.py notes.md
+git -C "$proj" -c user.name=t -c user.email=t@t commit -q -m first
+verify() { (cd "$proj" && bash "$root/scripts/st-verify.sh" "$@"); }
+
+out=$(verify "true"); rc=$?
+check "green and clean: ok, exit 0" '[ $rc = 0 ] && grep -q "^ok" <<<"$out"'
+
+out=$(verify "echo boom-line; exit 3"); rc=$?
+check "red test: FAIL, exit 1, shows output" '[ $rc = 1 ] && grep -q "^FAIL" <<<"$out" && grep -q "boom-line" <<<"$out"'
+
+printf 'x = 1\n# explains x\n' > "$proj/a.py"
+out=$(verify "true"); rc=$?
+check "added comment: FAIL, exit 1, names it" '[ $rc = 1 ] && grep -q "^FAIL" <<<"$out" && grep -q "explains x" <<<"$out"'
+
+printf 'x = 1\n# ponytail: global lock\n' > "$proj/a.py"
+printf '# Title\n# more\n' > "$proj/notes.md"
+out=$(verify "true"); rc=$?
+check "ponytail and md lines pass" '[ $rc = 0 ] && grep -q "^ok" <<<"$out"'
+
+out=$(verify); rc=$?
+check "no test command: exit 2" '[ $rc = 2 ]'
+
+for s in st st-build st-fast st-quick; do
+  check "skills/$s uses st-verify.sh" 'grep -qF "<plugin root>/scripts/st-verify.sh" "$root/skills/$s/SKILL.md"'
+done
+check "old inline grep gone from st and st-build" '! grep -qF "git diff -U0" "$root/skills/st/SKILL.md" "$root/skills/st-build/SKILL.md"'
+
+exit $fail

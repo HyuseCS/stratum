@@ -222,6 +222,10 @@ second file or touches any area above text and docs.
   `phase` to `fast` or `quick` with `lane`. St-close, st-fast and st-quick end by setting `phase`
   to `done`. With no lane running the hook adds nothing, and the session-start line says to
   start with `[Orchestrator]`.
+- **D22. Verify script (`scripts/st-verify.sh`).** The orchestrator's check after a build: run
+  the test command, then the added-comment grep on the working-tree diff. Prints the test's last
+  20 lines on a red test, the comment lines on a hit, else one `ok` line. Exit 0 ok, 1 fail, 2
+  no command. St, st-build, st-fast and st-quick use it. The `[P]` branch check stays as it was.
 
 ## 7. Project Pool move
 
