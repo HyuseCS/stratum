@@ -141,7 +141,7 @@ phrases <<'EOF'
 README st-status	readme	missing tools, duplicate installs, days since the last upstream sync, model overrides
 README st-init	readme	asks for the git guard modes and any model overrides
 README st-init	readme	writes the `AGENTS.md` and `CLAUDE.md` pointers
-README python3	readme	git guard, model overrides hook, statusline, handoff facts
+README python3	readme	git guard, model overrides hook, phase hook, statusline, handoff facts
 EOF
 
 exit $fail

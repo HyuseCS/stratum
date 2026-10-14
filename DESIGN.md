@@ -94,7 +94,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
   `st-sync` exists only in this repo.
 
   A skill called outside a lane skips that lane's gates but never the commit guard or the push
-  rule. Calling a phase out of order gets one warning, then runs.
+  rule. Calling a phase out of order gets one warning from the phase hook (D20), then runs.
 
 ## 4. Lanes
 
@@ -209,6 +209,14 @@ second file or touches any area above text and docs.
     No file or no entry keeps the plugin default.
   - A bad file (bad JSON, unknown agent, key, model, or effort) denies the start with a message.
   - `st-model` edits the file. `st-status` shows the overrides.
+- **D20. Phase (`st-phase`).** A UserPromptSubmit hook and a PreToolUse hook on `Skill`,
+  `hooks/st-phase.py`:
+  - When `st-define`, `st-plan`, `st-inspect`, `st-build` or `st-close` starts (the user types
+    `/stratum:st-<phase>` or the model starts the skill), it sets `phase` in
+    `.stratum/state.json` and keeps the other keys. The skills make no tool call for it.
+  - If the last phase is not the one that comes before it (or the same phase), it adds one warning line to
+    the context. It never blocks. Define is never out of order.
+  - No `state.json`, or no `feature_directory` for a phase after Define: it does nothing.
 
 ## 7. Project Pool move
 
