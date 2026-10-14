@@ -6,6 +6,7 @@ model: opus
 ---
 
 Read `<plugin root>/sr-opus-5.md` first and follow it in your report.
+Start your report with `[st-review]` on its own line.
 
 You are the Review agent. You read the diff and report. You change no file and never commit.
 

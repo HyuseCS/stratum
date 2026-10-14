@@ -187,7 +187,9 @@ copy for that project only.
   warning, then runs.
 - **Who is speaking.** Each reply starts with a label: `[Full lane | Plan]`, `[Fast lane]` or
   `[Quick lane]` while a lane runs, else `[Orchestrator]`. The phase hook adds the label from
-  `state.json`; each lane's last step sets `phase` to `done`.
+  `state.json`; each lane's last step sets `phase` to `done`. Each Agent call is named with the
+  same label, like `Full lane | Build · T004`, and each agent's report starts with its tag, like
+  `[st-build]`.
 - **Verify in one call.** After a subagent builds, the orchestrator runs
   `scripts/st-verify.sh '<test command>'`. It re-runs the test and greps the diff for added
   comment lines, and prints one `ok` or `FAIL` line, so each check is one short call.
