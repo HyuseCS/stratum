@@ -47,6 +47,16 @@ out=$(verify "true" a.py); rc=$?
 check "file not in the list is skipped" '[ $rc = 0 ]'
 rm "$proj/other.py"
 
+for case in 'a.c|*ptr = 1;|0' 'b.py|# see #!/bin/sh note|1' 'c.sql|-- sql note|1' 'd.html|<!-- html note -->|1' \
+            'e.sh|#!/bin/sh|0' 'f.css|#outro { color: red; }|0' 'g.c|#include <stdio.h>|0' 'h.c| * block comment line|1' \
+            'i.c|--i;|0'; do
+  IFS='|' read -r name line want <<<"$case"
+  printf '%s\n' "$line" > "$proj/$name"
+  verify "true" "$name" >/dev/null; rc=$?
+  check "$name '$line' exit $want" '[ $rc = $want ]'
+  rm "$proj/$name"
+done
+
 out=$(verify "true"); rc=$?
 check "no file list: exit 2" '[ $rc = 2 ]'
 
