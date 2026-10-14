@@ -185,10 +185,13 @@ copy for that project only.
   To change an entry, run `/stratum:st-model st-close opus`, say it in plain words ("make
   st-close use opus"), or edit the file.
 - **Session handoff.** `st-handoff` writes the goal, decisions, open questions, and next step.
-  Mid-session it runs in a background fork that has the whole conversation, so you keep talking. When you say you are done, it runs in the main session. A
-  hook adds a facts block (branch, phase, tasks done, last commits, uncommitted files) at session
-  end and before compaction. The next session starts by reading it.
-- **Background audits.** Say "run st-ponytail-audit in the background" (or st-ponytail-debt, or an st-impeccable audit). The agent of the same name runs it read-only while you keep talking, and its report comes back. Any other skill runs only in the main session.
+  Mid-session it runs in a background fork that has the whole conversation, so you keep talking.
+  When you say you are done, it runs in the main session. A hook adds a facts block (branch,
+  phase, tasks done, last commits, uncommitted files) at session end and before compaction. The
+  next session starts by reading it.
+- **Background audits.** Say "run st-ponytail-audit in the background" (or st-ponytail-debt, or
+  an st-impeccable audit). The agent of the same name runs it read-only while you keep talking,
+  and its report comes back. Any other skill runs only in the main session.
 - **Phase tracking.** A hook sets `phase` in `.stratum/state.json` when a phase skill starts,
   whether you type `/stratum:st-plan` or the orchestrator starts it. A phase out of order gets one
   warning, then runs.

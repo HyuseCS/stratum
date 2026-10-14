@@ -103,9 +103,11 @@ check "FR-008 plugin root" 'grep -qF "plugin root ($root)" "$tmp/hook.out"'
 check "FR-008 no rule outside Stratum" '! grep -qF "start the agent of the same name" "$tmp/nohook.out"'
 
 phrases <<'EOF'
-FR-009 handoff	skills/st-handoff/SKILL.md	The user said they are done: write it here, in the main session
+FR-009 handoff	skills/st-handoff/SKILL.md	The user said they are done or is ending the session: write it here, in the main session
 FR-009 handoff	skills/st-handoff/SKILL.md	subagent_type: "fork"
 FR-009 handoff	skills/st-handoff/SKILL.md	You are the fork.
+FR-009 handoff	skills/st-handoff/SKILL.md	A `Handoff` fork is already running: do not start another
+FR-009 handoff	skills/st-handoff/SKILL.md	If its report shows no file was written, write it here.
 FR-009 handoff	skills/st-handoff/SKILL.md	Do not start another agent.
 FR-009 handoff	skills/st-handoff/SKILL.md	The fork cannot start: write it here
 EOF
