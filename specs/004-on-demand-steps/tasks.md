@@ -76,7 +76,7 @@ L10.
 
 ### Tests for User Story 2
 
-- [ ] T003 [US2] Add the agent checks and move the pinned agent lists to 13 (FR-006, FR-007).
+- [X] T003 [US2] Add the agent checks and move the pinned agent lists to 13 (FR-006, FR-007).
   - `tests/test_on_demand.sh`: per agent in `st-impeccable st-ponytail-audit st-ponytail-debt`, with `tools` = `Read, Grep, Glob, Bash, Skill` for `st-impeccable` and `Read, Grep, Glob, Skill` for the other two: (a) `FR-006 <agent> frontmatter`: `agents/<agent>.md` has `grep -qx` lines `name: <agent>`, `tools: <tools>`, `model: <model>` (`opus` for `st-impeccable` and `st-ponytail-audit`, `sonnet` for `st-ponytail-debt`); (b) `FR-006 <agent> skill`: `skills/<agent>/SKILL.md` exists; (c) `FR-007 <agent> no edit tools`: its `tools:` line (read with `sed -n 's/^tools: //p'` outside `check`) has no `Edit` and no `Write` word; (d) for the two ponytail agents, `FR-007 <agent> no Bash`: no `Bash` word in that line; (e) the FR-006 and FR-007 phrase rows of `specs/004-on-demand-steps/contracts/background.md` section 4, added to the heredoc, one check per row.
   - `tests/test_inspect.sh:88-89`: `check "10 agents" '[ "$count" = 10 ]'` to `check "13 agents" '[ "$count" = 13 ]'`; line 97 phrase `Show a table of the 10 agents` to `Show a table of the 13 agents`.
   - `tests/test_model_hook.py:202-203` `test_module_constants`: expect `["st-build", "st-close", "st-debug", "st-fast", "st-git", "st-impeccable", "st-inspect", "st-plan", "st-ponytail-audit", "st-ponytail-debt", "st-quick", "st-review", "st-test"]`.
@@ -84,7 +84,7 @@ L10.
 
 ### Implementation for User Story 2
 
-- [ ] T004 [US2] Create the 3 agents and every doc that lists agents, in one task (the agent list checks in `tests/test_inspect.sh`, `tests/test_model_files.sh` and `tests/test_model_hook.py` read all of them, lessons L6). Security: plan.md S2 (Bash and the engine download), S4 (model file names).
+- [X] T004 [US2] Create the 3 agents and every doc that lists agents, in one task (the agent list checks in `tests/test_inspect.sh`, `tests/test_model_files.sh` and `tests/test_model_hook.py` read all of them, lessons L6). Security: plan.md S2 (Bash and the engine download), S4 (model file names).
   - Create `agents/st-impeccable.md`, `agents/st-ponytail-audit.md`, `agents/st-ponytail-debt.md` with the text of `specs/004-on-demand-steps/contracts/background.md` sections 1 to 3: `model: opus` for `st-impeccable` and `st-ponytail-audit`, `model: sonnet` for `st-ponytail-debt` (FR-006, FR-007). Each keeps `` Start your report with `[<agent>]` on its own line. `` (`tests/test_session_hooks.sh:43`).
   - `skills/st-model/SKILL.md:10-11`: list the 13 agents in sorted order (as in T003).
   - `skills/st-init/SKILL.md:26`: `Show a table of the 10 agents` to `Show a table of the 13 agents`.

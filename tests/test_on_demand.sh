@@ -50,4 +50,38 @@ EOF
 miss=$(for a in "$root"/agents/*.md; do n=$(basename "$a" .md); [ -f "$root/skills/$n/SKILL.md" ] || printf ' %s' "$n"; done)
 check "every agent has a command:$miss" '[ -z "$miss" ]'
 
+for a in st-impeccable st-ponytail-audit st-ponytail-debt; do
+  f="$root/agents/$a.md"
+  m=opus; t="Read, Grep, Glob, Skill"
+  [ "$a" = st-ponytail-debt ] && m=sonnet
+  [ "$a" = st-impeccable ] && t="Read, Grep, Glob, Bash, Skill"
+  tools=$(sed -n 's/^tools: //p' "$f")
+  check "FR-006 $a frontmatter" '[ -f "$f" ] && grep -qx "name: $a" "$f" && grep -qx "tools: $t" "$f" && grep -qx "model: $m" "$f"'
+  check "FR-006 $a skill" '[ -f "$root/skills/$a/SKILL.md" ]'
+  check "FR-007 $a no edit tools" '[ -n "$tools" ] && ! grep -qwE "Edit|Write" <<<"$tools"'
+  [ "$a" = st-impeccable ] || check "FR-007 $a no Bash" '[ -n "$tools" ] && ! grep -qw Bash <<<"$tools"'
+done
+
+phrases <<'EOF'
+FR-006 body	agents/st-impeccable.md	Read `<plugin root>/sr-opus-5.md` first
+FR-006 body	agents/st-impeccable.md	in the background
+FR-006 body	agents/st-impeccable.md	skill (Skill tool)
+FR-006 body	agents/st-ponytail-audit.md	Read `<plugin root>/sr-opus-5.md` first
+FR-006 body	agents/st-ponytail-audit.md	in the background
+FR-006 body	agents/st-ponytail-audit.md	skill (Skill tool)
+FR-006 body	agents/st-ponytail-debt.md	Read `<plugin root>/sr-opus-5.md` first
+FR-006 body	agents/st-ponytail-debt.md	in the background
+FR-006 body	agents/st-ponytail-debt.md	skill (Skill tool)
+FR-006 audit only	agents/st-impeccable.md	Run its `audit` command on the target
+FR-006 audit only	agents/st-impeccable.md	Run any mode except `audit`
+FR-006 audit only	agents/st-impeccable.md	Runs only audit in the background.
+FR-007 never	agents/st-impeccable.md	You change no file and never commit.
+FR-007 never	agents/st-impeccable.md	Ask the user a question.
+FR-007 never	agents/st-ponytail-audit.md	You change no file and never commit.
+FR-007 never	agents/st-ponytail-audit.md	Ask the user a question.
+FR-007 never	agents/st-ponytail-debt.md	You change no file and never commit.
+FR-007 never	agents/st-ponytail-debt.md	Ask the user a question.
+FR-007 ledger	agents/st-ponytail-debt.md	Write the ledger to a file
+EOF
+
 exit $fail

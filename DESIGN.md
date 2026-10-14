@@ -65,6 +65,9 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 | `st-quick` | vc quick-fix | Sonnet | Yes | Quick-lane edits. |
 | `st-close` | vc update-process + Spec Kit converge | Sonnet | Docs only | Drift fixes, gap report, lessons. |
 | `st-git` | vc git-manager | Sonnet | Git only | Commits each finished task, exact paths. |
+| `st-impeccable` | impeccable audit | Opus | No | Background impeccable audit. Read-only. |
+| `st-ponytail-audit` | ponytail audit | Opus | No | Background over-engineering audit. Read-only. |
+| `st-ponytail-debt` | ponytail debt | Sonnet | No | Background `ponytail:` ledger. Read-only. |
 
 - **D8. Rules every agent carries.** Read `sr-opus-5.md` first. Navigate graph, then search,
   then read. Agents that write code also carry the `[PONYTAIL]` directive and the no-comments

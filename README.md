@@ -122,6 +122,9 @@ All skills are called as `/stratum:<name>`.
 | `st-quick` | Sonnet | Quick-lane edits |
 | `st-close` | Sonnet | Drift fixes, gap report, lessons |
 | `st-git` | Sonnet | Commits each finished task, exact paths only |
+| `st-impeccable` | Opus | Background impeccable audit, read-only |
+| `st-ponytail-audit` | Opus | Background ponytail audit, read-only |
+| `st-ponytail-debt` | Sonnet | Background ponytail debt ledger, read-only |
 
 The Model column is the plugin default. `st-init`'s template runs `st-build`, `st-debug`,
 `st-quick`, `st-plan`, and `st-fast` on Opus with effort high, and `st-close`, `st-git`, and
@@ -165,13 +168,14 @@ copy for that project only.
   blocked: you delete remote branches yourself.
 - **Model overrides.** `.stratum/models.json` maps an agent name to an optional `model` and
   `effort`, for example `{ "st-close": { "model": "haiku", "effort": "xhigh" } }`. Agents:
-  `st-build`, `st-close`, `st-debug`, `st-fast`, `st-git`, `st-inspect`, `st-plan`, `st-quick`,
-  `st-review`, `st-test`. Models: `sonnet`, `opus`, `haiku`, `fable`. Efforts:
-  `low`, `medium`, `high`, `xhigh`, `max`. `st-init` writes it from `templates/models.json`:
+  `st-build`, `st-close`, `st-debug`, `st-fast`, `st-git`, `st-impeccable`, `st-inspect`,
+  `st-plan`, `st-ponytail-audit`, `st-ponytail-debt`, `st-quick`, `st-review`, `st-test`. Models:
+  `sonnet`, `opus`, `haiku`, `fable`. Efforts: `low`, `medium`, `high`, `xhigh`, `max`. `st-init` writes it from `templates/models.json`:
   `st-build`, `st-debug`, `st-quick`, `st-plan`, `st-fast` on opus with effort high, and
   `st-close`, `st-git`, `st-test` on haiku with effort xhigh.
-  `st-inspect` and `st-review` have no entry and keep the plugin default. A hook applies the file
-  each time a Stratum agent starts, so the next start picks up an edit. A bad file blocks every
+  `st-inspect` and `st-review` have no entry and keep the plugin default.
+  `st-impeccable`, `st-ponytail-audit` and `st-ponytail-debt` have no entry either. A hook applies
+  the file each time a Stratum agent starts, so the next start picks up an edit. A bad file blocks every
   Stratum agent start with a message that names the problem. Only Stratum agents are affected.
   `CLAUDE_CODE_EFFORT_LEVEL` beats the file's effort.
   The per-call `effort` needs Claude Code 2.1.292 or later. On an older client, remove the
