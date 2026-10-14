@@ -63,8 +63,9 @@ Plugin root is two levels up from this skill's base directory.
 2. No task ID given: say "Give the task ID, for example `/stratum:st-debug T004`." and stop.
 3. Test command: the one the user gave, else the one in the task's line in `<feature>/tasks.md`. None: say "Give the test command." and stop.
 4. Start the `st-debug` subagent (`stratum:st-debug`) with absolute paths: plugin root, project root, feature dir. Pass the task ID, the test command, and what was tried (the user's words, else "nothing yet, run on demand").
-5. **Check.** From the project root run `bash <plugin root>/scripts/st-verify.sh '<test command>' <files it changed>`. It re-runs the test and checks the files for added comment lines. Show its line. On `FAIL`, show the output and stop.
-6. Commit nothing. The user commits with `/stratum:st-git`.
+5. It reports `Stopped`, or changed no file: show its text and stop.
+6. **Check.** From the project root run `bash <plugin root>/scripts/st-verify.sh '<test command>' <files it changed>`. It re-runs the test and checks the files for added comment lines. Show its line. On `FAIL`, show the output and stop.
+7. Commit nothing. The user commits with `/stratum:st-git`.
 ```
 
 ## 4. `skills/st-git/SKILL.md`
@@ -81,7 +82,7 @@ Plugin root is two levels up from this skill's base directory.
 
 1. Files: the paths the user gave. None given: run `git status --porcelain --untracked-files=all`. No output: say "Nothing to commit." and stop. Else show the changed files and ask the user which to commit. They pick none: stop.
 2. Start the `st-git` subagent (`stratum:st-git`) with absolute paths: plugin root, project root. Pass the change (the user's words, else "on-demand commit") and the file list.
-3. It reports "Blocked": show its text and stop.
+3. Line 1 of its report does not start with `Committed`: show its text and stop.
 4. **Check.** Run `git log -1 --name-only --format=` and show it. It must list exactly the files given. If not, name the ones that differ.
 5. Push only when the user says "push".
 ```
