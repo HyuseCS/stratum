@@ -65,6 +65,9 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 | `st-quick` | vc quick-fix | Sonnet | Yes | Quick-lane edits. |
 | `st-close` | vc update-process + Spec Kit converge | Sonnet | Docs only | Drift fixes, gap report, lessons. |
 | `st-git` | vc git-manager | Sonnet | Git only | Commits each finished task, exact paths. |
+| `st-impeccable` | impeccable audit | Opus | No | Background impeccable audit. Read-only. |
+| `st-ponytail-audit` | ponytail audit | Opus | No | Background over-engineering audit. Read-only. |
+| `st-ponytail-debt` | ponytail debt | Sonnet | No | Background `ponytail:` ledger. Read-only. |
 
 - **D8. Rules every agent carries.** Read `sr-opus-5.md` first. Navigate graph, then search,
   then read. Agents that write code also carry the `[PONYTAIL]` directive and the no-comments
@@ -72,7 +75,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 
 ## 3. Skills
 
-- **D9.** Seventeen entry skills:
+- **D9.** Twenty-one entry skills:
 
 | Skill | Job |
 |-------|-----|
@@ -87,6 +90,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 | `st-template <name>` | Copy a plugin template into `.stratum/templates/` to edit. |
 | `st-handoff` | Write the session handoff. |
 | `st-pr [base]` | Open a PR: facts from git and the spec, one gate, a draft that becomes ready when CI passes. |
+| `st-review`, `st-test`, `st-debug`, `st-git` | Run one Build-loop agent on demand, then the check the orchestrator runs after it in a lane. |
 
   The Spec Kit commands are folded into the phase skills. `st-constitution` (amend rules) and
   `st-issues` (tasks to GitHub issues) stay callable alone, as do the forked tools (`st-grill`,
@@ -201,6 +205,11 @@ second file or touches any area above text and docs.
     last 5 commits, uncommitted files.
   - The SessionStart hook prints the handoff into each new session, and the orchestrator starts
     from it.
+  - Mid-session st-handoff starts an Agent with subagent_type "fork" (it inherits the
+    conversation and runs in the background). When the user says they are done or is ending the
+    session, it runs in the main session so it finishes before exit. It starts no second fork
+    while one runs. If the fork cannot start, or reports no file written, it runs in the main
+    session.
 - **D19. Model overrides (`st-models`).** A PreToolUse hook on `Agent`, `hooks/st-models.py`:
   - On every `stratum:` agent start it reads the repo's `.stratum/models.json` (git-ignored,
     written by `st-init` from `templates/models.json`). Each key is an agent name with an
@@ -232,6 +241,7 @@ second file or touches any area above text and docs.
   label shows the lane, and to keep
   a subagent's tag when relaying its report. Each agent file says to start its report with
   `[<agent name>]`.
+- **D24. Background agents.** st-impeccable (audit only), st-ponytail-audit and st-ponytail-debt each have a read-only agent of the same name (no Edit or Write tool). The session-start rule starts it when the user asks for the skill in the background, compares git rev-parse HEAD and git status --porcelain --untracked-files=all before and after, and says any other skill runs only in the main session. The agents' tool lists are the real guard (the ponytail agents cannot write; st-impeccable only has Bash), and the git check is a backup that cannot see edits to files that were already changed.
 
 ## 7. Project Pool move
 

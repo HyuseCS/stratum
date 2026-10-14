@@ -89,6 +89,7 @@ ponytail review, commit, drift fix.
 | `st <task>` | Main entry. Picks the lane and runs it. |
 | `st-full`, `st-fast`, `st-quick` | Force a lane. |
 | `st-define`, `st-plan`, `st-inspect`, `st-build`, `st-close` | Run or resume one Full-lane phase. |
+| `st-review`, `st-test`, `st-debug`, `st-git` | Run one Build-loop agent on demand. A missing feature comes from `.stratum/state.json`, a missing range is `main..HEAD`. |
 | `st-status` | Feature, phase, lane, tasks done, git guard options, next gate, missing tools, duplicate installs, days since the last upstream sync, model overrides. |
 | `st-shape arrow\|rounded\|slanted\|blocks\|flat` | Set the statusline shape. |
 | `st-theme <name>` | Set the color theme of the statusline and Token Weather. |
@@ -121,6 +122,9 @@ All skills are called as `/stratum:<name>`.
 | `st-quick` | Sonnet | Quick-lane edits |
 | `st-close` | Sonnet | Drift fixes, gap report, lessons |
 | `st-git` | Sonnet | Commits each finished task, exact paths only |
+| `st-impeccable` | Opus | Background impeccable audit, read-only |
+| `st-ponytail-audit` | Opus | Background ponytail audit, read-only |
+| `st-ponytail-debt` | Sonnet | Background ponytail debt ledger, read-only |
 
 The Model column is the plugin default. `st-init`'s template runs `st-build`, `st-debug`,
 `st-quick`, `st-plan`, and `st-fast` on Opus with effort high, and `st-close`, `st-git`, and
@@ -164,13 +168,14 @@ copy for that project only.
   blocked: you delete remote branches yourself.
 - **Model overrides.** `.stratum/models.json` maps an agent name to an optional `model` and
   `effort`, for example `{ "st-close": { "model": "haiku", "effort": "xhigh" } }`. Agents:
-  `st-build`, `st-close`, `st-debug`, `st-fast`, `st-git`, `st-inspect`, `st-plan`, `st-quick`,
-  `st-review`, `st-test`. Models: `sonnet`, `opus`, `haiku`, `fable`. Efforts:
-  `low`, `medium`, `high`, `xhigh`, `max`. `st-init` writes it from `templates/models.json`:
+  `st-build`, `st-close`, `st-debug`, `st-fast`, `st-git`, `st-impeccable`, `st-inspect`,
+  `st-plan`, `st-ponytail-audit`, `st-ponytail-debt`, `st-quick`, `st-review`, `st-test`. Models:
+  `sonnet`, `opus`, `haiku`, `fable`. Efforts: `low`, `medium`, `high`, `xhigh`, `max`. `st-init` writes it from `templates/models.json`:
   `st-build`, `st-debug`, `st-quick`, `st-plan`, `st-fast` on opus with effort high, and
   `st-close`, `st-git`, `st-test` on haiku with effort xhigh.
-  `st-inspect` and `st-review` have no entry and keep the plugin default. A hook applies the file
-  each time a Stratum agent starts, so the next start picks up an edit. A bad file blocks every
+  `st-inspect` and `st-review` have no entry and keep the plugin default.
+  `st-impeccable`, `st-ponytail-audit` and `st-ponytail-debt` have no entry either. A hook applies
+  the file each time a Stratum agent starts, so the next start picks up an edit. A bad file blocks every
   Stratum agent start with a message that names the problem. Only Stratum agents are affected.
   `CLAUDE_CODE_EFFORT_LEVEL` beats the file's effort.
   The per-call `effort` needs Claude Code 2.1.292 or later. On an older client, remove the
@@ -179,9 +184,14 @@ copy for that project only.
   link it, so agents there use the plugin defaults, as with `git-guard.json`.
   To change an entry, run `/stratum:st-model st-close opus`, say it in plain words ("make
   st-close use opus"), or edit the file.
-- **Session handoff.** `st-handoff` writes the goal, decisions, open questions, and next step. A
-  hook adds a facts block (branch, phase, tasks done, last commits, uncommitted files) at session
-  end and before compaction. The next session starts by reading it.
+- **Session handoff.** `st-handoff` writes the goal, decisions, open questions, and next step.
+  Mid-session it runs in a background fork that has the whole conversation, so you keep talking.
+  When you say you are done, it runs in the main session. A hook adds a facts block (branch,
+  phase, tasks done, last commits, uncommitted files) at session end and before compaction. The
+  next session starts by reading it.
+- **Background audits.** Say "run st-ponytail-audit in the background" (or st-ponytail-debt, or
+  an st-impeccable audit). The agent of the same name runs it read-only while you keep talking,
+  and its report comes back. Any other skill runs only in the main session.
 - **Phase tracking.** A hook sets `phase` in `.stratum/state.json` when a phase skill starts,
   whether you type `/stratum:st-plan` or the orchestrator starts it. A phase out of order gets one
   warning, then runs.
@@ -271,6 +281,7 @@ python3 tests/test_model_hook.py
 python3 tests/test_phase_hook.py
 bash tests/test_model_files.sh
 bash tests/test_inspect.sh
+bash tests/test_on_demand.sh
 bash tests/test_session_hooks.sh
 bash tests/test_statusline.sh
 bash tests/test_verify.sh

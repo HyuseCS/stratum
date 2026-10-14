@@ -79,3 +79,40 @@
   change" counts it.
 - Rule: Keep test runs from writing into the repo (`PYTHONDONTWRITEBYTECODE=1`, or `python3 -B`), or
   have the check ignore caches. A run with this side effect is not a clean pass.
+
+## 2026-10-15: 004-on-demand-steps
+
+### L9. A rebase onto main met a shared line the branch had changed
+
+- What happened: The branch was rebased onto main (`ff2e19a`; reflog `rebase (start): checkout
+  origin/main`). Main had rewritten the session-start `Stratum rule` echo in `0715256` (Agent
+  descriptions name only the task). The reflog shows `rebase (continue)` at `7fd44e0`, the commit
+  that adds the background text to that line, so the rebase stopped there for a manual merge. The
+  commit message of `7fd44e0` describes the first background wording (`git status --porcelain`).
+  Review fix `94e827c` changed the check. The plan and data model kept the old wording until this
+  close.
+- Rule: After a rebase onto main, diff each shared line the branch edits against main's text. Keep
+  main's wording, add only your sentence, and update the plan and contracts to the final line, not
+  the line from before the rebase.
+
+### L10. A review found a diff check blind; the tool list was the real guard
+
+- What happened: The US2 review (`94e827c`) found that the background check compared only
+  `git status --porcelain`, which misses a moved HEAD and files in a new untracked folder. The fix
+  added `git rev-parse HEAD` and `--untracked-files=all`. The writes that matter are stopped by the
+  `tools:` line: the two ponytail agents have no Edit, Write or Bash, and `st-impeccable` has no
+  Edit or Write. The FR-007 checks and quickstart section 2 controls C2 and C3 test those lines.
+  The plan (S2) says the diff does not see git-ignored paths.
+- Rule: When a review tightens a before-and-after diff check, name the guard that stops the write
+  (the tool list where one exists) and give that guard a negative control. State in the plan what
+  the diff does not see.
+
+### L11. A background fork that writes a file needs its failure states in the skill
+
+- What happened: The first build of `st-handoff` (`05eb181`) described the happy path only. The US3
+  review (`f4b2696`) found that a second `Handoff` fork could start and write while one ran, and that
+  no file was left when a fork wrote nothing. The fix added both rules and two FR-009 phrase checks.
+  At this close the contract's phrase table still lacked those two rows.
+- Rule: For each background or fork action, write its three failure states next to the happy path: a
+  run already in progress, a run that ends with no output, and a run that cannot start. Add one phrase
+  check per state, and add each check to the contract's phrase table in the same commit.

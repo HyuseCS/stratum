@@ -12,14 +12,14 @@ needs a new user story or touches privacy and access, move up to `/stratum:st-fu
 1. Start the `stratum:st-fast` subagent with: plugin root, project root, the feature dir, and the change.
    It writes `specs/<feature>/changes/NNN-<name>.md` and stops.
 2. **Gate:** show the user the change plan in short form. Continue only on their OK.
-3. For each test in the change plan: `stratum:st-test` writes it and shows it fails; `stratum:st-build` makes it
-   pass. A test still red after 2 tries goes to `stratum:st-debug`, with the advisor's answer
+3. For each test in the change plan: the `stratum:st-test` agent writes it and shows it fails; the `stratum:st-build` agent makes it
+   pass. A test still red after 2 tries goes to the `stratum:st-debug` agent, with the advisor's answer
    first if one is set (`/advisor`): root cause or rabbit hole?
 4. Verify with `bash <plugin root>/scripts/st-verify.sh '<test command>' <files touched>` (see `/stratum:st`). If an
    advisor is set, consult it on the diff: hidden regressions? Handle its notes like findings.
 5. Run `/stratum:st-ponytail-review` on the change's diff. Check each finding against the source
    (see `/stratum:st`). Send the real, small ones to `stratum:st-build`; big ones go to the user.
-6. `stratum:st-git` commits exact paths.
+6. The `stratum:st-git` agent commits exact paths.
 7. Start `stratum:st-close` for the drift fix only (no gap report, no lessons unless something went wrong).
 8. List the small decisions and findings (fixed and dropped). Push only on the user's "push".
    Set `phase` to `done` in state.json.
