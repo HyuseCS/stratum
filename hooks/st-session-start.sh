@@ -12,4 +12,7 @@ if [ -f "$project/.stratum/handoff.md" ]; then
   echo
   cat "$project/.stratum/handoff.md"
 fi
+if [ -d "$project/.stratum" ]; then
+  echo "Stratum rule: begin every reply with the label [Orchestrator]. A Stratum hook line on a prompt can name a different label for that reply; use that one instead. Set each Agent call's description to only the task, like \"US1 review\" or \"T004 test\". The panel already shows the agent's name and the reply label shows the lane. When you relay a subagent's report, keep its [tag]."
+fi
 exit 0

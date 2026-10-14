@@ -51,8 +51,10 @@ tell the user in one line, and restart at the higher lane with what was learned.
   source: the defect exists at that `file:line`, and the stated cause is the real one. Drop the
   false ones. A real finding is a decision like any other: small ones get fixed, big ones go to
   the user. The end-of-run list names what was fixed and what was dropped, and why.
-- Before accepting code from a subagent, re-run its tests and grep the diff for added comment
-  lines (`git diff -U0 -- . ':!*.md' | grep -E '^\+\s*(//|#|/\*|\*)' | grep -v -e ponytail: -e '^+++' -e '#!'`). Send back any found.
+- Before accepting code from a subagent, run
+  `bash <plugin root>/scripts/st-verify.sh '<test command>' <files it touched>`
+  from the project root. It re-runs the tests and greps the diff for added comment lines. Send
+  back any `FAIL`.
 - Push only when the user says "push".
 - Leave every branch and worktree alone, even one that is merged, done, or looks useless.
   Delete one only when the user says to delete it. Never delete a remote branch: the user does

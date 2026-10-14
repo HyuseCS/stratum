@@ -13,9 +13,7 @@ subagent absolute paths: plugin root, project root, feature dir, and its task ID
 
 1. Read `<project>/.stratum/state.json`. If there is no `feature_directory`, stop and tell the
    user to run `/stratum:st-define`.
-2. Order check: `phase` should be `inspect` or `build`. If not, warn once in one line, then run.
-3. Set `phase` to `build` in state.json (keep the other keys).
-4. Read `<feature>/tasks.md`. Work on unticked tasks in order, phase by phase.
+2. Read `<feature>/tasks.md`. Work on unticked tasks in order, phase by phase.
 
 ## Per task
 
@@ -23,9 +21,10 @@ subagent absolute paths: plugin root, project root, feature dir, and its task ID
    Check the failing output yourself. A test that passes before the build is wrong.
 2. The build tasks that follow go to `st-build` (`stratum:st-build`). It builds until that test
    passes and ticks the task `[X]` in tasks.md. Setup tasks with no test go straight to `st-build`.
-3. **Verify.** Re-run the test yourself. Grep the diff for added comment lines:
-   `git diff -U0 -- . ':!*.md' | grep -E '^\+\s*(//|#|/\*|\*)' | grep -v -e ponytail: -e '^+++' -e '#!'`
-   Send any hit back to `st-build`.
+3. **Verify.** From the project root, run
+   `bash <plugin root>/scripts/st-verify.sh '<test command>' <files the task touched>`.
+   It re-runs the test, greps the diff for added comment lines, and prints one line. Send any
+   `FAIL` back to `st-build`.
 4. **Two tries.** If the test is still red after 2 `st-build` tries, consult the advisor if one
    is set (`/advisor`): root cause or rabbit hole? Then start `st-debug` (`stratum:st-debug`)
    with the task, the test, both failure outputs, and the advisor's answer.

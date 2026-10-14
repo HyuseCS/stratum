@@ -5,7 +5,7 @@ description: Run a change through Stratum's Fast lane: short change plan, one ga
 
 # /stratum:st-fast <change>
 
-Plugin root is two levels up from this skill's base directory. Set `lane` to `fast` in
+Plugin root is two levels up from this skill's base directory. Set `lane` and `phase` to `fast` in
 `<project>/.stratum/state.json`. The change must sit inside an existing feature in `specs/`; if it
 needs a new user story or touches privacy and access, move up to `/stratum:st-full`.
 
@@ -15,12 +15,13 @@ needs a new user story or touches privacy and access, move up to `/stratum:st-fu
 3. For each test in the change plan: `stratum:st-test` writes it and shows it fails; `stratum:st-build` makes it
    pass. A test still red after 2 tries goes to `stratum:st-debug`, with the advisor's answer
    first if one is set (`/advisor`): root cause or rabbit hole?
-4. Verify: re-run the tests and grep the diff for added comment lines (see `/stratum:st`). If an
+4. Verify with `bash <plugin root>/scripts/st-verify.sh '<test command>' <files touched>` (see `/stratum:st`). If an
    advisor is set, consult it on the diff: hidden regressions? Handle its notes like findings.
 5. Run `/stratum:st-ponytail-review` on the change's diff. Check each finding against the source
    (see `/stratum:st`). Send the real, small ones to `stratum:st-build`; big ones go to the user.
 6. `stratum:st-git` commits exact paths.
 7. Start `stratum:st-close` for the drift fix only (no gap report, no lessons unless something went wrong).
 8. List the small decisions and findings (fixed and dropped). Push only on the user's "push".
+   Set `phase` to `done` in state.json.
 
 If any agent reports the change needs a higher lane, stop and move up.

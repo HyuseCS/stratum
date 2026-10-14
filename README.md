@@ -38,7 +38,7 @@ project, offers to upgrade graphify, installs its post-commit hook, and checks y
 
 | Tool | Used for |
 |------|----------|
-| `git`, `python3` | git guard, model overrides hook, statusline, handoff facts, scripts |
+| `git`, `python3` | git guard, model overrides hook, phase hook, statusline, handoff facts, scripts |
 | `node` | ponytail hooks |
 | `bunx` (Bun) | statusline bar (falls back to markers only) |
 | `graphify` 0.9.74 or later (`uv tool install graphifyy`) | code navigation graph, Dart support |
@@ -182,6 +182,18 @@ copy for that project only.
 - **Session handoff.** `st-handoff` writes the goal, decisions, open questions, and next step. A
   hook adds a facts block (branch, phase, tasks done, last commits, uncommitted files) at session
   end and before compaction. The next session starts by reading it.
+- **Phase tracking.** A hook sets `phase` in `.stratum/state.json` when a phase skill starts,
+  whether you type `/stratum:st-plan` or the orchestrator starts it. A phase out of order gets one
+  warning, then runs.
+- **Who is speaking.** Each reply starts with a label: `[Full lane | Plan]`, `[Fast lane]` or
+  `[Quick lane]` while a lane runs, else `[Orchestrator]`. The phase hook adds the label from
+  `state.json`; each lane's last step sets `phase` to `done`. After you upgrade, a project whose
+  last feature is finished may still show its old phase: set `phase` to `done` once. Each Agent call is named with only its
+  task, like `US1 review`, and each agent's report starts with its tag, like
+  `[st-build]`.
+- **Verify in one call.** After a subagent builds, the orchestrator runs
+  `scripts/st-verify.sh '<test command>' <files>`. It re-runs the test and checks the listed files
+  (new ones too) for added comment lines, and prints one `ok` or `FAIL` line, so each check is one short call.
 - **Statusline.** A powerline in two lines. Line 1: `Stratum`, project path, and session length on
   the left, git branch on the right. Line 2: model with its thinking level, and ponytail on the left,
   the `commit` option on the right. Each line fits the terminal width: the path becomes the folder name, other segments
@@ -256,10 +268,12 @@ ports, and waits for review before updating `vendor.lock`.
 ```bash
 python3 tests/test_git_guard.py
 python3 tests/test_model_hook.py
+python3 tests/test_phase_hook.py
 bash tests/test_model_files.sh
 bash tests/test_inspect.sh
 bash tests/test_session_hooks.sh
 bash tests/test_statusline.sh
+bash tests/test_verify.sh
 node tests/test_token_weather.mjs
 claude plugin validate .claude-plugin/plugin.json
 ```

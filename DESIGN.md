@@ -94,7 +94,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
   `st-sync` exists only in this repo.
 
   A skill called outside a lane skips that lane's gates but never the commit guard or the push
-  rule. Calling a phase out of order gets one warning, then runs.
+  rule. Calling a phase out of order gets one warning from the phase hook (D20), then runs.
 
 ## 4. Lanes
 
@@ -209,6 +209,29 @@ second file or touches any area above text and docs.
     No file or no entry keeps the plugin default.
   - A bad file (bad JSON, unknown agent, key, model, or effort) denies the start with a message.
   - `st-model` edits the file. `st-status` shows the overrides.
+- **D20. Phase (`st-phase`).** A UserPromptSubmit hook and a PreToolUse hook on `Skill`,
+  `hooks/st-phase.py`:
+  - When `st-define`, `st-plan`, `st-inspect`, `st-build` or `st-close` starts (the user types
+    `/stratum:st-<phase>` or the model starts the skill), it sets `phase` in
+    `.stratum/state.json` and keeps the other keys. The skills make no tool call for it.
+  - If the last phase is not the one that comes before it (or the same phase), it adds one warning line to
+    the context. It never blocks. Define is never out of order.
+  - No `state.json`, or no `feature_directory` for a phase after Define: it does nothing.
+- **D21. Reply label.** On each prompt, `st-phase` reads `phase` and adds one line: start the
+  reply with `[Full lane | <Phase>]`, `[Fast lane]` or `[Quick lane]`. St-fast and st-quick set
+  `phase` to `fast` or `quick` with `lane`. St-close, st-fast and st-quick end by setting `phase`
+  to `done`. With no lane running the hook adds nothing, and the session-start line says to
+  start with `[Orchestrator]`.
+- **D22. Verify script (`scripts/st-verify.sh`).** The orchestrator's check after a build: run
+  the test command, then check the listed files (tracked diff, or the whole file if new) for
+  added comment lines. Prints the test's last
+  20 lines on a red test, the comment lines on a hit, else one `ok` line. Exit 0 ok, 1 fail, 2
+  no command or no files. St, st-build, st-fast and st-quick use it. The `[P]` branch check stays as it was.
+- **D23. Agent names.** The session-start rule says to set each Agent call's description to the
+  task only (`US1 review`, `T004 test`), since the panel shows the agent's name and the reply
+  label shows the lane, and to keep
+  a subagent's tag when relaying its report. Each agent file says to start its report with
+  `[<agent name>]`.
 
 ## 7. Project Pool move
 
