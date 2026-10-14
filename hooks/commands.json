@@ -12,6 +12,12 @@
         "hooks": [
           { "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/st-models.py\"", "timeout": 10 }
         ]
+      },
+      {
+        "matcher": "Skill",
+        "hooks": [
+          { "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/st-phase.py\"", "timeout": 10 }
+        ]
       }
     ],
     "SessionStart": [
@@ -48,7 +54,8 @@
             "command": "node -e \"require(require('node:path').join(process.env.CLAUDE_PLUGIN_ROOT.replaceAll(String.fromCharCode(92), '/'), 'hooks/ponytail/ponytail-mode-tracker.js'))\"",
             "timeout": 5,
             "statusMessage": "Stratum · ponytail check"
-          }
+          },
+          { "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/st-phase.py\"", "timeout": 10 }
         ]
       }
     ],
