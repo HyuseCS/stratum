@@ -129,7 +129,7 @@ L12.
 ## Phase 6: Polish and checks Inspect would run
 
 - [X] T009 Negative controls (lessons L2, L7). Run quickstart.md section 2 exactly: the phrase loop (baseline 0, then 1 per line, each naming its own check), structure controls C1 to C6, and the README control. A control with 0 `FAIL` lines is a check that cannot fail: fix the check in `tests/test_on_demand.sh` and run again. Touch no repo file other than `tests/test_on_demand.sh`. Report each output line.
-- [ ] T010 Full run. Run quickstart.md section 1 in full, including `claude plugin validate .claude-plugin/plugin.json` and the final `git status --porcelain` (no file a test wrote, lessons L8). Then give the user quickstart.md section 3 (live checks L1 to L12) as exact steps. It needs a live Claude Code session, so the user runs it. Record the results in the report: which rows passed, which failed with the output.
+- [X] T010 Full run. Run quickstart.md section 1 in full, including `claude plugin validate .claude-plugin/plugin.json` and the final `git status --porcelain` (no file a test wrote, lessons L8). Then give the user quickstart.md section 3 (live checks L1 to L12) as exact steps. It needs a live Claude Code session, so the user runs it. Record the results in the report: which rows passed, which failed with the output.
 
 ---
 

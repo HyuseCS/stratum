@@ -129,3 +129,9 @@ In that session:
 | L12 | "I'm done for today" | the handoff is written in the main session (no new agent row) and the reply ends after the file is written (US3-2) |
 
 Delete the scratch dir after: `rm -rf "$s"`.
+
+Recorded (T010, 2026-10-15, headless `claude -p --plugin-dir` on a scratch clone, model sonnet):
+L1 passed (test written, re-run fails with `FAIL: expected 'hi', got ''`), L5 passed
+(`Nothing to commit.`), L7 passed (`No current feature. Run /stratum:st-define.`), L10 passed
+(one line, no agent started). L2 to L4, L6, L8, L9, L11 and L12 need commit prompts or the
+agent panel, so the user runs them while using the feature on real projects.
