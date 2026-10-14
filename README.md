@@ -89,6 +89,7 @@ ponytail review, commit, drift fix.
 | `st <task>` | Main entry. Picks the lane and runs it. |
 | `st-full`, `st-fast`, `st-quick` | Force a lane. |
 | `st-define`, `st-plan`, `st-inspect`, `st-build`, `st-close` | Run or resume one Full-lane phase. |
+| `st-review`, `st-test`, `st-debug`, `st-git` | Run one Build-loop agent on demand. A missing feature comes from `.stratum/state.json`, a missing range is `main..HEAD`. |
 | `st-status` | Feature, phase, lane, tasks done, git guard options, next gate, missing tools, duplicate installs, days since the last upstream sync, model overrides. |
 | `st-shape arrow\|rounded\|slanted\|blocks\|flat` | Set the statusline shape. |
 | `st-theme <name>` | Set the color theme of the statusline and Token Weather. |
@@ -271,6 +272,7 @@ python3 tests/test_model_hook.py
 python3 tests/test_phase_hook.py
 bash tests/test_model_files.sh
 bash tests/test_inspect.sh
+bash tests/test_on_demand.sh
 bash tests/test_session_hooks.sh
 bash tests/test_statusline.sh
 bash tests/test_verify.sh
