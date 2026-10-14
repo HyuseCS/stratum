@@ -12,8 +12,6 @@ Plugin root (`<plugin root>`) is two levels up from this skill's base directory.
 
 1. Read `<project>/.stratum/state.json`. If there is no `feature_directory`, stop and tell the
    user to run `/stratum:st-define`.
-2. Order check: `phase` should be `define` or `plan`. If not, warn once in one line, then run.
-3. Set `phase` to `plan` in state.json (keep the other keys).
 
 ## Steps
 

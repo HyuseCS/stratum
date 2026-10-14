@@ -64,8 +64,6 @@ FR-004	agent	the per-check verdict (PASS, CONCERN, FAIL) of each validate check
 EOF
 check "skill frontmatter" 'grep -qx "name: st-inspect" "$skill"'
 phrases <<'EOF'
-FR-005	skill	Set `phase` to `inspect`
-FR-005	skill	`phase` should be `plan` or `inspect`
 FR-005	skill	Start the `st-inspect` subagent (`stratum:st-inspect`)
 S1	skill	only `plan.md` may change
 S1	skill	touches only its `## Validate` section
@@ -93,7 +91,6 @@ phrases <<'EOF'
 rename skills/st/SKILL.md:32	skills/st/SKILL.md	`/stratum:st-plan`, `/stratum:st-inspect`, `/stratum:st-build`
 rename skills/st-full/SKILL.md:12	skills/st-full/SKILL.md	3. `/stratum:st-inspect` (gate: user OKs the build)
 rename skills/st-plan/SKILL.md:35	skills/st-plan/SKILL.md	Next phase: `/stratum:st-inspect`.
-rename skills/st-build/SKILL.md:16	skills/st-build/SKILL.md	`phase` should be `inspect` or `build`
 rename skills/st-status/SKILL.md:13	skills/st-status/SKILL.md	Inspect → "you OK the
 rename skills/st-status/SKILL.md:37	skills/st-status/SKILL.md	stratum:st-inspect
 rename skills/st-model/SKILL.md:35	skills/st-model/SKILL.md	stratum:st-inspect

@@ -37,8 +37,7 @@ Show the spec in short form: user stories with priority, the FRs, success criter
 assumptions. Ask: "Do you agree the spec?" Edit and ask again until they say yes. Do not start
 `/stratum:st-plan` before that.
 
-On yes: set `phase` to `define` in state.json (keep the other keys), then have `st-git` commit
-the spec files with exact paths.
+On yes: have `st-git` commit the spec files with exact paths.
 
 ## Always
 
