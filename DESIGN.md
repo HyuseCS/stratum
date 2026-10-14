@@ -206,8 +206,10 @@ second file or touches any area above text and docs.
   - The SessionStart hook prints the handoff into each new session, and the orchestrator starts
     from it.
   - Mid-session st-handoff starts an Agent with subagent_type "fork" (it inherits the
-    conversation and runs in the background). When the user says they are done, it runs in the
-    main session so it finishes before exit. If the fork cannot start, it runs in the main session.
+    conversation and runs in the background). When the user says they are done or is ending the
+    session, it runs in the main session so it finishes before exit. It starts no second fork
+    while one runs. If the fork cannot start, or reports no file written, it runs in the main
+    session.
 - **D19. Model overrides (`st-models`).** A PreToolUse hook on `Agent`, `hooks/st-models.py`:
   - On every `stratum:` agent start it reads the repo's `.stratum/models.json` (git-ignored,
     written by `st-init` from `templates/models.json`). Each key is an agent name with an

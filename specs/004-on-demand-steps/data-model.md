@@ -35,19 +35,29 @@ No stored data changes shape. The entities are plugin files, one hook line, and 
 
 ## Background rule (session-start line)
 
-- Lives in the `Stratum rule:` text that `hooks/st-session-start.sh:16` prints when the project
-  has `.stratum/`.
-- States: the user asks for one of the 3 skills in the background -> start `stratum:<name>`, note
-  `git status --porcelain` before and compare after. The user asks for any other skill in the
-  background (except `st-handoff`) -> one line: it runs only in the main session.
+- Lives in the `Stratum rule:` text that `hooks/st-session-start.sh:17` prints when the project
+  has `.stratum/`. The same echo holds main's agent-naming sentence (commit 0715256: the Agent
+  description is only the task). The background text follows it.
+- States: the user asks for one of the 3 skills in the background -> note `git rev-parse HEAD` and
+  `git status --porcelain --untracked-files=all`, then start `stratum:<name>` with the plugin root,
+  the project root and, for `st-impeccable`, the target. When the report arrives, run both again:
+  any difference is a finding to check. The user asks for any other skill in the background
+  (except `st-handoff`) -> one line: it runs only in the main session.
 
 ## Handoff run mode
 
 | When | Where | Who writes `.stratum/handoff.md` |
 |------|-------|-----------------------------------|
-| The user said they are done | main session | the main session |
-| Any other time | Agent tool, `subagent_type: "fork"`, background | the fork |
+| The user said they are done or is ending the session | main session | the main session |
+| A `Handoff` fork is already running | no new fork; wait for its report (and before the reply ends, if the user said they are done) | the running fork |
+| Any other time | Agent tool, `subagent_type: "fork"`, description `Handoff`, background | the fork |
+| The fork's report shows no file written | main session | the main session |
 | The fork cannot start | main session | the main session, with one line saying so |
+
+## Stop rules
+
+- `st-git`: the agent's report must start with `Committed`. Otherwise show its text and stop.
+- `st-debug`: the agent reports `Stopped`, or changes no file: show its text and stop.
 
 ## Agent list (`hooks/st-models.py` `AGENTS`)
 

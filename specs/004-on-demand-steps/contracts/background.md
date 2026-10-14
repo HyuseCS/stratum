@@ -135,7 +135,7 @@ for every agent file.
 
 ## 5. Background rule (`hooks/st-session-start.sh`)
 
-Append to the `Stratum rule:` echo on line 16 (inside the `.stratum` check, plain text, no
+Append to the `Stratum rule:` echo on line 17 (inside the `.stratum` check, plain text, no
 backticks: the string is in double quotes). `plugin` is set at the top of the script the way `sr` was,
 `"${CLAUDE_PLUGIN_ROOT:-$(dirname "$0")/..}"`, so the printed line holds the real plugin root:
 
@@ -177,4 +177,6 @@ The rest of the file stays as it is.
 Phrases, check `FR-009 handoff`:
 `The user said they are done or is ending the session: write it here, in the main session`;
 `subagent_type: "fork"`; `You are the fork.`; `Do not start another agent.`;
+`` A `Handoff` fork is already running: do not start another ``;
+`If its report shows no file was written, write it here.`;
 `The fork cannot start: write it here`; description line holds `background fork`.

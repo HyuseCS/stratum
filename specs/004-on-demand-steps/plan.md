@@ -12,9 +12,11 @@ on demand. Each fills a missing feature from `.stratum/state.json` and a missing
 `main..HEAD`, then runs the check the orchestrator runs after that agent in a lane (research R10).
 The agent files do not change. Three read-only agents, `st-impeccable`, `st-ponytail-audit` and
 `st-ponytail-debt`, run their skill in the background with no Edit or Write tool. Impeccable runs
-`audit` only (research R7). One sentence added to the session-start `Stratum rule` routes "in the
-background" requests and refuses the rest (research R9). `st-handoff` runs as a background fork
-mid-session and in the main session when the user says they are done. A new test,
+`audit` only (research R7). A background paragraph in the session-start `Stratum rule` routes "in
+the background" requests and refuses the rest (research R9). `st-handoff` runs as a background fork
+mid-session, and in the main session when the user says they are done or is ending the session. One
+fork runs at a time, and the main session writes the handoff when the fork writes no file or cannot
+start. A new test,
 `tests/test_on_demand.sh`, checks each FR by phrase and by file structure, including an
 agent-without-command check that names the agent. Docs and the tests that pin the agent list go
 from 10 to 13 agents. No hook code changes: `hooks/st-models.py` reads `agents/*.md`.
@@ -37,7 +39,7 @@ from 10 to 13 agents. No hook code changes: `hooks/st-models.py` reads `agents/*
 
 **Constraints**: No comments in code except `ponytail:` markers. Minimal diff. No new dependency. `hooks/st-models.py`, `hooks/st-phase.py` and the 4 existing agent files unchanged. Background agents have no Edit or Write tool.
 
-**Scale/Scope**: 4 new skills, 3 new agents, 1 new test. Edits: `hooks/st-session-start.sh`, `skills/st-handoff/SKILL.md`, `skills/st-model/SKILL.md`, `skills/st-init/SKILL.md`, `README.md`, `DESIGN.md`, `tests/test_inspect.sh`, `tests/test_model_hook.py`. 13 agents.
+**Scale/Scope**: 4 new skills, 3 new agents, 1 new test. Edits: `hooks/st-session-start.sh`, `skills/st-handoff/SKILL.md`, `skills/st-model/SKILL.md`, `skills/st-init/SKILL.md`, `skills/st-build/SKILL.md`, `skills/st-fast/SKILL.md`, `skills/st-quick/SKILL.md` (agent wording only), `README.md`, `DESIGN.md`, `tests/test_inspect.sh`, `tests/test_model_hook.py`. 13 agents.
 
 ## Constitution Check
 
@@ -72,12 +74,15 @@ Post-design re-check: all gates pass. No violations, so Complexity Tracking stay
   `impeccable context` and `impeccable detect` (research R8). On first use the launcher downloads
   the engine from `github.com/pbakaus/impeccable/releases` into `~/.impeccable/bin/<version>/`
   with a sha256 check. That is outside the working tree. Nothing sandboxes Bash. The guards: the
-  `## Never` lines, no Edit or Write tool, and the orchestrator's `git status --porcelain` before
-  and after (T006). That check does not see git-ignored paths (`.env`, `.stratum/models.json`).
-  The ponytail agents have no Bash, so they cannot write or reach the network.
+  `## Never` lines, no Edit or Write tool, and the orchestrator's `git rev-parse HEAD` and
+  `git status --porcelain --untracked-files=all` before and after (T006; review commit 94e827c
+  added HEAD and the untracked flag). That check does not see git-ignored paths (`.env`,
+  `.stratum/models.json`). The ponytail agents have no Edit, Write or Bash, so their tool list
+  stops writes and network use. `st-impeccable` keeps Bash, so for it the before and after check
+  and its `## Never` lines are the guards.
 - **S3. The handoff fork has the whole conversation and every tool (T008).** A fork inherits the
-  conversation, runs with `tools: ["*"]` and `permissionMode: "bubble"` (permission asks go to the
-  user). It writes `.stratum/handoff.md`, which is git-ignored, as the main session does today. Any
+  conversation. The fork type's definition gives it `tools: ["*"]` and `permissionMode: "bubble"`
+  (permission asks go to the user; research R4). The skill sets neither. It writes `.stratum/handoff.md`, which is git-ignored, as the main session does today. Any
   secret pasted in the conversation could reach that file, the same as today.
 - **S4. Model file names (T004).** `.stratum/models.json` accepts the 3 new agent names. Existing
   files stay valid. No other contract changes.
@@ -88,8 +93,9 @@ Post-design re-check: all gates pass. No violations, so Complexity Tracking stay
 - None for stored data or existing files. A `.stratum/models.json` written before still passes.
 - The agent count in docs and tests goes from 10 to 13 (research R12).
 - Risk: a lane step that says "`st-git` (`stratum:st-git`) commits" could now reach the
-  `st-git` skill. With a file list it passes the list through and starts the same agent, so the
-  result is the same plus the log check.
+  `st-git` skill. Commit 7323230 changed the lane steps to say "the `st-git` agent", and Close
+  changed the last one, `skills/st-build/SKILL.md:22`. With a file list the `st-git` skill passes
+  the list through and starts the same agent, so the result is the same plus the log check.
 - Rollback: revert the feature's commits.
 
 ## Project Structure
@@ -121,7 +127,10 @@ skills/
 ├── st-git/SKILL.md       # new (US1)
 ├── st-handoff/SKILL.md   # fork or main session (US3)
 ├── st-model/SKILL.md     # 13 agents (US2)
-└── st-init/SKILL.md      # "13 agents" (US2)
+├── st-init/SKILL.md      # "13 agents" (US2)
+├── st-build/SKILL.md     # "agent" wording in lane steps (7323230)
+├── st-fast/SKILL.md      # same
+└── st-quick/SKILL.md     # same
 agents/
 ├── st-impeccable.md      # new (US2)
 ├── st-ponytail-audit.md  # new (US2)

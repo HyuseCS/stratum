@@ -108,3 +108,15 @@ Target is the skill folder under `skills/`. Each row is one check named `<FR> <s
 
 The FR-005 check prints `FAIL every agent has a command: <names>` so the missing agent is named
 (spec US1 scenario 6). It is one-way on purpose: many skills have no agent.
+
+The stop rules of `st-git` (section 4 step 3) and `st-debug` (section 3 step 5) are not in this
+table. No test reads them.
+
+## 6. Lane wording
+
+A lane skill names an agent that has a command of the same name. It writes "the `<name>` agent
+(`stratum:<name>`)", not the bare form "`<name>` (`stratum:<name>`)". The bare form is the start
+line of a command skill (P2). Commit 7323230 changed these lane steps: `skills/st-build/SKILL.md`
+steps 1, 4 and 5 and the per-story step 1; `skills/st-fast/SKILL.md` steps 3 and 6;
+`skills/st-quick/SKILL.md` step 4. Close changed `skills/st-build/SKILL.md` step 2 the same way.
+The FR-001 count reads only the four command skills.

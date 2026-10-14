@@ -19,7 +19,7 @@ subagent absolute paths: plugin root, project root, feature dir, and its task ID
 
 1. A test task goes to the `st-test` agent (`stratum:st-test`). It writes the test and shows it fails.
    Check the failing output yourself. A test that passes before the build is wrong.
-2. The build tasks that follow go to `st-build` (`stratum:st-build`). It builds until that test
+2. The build tasks that follow go to the `st-build` agent (`stratum:st-build`). It builds until that test
    passes and ticks the task `[X]` in tasks.md. Setup tasks with no test go straight to `st-build`.
 3. **Verify.** From the project root, run
    `bash <plugin root>/scripts/st-verify.sh '<test command>' <files the task touched>`.

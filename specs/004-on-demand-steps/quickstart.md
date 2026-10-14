@@ -63,6 +63,8 @@ agents/st-impeccable.md|Runs only audit in the background.
 agents/st-ponytail-audit.md|You change no file and never commit.
 agents/st-ponytail-debt.md|Write the ledger to a file
 skills/st-handoff/SKILL.md|You are the fork.
+skills/st-handoff/SKILL.md|A `Handoff` fork is already running: do not start another
+skills/st-handoff/SKILL.md|If its report shows no file was written, write it here.
 EOF
 ```
 
@@ -122,11 +124,11 @@ In that session:
 | L5 | `/stratum:st-git` with a clean tree | `Nothing to commit.` and no commit |
 | L6 | `/stratum:st-review` | `st-review` runs on `main..HEAD`. Each finding shown was checked against the source; dropped ones are listed (US1-1) |
 | L7 | set `"feature_directory": null` in `.stratum/state.json`, then `/stratum:st-review` | one line: `No current feature. Run /stratum:st-define.` Put the value back after |
-| L8 | "run st-ponytail-debt in the background", then at once "what is 2+2?" | the agent row reads `st-ponytail-debt` from start to end. The 2+2 answer comes before the report. The report arrives. `git status --porcelain` is the same as before (US2-1, US2-2, SC-002, SC-003, SC-004) |
+| L8 | "run st-ponytail-debt in the background", then at once "what is 2+2?" | the agent row reads `st-ponytail-debt` from start to end. The 2+2 answer comes before the report. The report arrives. `git rev-parse HEAD` and `git status --porcelain --untracked-files=all` are the same as before (US2-1, US2-2, SC-002, SC-003, SC-004) |
 | L9 | "run st-ponytail-audit and an impeccable audit of index.html in the background" | two rows, `st-ponytail-audit` and `st-impeccable`, each with its own name. Both report. No file changed |
 | L10 | "run st-define in the background" | one line saying it runs only in the main session. No agent starts (US2-3) |
 | L11 | say "we decided the demo prints hi, not hello", then "write the handoff", then at once "what is 3+3?" | an agent row `Handoff` (type fork) starts. The 3+3 answer comes before it ends. `.stratum/handoff.md` names the hi/hello decision (US3-1, SC-003) |
-| L12 | "I'm done for today" | the handoff is written in the main session (no new agent row) and the reply ends after the file is written (US3-2) |
+| L12 | "I'm done for today", or "I'm ending the session" | the handoff is written in the main session (no new agent row) and the reply ends after the file is written (US3-2) |
 
 Delete the scratch dir after: `rm -rf "$s"`.
 

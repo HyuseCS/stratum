@@ -84,8 +84,8 @@ read `.stratum/handoff.md`.
 1. **Given** a session in progress, **When** the user asks for the handoff and keeps talking,
    **Then** the main session answers while a fork writes `.stratum/handoff.md`, and the file
    names the decisions made in the conversation.
-2. **Given** the user says they are done, **When** the handoff runs, **Then** it runs in the main
-   session and finishes before the reply ends.
+2. **Given** the user says they are done or is ending the session, **When** the handoff runs,
+   **Then** it runs in the main session and finishes before the reply ends.
 
 ### Edge Cases
 
@@ -93,6 +93,9 @@ read `.stratum/handoff.md`.
 - `/stratum:st-git` and nothing changed: it says so and commits nothing.
 - A background agent's skill finds nothing: it reports that in one line.
 - Two background agents at once: each row shows its own skill name.
+- A handoff is asked for while a `Handoff` fork runs: no second fork starts. If the user said they
+  are done, the main session waits for the first fork before the reply ends.
+- A `Handoff` fork writes no file: the main session writes `.stratum/handoff.md`.
 
 ## Requirements *(mandatory)*
 
@@ -103,17 +106,24 @@ read `.stratum/handoff.md`.
 - **FR-002**: The commands MUST fill a missing feature from the project state and a missing diff
   range with the branch's changes against `main`.
 - **FR-003**: `/stratum:st-git` with no file list MUST show the changed files and commit only the
-  ones the user picks.
+  ones the user picks. It MUST stop, showing the agent's text, unless the agent's report starts
+  with `Committed`.
 - **FR-004**: Each command MUST run the check the orchestrator runs after that agent in a lane.
+  `/stratum:st-debug` MUST stop, showing the agent's text, when the agent reports `Stopped` or
+  changes no file.
 - **FR-005**: A test MUST fail when an agent has no command of the same name.
 - **FR-006**: `st-impeccable`, `st-ponytail-audit` and `st-ponytail-debt` MUST each have a
   background agent with the same name that runs only the skill's read-only modes and reports.
 - **FR-007**: The background agents MUST NOT change files.
 - **FR-008**: The orchestrator MUST start the matching background agent when the user asks to run
   one of those skills in the background, and MUST refuse in one line for skills that start agents
-  or ask the user questions.
+  or ask the user questions (`st-handoff` is covered by FR-009). Before the start it MUST note
+  `git rev-parse HEAD` and `git status --porcelain --untracked-files=all`; when the report arrives
+  it MUST run both again and check any difference.
 - **FR-009**: Mid-session, the handoff MUST run as a background fork. When the user says they are
-  done, it MUST run in the main session.
+  done or is ending the session, it MUST run in the main session. A second fork MUST NOT start
+  while one runs. When a fork writes no file or cannot start, the main session MUST write the
+  handoff.
 
 ### Key Entities
 
