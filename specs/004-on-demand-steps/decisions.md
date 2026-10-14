@@ -1,0 +1,6 @@
+# Decisions: Run Stratum steps on demand
+
+- D1 (settled before Define): #13 commands fill missing inputs from `.stratum/state.json` (feature dir) and `main..HEAD` (diff range). `/stratum:st-git` with no file list shows the changed files and asks which to commit. Each command runs the checks the orchestrator runs after that agent. A test fails when an agent in `agents/` has no skill of the same name.
+- D2 (settled before Define): the Full lane runs #13 + I1 + I2 and skips Inspect. #19 (Quick), I5 (Fast) and I3 (spec writer test) are later and separate.
+- D3 (Q1): O2. No generic `st-worker`. Each skill that can run in the background gets a thin agent with the same name (`st-impeccable`, `st-ponytail-audit`, `st-ponytail-debt`), so the panel row shows the skill name for the whole run. These agents only read and report; any fix goes through a lane. Rejected: one `st-worker` with the skill in the description (the name is lost once the live summary replaces the label).
+- D4 (Q2): O1. `st-handoff` runs as a background fork (inherits the conversation) mid-session, and in the main session when the user says they are done, so it finishes before exit. Rejected: fork only when the user says "in the background".

@@ -1,5 +1,5 @@
 {
-  "feature_directory": "specs/002-merge-check-validate",
-  "phase": "done",
+  "feature_directory": "specs/004-on-demand-steps",
+  "phase": "plan",
   "lane": "full"
 }
