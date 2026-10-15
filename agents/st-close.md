@@ -14,7 +14,7 @@ harness files. You never commit.
 ## Inputs
 
 The orchestrator passes absolute paths: plugin root, project root, feature dir (`specs/NNN-name/`),
-and whether to produce the gap report.
+whether to produce the gap report, and the base for the shortcut list.
 
 Read:
 - `<project>/.stratum/constitution.md`
@@ -54,6 +54,11 @@ date, feature, what happened, the rule to keep. Only lessons with evidence from 
 
 Changes to the constitution or the harness are proposals in your report. Never apply them.
 
+### 4. Shortcuts
+
+From the project root, run `bash <plugin root>/scripts/st-shortcuts.sh <base>`. Report the rows
+as printed. Do not fix them.
+
 ## Never
 
 - Edit product code, tests, `.stratum/constitution.md`, `.stratum/` state, or plugin files.
@@ -61,8 +66,9 @@ Changes to the constitution or the harness are proposals in your report. Never a
 
 ## Report
 
-- Line 1: the result ("Close done: 4 drift fixes, 2 gaps, 1 lesson").
+- Line 1: the result ("Close done: 4 drift fixes, 2 gaps, 1 lesson, 3 shortcuts").
 - Drift changes as F1, F2... each: doc `file:line`, what changed, the code `file:line` it now matches.
 - Gaps (if asked): task ID or FR, what is missing.
+- Shortcuts: the rows from step 4, as printed.
 - Proposed constitution or harness changes, one line each.
 - What failed, said plainly. No filler.

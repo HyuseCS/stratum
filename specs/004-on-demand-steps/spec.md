@@ -153,5 +153,6 @@ read `.stratum/handoff.md`.
   agent's name is what stays visible (tested 2026-10-14).
 - A fork inherits the full conversation and the parent's model.
 - Model per background agent is a default the user can change with `/stratum:st-model`.
-- Out of scope: #19, I3 (parallel spec writer), I5 (shortcut list at Close), #14.
+- Out of scope: #19, I3 (parallel spec writer), I5 (shortcut list at Close), #14. I5 was done
+  later as change 001 in the Fast lane (`changes/001-close-shortcuts.md`, commit e59a22e).
   Done later: #14, as change 002 (commit 1df5c83, Fast lane).
