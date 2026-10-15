@@ -140,15 +140,17 @@ backticks: the string is in double quotes). `plugin` is set at the top of the sc
 `"${CLAUDE_PLUGIN_ROOT:-$(dirname "$0")/..}"`, so the printed line holds the real plugin root:
 
 ```text
- Background: when the user asks to run st-impeccable (an audit), st-ponytail-audit or st-ponytail-debt in the background, note git rev-parse HEAD and git status --porcelain --untracked-files=all, then start the agent of the same name (stratum:<name>). Pass it the plugin root ($plugin), the project root and, for st-impeccable, the target. When its report arrives, run both again: any difference is a finding to check, since the main session may also have changed files. Any other skill asked for in the background, except st-handoff: say in one line that it runs only in the main session.
+ Background: when the user asks to run st-impeccable (an audit), st-review, st-ponytail-audit or st-ponytail-debt in the background, note git rev-parse HEAD and git status --porcelain --untracked-files=all, then start the agent of the same name (stratum:<name>). Pass it the plugin root ($plugin), the project root and, for st-impeccable, the target. For st-review, pass the feature dir and the range, found as /stratum:st-review steps 1 and 2 say (stop where they stop), and check each finding against the source before you show it. When its report arrives, run both again: any difference is a finding to check, since the main session may also have changed files. Any other skill asked for in the background, except st-handoff: say in one line that it runs only in the main session.
 ```
 
 Phrases checked on the hook output (`CLAUDE_PROJECT_DIR` with `.stratum/`), check `FR-008 rule`:
-`st-impeccable (an audit), st-ponytail-audit or st-ponytail-debt in the background`;
+`st-impeccable (an audit), st-review, st-ponytail-audit or st-ponytail-debt in the background`;
 `note git rev-parse HEAD and git status --porcelain --untracked-files=all`;
 `start the agent of the same name (stratum:<name>)`; `the project root and, for st-impeccable, the target`;
 `run both again: any difference is a finding to check`; `the main session may also have changed files`;
-`except st-handoff`; `it runs only in the main session`. With no `.stratum/` the output holds
+`except st-handoff`; `it runs only in the main session`;
+`For st-review, pass the feature dir and the range`;
+`check each finding against the source before you show it`. With no `.stratum/` the output holds
 none of them (check `FR-008 no rule outside Stratum`). With `CLAUDE_PLUGIN_ROOT` set, the output holds
 `plugin root (<that path>)` (check `FR-008 plugin root`).
 

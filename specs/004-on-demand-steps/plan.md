@@ -37,7 +37,7 @@ from 10 to 13 agents. No hook code changes: `hooks/st-models.py` reads `agents/*
 
 **Performance Goals**: SC-003: the main session answers the next message while a background audit or the handoff fork runs.
 
-**Constraints**: No comments in code except `ponytail:` markers. Minimal diff. No new dependency. `hooks/st-models.py`, `hooks/st-phase.py` and the 4 existing agent files unchanged. Background agents have no Edit or Write tool.
+**Constraints**: No comments in code except `ponytail:` markers. Minimal diff. No new dependency. `hooks/st-models.py`, `hooks/st-phase.py` and the 4 existing agent files unchanged. Background agents have no Edit or Write tool. Change 002 (#14, commit 1df5c83) later edited `agents/st-review.md`, one of the 4 existing agent files. See `changes/002-one-review.md`.
 
 **Scale/Scope**: 4 new skills, 3 new agents, 1 new test. Edits: `hooks/st-session-start.sh`, `skills/st-handoff/SKILL.md`, `skills/st-model/SKILL.md`, `skills/st-init/SKILL.md`, `skills/st-build/SKILL.md`, `skills/st-fast/SKILL.md`, `skills/st-quick/SKILL.md` (agent wording only), `README.md`, `DESIGN.md`, `tests/test_inspect.sh`, `tests/test_model_hook.py`. 13 agents.
 

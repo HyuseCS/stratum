@@ -113,6 +113,9 @@ claude --plugin-dir "$s/p"
 If Stratum is also installed as a plugin, turn it off in `/plugin` for this test so only the
 clone's copy runs.
 
+L13 needs a branch with #14 (commit 1df5c83 or later). For L13, make the clone with
+`-b 014-one-review` instead of `-b 013-agent-skills` in the clone line above, which predates #14.
+
 In that session:
 
 | # | Type | Expected |
@@ -129,6 +132,7 @@ In that session:
 | L10 | "run st-define in the background" | one line saying it runs only in the main session. No agent starts (US2-3) |
 | L11 | say "we decided the demo prints hi, not hello", then "write the handoff", then at once "what is 3+3?" | an agent row `Handoff` (type fork) starts. The 3+3 answer comes before it ends. `.stratum/handoff.md` names the hi/hello decision (US3-1, SC-003) |
 | L12 | "I'm done for today", or "I'm ending the session" | the handoff is written in the main session (no new agent row) and the reply ends after the file is written (US3-2) |
+| L13 | in a shell: `printf 'def last(xs): return xs[len(xs)]\n\nclass Summer:\n    def total(self, xs):\n        t = 0\n        for x in xs:\n            t += x\n        return t\n' > lib.py`, then `git add lib.py && git -c user.name=t -c user.email=t@t commit -qm lib`. Then `/stratum:st-review HEAD~1..HEAD` | one ranked list holds a `correctness` finding at the `xs[len(xs)]` line and a `simplify` finding (`stdlib:` `sum`) at `Summer`. No file changed (#14). The command shows findings in short form, so the agent's `net:` line may not show. Headless: 2 of 2 passed after b91b455 |
 
 Delete the scratch dir after: `rm -rf "$s"`.
 

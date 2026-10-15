@@ -40,12 +40,11 @@ Never delete a remote branch: the user does that. If the project is another repo
 
 ## Per story (after its last task)
 
-1. The `st-review` agent (`stratum:st-review`) on the story's diff.
-2. Run the `st-ponytail-review` skill on the same diff.
-3. For screen work, run the `st-impeccable` skill on the changed screens.
-4. Check each finding against the source first (see `/stratum:st`). Send the real, small ones to
+1. The `stratum:st-review` agent on the story's diff.
+2. For screen work, run the `st-impeccable` skill on the changed screens.
+3. Check each finding against the source first (see `/stratum:st`). Send the real, small ones to
    `st-build`; verify and commit them like a task. Big ones go to the user. Drop the false ones.
-5. Run the story's steps from `<feature>/quickstart.md`. Give the user exact steps for any
+4. Run the story's steps from `<feature>/quickstart.md`. Give the user exact steps for any
    step you cannot run.
 
 ## Stop only when

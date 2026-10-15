@@ -7,7 +7,7 @@ No stored data changes shape. The entities are plugin files, one hook line, and 
 
 - An agent file `agents/<name>.md` and a skill `skills/<name>/SKILL.md` with the same `<name>`.
 - Rule (FR-005, SC-001): every agent has one. The check is one-way: a skill may have no agent.
-- New pairs: `st-review`, `st-test`, `st-debug`, `st-git` (new skills, agents unchanged).
+- New pairs: `st-review`, `st-test`, `st-debug`, `st-git` (new skills, agents unchanged; change 002 later edited `agents/st-review.md`).
   `st-impeccable`, `st-ponytail-audit`, `st-ponytail-debt` (new agents, skills unchanged).
 - Command fields: frontmatter `name`, `description`; heading `# /stratum:<name> <args>`; one start
   line `` (`stratum:<name>`) ``; one check step. Text: [contracts/commands.md](contracts/commands.md).
@@ -38,7 +38,7 @@ No stored data changes shape. The entities are plugin files, one hook line, and 
 - Lives in the `Stratum rule:` text that `hooks/st-session-start.sh:17` prints when the project
   has `.stratum/`. The same echo holds main's agent-naming sentence (commit 0715256: the Agent
   description is only the task). The background text follows it.
-- States: the user asks for one of the 3 skills in the background -> note `git rev-parse HEAD` and
+- States: the user asks for one of the 3 skills (4 after change 002 added `st-review`) in the background -> note `git rev-parse HEAD` and
   `git status --porcelain --untracked-files=all`, then start `stratum:<name>` with the plugin root,
   the project root and, for `st-impeccable`, the target. When the report arrives, run both again:
   any difference is a finding to check. The user asks for any other skill in the background
