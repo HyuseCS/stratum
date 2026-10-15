@@ -63,7 +63,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 | `st-debug` | vc debugger | Opus | Yes | Takes over after 2 failed tries. |
 | `st-fast` | vc fast-mode | Sonnet | No | Fast-lane change plans. |
 | `st-quick` | vc quick-fix | Sonnet | Yes | Quick-lane edits. |
-| `st-close` | vc update-process + Spec Kit converge | Sonnet | Docs only | Drift fixes, gap report, lessons. |
+| `st-close` | vc update-process + Spec Kit converge | Sonnet | Docs only | Drift fixes, gap report, lessons, shortcut list. |
 | `st-git` | vc git-manager | Sonnet | Git only | Commits each finished task, exact paths. |
 | `st-impeccable` | impeccable audit | Opus | No | Background impeccable audit. Read-only. |
 | `st-ponytail-audit` | ponytail audit | Opus | No | Background over-engineering audit. Read-only. |
@@ -121,7 +121,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 | 2 | Plan (`st-plan`) | plan → tasks. Open decisions return to the orchestrator and are grilled one at a time, then `st-plan` resumes. | Orchestrator asks: make GitHub issues? |
 | 3 | Inspect (`st-inspect`) | analyze and validate in one pass. Findings that need a decision go to the user. | User OKs the build |
 | 4 | Build | See the build loop | None unless blocked or a decision falls outside the plan |
-| 5 | Close (`st-close`) | Drift fixes, gap report, lessons, docs graph update | Push only on the user's "push" |
+| 5 | Close (`st-close`) | Drift fixes, gap report, lessons, shortcuts, docs graph update | Push only on the user's "push" |
 
 **Build loop**
 
@@ -141,11 +141,14 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
    to Build, defers, or drops them. At most one send-back per feature.
 3. Lessons: append to `docs/lessons.md`. Changes to the constitution or the harness are proposed,
    never applied by the agent.
+4. Shortcuts: `scripts/st-shortcuts.sh` lists the `ponytail:` markers the feature's diff adds. The
+   user picks fix now (st-build, st-verify, st-git commit) or keep (no record: st-ponytail-debt
+   finds the marker).
 
 ### Fast lane
 
 `st-fast` writes `specs/<feature>/changes/NNN-<name>.md` (what, which FRs, files, tests) → user OK →
-test first, build, ponytail-review → commit → drift fix.
+test first, build, ponytail-review → commit → drift fix and shortcut list.
 
 ### Quick lane
 
@@ -242,6 +245,8 @@ second file or touches any area above text and docs.
   a subagent's tag when relaying its report. Each agent file says to start its report with
   `[<agent name>]`.
 - **D24. Background agents.** st-impeccable (audit only), st-ponytail-audit and st-ponytail-debt each have a read-only agent of the same name (no Edit or Write tool). The session-start rule starts it when the user asks for the skill in the background, compares git rev-parse HEAD and git status --porcelain --untracked-files=all before and after, and says any other skill runs only in the main session. The agents' tool lists are the real guard (the ponytail agents cannot write; st-impeccable only has Bash), and the git check is a backup that cannot see edits to files that were already changed.
+
+- **D25. Shortcut list (`scripts/st-shortcuts.sh`).** Close lists the `ponytail:` markers that the feature's diff adds, as `file:line: text`. The base is `main` on a branch, the parent of the first commit that added spec.md on `main`, or the HEAD noted at Fast step 1. The user picks fix now or keep. Kept markers need no record, because `st-ponytail-debt` finds them. When HEAD has no commits after the base, the script prints `No commits after <base>.`
 
 ## 7. Project Pool move
 

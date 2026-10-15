@@ -75,10 +75,10 @@ The lane follows the highest impact area the change touches.
 | 2 | Plan | `st-plan` writes the plan and tasks. Open decisions come to you one at a time. | Asked: make GitHub issues? |
 | 3 | Inspect | `st-inspect` checks the files agree and the plan can be built | You OK the build |
 | 4 | Build | Per task: failing test, build, check, commit. Per story: review, ponytail review, design review. | None unless blocked |
-| 5 | Close | Fix spec drift, optional gap report, proposed lessons | Push only when you say "push" |
+| 5 | Close | Fix spec drift, optional gap report, proposed lessons, shortcut list | Push only when you say "push" |
 
 **Fast lane:** a short change plan in `specs/<feature>/changes/`, your OK, test-first build,
-ponytail review, commit, drift fix.
+ponytail review, commit, drift fix and shortcut list.
 
 **Quick lane:** one file, no gate, related tests, commit. It moves up a lane if it needs more.
 
@@ -120,7 +120,7 @@ All skills are called as `/stratum:<name>`.
 | `st-debug` | Opus | Takes over after 2 failed tries |
 | `st-fast` | Sonnet | Fast-lane change plans |
 | `st-quick` | Sonnet | Quick-lane edits |
-| `st-close` | Sonnet | Drift fixes, gap report, lessons |
+| `st-close` | Sonnet | Drift fixes, gap report, lessons, shortcut list |
 | `st-git` | Sonnet | Commits each finished task, exact paths only |
 | `st-impeccable` | Opus | Background impeccable audit, read-only |
 | `st-ponytail-audit` | Opus | Background ponytail audit, read-only |

@@ -8,39 +8,56 @@ FRs: none. spec.md Assumptions lists I5 as out of scope, and decisions.md D2 sen
 Impact area: core runtime
 
 ## Files
-- scripts/st-shortcuts.sh (new) - `st-shortcuts.sh [base]`, base defaults to `main`. Runs
-  `git diff -U0 <base>...HEAD -- . ':!*.md'`. An awk step (same style as `st-verify.sh`) tracks the
-  file and the `+` line numbers from the `@@` headers. It keeps added lines that match
+- scripts/st-shortcuts.sh (new) - `st-shortcuts.sh [base]`, base defaults to `main`. If the merge
+  base of `<base>` and `HEAD` is `HEAD`, it prints `No commits after <base>.` and exits 0.
+  Otherwise it runs `git -c core.quotePath=false diff --no-color --no-ext-diff --no-textconv
+  --src-prefix=a/ --dst-prefix=b/ -U0 <base>...HEAD -- . ':!*.md'`. The pinned flags keep user git
+  config from changing the output. An awk step (same style as `st-verify.sh`) tracks the file from
+  the `+++` line and the `+` line numbers from the `@@` headers. It keeps added lines that match
   `(#|//|/[*]) ?ponytail:` (the regex from `skills/st-ponytail-debt/SKILL.md:20`) and prints
   `<file>:<line>: <line text>`. If nothing matches, it prints `No new ponytail: markers.` Exit 0.
+  An unknown base exits 1 with the git error.
 - agents/st-close.md - Inputs: add "base for the shortcut list". New step `### 4. Shortcuts`:
   run `bash <plugin root>/scripts/st-shortcuts.sh <base>` from the project root and report the
   rows as printed. Report line 1 adds the count, e.g. "Close done: 4 drift fixes, 2 gaps, 1 lesson,
   3 shortcuts".
-- skills/st-close/SKILL.md - step 2 passes base `main`. New step after 5 (Lessons) and before
-  6 (Docs graph): "Shortcuts". Show each row and the user picks fix now or keep.
-  Fix now goes to `stratum:st-build`, then `st-verify.sh`. Keep needs no record because
-  `st-ponytail-debt` finds kept markers across the whole repo. Gate line adds "shortcuts and their fate".
+- skills/st-close/SKILL.md - step 2 passes the base. On a branch it is `main`. On `main` it is the
+  parent of the first commit that added spec.md (`git rev-parse "$(git log --diff-filter=A --format=%H -- <feature dir>/spec.md | tail -1)^"`).
+  New step 6 after 5 (Lessons) and before 7 (Docs graph): "Shortcuts". Show each row and the user
+  picks fix now or keep. Fix now goes to `stratum:st-build`, then `st-verify.sh`, then
+  `stratum:st-git` commits the touched files. Keep needs no record because `st-ponytail-debt`
+  finds kept markers across the whole repo. Gate line adds "shortcuts and their fate".
 - skills/st-fast/SKILL.md - step 1: note `git rev-parse HEAD` before the agent starts. Step 7:
   pass that SHA to `st-close` as the base, and change "drift fix only" so it does not exclude
-  the shortcut list. Step 8: handle the rows as in `/stratum:st-close` "Shortcuts".
+  the shortcut list. Start it only after the step 6 commit landed, and stop if it did not. Step 8:
+  handle the rows as in `/stratum:st-close` "Shortcuts".
 
-Base: the Full lane uses `main`. The Fast lane always uses the HEAD noted at step 1. If the
-work is committed on `main`, `main...HEAD` is empty (checked on a temp repo: 0 lines). No hook
-blocks commits on `main`. The noted SHA also leaves out earlier commits on the same branch.
+Base:
+- Full lane on a branch: `main`.
+- Full lane on `main`: the parent of the first commit that added spec.md. `main...HEAD` is empty
+  when the work is committed on `main`, so `main` alone lists nothing. No hook blocks commits on `main`.
+- Fast lane: the HEAD noted at step 1. It also leaves out earlier commits on the same branch.
+- When `HEAD` has no commits after the base, the script prints `No commits after <base>.`, not an
+  empty list.
 
 ## Tests (written first, must fail before the build)
 - tests/test_shortcuts.sh (new) - temp git repo, modeled on `tests/test_verify.sh`. Each check
-  fails today because the script does not exist. Checks:
+  fails before the build because the script does not exist. 16 checks:
   - a branch that adds `# ponytail: global lock` to `a.py` prints exactly one row,
     `a.py:<n>: # ponytail: global lock`
   - a branch with no marker prints `No new ponytail: markers.` (negative control)
   - a marker that is already on `main` and not changed on the branch is not listed
-  - a branch that adds only `docs/x.md` with `use a // ponytail: comment` prints the empty line
+  - a branch that adds only `docs/x.md` with `use a // ponytail: comment` prints `No new ponytail: markers.`
   - commits on `main`, `[base]` = the SHA before them, print the row. With no base, the same
-    commits print the empty line.
-  - phrase checks (`grep -qF`): `agents/st-close.md` and `skills/st-close/SKILL.md` name
-    `scripts/st-shortcuts.sh`, `skills/st-close/SKILL.md` has `fix now or keep`, and
+    commits print `No commits after main.` and exit 0.
+  - a bad base exits 1, and the git error names it
+  - on `main`, the base from the spec.md commit (the command in `skills/st-close/SKILL.md`, run in
+    the temp repo) prints the row
+  - a `// ponytail:` line in a `.js` file prints one row at line 1
+  - `color.ui=always` in the git config does not change the row
+  - a path with spaces prints the exact path
+  - five phrase checks (`grep -qF`): `agents/st-close.md` and `skills/st-close/SKILL.md` name
+    `scripts/st-shortcuts.sh`; `skills/st-close/SKILL.md` has `--diff-filter=A` and `fix now or keep`;
     `skills/st-fast/SKILL.md` has `git rev-parse HEAD`
   - command: `bash tests/test_shortcuts.sh`
 
