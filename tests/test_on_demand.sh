@@ -50,6 +50,9 @@ EOF
 miss=$(for a in "$root"/agents/*.md; do n=$(basename "$a" .md); [ -f "$root/skills/$n/SKILL.md" ] || printf ' %s' "$n"; done)
 check "every agent has a command:$miss" '[ -z "$miss" ]'
 
+bare=$(grep -lE '`st-[a-z-]+` \(`stratum:' "$root"/skills/*/SKILL.md | sed "s|$root/| |" | tr -d '\n')
+check "lane wording no bare agent name:$bare" '[ -z "$bare" ]'
+
 for a in st-impeccable st-ponytail-audit st-ponytail-debt; do
   f="$root/agents/$a.md"
   m=opus; t="Read, Grep, Glob, Skill"
