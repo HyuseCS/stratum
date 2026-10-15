@@ -66,7 +66,9 @@ Impact area: core runtime
   Result: 2 of 2 headless runs on isolated clones gave one list with a `correctness` finding at
   `xs[len(xs)]` and a `simplify` finding at `Summer`. Both runs left
   `__pycache__/lib.cpython-314.pyc`, because the review ran lib.py. So the `No file changed`
-  expectation did not hold.
+  expectation did not hold. Cause: the review ran `python3 -I`, and isolated mode ignores
+  `PYTHONDONTWRITEBYTECODE`. After b91b455 (agents/st-review.md: run Python as `python3 -B`), 2 of
+  2 headless runs gave the same two findings, with tags, and left the tree unchanged.
 
 ## Risks
 - `st-ponytail-review` says "and stop" on a clean diff and puts correctness out of scope. The agent
