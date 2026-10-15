@@ -7,7 +7,7 @@ Rules for every file below:
 - P3. No comments. Frame of `skills/st-quick/SKILL.md`. The text below is the file content. The
   build may fix grammar but keeps every phrase.
 - P4. The agent files `agents/st-review.md`, `agents/st-test.md`, `agents/st-debug.md`,
-  `agents/st-git.md` do not change (research R10).
+  `agents/st-git.md` do not change (research R10). Change 002 (#14) later edited `agents/st-review.md`; see [changes/002-one-review.md](../changes/002-one-review.md).
 
 ## 1. `skills/st-review/SKILL.md`
 

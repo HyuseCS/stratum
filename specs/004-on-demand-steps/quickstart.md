@@ -113,6 +113,9 @@ claude --plugin-dir "$s/p"
 If Stratum is also installed as a plugin, turn it off in `/plugin` for this test so only the
 clone's copy runs.
 
+L13 needs a branch with #14 (commit 1df5c83 or later). For L13, make the clone with
+`-b 014-one-review` instead of `-b 013-agent-skills` in the clone line above, which predates #14.
+
 In that session:
 
 | # | Type | Expected |

@@ -114,12 +114,15 @@ read `.stratum/handoff.md`.
 - **FR-005**: A test MUST fail when an agent has no command of the same name.
 - **FR-006**: `st-impeccable`, `st-ponytail-audit` and `st-ponytail-debt` MUST each have a
   background agent with the same name that runs only the skill's read-only modes and reports.
+  Note (change 002, done later in the Fast lane): `st-review` also has a background agent of the
+  same name. See `changes/002-one-review.md`.
 - **FR-007**: The background agents MUST NOT change files.
 - **FR-008**: The orchestrator MUST start the matching background agent when the user asks to run
   one of those skills in the background, and MUST refuse in one line for skills that start agents
   or ask the user questions (`st-handoff` is covered by FR-009). Before the start it MUST note
   `git rev-parse HEAD` and `git status --porcelain --untracked-files=all`; when the report arrives
   it MUST run both again and check any difference.
+  Note (change 002): `st-review` is also a background skill under this rule.
 - **FR-009**: Mid-session, the handoff MUST run as a background fork. When the user says they are
   done or is ending the session, it MUST run in the main session. A second fork MUST NOT start
   while one runs. When a fork writes no file or cannot start, the main session MUST write the
@@ -144,8 +147,11 @@ read `.stratum/handoff.md`.
 
 - #14 later merges `st-ponytail-review` into `st-review`. This feature keeps the
   `/stratum:st-review` name for it.
+  Done later as change 002 (commit 1df5c83, Fast lane): `st-review` loads `st-ponytail-review` in the
+  same run. `/stratum:st-ponytail-review` stays its own command.
 - Claude Code's live summary replaces the row's description after about 30 seconds, so the
   agent's name is what stays visible (tested 2026-10-14).
 - A fork inherits the full conversation and the parent's model.
 - Model per background agent is a default the user can change with `/stratum:st-model`.
 - Out of scope: #19, I3 (parallel spec writer), I5 (shortcut list at Close), #14.
+  Done later: #14, as change 002 (commit 1df5c83, Fast lane).

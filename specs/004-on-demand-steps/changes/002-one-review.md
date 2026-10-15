@@ -25,13 +25,21 @@ Impact area: core runtime
   commits after the review). Keep "Check each finding against the source" and the routing text.
 - `hooks/st-session-start.sh:17` - the background list becomes "st-impeccable (an audit), st-review,
   st-ponytail-audit or st-ponytail-debt in the background". New sentence after the "Pass it ..."
-  sentence: "For st-review, pass the feature dir and the range (default main..HEAD), and check each
-  finding against the source before you show it." All other phrases stay.
+  sentence: "For st-review, pass the feature dir and the range, found as /stratum:st-review steps 1
+  and 2 say (stop where they stop), and check each finding against the source before you show it."
+  All other phrases stay.
 - `specs/004-on-demand-steps/contracts/background.md:143-151` - the same rule text and phrase list.
 - `DESIGN.md:131` - "Per story: `st-review` on the story's diff (correctness, security, plan fit,
   over-engineering), impeccable for screens, ...".
 - `DESIGN.md:148` - "test first, build, `st-review` → commit → drift fix."
-- `specs/004-on-demand-steps/quickstart.md` - new live row L13 (seeded diff, see Tests).
+- `specs/004-on-demand-steps/quickstart.md` - new live row L13 (seeded diff, see Tests), and a note
+  that L13 needs a clone of a branch with #14.
+- Review fixes after the gate, built in 1df5c83 (not in the list above):
+  - `DESIGN.md` D24 - adds st-review to the background list. Says st-impeccable and st-review only
+    have Bash, since st-review runs tests.
+  - `agents/st-review.md` Report - when the skill gives a `net:` line, it ends the report.
+  - `agents/st-review.md` steps 2 and 3 - "(or the change plan's)", so a Fast-lane change checks the
+    change plan's FRs and tests.
 
 ## Tests (written first, must fail before the build)
 - `tests/test_on_demand.sh` - new checks, run `bash tests/test_on_demand.sh`:
@@ -55,6 +63,10 @@ Impact area: core runtime
   `Summer`. Manual because it calls a model (cost, varying output), so it cannot sit in the shell
   tests. Headless `claude -p --plugin-dir "$s/p" "/stratum:st-review HEAD~1..HEAD"` can also work
   (no prompts, no commit), but T010 left L6 for the user, so manual is the default.
+  Result: 2 of 2 headless runs on isolated clones gave one list with a `correctness` finding at
+  `xs[len(xs)]` and a `simplify` finding at `Summer`. Both runs left
+  `__pycache__/lib.cpython-314.pyc`, because the review ran lib.py. So the `No file changed`
+  expectation did not hold.
 
 ## Risks
 - `st-ponytail-review` says "and stop" on a clean diff and puts correctness out of scope. The agent
