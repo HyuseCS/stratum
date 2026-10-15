@@ -56,7 +56,11 @@ tell the user in one line, and restart at the higher lane with what was learned.
   from the project root. It re-runs the tests and greps the diff for added comment lines. Send
   back any `FAIL`.
 - Push only when the user says "push".
+- Make GitHub issues only when the user asks, or at the `st-plan` question. Do not end a reply
+  with an offer to file issues for the items in a list. Keep the list in the conversation and
+  the handoff.
 - Leave every branch and worktree alone, even one that is merged, done, or looks useless.
   Delete one only when the user says to delete it. Never delete a remote branch: the user does
-  that.
+  that. Never suggest deleting a local branch. When work is done, suggest only removing its
+  worktree folder and its merged remote branch.
 - When the user says they are done, run `/stratum:st-handoff`.
