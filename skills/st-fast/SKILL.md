@@ -9,7 +9,8 @@ Plugin root is two levels up from this skill's base directory. Set `lane` and `p
 `<project>/.stratum/state.json`. The change must sit inside an existing feature in `specs/`; if it
 needs a new user story or touches privacy and access, move up to `/stratum:st-full`.
 
-1. Start the `stratum:st-fast` subagent with: plugin root, project root, the feature dir, and the change.
+1. Note `git rev-parse HEAD` as the base. Then start the `stratum:st-fast` subagent with: plugin
+   root, project root, the feature dir, and the change.
    It writes `specs/<feature>/changes/NNN-<name>.md` and stops.
 2. **Gate:** show the user the change plan in short form. Continue only on their OK.
 3. For each test in the change plan: the `stratum:st-test` agent writes it and shows it fails; the `stratum:st-build` agent makes it
@@ -20,8 +21,12 @@ needs a new user story or touches privacy and access, move up to `/stratum:st-fu
 5. Run `/stratum:st-ponytail-review` on the change's diff. Check each finding against the source
    (see `/stratum:st`). Send the real, small ones to `stratum:st-build`; big ones go to the user.
 6. The `stratum:st-git` agent commits exact paths.
-7. Start `stratum:st-close` for the drift fix only (no gap report, no lessons unless something went wrong).
-8. List the small decisions and findings (fixed and dropped). Push only on the user's "push".
+7. Start the `stratum:st-close` agent with the base from step 1, for the drift fix and the shortcut
+   list (no gap report, no lessons unless something went wrong). Do this only after the step 6
+   commit landed: the shortcut list sees only committed work. If the commit did not land, stop
+   and tell the user.
+8. Handle the shortcut rows as in `/stratum:st-close` "Shortcuts". List the small decisions and
+   findings (fixed and dropped). Push only on the user's "push".
    Set `phase` to `done` in state.json.
 
 If any agent reports the change needs a higher lane, stop and move up.

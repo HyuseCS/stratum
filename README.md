@@ -283,6 +283,7 @@ bash tests/test_model_files.sh
 bash tests/test_inspect.sh
 bash tests/test_on_demand.sh
 bash tests/test_session_hooks.sh
+bash tests/test_shortcuts.sh
 bash tests/test_statusline.sh
 bash tests/test_verify.sh
 node tests/test_token_weather.mjs
