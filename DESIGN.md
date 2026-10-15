@@ -128,7 +128,8 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 1. Per task: `st-test` writes the test and shows it fails → `st-build` builds until it passes →
    the orchestrator re-runs the test and checks the diff has no added comments → `st-git` commits.
 2. A test still red after 2 tries goes to `st-debug`.
-3. Per story: `st-review` and ponytail-review on the story's diff, impeccable for screens,
+3. Per story: `st-review` on the story's diff (correctness, security, plan fit,
+   over-engineering), impeccable for screens,
    findings checked against the source, `st-build` fixes the real ones, then the story's quickstart steps run.
 4. `[P]` tasks run in parallel, each subagent in its own built-in worktree. The orchestrator
    checks each branch and merges it into `main`.
@@ -145,7 +146,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 ### Fast lane
 
 `st-fast` writes `specs/<feature>/changes/NNN-<name>.md` (what, which FRs, files, tests) → user OK →
-test first, build, ponytail-review → commit → drift fix.
+test first, build, `st-review` → commit → drift fix.
 
 ### Quick lane
 
@@ -241,7 +242,7 @@ second file or touches any area above text and docs.
   label shows the lane, and to keep
   a subagent's tag when relaying its report. Each agent file says to start its report with
   `[<agent name>]`.
-- **D24. Background agents.** st-impeccable (audit only), st-ponytail-audit and st-ponytail-debt each have a read-only agent of the same name (no Edit or Write tool). The session-start rule starts it when the user asks for the skill in the background, compares git rev-parse HEAD and git status --porcelain --untracked-files=all before and after, and says any other skill runs only in the main session. The agents' tool lists are the real guard (the ponytail agents cannot write; st-impeccable only has Bash), and the git check is a backup that cannot see edits to files that were already changed.
+- **D24. Background agents.** st-impeccable (audit only), st-review, st-ponytail-audit and st-ponytail-debt each have a read-only agent of the same name (no Edit or Write tool). The session-start rule starts it when the user asks for the skill in the background, compares git rev-parse HEAD and git status --porcelain --untracked-files=all before and after, and says any other skill runs only in the main session. The agents' tool lists are the real guard (the ponytail agents cannot write; st-impeccable and st-review only have Bash, since st-review runs tests), and the git check is their backup that cannot see edits to files that were already changed.
 
 ## 7. Project Pool move
 

@@ -93,7 +93,7 @@ HOME="$tmp/home" CLAUDE_PLUGIN_ROOT="$root" CLAUDE_PROJECT_DIR="$tmp/proj" bash 
 HOME="$tmp/home" CLAUDE_PLUGIN_ROOT="$root" CLAUDE_PROJECT_DIR="$tmp/plain" bash "$root/hooks/st-session-start.sh" > "$tmp/nohook.out"
 
 phrases <<'EOF'
-FR-008 rule	hook	st-impeccable (an audit), st-ponytail-audit or st-ponytail-debt in the background
+FR-008 rule	hook	st-impeccable (an audit), st-review, st-ponytail-audit or st-ponytail-debt in the background
 FR-008 rule	hook	start the agent of the same name (stratum:<name>)
 FR-008 rule	hook	note git rev-parse HEAD and git status --porcelain --untracked-files=all
 FR-008 rule	hook	the project root and, for st-impeccable, the target
@@ -101,6 +101,8 @@ FR-008 rule	hook	run both again: any difference is a finding to check
 FR-008 rule	hook	the main session may also have changed files
 FR-008 rule	hook	except st-handoff
 FR-008 rule	hook	it runs only in the main session
+FR-008 rule	hook	For st-review, pass the feature dir and the range
+FR-008 rule	hook	check each finding against the source before you show it
 EOF
 check "FR-008 plugin root" 'grep -qF "plugin root ($root)" "$tmp/hook.out"'
 check "FR-008 no rule outside Stratum" '! grep -qF "start the agent of the same name" "$tmp/nohook.out"'
@@ -116,5 +118,17 @@ FR-009 handoff	skills/st-handoff/SKILL.md	The fork cannot start: write it here
 EOF
 d=$(grep -m1 "^description:" "$root/skills/st-handoff/SKILL.md")
 check "FR-009 handoff description" 'grep -qF "background fork" <<<"$d"'
+
+phrases <<'EOF'
+#14 review body	agents/st-review.md	Load the `st-ponytail-review` skill (Skill tool)
+#14 review body	agents/st-review.md	`correctness`, `security`, `plan`, `simplify`
+#14 review body	agents/st-review.md	one ranked list
+#14 review body	agents/st-review.md	the change plan
+EOF
+check "#14 review tools" '[ -f "$root/agents/st-review.md" ] && grep -qx "tools: Read, Grep, Glob, Bash, Skill" "$root/agents/st-review.md"'
+check "#14 no copied rules" 'grep -qF "st-ponytail-review" "$root/agents/st-review.md" && ! grep -qF "yagni:" "$root/agents/st-review.md"'
+check "#14 lanes" '! grep -qF st-ponytail-review "$root/skills/st-build/SKILL.md" && ! grep -qF st-ponytail-review "$root/skills/st-fast/SKILL.md" && grep -qF "stratum:st-review" "$root/skills/st-fast/SKILL.md"'
+check "#14 ponytail-review kept" '[ -f "$root/skills/st-ponytail-review/SKILL.md" ]'
+check "#14 design" '! grep -qF ponytail-review "$root/DESIGN.md"'
 
 exit $fail

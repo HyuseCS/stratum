@@ -17,8 +17,10 @@ needs a new user story or touches privacy and access, move up to `/stratum:st-fu
    first if one is set (`/advisor`): root cause or rabbit hole?
 4. Verify with `bash <plugin root>/scripts/st-verify.sh '<test command>' <files touched>` (see `/stratum:st`). If an
    advisor is set, consult it on the diff: hidden regressions? Handle its notes like findings.
-5. Run `/stratum:st-ponytail-review` on the change's diff. Check each finding against the source
-   (see `/stratum:st`). Send the real, small ones to `stratum:st-build`; big ones go to the user.
+5. Start the `stratum:st-review` agent with the change plan path and the change's uncommitted diff
+   (`git diff HEAD` plus new files, since step 6 commits after the review). Check each finding
+   against the source (see `/stratum:st`). Send the real, small ones to `stratum:st-build`; big
+   ones go to the user.
 6. The `stratum:st-git` agent commits exact paths.
 7. Start `stratum:st-close` for the drift fix only (no gap report, no lessons unless something went wrong).
 8. List the small decisions and findings (fixed and dropped). Push only on the user's "push".
