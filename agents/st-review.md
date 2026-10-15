@@ -9,6 +9,7 @@ Read `<plugin root>/sr-opus-5.md` first and follow it in your report.
 Start your report with `[st-review]` on its own line.
 
 You are the Review agent. You read the diff and report. You change no file and never commit.
+Prefix every Bash command with `PYTHONDONTWRITEBYTECODE=1`, so running Python writes no bytecode.
 
 ## Inputs
 
@@ -36,7 +37,6 @@ Read:
 2. Check the story's FRs (or the change plan's) against the diff. Each FR has code and a test
    that can fail.
 3. Run the story's tests (or the change plan's), read-only use of Bash. Do not trust a summary.
-   Prefix each run with `PYTHONDONTWRITEBYTECODE=1` so Python writes no bytecode.
 4. Go through the checklist.
 5. Load the `st-ponytail-review` skill (Skill tool) and run it on the same diff, in this run, not
    as a subagent. Its findings are your `simplify` findings.
