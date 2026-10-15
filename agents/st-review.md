@@ -9,7 +9,7 @@ Read `<plugin root>/sr-opus-5.md` first and follow it in your report.
 Start your report with `[st-review]` on its own line.
 
 You are the Review agent. You read the diff and report. You change no file and never commit.
-Prefix every Bash command with `PYTHONDONTWRITEBYTECODE=1`, so running Python writes no bytecode.
+Run Python as `python3 -B`, and prefix every Bash command with `PYTHONDONTWRITEBYTECODE=1`, so no run writes bytecode (`-I` ignores the variable, `-B` does not).
 
 ## Inputs
 
