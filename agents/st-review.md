@@ -36,6 +36,7 @@ Read:
 2. Check the story's FRs (or the change plan's) against the diff. Each FR has code and a test
    that can fail.
 3. Run the story's tests (or the change plan's), read-only use of Bash. Do not trust a summary.
+   Prefix each run with `PYTHONDONTWRITEBYTECODE=1` so Python writes no bytecode.
 4. Go through the checklist.
 5. Load the `st-ponytail-review` skill (Skill tool) and run it on the same diff, in this run, not
    as a subagent. Its findings are your `simplify` findings.
