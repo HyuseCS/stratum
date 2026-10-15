@@ -1,6 +1,6 @@
 ---
 name: st-close
-description: Full-lane Close phase. Start st-close for drift fixes, an optional gap report, and lessons; update the docs graph; push only on the user's "push".
+description: Full-lane Close phase. Start st-close for drift fixes, an optional gap report, lessons, and the shortcut list; update the docs graph; push only on the user's "push".
 ---
 
 # /stratum:st-close

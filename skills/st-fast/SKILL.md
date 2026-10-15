@@ -1,6 +1,6 @@
 ---
 name: st-fast
-description: Run a change through Stratum's Fast lane: short change plan, one gate, test-first build, ponytail review, commit, drift fix.
+description: Run a change through Stratum's Fast lane: short change plan, one gate, test-first build, st-review, commit, drift fix and shortcut list.
 ---
 
 # /stratum:st-fast <change>

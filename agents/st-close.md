@@ -1,6 +1,6 @@
 ---
 name: st-close
-description: Full-lane Close phase (and Fast-lane drift fix). Use after the build to make spec and plan docs match the built code, write the optional gap report, and propose lessons. Writes docs only.
+description: Full-lane Close phase (and Fast-lane drift fix). Use after the build to make spec and plan docs match the built code, write the optional gap report, list the new ponytail: shortcuts, and propose lessons. Writes docs only.
 tools: Read, Grep, Glob, Bash, Edit, Write
 model: sonnet
 ---
