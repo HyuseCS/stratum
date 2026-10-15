@@ -41,5 +41,8 @@ Feature <dir>, lane <lane>, phase <phase>, task <ID or "none">.
 <the exact next action, with the command or file>
 ```
 
+In `## Next step`, never suggest deleting a local branch. For cleanup, name only a worktree folder
+whose work is done and a merged remote branch (the user deletes the remote branch).
+
 Then make sure `<project>/.gitignore` has `.stratum/handoff.md`. Reply with the next step in one
 line.
