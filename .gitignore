@@ -7,3 +7,4 @@ tsconfig.json
 graphify-out/
 .stratum/git-guard.json
 .stratum/models.json
+__pycache__/

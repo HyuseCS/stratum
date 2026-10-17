@@ -82,7 +82,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 | `st <task>` | Main entry. Picks the lane by impact area, states it in one line, runs it. |
 | `st-full`, `st-fast`, `st-quick` | Force a lane. |
 | `st-define`, `st-plan`, `st-inspect`, `st-build`, `st-close` | Run one Full-lane phase on the current feature, for resuming or redoing. |
-| `st-status` | Feature, phase, lane, tasks done, git guard options, next gate, missing tools, days since last sync. |
+| `st-status` | Feature, phase, lane, tasks done, git guard options, next gate, missing tools, duplicate installs, days since the last upstream sync, model overrides. |
 | `st-shape arrow\|rounded\|slanted\|blocks\|flat` | Set the statusline shape. |
 | `st-theme <name>` | Set the color theme of the statusline and Token Weather. |
 | `st-model <agent> <value>...` | Set an agent's model or effort in `.stratum/models.json`. |
