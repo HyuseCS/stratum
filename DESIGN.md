@@ -149,7 +149,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 ### Fast lane
 
 `st-fast` writes `specs/<feature>/changes/NNN-<name>.md` (what, which FRs, files, tests) → user OK →
-test first, build, `st-review` → commit → drift fix and shortcut list.
+test first, build, `st-review` → commit → drift fix and shortcut list → commit docs.
 
 ### Quick lane
 
