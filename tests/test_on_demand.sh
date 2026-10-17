@@ -131,4 +131,9 @@ check "#14 lanes" '! grep -qF st-ponytail-review "$root/skills/st-build/SKILL.md
 check "#14 ponytail-review kept" '[ -f "$root/skills/st-ponytail-review/SKILL.md" ]'
 check "#14 design" '! grep -qF ponytail-review "$root/DESIGN.md"'
 
+phrases <<'EOF'
+Q2 fast docs commit	skills/st-fast/SKILL.md	commits the docs `st-close` changed
+Q2 fast docs commit	DESIGN.md	shortcut list → commit docs
+EOF
+
 exit $fail

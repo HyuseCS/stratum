@@ -28,7 +28,11 @@ needs a new user story or touches privacy and access, move up to `/stratum:st-fu
    commit landed: the shortcut list sees only committed work. If the commit did not land, stop
    and tell the user.
 8. Handle the shortcut rows as in `/stratum:st-close` "Shortcuts". List the small decisions and
-   findings (fixed and dropped). Push only on the user's "push".
-   Set `phase` to `done` in state.json.
+   findings (fixed and dropped).
+9. Check each drift change against the code it names (as `/stratum:st-close` step 3). Then the
+   `stratum:st-git` agent commits the docs `st-close` changed, with exact paths: the doc files in
+   its drift list, and `docs/lessons.md` if it wrote a lesson. If it changed no docs, skip this
+   step. If the commit did not land, stop and tell the user.
+10. Push only on the user's "push". Set `phase` to `done` in state.json.
 
 If any agent reports the change needs a higher lane, stop and move up.

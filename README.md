@@ -78,7 +78,7 @@ The lane follows the highest impact area the change touches.
 | 5 | Close | Fix spec drift, optional gap report, proposed lessons, shortcut list | Push only when you say "push" |
 
 **Fast lane:** a short change plan in `specs/<feature>/changes/`, your OK, test-first build,
-`st-review`, commit, drift fix and shortcut list.
+`st-review`, commit, drift fix and shortcut list, commit docs.
 
 **Quick lane:** one file, no gate, related tests, commit. It moves up a lane if it needs more.
 
