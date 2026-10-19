@@ -59,6 +59,8 @@ repo at `1e73f80`.
 - Decision: no change.
 - Rationale: `NAME` matches only `define|plan|inspect|build|close` (`hooks/st-phase.py:10`).
   `/stratum:st-review` and the other new commands do not change `phase`.
+- Later: change 004 (#24, commit b12b8da) added `fast|quick|full` to `NAME` (`hooks/st-phase.py:11`).
+  The rationale above still holds for the new commands.
 
 ## R7. Read-only modes of the three skills
 

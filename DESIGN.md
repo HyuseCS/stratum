@@ -228,12 +228,13 @@ second file or touches any area above text and docs.
     `st-full` starts (the user types `/stratum:st-<name>` or the model starts the skill), it
     writes `.stratum/state.json` and keeps the other keys. The skills make no tool call for it.
   - `st-fast` and `st-quick` set `lane` and `phase` to `fast` or `quick`. `st-full` sets `lane`
-    to `full` only. `st-define` sets `phase` and sets `lane` to `full`. `st-plan` to `st-close`
-    set `phase`, and set `lane` to `full` only when `lane` is unset, so a Fast run that opens
-    `st-close` keeps `lane: fast`.
+    to `full`. If `phase` is `fast` or `quick`, it sets `phase` to null. `st-define` sets `phase`
+    and sets `lane` to `full`. `st-plan` to `st-close` set `phase`, and set `lane` to `full` only
+    when `lane` is unset, so a Fast run that opens `st-close` keeps `lane: fast`.
   - If the last phase is not the one that comes before it (or the same phase), it adds one warning line to
     the context. It never blocks. Define, Fast, Quick and Full are never out of order.
-  - No `state.json`, or no `feature_directory` for a phase after Define: it does nothing.
+  - No `state.json`: it does nothing. With no `feature_directory`, only `st-define`, `st-fast`,
+    `st-quick` and `st-full` write. The other phases do nothing.
 - **D21. Reply label.** On each prompt, `st-phase` reads `phase` and adds one line: start the
   reply with `[Full lane | <Phase>]`, `[Fast lane]` or `[Quick lane]`. The hook sets `phase` to
   `fast` or `quick` when st-fast or st-quick starts. The `st-close` agent (Full Close and the
