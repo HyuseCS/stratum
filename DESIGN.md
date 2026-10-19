@@ -224,16 +224,21 @@ second file or touches any area above text and docs.
   - `st-model` edits the file. `st-status` shows the overrides.
 - **D20. Phase (`st-phase`).** A UserPromptSubmit hook and a PreToolUse hook on `Skill`,
   `hooks/st-phase.py`:
-  - When `st-define`, `st-plan`, `st-inspect`, `st-build` or `st-close` starts (the user types
-    `/stratum:st-<phase>` or the model starts the skill), it sets `phase` in
-    `.stratum/state.json` and keeps the other keys. The skills make no tool call for it.
+  - When `st-define`, `st-plan`, `st-inspect`, `st-build`, `st-close`, `st-fast`, `st-quick` or
+    `st-full` starts (the user types `/stratum:st-<name>` or the model starts the skill), it
+    writes `.stratum/state.json` and keeps the other keys. The skills make no tool call for it.
+  - `st-fast` and `st-quick` set `lane` and `phase` to `fast` or `quick`. `st-full` sets `lane`
+    to `full` only. `st-define` sets `phase` and sets `lane` to `full`. `st-plan` to `st-close`
+    set `phase`, and set `lane` to `full` only when `lane` is unset, so a Fast run that opens
+    `st-close` keeps `lane: fast`.
   - If the last phase is not the one that comes before it (or the same phase), it adds one warning line to
-    the context. It never blocks. Define is never out of order.
+    the context. It never blocks. Define, Fast, Quick and Full are never out of order.
   - No `state.json`, or no `feature_directory` for a phase after Define: it does nothing.
 - **D21. Reply label.** On each prompt, `st-phase` reads `phase` and adds one line: start the
-  reply with `[Full lane | <Phase>]`, `[Fast lane]` or `[Quick lane]`. St-fast and st-quick set
-  `phase` to `fast` or `quick` with `lane`. St-close, st-fast and st-quick end by setting `phase`
-  to `done`. With no lane running the hook adds nothing, and the session-start line says to
+  reply with `[Full lane | <Phase>]`, `[Fast lane]` or `[Quick lane]`. The hook sets `phase` to
+  `fast` or `quick` when st-fast or st-quick starts. The `st-close` agent (Full Close and the
+  Fast-lane drift step) and the `st-quick` agent set `phase` to `done` at the end of their run.
+  With no lane running the hook adds nothing, and the session-start line says to
   start with `[Orchestrator]`.
 - **D22. Verify script (`scripts/st-verify.sh`).** The orchestrator's check after a build: run
   the test command, then check the listed files (tracked diff, or the whole file if new) for

@@ -192,12 +192,13 @@ copy for that project only.
 - **Background audits.** Say "run st-ponytail-audit in the background" (or st-ponytail-debt, an
   st-impeccable audit, or st-review). The agent of the same name runs it read-only while you keep talking,
   and its report comes back. Any other skill runs only in the main session.
-- **Phase tracking.** A hook sets `phase` in `.stratum/state.json` when a phase skill starts,
-  whether you type `/stratum:st-plan` or the orchestrator starts it. A phase out of order gets one
+- **Phase tracking.** A hook sets `phase` and `lane` in `.stratum/state.json` when a phase skill,
+  `st-fast`, `st-quick` or `st-full` starts, whether you type `/stratum:st-plan` or the
+  orchestrator starts it. A phase out of order gets one
   warning, then runs.
 - **Who is speaking.** Each reply starts with a label: `[Full lane | Plan]`, `[Fast lane]` or
   `[Quick lane]` while a lane runs, else `[Orchestrator]`. The phase hook adds the label from
-  `state.json`; each lane's last step sets `phase` to `done`. After you upgrade, a project whose
+  `state.json`; the lane's last agent (`st-close` or `st-quick`) sets `phase` to `done`. After you upgrade, a project whose
   last feature is finished may still show its old phase: set `phase` to `done` once. Each Agent call is named with only its
   task, like `US1 review`, and each agent's report starts with its tag, like
   `[st-build]`.

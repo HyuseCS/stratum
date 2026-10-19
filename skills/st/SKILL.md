@@ -25,14 +25,14 @@ The highest area wins:
 | Text and docs | labels, typos, wording | Quick |
 
 Say it in one line: `Lane: <lane> (<area>: <why>). Say "full", "fast" or "quick" to override.`
-Then run the lane. If the user overrides, use their lane. Write `lane` to state.json.
+Then run the lane. If the user overrides, use their lane.
 
 ## 2. Run the lane
 
 - **Full:** run `/stratum:st-define`, `/stratum:st-plan`, `/stratum:st-inspect`, `/stratum:st-build`,
   `/stratum:st-close` in order, stopping at each gate those skills name.
-- **Fast:** follow `/stratum:st-fast`.
-- **Quick:** follow `/stratum:st-quick`.
+- **Fast:** run `/stratum:st-fast`.
+- **Quick:** run `/stratum:st-quick`.
 
 ## 3. Moving up a lane
 

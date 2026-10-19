@@ -8,7 +8,7 @@ import tempfile
 BEFORE = {"plan": "define", "inspect": "plan", "build": "inspect", "close": "build"}
 LABEL = {p: f"[Full lane | {p.title()}]" for p in ("define", "plan", "inspect", "build", "close")}
 LABEL.update(fast="[Fast lane]", quick="[Quick lane]")
-NAME = re.compile(r"/stratum:st-(define|plan|inspect|build|close)(?:\s|$)")
+NAME = re.compile(r"/stratum:st-(define|plan|inspect|build|close|fast|quick|full)(?:\s|$)")
 
 
 def main():
@@ -32,9 +32,16 @@ def main():
     except Exception:
         return
     notes = []
-    if m and (m.group(1) == "define" or state.get("feature_directory")):
+    if m and (m.group(1) in ("define", "fast", "quick", "full") or state.get("feature_directory")):
         phase = m.group(1)
-        state["phase"] = phase
+        if phase != "full":
+            state["phase"] = phase
+        elif old in ("fast", "quick"):
+            state["phase"] = None
+        if phase in ("fast", "quick"):
+            state["lane"] = phase
+        elif phase in ("define", "full") or not state.get("lane"):
+            state["lane"] = "full"
         fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path), prefix=".state-")
         with os.fdopen(fd, "w") as f:
             f.write(json.dumps(state, indent=2) + "\n")

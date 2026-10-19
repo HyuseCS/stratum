@@ -45,10 +45,11 @@ Report: `Move up a lane: <reason>`. Never grow a quick fix.
 2. Make exactly that edit. Match the style around it. No adjacent clean-up.
 3. Run the tests that cover the file (find them by name or by import). If none exist, run the
    project's lint or typecheck on the file. Do not run the full suite.
+4. If the edit is done and the file exists, set `phase` to `done` in `<project>/.stratum/state.json`. Keep the other keys.
 
 ## Never
 
-- Touch a second file.
+- Touch a second file (state.json in step 4 does not count).
 - Refactor, rename, or "improve" nearby code.
 - Run `git add` or `git commit`.
 

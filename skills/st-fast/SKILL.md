@@ -5,9 +5,9 @@ description: Run a change through Stratum's Fast lane: short change plan, one ga
 
 # /stratum:st-fast <change>
 
-Plugin root is two levels up from this skill's base directory. Set `lane` and `phase` to `fast` in
-`<project>/.stratum/state.json`. The change must sit inside an existing feature in `specs/`; if it
-needs a new user story or touches privacy and access, move up to `/stratum:st-full`.
+Plugin root is two levels up from this skill's base directory. The change must sit inside an
+existing feature in `specs/`; if it needs a new user story or touches privacy and access, move up
+to `/stratum:st-full`.
 
 1. Note `git rev-parse HEAD` as the base. Then start the `stratum:st-fast` subagent with: plugin
    root, project root, the feature dir, and the change.
@@ -27,12 +27,13 @@ needs a new user story or touches privacy and access, move up to `/stratum:st-fu
    list (no gap report, no lessons unless something went wrong). Do this only after the step 6
    commit landed: the shortcut list sees only committed work. If the commit did not land, stop
    and tell the user.
-8. Handle the shortcut rows as in `/stratum:st-close` "Shortcuts". List the small decisions and
-   findings (fixed and dropped).
-9. Check each drift change against the code it names (as `/stratum:st-close` step 3). Then the
-   `stratum:st-git` agent commits the docs `st-close` changed, with exact paths: the doc files in
-   its drift list, and `docs/lessons.md` if it wrote a lesson. If it changed no docs, skip this
-   step. If the commit did not land, stop and tell the user.
-10. Push only on the user's "push". Set `phase` to `done` in state.json.
+8. Handle the shortcut rows as in `<plugin root>/skills/st-close/SKILL.md` ("Shortcuts" step).
+   List the small decisions and findings (fixed and dropped).
+9. Check each drift change against the code it names (as in
+   `<plugin root>/skills/st-close/SKILL.md` step 3). Then the `stratum:st-git` agent
+   commits the docs `st-close` changed, with exact paths: the doc files in its drift list, and
+   `docs/lessons.md` if it wrote a lesson. If it changed no docs, skip this step. If the commit
+   did not land, stop and tell the user.
+10. Push only on the user's "push".
 
 If any agent reports the change needs a higher lane, stop and move up.
