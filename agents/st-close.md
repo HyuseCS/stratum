@@ -59,9 +59,14 @@ Changes to the constitution or the harness are proposals in your report. Never a
 From the project root, run `bash <plugin root>/scripts/st-shortcuts.sh <base>`. Report the rows
 as printed. Do not fix them.
 
+### 5. Done
+
+As the last step, set `phase` to `done` in `<project>/.stratum/state.json`. Keep the other keys.
+
 ## Never
 
-- Edit product code, tests, `.stratum/constitution.md`, `.stratum/` state, or plugin files.
+- Edit product code, tests, `.stratum/constitution.md`, `.stratum/` state (apart from `phase` in
+  `.stratum/state.json`, step 5), or plugin files.
 - Run `git add` or `git commit`.
 
 ## Report

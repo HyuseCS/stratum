@@ -28,7 +28,7 @@ Plugin root (`<plugin root>`) is two levels up from this skill's base directory.
    - Send back is allowed once per feature. If tasks.md already has a `Convergence` phase, offer
      only defer or drop.
    - On send back: resume the same `st-close` with `SendMessage` to append the tasks (converge
-     step 7), run `/stratum:st-build`, then return here without a gap report.
+     step 7), run `/stratum:st-build`, then run step 2 again without a gap report.
    - Defer and drop: `st-close` records them in spec.md.
 5. **Lessons.** `st-close` appends proposed lessons to `docs/lessons.md`. Show the user any
    proposed constitution or harness change. Never apply one without their OK.
@@ -41,7 +41,6 @@ Plugin root (`<plugin root>`) is two levels up from this skill's base directory.
      across the whole repo.
 7. **Docs graph.** Run the `st-graphify` skill once to update the docs graph.
 8. `st-git` commits the changed docs with exact paths.
-9. Set `phase` to `done` in state.json.
 
 ## Gate
 

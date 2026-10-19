@@ -100,9 +100,9 @@ class PhaseHookTest(unittest.TestCase):
         self.write_state(feature_directory="specs/001-x", phase="done", lane="full")
         before = self.raw()
         for text in ("/stratum:st-status", "/stratum:st", "/stratum:st-planner", "please run /stratum:st-build", "stratum:st-plan",
-                     "/stratum:st-build-x", "hello", ""):
+                     "/stratum:st-build-x", "hello", "", "/stratum:st-quick-x", "please run /stratum:st-fast", "/stratum:st-fuller"):
             self.assertEqual(self.prompt(text).strip(), "", text)
-        for name in ("stratum:st-status", "stratum:st-fast", "st-close", "other:st-build", ""):
+        for name in ("stratum:st-status", "stratum:st-fastx", "other:st-quick", "st-close", "other:st-build", ""):
             self.assertEqual(self.skill(name).strip(), "", name)
         self.assertEqual(self.raw(), before)
 
@@ -125,14 +125,57 @@ class PhaseHookTest(unittest.TestCase):
         self.assertEqual(self.skill("stratum:st-status").strip(), "")
         self.assertEqual(self.skill("stratum:st-build").strip(), "")
 
-    def test_lanes_end_with_done(self):
-        for name, start in (("st-close", None), ("st-fast", "Set `lane` and `phase` to `fast`"),
-                            ("st-quick", "Set `lane` and `phase` to `quick`")):
+    def test_lane_skills_set_lane_and_phase(self):
+        keep = {"feature_directory": None, "phase": "done", "keep": 1}
+        for x, before, lane, phase in (("fast", "full", "fast", "fast"), ("quick", "full", "quick", "quick"),
+                                       ("full", "fast", "full", "done")):
+            want = dict(keep, lane=lane, phase=phase)
+            self.write_state(lane=before, **keep)
+            self.prompt("/stratum:st-" + x + " do it")
+            self.assertEqual(self.read_state(), want, "prompt " + x)
+            self.write_state(lane=before, **keep)
+            self.assertEqual(self.skill("stratum:st-" + x).strip(), "", "skill " + x)
+            self.assertEqual(self.read_state(), want, "skill " + x)
+        for old in ("fast", "quick"):
+            want = {"feature_directory": None, "phase": None, "lane": "full"}
+            self.write_state(feature_directory=None, phase=old, lane=old)
+            self.assertEqual(self.prompt("/stratum:st-full do it").strip(), "", "prompt full from " + old)
+            self.assertEqual(self.read_state(), want, "prompt full from " + old)
+            self.write_state(feature_directory=None, phase=old, lane=old)
+            self.skill("stratum:st-full")
+            self.assertEqual(self.read_state(), want, "skill full from " + old)
+        self.write_state(lane="full", **keep)
+        self.assertEqual(self.context(self.prompt("/stratum:st-fast do it"), "UserPromptSubmit"),
+                         "Start your reply with [Fast lane].")
+        self.write_state(lane="full", **keep)
+        self.assertEqual(self.context(self.prompt("/stratum:st-quick do it"), "UserPromptSubmit"),
+                         "Start your reply with [Quick lane].")
+
+    def test_phase_sets_lane_only_when_unset(self):
+        for lane in (None, ""):
+            self.write_state(feature_directory="specs/001-x", phase="define", lane=lane)
+            self.skill("stratum:st-plan")
+            self.assertEqual(self.read_state().get("lane"), "full", repr(lane))
+        self.write_state(feature_directory="specs/001-x", phase="define")
+        self.skill("stratum:st-plan")
+        self.assertEqual(self.read_state().get("lane"), "full", "missing")
+        self.write_state(feature_directory="specs/001-x", phase="fast", lane="fast")
+        self.skill("stratum:st-close")
+        self.assertEqual(self.read_state(), {"feature_directory": "specs/001-x", "phase": "close", "lane": "fast"})
+        self.write_state(feature_directory="specs/001-x", phase="fast", lane="fast")
+        self.skill("stratum:st-define")
+        self.assertEqual(self.read_state(), {"feature_directory": "specs/001-x", "phase": "define", "lane": "full"})
+
+    def test_agents_write_done(self):
+        for name in ("st", "st-fast", "st-quick", "st-full", "st-close"):
             with open(os.path.join(ROOT, "skills", name, "SKILL.md")) as f:
                 text = f.read()
-            self.assertIn("Set `phase` to `done` in state.json.", text, name)
-            if start:
-                self.assertIn(start, text, name)
+            for stale in ("Write `lane`", "Set `lane`", "Set `phase`"):
+                self.assertNotIn(stale, text, name)
+        for name in ("st-close", "st-quick"):
+            with open(os.path.join(ROOT, "agents", name + ".md")) as f:
+                text = f.read()
+            self.assertIn("set `phase` to `done` in `<project>/.stratum/state.json`", text, name)
 
     def test_write_replaces_file_atomically(self):
         self.write_state(feature_directory="specs/001-x", phase="define", lane="full")
