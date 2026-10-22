@@ -73,7 +73,7 @@ Ids come only from the JSON of the call that made them (`jq -er`; a missing id i
 9  H pane split P5 --direction right --cwd D --no-focus      -> P6
 10 H workspace focus WS
 11 H pane process-info --pane P1 / --pane P2, once per round, sleep 1, up to 10 rounds (D20)
-12 H pane list --workspace WS                                 (read back cwd per pane)
+12 H pane list --workspace WS                                 (read back: .result.panes[] with pane_id, tab_id, cwd)
 ```
 
 `basic`: steps 1, 2, 3, 10, 12. No `pane run`, no running check.
@@ -92,6 +92,8 @@ Rules the test enforces:
 
 A call that fails at or after step 1 stops the run: print `stopped: <first stderr line>`, then
 the report of what exists (section 5), exit 1. No further mutating call, nothing closed, no focus.
+Exception: a failed `pane process-info` in step 11 does not stop the run; that pane counts as
+`not seen` for that round (research R5).
 The read back (step 12) still runs, since it is a read; its failure only puts `?` in the cwd
 column. Step 12 does not run when step 1 itself failed (no `WS`).
 

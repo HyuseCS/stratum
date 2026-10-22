@@ -66,12 +66,16 @@ Run only when `herdr --machine laptop workspace list` exits 0:
 bash scripts/st-herdr-workspace.sh '~/Desktop/<project>' --label ada --machine laptop
 herdr --machine laptop tab list --workspace <WS>
 herdr --machine laptop pane list --workspace <WS> | jq -r '.result.panes[].cwd'
+env -u HERDR_ENV -u HERDR_PANE_ID -u HERDR_TAB_ID -u HERDR_WORKSPACE_ID bash scripts/st-herdr-workspace.sh '~/Desktop/<project>' --label ada --machine laptop
 ```
+
+Run the last command once from a terminal outside herdr. It must work the same as the first
+(D8: the `--machine` path does not need `HERDR_ENV`). That run is the live proof of D8.
 
 Expected: the same six panes on the laptop, every cwd the remote absolute path, P1 `claude
 running`, P2 `lazygit running`. Then `bash scripts/st-herdr-workspace.sh '~/no-such' --label ada --machine laptop`
 prints `Folder not found on laptop: ~/no-such` and makes nothing, even if that path exists here.
-The user closes the remote test workspace by hand.
+The user closes both remote test workspaces by hand.
 
 ## 4. Basic layout (US3)
 

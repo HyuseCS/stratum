@@ -2,7 +2,7 @@
 
 **Branch**: `003-session-mods` | **Date**: 2026-10-23 | **Spec**: [spec.md](spec.md)
 
-**Input**: Feature specification from `/specs/007-herdr-workspace/spec.md`, decisions D1 to D11 in
+**Input**: Feature specification from `/specs/007-herdr-workspace/spec.md`, decisions D1 to D10 and D20 (D11 is for the next feature) in
 [decisions.md](decisions.md), GitHub issue #32, the user's `~/.config/herdr/templates.sh`.
 
 ## Summary
@@ -138,6 +138,7 @@ tests/test_herdr_workspace.sh        # new (US1, US2, US3)
 tests/test_on_demand.sh              # phrase rows (US1)
 README.md                            # skill row, tool row, test line
 DESIGN.md                            # skill row, count 22 -> 23
+skills/st-status/SKILL.md            # step 4 tool check: herdr, jq optional (US1)
 ```
 
 **Structure Decision**: same layout as `st-worktree.sh` and `st-verify.sh` (scripts) and
@@ -146,3 +147,21 @@ DESIGN.md                            # skill row, count 22 -> 23
 ## Complexity Tracking
 
 Empty. No violations.
+
+## Validate
+
+Date: 2026-10-23. Verdict: CONDITIONAL
+
+| Check | Verdict | Findings |
+|-------|---------|----------|
+| 1. Setup and dependencies | CONCERN | F1 |
+| 2. Test coverage per requirement | CONCERN | F2, F3, F4 |
+| 3. Breaking changes | PASS | F5 |
+| 4. Security and privacy | PASS | F6 |
+
+F1. plan.md:93-98 (B1) The saved machine `laptop` (`hyuse@100.73.64.64`) still does not answer: `herdr --machine laptop workspace list` exits 1 after 11 s, `ssh: connect to host 100.73.64.64 port 22: Connection timed out`. Every local tool matches the plan header (herdr 0.9.4, jq 1.8.2, bash 5.3.20, OpenSSH 10.6p1, git 2.56.0, Claude Code 2.1.302, lazygit 0.66.2). Live read-only calls confirm the JSON fields the plan uses (`machine list --json`, `workspace list`, `tab list`, `pane list`, `pane process-info`, the create response fields in `herdr --skill`, the create and split flags). Not checkable until the laptop answers: herdr version on the laptop, `pane process-info` over `--machine`, the `claude2` alias there, its login shell reading `printf %q`. -> Keep T007 gated (it is). User decision only if the remote story must ship proven live.
+F2. tasks.md:56, tasks.md:62, tasks.md:91 The report `<cwd>` column (contracts/script.md:117, read back from step 12) cannot fail in any case: `STUB_CWD` is set to the same path the script already holds as `D` (L1, L12) or to the ssh output `D` (R1), so a script that prints `D` instead of the read back passes (lessons L1). The `?` path (step 12 fails or has no entry) has no case. -> st-plan: in T001 add one case with `STUB_CWD=/stub/elsewhere` that expects that value in all six `pane` lines, and one case `STUB_FAIL="pane list"` that expects exit 0 and `?` in every cwd column.
+F3. contracts/script.md:93 says any call that fails at or after step 1 stops the run; research.md:83-84 (D7, D20) says a failed `pane process-info` counts as `not seen` and does not stop the run. T002 (tasks.md:69) does not say which, and no case runs `STUB_FAIL="pane process-info"`. -> st-plan: add "except step 11: a failed call counts as `not seen`" to contracts/script.md:93-96 and a T001 case with `STUB_FAIL="pane process-info"` that expects exit 0 and `not seen` for P1 and P2.
+F4. tasks.md:59, tasks.md:90 Every git-state case has ahead 0 (L4 `behind 1`, stub ssh `+0 -2`), so a wrong ahead parse (`ahead +0`, or ahead and behind swapped for a non-zero ahead) cannot go red. -> st-plan: make the stub ssh line `# branch.ab +3 -2` and expect `ahead 3, behind 2` in R1.
+F5. Callers that could break: `tests/test_inspect.sh:112-114` (skill folders against README rows, both ways) and `tests/test_inspect.sh:129-132` (every `tests/test_*` in README). T001 adds the test file and its README line together, T004 adds the skill and its README row together, so neither goes red. DESIGN.md:79 count `Twenty-two` is right today (22 rows) and T004 changes it to 23. No API, stored data or migration. Rollback note present (plan.md:110-111).
+F6. S1 to S5 cover the user text (folder, label, agent), the ssh target, herdr session control and remote ids. Checked live: `printf %q` of `~$(echo PWNED)` with the leading `\~` turned back gives `~\$\(echo\ PWNED\)`, and `bash -c` prints it as text and runs nothing. No secrets, no personal or minors' data, no access rules.
