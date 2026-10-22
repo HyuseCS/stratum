@@ -127,7 +127,7 @@ Diff point:
 
 ```text
 Point: diff. Review the full diff before the build is called done: hidden regressions, broken project rules, missed requirements.
-Inputs: run git diff <sha> -- . ':(exclude)<f>/advisor.md' and read each untracked file listed below. The feature dir is <f>.
+Inputs: run git diff <sha> -- . ':(exclude)<f>/advisor.md' ':(exclude).env*' ':(exclude)*/.env*' ':(exclude)*.pem' ':(exclude)*.key' ':(exclude)*.p12' ':(exclude)*.pfx' and read each untracked file listed below. Env and secret files are left out of that diff. The feature dir is <f>.
 Untracked files:
 <one path per line, or the line: none>
 ```
