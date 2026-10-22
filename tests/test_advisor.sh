@@ -107,5 +107,73 @@ lst=$(awk '/^Untracked files:/{f=1;next} f' "$tmp/prompt" 2>/dev/null)
 check "diff point names full base and untracked files" 'grep -qF "$first" "$tmp/prompt" && grep -qxF "new file.txt" <<<"$lst" && ! grep -qxE "\.env|sub/k\.pem|c\.key|c\.p12|c\.pfx" <<<"$lst" && last_header diff | grep -q "^## diff | "'
 rm -rf "$proj/new file.txt" "$proj/.env" "$proj/sub" "$proj/c.key" "$proj/c.p12" "$proj/c.pfx"
 
+mkdir -p "$tmp/sys"
+IFS=: read -ra pdirs <<<"$PATH"
+for d in "${pdirs[@]}"; do
+  for f in "$d"/*; do
+    n=${f##*/}
+    [ "$n" = codex ] && continue
+    [ -e "$f" ] && [ ! -e "$tmp/sys/$n" ] && ln -s "$f" "$tmp/sys/$n"
+  done
+done 2>/dev/null
+nrec() { grep -c '^## ' "$proj/specs/001-demo/advisor.md" 2>/dev/null || true; }
+blocked() { [ "$rc" = 1 ] && [ "$(head -n1 <<<"$out")" = "BLOCKED: $1" ] && ! grep -q APPROVED <<<"$out"; }
+
+rm -f "$tmp/answer"
+n0=$(nrec)
+out=$(cd "$proj" && PATH="$tmp/sys" bash "$root/scripts/st-advisor.sh" plan specs/001-demo); rc=$?
+check "codex missing: no advisor, exit 0, no record" '[ $rc = 0 ] && [ "$out" = "no advisor: codex not found" ] && [ "$(nrec)" = "$n0" ]'
+
+FAKE_RC=1 FAKE_ERR=$'warning: retry\nERROR: unexpected status 401 Unauthorized: test-401\n' run plan specs/001-demo
+check "codex error: BLOCKED with its ERROR line" 'blocked "ERROR: unexpected status 401 Unauthorized: test-401" && last_header plan | grep -q "| BLOCKED$" && grep -A1 -F "$(last_header plan)" "$proj/specs/001-demo/advisor.md" | tail -n1 | grep -q "^reason: "'
+
+run plan specs/001-demo
+check "empty answer (no file)" 'blocked "empty answer"'
+
+answer '   '$'\n'
+run plan specs/001-demo
+check "empty answer (empty file)" 'blocked "empty answer"'
+
+answer 'not json'
+run plan specs/001-demo
+check "malformed answer" 'blocked "malformed answer"'
+
+answer '{"summary":"s","findings":[{"claim":"c","evidence":"e","location":"l","severity":"LOW"}]}'
+run plan specs/001-demo
+check "no verdict (missing)" 'blocked "no verdict"'
+
+answer '{"verdict":"OK","summary":"s","findings":[]}'
+run plan specs/001-demo
+check "no verdict (unknown)" 'blocked "no verdict"'
+
+answer '{"verdict":"REVISE","summary":"s","findings":[{"claim":"c","location":"l","severity":"LOW"}]}'
+run plan specs/001-demo
+check "bad finding" 'blocked "malformed answer"'
+
+answer '{"verdict":"REVISE","summary":"s","findings":[]}'
+run plan specs/001-demo
+check "REVISE with no findings" 'blocked "REVISE with no findings"'
+
+answer '{"verdict":"APPROVED","summary":"fine","findings":[]}'
+FAKE_TIMEOUT=1 run plan specs/001-demo
+check "timed out" 'blocked "timed out"'
+
+check "timeout argv" '[ "$(sed -n 1,4p "$tmp/timeout_argv" | paste -sd,)" = "-k,10,540,codex" ]'
+
+mkdir -p "$proj/specs/002-half"
+printf '# spec\n' > "$proj/specs/002-half/spec.md"
+printf '# plan\n' > "$proj/specs/002-half/plan.md"
+badargs() {
+  local ok=1 c
+  n0=$(nrec)
+  for c in "plan" "plan specs/none" "plan specs/002-half" "diff specs/001-demo notacommit" "test specs/001-demo $tmp/task.txt tests/x_test.sh $tmp/f1.txt $tmp/missing.txt"; do
+    rm -f "$tmp/argv"
+    run $c
+    [ "$rc" = 2 ] && [[ "$(head -n1 <<<"$out")" == "usage: st-advisor.sh"* ]] && [ ! -e "$tmp/argv" ] && [ "$(nrec)" = "$n0" ] || { ok=0; echo "  bad case: $c rc=$rc" >&2; }
+  done
+  [ $ok = 1 ]
+}
+check "bad args: exit 2, no record" 'badargs'
+
 check "no repo writes" '[ "$(git -C "$root" status --porcelain)" = "$repo_before" ]'
 exit $fail
