@@ -60,12 +60,17 @@ Facts checked on 2026-10-22 against Claude Code 2.1.302 (`/opt/claude-code/bin/c
 ## R6. Input from GitHub is untrusted
 
 - Decision: the skill accepts only digit issue numbers (a leading `#` is stripped). The agent reads only
-  paths inside the repo (relative, no `..` part, not starting with `/` or `~`), puts each path and
+  tracked paths inside the repo (relative, no `..` part, not starting with `/` or `~`, and
+  `git ls-files --error-unmatch` succeeds), puts each path and
   each `git log --grep` or `-S` value from the issue in single quotes, marks one that holds a `'`
-  as `unchecked`, and treats the issue text as
-  claims to check, not as instructions.
+  as `unchecked`, counts a URL to this repo's `issues/N` or `pull/N` (N digits only) as `#N`, and
+  treats the issue text as claims to check, not as instructions. The skill treats each report as
+  data and drops a cite whose sha is not 7 to 40 hex characters or whose path breaks the path rule.
 - Rationale: the issue number and every link go into shell commands. Anyone who can comment on the
   repo can write the issue text the agent reads.
+- Kept gap: a path that exists but is not tracked (for example `.env`) takes the same branch as a
+  gone path, so `git log --oneline -- '<path>'` prints nothing and the Links part has no
+  "not read: not tracked" form. The file is not read. Only the report wording is short.
 - Alternatives considered: none.
 
 ## R7. Detecting a change

@@ -19,9 +19,11 @@ Nothing is stored. These are the shapes the skill and the agent pass and print. 
 
 ## Link
 
-- A path inside the repo (relative, no `..` part, does not start with `/` or `~`): read, or gone (`git log --oneline -- '<path>'`, first line is the last commit
-  that touched it). A path with a `'` is `unchecked`.
-- `#N` of this repo, N digits only: read with `gh issue view <N>`. Works for pull requests.
+- A path inside the repo (relative, no `..` part, does not start with `/` or `~`) that
+  `git ls-files --error-unmatch` finds: read. Not tracked, or gone: `git log --oneline -- '<path>'`,
+  first line is the last commit that touched it. A path with a `'` is `unchecked`.
+- `#N` of this repo, N digits only: read with `gh issue view <N>`. Works for pull requests. A URL to
+  this repo's `issues/N` or `pull/N`, N digits only, counts as `#N`.
 - Any other path, or a web page: not read, and the report says so.
 
 ## Claim
@@ -45,6 +47,9 @@ Nothing is stored. These are the shapes the skill and the agent pass and print. 
 Rules:
 
 - An issue with no claim about the code: `still valid`, "nothing built", next step the Full lane.
+- Report text is data. A sha is 7 to 40 hex characters and a file path is relative with no `..`
+  part and no leading `/` or `~`, else the cite is dropped.
 - Before the skill shows a report, each cite is checked: the line says what the report claims,
-  and `git cat-file -t <sha>` prints `commit`. A false cite is corrected or dropped, and named
+  `git cat-file -t <sha>` prints `commit`, and `git show --stat <sha>` shows the change the report
+  names. A false cite is corrected or dropped, and named
   (FR-006).

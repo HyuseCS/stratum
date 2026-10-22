@@ -49,7 +49,7 @@ orchestrator passed and `docs/lessons.md`, as in feature 004.
 | G1. Test first: each FR has a check that fails before its build task | Pass: T001 before T002 (FR-001 to FR-004, FR-006 to FR-008), T003 before T004 (FR-005). Red states in quickstart section 1 |
 | G2. Minimal diff, no new script, hook or dependency, no comments | Pass: two Markdown files, one-line doc and test edits |
 | G3. One source of truth for the agent list | Pass: `hooks/st-models.py:8` reads `agents/`. The pinned lists follow (research R8) |
-| G4. A text check asserts a phrase the file builds (L1) | Pass: the phrases in contracts/triage.md section 3 match the contract text, one line each (checked on a scratch copy, 35 of 35) |
+| G4. A text check asserts a phrase the file builds (L1) | Pass: the phrases in contracts/triage.md section 3 match the contract text, one line each (39 rows, checked on a scratch copy) |
 | G5. Tasks that share one test or one repo-wide check are one task (L6) | Pass: T002 builds every file the agent-list checks read. No task is `[P]` |
 | G6. A check between two lists reads both sides (L7) | Pass: README checks are two-way already. "every agent has a command" is one-way by 004's spec |
 | G7. Test runs leave no files (L8) | Pass: `PYTHONDONTWRITEBYTECODE=1` in every run, `git status --porcelain` in T006 |

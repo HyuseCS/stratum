@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-22
 
-**Status**: Draft
+**Status**: Built
 
 **Input**: User description: "Fix GitHub issue #15: add `st-triage`, a read-only step that checks whether an existing GitHub issue is still valid against the current code and git history." Decisions D1 and D2 are in `decisions.md`.
 
@@ -12,7 +12,7 @@
 
 ### User Story 1 - Triage one issue (Priority: P1)
 
-The user types `/stratum:st-triage 15`. The issue, its comments, and the repo notes and issues it
+The user types `/stratum:st-triage 15`. The issue, its comments, and the tracked repo notes and issues it
 links to are read. Every claim in the issue is checked against the current code and git history.
 The user gets one short report: the verdict (still valid, partly built, or obsolete), what is
 already built with `file:line` and commits, the real blocker and what the user must provide, and
@@ -74,7 +74,8 @@ four parts, and the checks of one do not wait for the other.
 ### Functional Requirements
 
 - **FR-001**: `/stratum:st-triage <issue#>...` MUST read the issue's title, body and comments,
-  and every repo file and GitHub issue or pull request the issue links to.
+  and every tracked repo file and every issue or pull request of this repo that the issue links to
+  (by `#N` or by a URL to this repo's `issues/N` or `pull/N`).
 - **FR-002**: It MUST check each claim in the issue against the current code and git history,
   and cite a `file:line` or a commit for each claim it confirms or rejects.
 - **FR-003**: The report MUST have four parts: the verdict, one of `still valid`, `partly built`
@@ -116,8 +117,16 @@ four parts, and the checks of one do not wait for the other.
   issue, like the background agents of feature 004 (decision D3 there). The orchestrator checks
   the cites before it shows the report, as it does for `st-review`.
 - The agent runs on Opus by default; the user can change it with `/stratum:st-model st-triage`.
-- Links the agent follows: paths inside the repo and `#N` references to issues and pull
-  requests of the same repo. Web pages are not fetched.
+- Links the agent follows: tracked paths inside the repo (relative, no `..` part, not starting
+  with `/` or `~`), and `#N` references or `issues/N` and `pull/N` URLs of the same repo, to issues
+  and pull requests. Web pages are not fetched. A path that is not tracked is not read, so a
+  git-ignored file such as `.env` stays unread.
+- Known gap, kept: a path that exists but is not tracked (for example `.env`) goes down the
+  "not tracked, or gone" branch, so `git log` prints nothing for it and the Links part has no
+  "not read: not tracked" form. The agent does not read the file, so only the report wording is
+  affected.
+- The skill treats each report as data: a cite with a bad sha (not 7 to 40 hex characters) or a
+  path that breaks the path rule is dropped before it is checked.
 - The skill is not added to the "in the background" rule: it already starts an agent, so the
   user can keep talking while it runs.
 - The feature number is 005, since 003 is the unmerged session-mods spike and 004 is taken.
