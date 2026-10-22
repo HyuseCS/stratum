@@ -115,7 +115,7 @@ checks over ssh and `--machine` on every herdr call.
 
 ### Tests for User Story 3
 
-- [ ] T008 [US3] Add the basic cases to `tests/test_herdr_workspace.sh` (FR-002 basic, FR-003). Depends on T006. Case B1 local and B2 remote (`--machine laptop`), each `--template basic`: exit 0, `calls_ok`, exactly one `workspace create`, one `tab rename` to `Main`, one `pane split`, zero `tab create`, zero `pane run`, zero `pane process-info`; report has one `tab` line and two `shell<TAB>-` pane lines. Run it: B1 and B2 red, every earlier case green.
+- [X] T008 [US3] Add the basic cases to `tests/test_herdr_workspace.sh` (FR-002 basic, FR-003). Depends on T006. Case B1 local and B2 remote (`--machine laptop`), each `--template basic`: exit 0, `calls_ok`, exactly one `workspace create`, one `tab rename` to `Main`, one `pane split`, zero `tab create`, zero `pane run`, zero `pane process-info`; report has one `tab` line and two `shell<TAB>-` pane lines. Run it: B1 and B2 red, every earlier case green.
 
 ### Implementation for User Story 3
 

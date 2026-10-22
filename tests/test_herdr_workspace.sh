@@ -272,4 +272,20 @@ nc NC2 r1
 sed -E '/^Q=\$\{Q\/#/d' "$script" > "$tmp/NC4.sh" 2>/dev/null
 nc NC4 r1
 
+bchk() {
+  local n=$1 f=$2 m=$3
+  check "$n exit 0" '[ $rc = 0 ]'
+  calls_ok "$n" "$f" "$m"
+  check "$n one workspace create, one tab rename, one pane split" '[ "$(cnt "^workspace\tcreate\t")" = 1 ] && [ "$(cnt "^tab\trename\t")" = 1 ] && [ "$(cnt "^pane\tsplit\t")" = 1 ]'
+  check "$n no tab create, pane run, pane process-info" '[ "$(cnt "^tab\tcreate\t")" = 0 ] && [ "$(cnt "^pane\trun\t")" = 0 ] && [ "$(cnt "^pane\tprocess-info\t")" = 0 ]'
+  check "$n one tab line, T1 Main" '[ "$(grep -cP "^tab\t" <<<"$out")" = 1 ] && grep -qxF "$(printf "tab\t%s\tMain" "$(tid 1)")" <<<"$out"'
+  check "$n two shell pane lines" '[ "$(grep -cP "^pane\t" <<<"$out")" = 2 ] && [ "$(grep -P "^pane\t" <<<"$out")" = "$(printf "pane\t%s\t%s\tshell\t-\t%s\npane\t%s\t%s\tshell\t-\t%s" "$(pid 1)" "$(tid 1)" "$f" "$(pid 2)" "$(tid 2)" "$f")" ]'
+}
+STUB_CWD="$proj" run bash "$script" "$proj" --label 32-herdr-workspace --template basic
+bchk B1 "$proj" ""
+unset HERDR_ENV
+STUB_CWD='/home/u/proj x' run bash "$script" '~/proj x' --label 32-herdr-workspace --template basic --machine laptop
+export HERDR_ENV=1
+bchk B2 '/home/u/proj x' laptop
+
 exit $fail
