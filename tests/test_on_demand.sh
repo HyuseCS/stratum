@@ -239,6 +239,7 @@ phrases <<'EOF'
 #18 D13 readme	README.md	Whether Codex's own shell sees your environment variables is not checked.
 #18 inspect keep	skills/st-inspect/SKILL.md	; big ones go to the user before the gate.
 #18 FR-014 readme	README.md	Optional `model` and `effort` keys in the same file pick the Codex model and reasoning effort
+#18 D15 readme	README.md	A committed .codex/config.toml in the project can change the Codex model, provider or host, like any committed code.
 #18 FR-014 init	skills/st-init/SKILL.md	Optional `model` and `effort` keys pick the Codex model and reasoning effort
 #18 FR-001 build worktree stop	skills/st-build/SKILL.md	a subagent whose test is still red after 2 tries stops and reports both failures
 EOF

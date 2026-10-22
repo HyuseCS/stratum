@@ -53,7 +53,7 @@ L2, L10).
 | ID | Change in the copy of `scripts/st-advisor.sh` | Red check |
 |----|-----------------------------------------------|-----------|
 | C1 | `-s read-only` to `-s workspace-write` | `FR-012 argv read-only`, `FR-012 script has no write flag` |
-| C2 | always add `-m o3` after `exec` | `FR-014 no model or effort flag without keys` (exactly one more `FAIL`: the check runs with the harness `{"mode": "codex"}` file and requires `$tmp/argv` to exist; `FR-014 model and effort from the file` still finds `-m` then `gpt-test-1`) |
+| C2 | always add `-m o3` after `exec` | `FR-014 no model or effort flag without keys` (the check runs with the harness `{"mode": "codex"}` file and requires `$tmp/argv` to exist) and `FR-014 model and effort from the file` (its argv order check) |
 | C3 | remove the `':(exclude)<f>/advisor.md'` pathspec from the diff hash | `diff stays fresh after the record append` |
 | C3b | remove the `':(exclude)<f>/advisor.md'` pathspec from the `git ls-files --others` line only | `diff stays fresh with an untracked record` |
 | C4 | remove the untracked-file loop from the diff hash | `untracked file makes diff stale` |

@@ -1,5 +1,5 @@
 {
   "feature_directory": "specs/006-codex-advisor",
-  "phase": "inspect",
+  "phase": "build",
   "lane": "full"
 }

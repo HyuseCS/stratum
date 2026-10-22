@@ -1,0 +1,10 @@
+## plan | 2026-10-22T19:09:59Z | sha256 4572e493808b832841b32c69fa5ed44f2e27372caac00123cffb3ead2c2e1cc5 | REVISE
+summary: The plan needs fixes to answer validation, hash framing, and the project-configuration probe. No files were changed or tests run.
+- [HIGH] specs/006-codex-advisor/data-model.md:59: The planned validator can accept answers that violate the required schema. Evidence: The answer-mapping rules check verdict and finding strings but omit summary presence/type, severity enum membership, and additional-property rejection. For example, {"verdict":"APPROVED","findings":[]} reaches approval despite missing the required summary. Validate the complete agreed shape and add malformed-answer cases.
+- [MEDIUM] specs/006-codex-advisor/data-model.md:82: Concatenating plan files without boundaries lets changed plans retain approval. Evidence: The hash explicitly uses spec.md, plan.md and tasks.md with no separator. Moving a trailing paragraph from spec.md to the beginning of plan.md preserves the concatenated bytes and hash despite changing both documents. Use a length-framed file manifest and test redistribution across file boundaries.
+- [MEDIUM] specs/006-codex-advisor/tasks.md:205: The project-config probe cannot resolve the trust-dependent risk it is intended to test. Evidence: The plan says project overrides may load only for trusted projects, but T011 probes a fresh scratch repository with an empty CODEX_HOME and no trust setup. A negative result therefore cannot establish behavior in trusted projects, yet it causes the disclosure to be omitted. Probe both trust states explicitly or retain the disclosure without conditioning it on this test.
+
+## plan | 2026-10-22T19:10:42Z | sha256 4572e493808b832841b32c69fa5ed44f2e27372caac00123cffb3ead2c2e1cc5 | BLOCKED
+reason: ERROR: unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a4eacdbc08ffe300-HKG, request id: req_fb3514c9e3c347d2b5d5fa41bffc9dd9
+
+## plan | 2026-10-22T19:10:42Z | sha256 4572e493808b832841b32c69fa5ed44f2e27372caac00123cffb3ead2c2e1cc5 | BLOCKED, user continued
