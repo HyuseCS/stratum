@@ -116,10 +116,10 @@ None. Both are settled in decisions.md:
   the user's plugins and settings, started with `--permission-mode auto -n <name>` and nothing
   else (FR-013, test S1): no `--dangerously-skip-permissions`, no `--allowedTools`. Auto mode's
   classifier and every ask and deny rule still apply. D26: the orchestrator may answer a
-  permission prompt for the task's own command; any other access question goes to the user. D24: `start` writes `{"commit":"auto"}` to
-  `.stratum/git-guard.json` in that worktree only, so a plain `git commit` there passes the
-  Stratum guard; amend, push, `reset --hard` and branch delete still ask. The file is git-ignored
-  and never written in the orchestrator's own folder (test S1 checks both).
+  permission prompt for the task's own command; any other access question goes to the user. D24: `start` writes the repo's own guard file (or `{}`)
+  with `"commit": "auto"` set to `.stratum/git-guard.json` in that worktree only, so per-repo
+  `deny` keys carry over and a plain `git commit` there passes the Stratum guard; amend, push, `reset --hard` and branch delete still ask. The file is git-ignored
+  and never written in the orchestrator's own folder (tests S1 and S1b check both).
 - **S5. Headless allow list (headless; access rule).** `--tools Read,Edit,Write,Glob,Grep,Bash`
   (no AskUserQuestion, SendMessage, Agent or web tool), `--allowedTools` for those and only
   `Bash(<test command>)`, `--permission-mode dontAsk`, `--permission-prompts none`,

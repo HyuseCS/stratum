@@ -232,6 +232,7 @@ phrases <<'EOF'
 #17 D25 one machine	skills/st-worker/SKILL.md	Put a task that builds on a teammate's work on that teammate's machine
 #17 stop	skills/st-worker/SKILL.md	On a one-line failure, show the line and stop.
 #17 no retry	skills/st-worker/SKILL.md	After a failure, do not run start again
+#17 start exit 4	skills/st-worker/SKILL.md	then run `bash scripts/st-worker.sh goal <id> --test <cmd>`
 EOF
 check "#17 skill" 'f="$root/skills/st-worker/SKILL.md"; [ -f "$f" ] && grep -qx "name: st-worker" "$f" && grep -q "^# /stratum:st-worker" "$f"'
 check "#17 FR-009 order" 'f="$root/skills/st-worker/SKILL.md"; [ -f "$f" ] && r=$(grep -nF "/stratum:st-review" "$f" | head -1 | cut -d: -f1) && m=$(grep -nF "git merge --no-ff" "$f" | head -1 | cut -d: -f1) && c=$(grep -nF "st-worker.sh close" "$f" | head -1 | cut -d: -f1) && [ -n "$r" ] && [ -n "$m" ] && [ -n "$c" ] && [ "$r" -lt "$m" ] && [ "$m" -lt "$c" ]'

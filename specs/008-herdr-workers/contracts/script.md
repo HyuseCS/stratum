@@ -20,7 +20,8 @@ st-worker.sh headless <id> --task <file> --test <cmd>
 ```
 
 - `<id>`: `^[A-Za-z0-9][A-Za-z0-9-]{0,24}$`. The worker name is `worker-` + the id in lower case
-  (research R2). `N` below is that name.
+  (research R2), always: an id that already starts with `worker-` gets the prefix again. `N`
+  below is that name.
 - `--keys` is last; every argument after it is one key for `agent send-keys`.
 - `--repo` is required with `--machine` on `start`, and only there.
 - `headless` has no `--machine` (D15: the headless path runs in the orchestrator's folder).
@@ -69,10 +70,15 @@ with the brief on stdin, `<Q>` = `printf %q` of `<WT>` with one leading `\~` tur
 (the #32 fix, specs/007-herdr-workspace/research.md R3, `scripts/st-herdr-workspace.sh`), so a
 `~/...` path that herdr returns still expands on the saved machine. Every `<Q>` below is this one.
 
-With the brief, `start` writes `<WT>/.stratum/git-guard.json` with the one line `{"commit":"auto"}`
-(D24), after `mkdir -p <WT>/.stratum`. On a saved machine both files go in the same ssh call:
-`ssh -o BatchMode=yes -- <target> "cat > <Q>/brief.md && mkdir -p <Q>/.stratum && printf '%s\n' '{\"commit\":\"auto\"}' > <Q>/.stratum/git-guard.json"`.
-The script never writes `git-guard.json` anywhere else.
+With the brief, `start` writes `<WT>/.stratum/git-guard.json` (D24), after
+`mkdir -p <WT>/.stratum`. The content `G` is the repo's own guard file merged with the commit key:
+read `<repo>/.stratum/git-guard.json` of this machine's repo (`git rev-parse --show-toplevel`) if
+it exists, else `{}`; set `.commit = "auto"`; write it as one line (`jq -c`). So per-repo keys such
+as `"force_push": "deny"` carry over to the worker. On a saved machine both files go in the same
+ssh call, with `G` quoted by `printf %q`:
+`ssh -o BatchMode=yes -- <target> "cat > <Q>/brief.md && mkdir -p <Q>/.stratum && printf '%s\n' <G quoted> > <Q>/.stratum/git-guard.json"`.
+`ponytail:` on a saved machine `G` comes from this machine's repo file; the saved machine's own
+repo guard file is not read. The script never writes `git-guard.json` anywhere else.
 
 Exact text, with `<...>` filled in. The advisor block is written only when `st-advisor.sh` exists
 in the same folder as `st-worker.sh`.
@@ -102,7 +108,7 @@ You are worker <N>, started by the Stratum orchestrator. Read this file first an
 
 ## Team rules
 
-1. Commit each finished unit with the st-git agent, exact paths only. Never commit brief.md or result.md.
+1. Commit each finished unit with the st-git agent, exact paths only. Never commit brief.md, result.md or .stratum/git-guard.json.
 2. Before you build on a teammate's work, merge its branch: `git log <branch>`, `git merge <branch>`. A teammate on another machine shares no commits with you: send it messages only, and do not build on its work.
 3. Ask a teammate by name: on your machine, SendMessage to its name; on another machine, `herdr --machine <label> agent prompt <name> "<text>"`, with `<label>` from `herdr machine list` on your machine.
 4. Never merge and never push. The orchestrator reviews every branch and is the only one who merges.
@@ -205,7 +211,7 @@ The pane text is never printed when the file exists.
 
 ```text
 F1, F2
-1 H agent get N                          working|blocked -> refuse, exit 1; an error (agent gone) -> go on
+1 H agent get N                          working|blocked -> "Worker <N> is <state>. Close refused.", exit 1; an error (agent gone) -> go on
 2 H workspace close WS
 3 H agent list, H workspace list         N still there -> "close left <agent|workspace> <N>", exit 1
 ```
@@ -270,7 +276,7 @@ makes their facts succeeded (lessons L20).
 
 ```text
 worker	<N>	<m|local>	<WS|->	<pane|->	<branch|->	<WT|->      (start)
-state	<working|blocked|finished|stopped>	<N>	<pane>          (start, goal, wait, answer)
+state	<working|blocked|finished|stopped>	<N>	<pane>          (start, goal, wait, answer; start and goal print working for every state but blocked)
 pane text:                                                        (then the pane lines as they are)
 result	<N>	<WT>/result.md                                       (then the file as it is)
 fetched	<N>	<sha>                                                (result, saved machine)
@@ -294,14 +300,17 @@ stub log, never from built ids.
 
 | Case | What it asserts |
 |------|-----------------|
-| S1 | `start` here: one `worktree create` with `--cwd <repo> --branch worker-t004 --base <HEAD sha> --path <parent>/<repo>-worker-t004 --label worker-t004 --no-focus`; brief.md in the stub's path with the task text, test command, lane, the line `Run only task T004; skip every other task, ticked or not.`, result path, every roster row and the four team rules; `<WT>/.stratum/git-guard.json` is `{"commit":"auto"}` and the repo's own `.stratum/git-guard.json` is unchanged; no advisor block; one `agent start` with `-- --permission-mode auto -n worker-t004`; exactly one `agent prompt` with text `P` and `--wait --until working --until blocked`; `worker` line ids from the stub log; exit 0 |
+| S1 | `start` here: one `worktree create` with `--cwd <repo> --branch worker-t004 --base <HEAD sha> --path <parent>/<repo>-worker-t004 --label worker-t004 --no-focus`; brief.md in the stub's path with the task text, test command, lane, the line `Run only task T004; skip every other task, ticked or not.`, result path, every roster row and the four team rules; with no guard file in the repo, `<WT>/.stratum/git-guard.json` is `{"commit":"auto"}` and the repo still has no guard file; no advisor block; one `agent start` with `-- --permission-mode auto -n worker-t004`; exactly one `agent prompt` with text `P` and `--wait --until working --until blocked`; `worker` line ids from the stub log; exit 0 |
+| S1b | `start` here with the repo file `.stratum/git-guard.json` = `{"force_push":"deny"}`: `<WT>/.stratum/git-guard.json` is the one line `{"force_push":"deny","commit":"auto"}`; the repo file is unchanged |
 | S2 | same with a dummy `st-advisor.sh` next to a copy of the script: the advisor block is in the brief |
 | S3 | `agent start` fails with `agent_not_ready`: `state blocked`, `pane text:`, the stub pane text, no `agent prompt`, exit 4; then `goal` sends exactly one `agent prompt`, exit 0 |
-| S4 | `worktree create` fails: `stopped: ` with the stub message, `worker` line with `-` ids, no `agent start`, exit 1 |
+| S4 | `worktree create` fails: `stopped: ` with the stub message, `worker` line with `-` in every id field and in the branch field, no `agent start`, exit 1 |
 | S5 | `agent prompt` fails with `agent_prompt_stalled`: `stopped:` line, no second prompt, nothing closed, exit 1 |
 | S6 | `start` when `workspace list` already has the label `worker-t004`: one line `A worker worker-t004 already exists.`, no `worktree create`, no other mutating call, exit 1 (plan G10, lessons L11) |
 | S7 | `agent prompt` fails with `agent_blocked`: `worker` line, `state blocked`, `pane text:`, the stub pane text, no second prompt, nothing closed, exit 4; then `goal` sends exactly one `agent prompt` |
 | P1-P7 | each check of section 2 rows 1 to 7: one line with the phrase, no herdr call, exit 1 |
+| P2b | `start` with a task file that exists but is empty: section 2 row 2 line, no herdr call, exit 1 |
+| P5b | roster with an empty TAB field on one line: section 2 row 5 line `Roster line <n> must be ...`, exit 1; a roster that ends with a blank line passes the check |
 | W1 | `wait`, stub settles `done`, result.md present: `state finished`, exit 0, zero `agent prompt` |
 | W2 | `wait`, agent wait times out: `state working` with the pane, exit 3 |
 | W3 | `wait`, settles `idle`, no result.md, resume check matches, then `done` with result.md: `state finished`, two `agent wait` without `--until`, exit 0 |
@@ -313,7 +322,7 @@ stub log, never from built ids.
 | G1 | `result` here with result.md: prints `RESULT FILE <random>`, not `STUB PANE`, exit 0 |
 | G2 | `result` here, no result.md: `no result file: `, `pane text:`, the stub pane text, exit 1 |
 | C1 | `close`, state `done`: one `workspace close` on the stub's WS, `closed`, `folder <WT> ready to remove`, exit 0 |
-| C2 | `close`, state `working`: refuse line, no `workspace close`, exit 1 |
+| C2 | `close`, state `working`: the exact line `Worker worker-t004 is working. Close refused.`, no `workspace close`, exit 1 |
 | C3 | `close`, stub keeps the agent after close: `close left agent worker-t004`, exit 1 |
 | C4 | `close`, no workspace with the label: `No worker worker-t004 on local.`, no `workspace close`, exit 1 |
 | C5 | `close`, `agent get` fails (agent gone): one `workspace close` on the stub's WS, `closed`, `folder <WT> ready to remove`, exit 0 |

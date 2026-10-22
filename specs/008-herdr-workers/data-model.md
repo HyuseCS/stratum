@@ -26,7 +26,7 @@ start -> working -> finished                 (idle or done, result.md exists)
 finished -> closed                           (close, after the skill merged)
 ```
 
-A `blocked` or `stopped` worker keeps its pane (FR-010). `close` refuses `working` and `blocked`.
+A `blocked` or `stopped` worker keeps its pane (FR-010). `close` refuses `working` and `blocked` with `Worker <N> is <state>. Close refused.`
 
 ## Brief (`<path>/brief.md`)
 

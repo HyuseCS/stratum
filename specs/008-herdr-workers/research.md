@@ -129,8 +129,9 @@ branch `18-codex-advisor`.
   the user already answered in the pane (US2 scenario 3).
 - A permission prompt (Stratum's commit guard, `hooks/st-git-guard.py:144-150`: `ask` unless the
   worktree's `.stratum/git-guard.json` says `auto`) shows as `blocked` the same way (US2
-  scenario 4). D24: `start` writes `{"commit":"auto"}` to the worker worktree's
-  `.stratum/git-guard.json`, so a plain commit there does not ask; amend, push, `reset --hard` and
+  scenario 4). D24: `start` writes the repo's own `.stratum/git-guard.json` (or `{}`) with
+  `"commit": "auto"` set, as one line, to the worker worktree's `.stratum/git-guard.json`, so
+  per-repo keys such as `"force_push": "deny"` carry over and a plain commit there does not ask; amend, push, `reset --hard` and
   branch delete still ask. The guard reads that file because it walks up from the cwd to the first
   folder with `.stratum/` or `.git` (`hooks/st-git-guard.py:105-114`), which is the worktree root.
 - D26: the skill, not the script, decides each question with the `/stratum:st` rule: a small one
@@ -174,7 +175,8 @@ branch `18-codex-advisor`.
 
 ## R11. Close (FR-010, FR-012, D18)
 
-- Decision: `close` refuses while the worker is `working` or `blocked`. Else it runs
+- Decision: `close` refuses while the worker is `working` or `blocked`, with the line
+  `Worker <N> is <state>. Close refused.` Else it runs
   `H workspace close <ws>` on the one workspace whose label is the worker name, then checks that
   `agent list` has no agent of that name and `workspace list` no label of that name, and prints
   the folder as ready to remove. It never runs `worktree remove`, `pane close`, `--group`,

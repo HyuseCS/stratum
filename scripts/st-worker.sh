@@ -28,8 +28,7 @@ esac
 N=
 if [ "$cmd" != list ]; then
   [[ $id =~ ^[A-Za-z0-9][A-Za-z0-9-]{0,24}$ ]] || fail "Task id must be letters, digits or dash, start with a letter or digit, and be at most 25 characters."
-  N=${id,,}
-  [[ $N == worker-* ]] || N=worker-$N
+  N=worker-${id,,}
 fi
 if [ "$cmd" = start ]; then
   [ -f "$task" ] && [ -s "$task" ] || fail "Task file not found or empty: $task"
@@ -43,8 +42,10 @@ if [ "$cmd" = start ]; then
   R=() n=0 own=
   while IFS= read -r l || [ -n "$l" ]; do
     n=$((n + 1))
+    [ -n "$l" ] || continue
+    t=${l//[!$'\t']/}
     IFS=$'\t' read -r -a f <<<"$l"
-    [ ${#f[@]} = 4 ] && [[ ${f[0]} == worker-* ]] || fail "Roster line $n must be: name, machine, branch, task, split by TAB."
+    [ ${#t} = 3 ] && [ ${#f[@]} = 4 ] && [[ ${f[0]} == worker-* ]] || fail "Roster line $n must be: name, machine, branch, task, split by TAB."
     [ "${f[0]}" != "$N" ] || own=1
     R+=("${f[@]}")
   done <"$roster"
@@ -109,7 +110,7 @@ brief() {
   printf '| %s | %s | %s | %s |\n' "${R[@]}"
   printf '\n%s\n\n' '## Team rules'
   printf '%s\n' \
-    '1. Commit each finished unit with the st-git agent, exact paths only. Never commit brief.md or result.md.' \
+    '1. Commit each finished unit with the st-git agent, exact paths only. Never commit brief.md, result.md or .stratum/git-guard.json.' \
     "2. Before you build on a teammate's work, merge its branch: \`git log <branch>\`, \`git merge <branch>\`. A teammate on another machine shares no commits with you: send it messages only, and do not build on its work." \
     '3. Ask a teammate by name: on your machine, SendMessage to its name; on another machine, `herdr --machine <label> agent prompt <name> "<text>"`, with `<label>` from `herdr machine list` on your machine.' \
     '4. Never merge and never push. The orchestrator reviews every branch and is the only one who merges.'
@@ -125,14 +126,16 @@ start)
   h workspace list
   c=$(jq -er --arg n "$N" '[.result.workspaces[] | select(.label == $n)] | length' <<<"$r") || stop "no .result.workspaces in the herdr answer"
   [ "$c" = 0 ] || fail "A worker $N already exists."
-  h worktree create --cwd "$repo" --branch "$N" --base "$sha" --path "$(dirname "$repo")/$(basename "$repo")-$N" --label "$N" --no-focus
+  path="$(dirname "$repo")/$(basename "$repo")-$N"
+  h worktree create --cwd "$repo" --branch "$N" --base "$sha" --path "$path" --label "$N" --no-focus
   get WS .result.workspace.workspace_id
   get PANE .result.root_pane.pane_id
   get BR .result.worktree.branch
   get WT .result.worktree.path
+  [ "$WT" = "$path" ] || stop "herdr made the worktree in $WT, not $path"
   brief >"$WT/brief.md" || stop "cannot write $WT/brief.md"
   mkdir -p "$WT/.stratum" || stop "cannot make $WT/.stratum"
-  printf '%s\n' '{"commit":"auto"}' >"$WT/.stratum/git-guard.json" || stop "cannot write the commit guard file in $WT/.stratum"
+  jq -c '.commit="auto"' <(cat "$repo/.stratum/git-guard.json" 2>/dev/null || echo '{}') >"$WT/.stratum/git-guard.json" || stop "cannot write the commit guard file in $WT/.stratum"
   if ! "${H[@]}" agent start "$N" --kind claude --pane "$PANE" --timeout 120000 -- --permission-mode auto -n "$N" >/dev/null 2>"$e"; then
     [ "$(code)" = agent_not_ready ] || stop "$(head -1 "$e")"
     worker
@@ -142,12 +145,14 @@ start)
   prompt
   look
   worker
+  [ "$S" = blocked ] || S=working
   st "$S"
   [ "$S" != blocked ] || exit 4
   ;;
 goal)
   prompt
   look
+  [ "$S" = blocked ] || S=working
   st "$S"
   [ "$S" != blocked ] || exit 4
   ;;

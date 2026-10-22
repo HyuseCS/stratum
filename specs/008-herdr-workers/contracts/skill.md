@@ -30,6 +30,7 @@ line of the file, because the test greps it with `grep -qF`.
   4. Run `bash <plugin root>/scripts/st-worker.sh start <id> --task <file> --test <cmd> --lane <lane> --roster <file>`
      (with `--machine <m> --repo <path>` for a saved machine), one call per worker, each value
      one quoted argument. Show the `worker` line.
+     `start` exit 4 (state blocked): handle it as in step 6 `blocked`, then run `bash scripts/st-worker.sh goal <id> --test <cmd>`, then go on with step 6.
   5. On a one-line failure, show the line and stop. After a failure, do not run start again:
      run list and show what exists (a failed remote call may still have made something).
   6. Wait: `st-worker.sh wait <id>` per worker.
@@ -91,6 +92,7 @@ line of the file, because the test greps it with `grep -qF`.
 | `#11 FR-011 headless` | `the headless worker never commits` |
 | `#17 FR-014 build` | `The build loop (/stratum:st-build) does not use workers.` |
 | `#17 D25 one machine` | `Put a task that builds on a teammate's work on that teammate's machine` |
+| `#17 start exit 4` | `` then run `bash scripts/st-worker.sh goal <id> --test <cmd>` `` |
 | `#17 stop` | `On a one-line failure, show the line and stop.` |
 | `#17 no retry` | `After a failure, do not run start again` |
 

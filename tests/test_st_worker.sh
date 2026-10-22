@@ -28,6 +28,7 @@ case "$1 $2" in
     shift
   done
   mkdir -p "$p/.stratum"
+  p=${STUB_WT_PATH:-$p}
   w="stubWS$X"
   jq -nc --arg w "$w" --arg p "$p" --arg b "$b" '{result:{type:"worktree_created",workspace:{workspace_id:$w},tab:{tab_id:($w+":t1")},root_pane:{pane_id:($w+":p1")},worktree:{path:$p,branch:$b}}}' | tee "$T/wc.json"
   upd ws.json --arg w "$w" --arg l "$l" '. + [{workspace_id:$w,label:$l}]'
@@ -85,7 +86,7 @@ testcmd='bash tests/test_demo.sh'
 lane=st-build
 printf 'worker-t004\tlocal\tworker-t004\tT004\nworker-t005\tlocal\tworker-t005\tT005\n' > "$roster"
 printf '%s\n' \
-  '1. Commit each finished unit with the st-git agent, exact paths only. Never commit brief.md or result.md.' \
+  '1. Commit each finished unit with the st-git agent, exact paths only. Never commit brief.md, result.md or .stratum/git-guard.json.' \
   "2. Before you build on a teammate's work, merge its branch: \`git log <branch>\`, \`git merge <branch>\`. A teammate on another machine shares no commits with you: send it messages only, and do not build on its work." \
   '3. Ask a teammate by name: on your machine, SendMessage to its name; on another machine, `herdr --machine <label> agent prompt <name> "<text>"`, with `<label>` from `herdr machine list` on your machine.' \
   '4. Never merge and never push. The orchestrator reviews every branch and is the only one who merges.' > "$rules"
@@ -93,7 +94,7 @@ P="/goal \`$testcmd\` exits 0, the change is committed on branch worker-t004, an
 sargs=(T004 --task "$task" --test "$testcmd" --lane "$lane" --roster "$roster")
 
 reset() { : > "$tmp/calls"; }
-states() { printf '%s\n' "$@" > "$tmp/states"; }
+states() { rm -f "$tmp/n_get"; printf '%s\n' "$@" > "$tmp/states"; }
 fresh() {
   rm -rf "$tmp"/repo-worker-* "$tmp"/n_* "$tmp/closed" "$tmp/resume_result" "$tmp/wc.json" "$tmp/s2"
   printf 'x%s\n' "$RANDOM$RANDOM" > "$tmp/x"
@@ -140,6 +141,7 @@ s1() {
   check "S1 brief heading, test, lane, branch, machine, result path" 'grep -qxF "# Brief: worker-t004" "$b" && grep -qxF -- "- Test command: \`$testcmd\`" "$b" && grep -qxF -- "- Lane: $lane. Start it with the Skill tool. Run only task T004; skip every other task, ticked or not." "$b" && grep -qxF -- "- Branch: worker-t004" "$b" && grep -qxF -- "- Your machine: local. \`local\` is the orchestrator'"'"'s machine." "$b" && grep -qxF -- "- Result file: $(wt)/result.md" "$b"'
   check "S1 brief has every roster row" 'grep -qxF "| worker-t004 | local | worker-t004 | T004 |" "$b" && grep -qxF "| worker-t005 | local | worker-t005 | T005 |" "$b"'
   check "S1 brief has the four team rules" '[ "$(grep -cxFf "$rules" "$b")" = 4 ]'
+  check "S1 brief rule 1 names .stratum/git-guard.json" 'grep -q "^1\. .*Never commit .*\.stratum/git-guard\.json\.\$" "$b"'
   check "S1 brief has no advisor block" '[ -f "$b" ] && ! grep -q "^## Advisor" "$b"'
   check "S1 git-guard.json in the worktree is auto" '[ "$(cat "$(wt)/.stratum/git-guard.json")" = "{\"commit\":\"auto\"}" ]'
   check "S1 repo has no git-guard.json and is unchanged" '[ ! -e "$repo/.stratum/git-guard.json" ] && [ -z "$(git -C "$repo" status --porcelain)" ]'
@@ -150,6 +152,14 @@ s1() {
   check "S1 never-list, one prompt, no close, no pane text" 'never 0 1 && nopane'
 }
 s1 "$script"
+
+fresh
+printf '{"force_push":"deny"}\n' > "$repo/.stratum/git-guard.json"
+run bash "$script" start "${sargs[@]}"
+check "S1b exit 0" '[ $rc = 0 ]'
+check "S1b worker git-guard.json merges the repo file with commit auto" '[ "$(jq -S -c . "$(wt)/.stratum/git-guard.json")" = "$(jq -S -c -n "{force_push:\"deny\",commit:\"auto\"}")" ] && [ "$(grep -c . "$(wt)/.stratum/git-guard.json")" = 1 ]'
+check "S1b repo git-guard.json is unchanged" '[ "$(cat "$repo/.stratum/git-guard.json")" = "{\"force_push\":\"deny\"}" ]'
+rm -f "$repo/.stratum/git-guard.json"
 
 fresh
 mkdir "$tmp/s2"
@@ -167,7 +177,7 @@ check "S3 worker line with ids" 'hasline "worker\tworker-t004\tlocal\t%s\t%s\two
 check "S3 state blocked, pane text, the stub pane text" 'hasline "state\tblocked\tworker-t004\t%s" "$(pane)" && paneshown'
 check "S3 pane read call, no agent prompt" 'hascall "agent\tread\tworker-t004\t--source\trecent-unwrapped\t--lines\t40" && never 0 0'
 reset
-run bash "$script" goal worker-t004 --test "$testcmd"
+run bash "$script" goal T004 --test "$testcmd"
 check "S3 goal exit 0" '[ $rc = 0 ]'
 check "S3 goal sends exactly one agent prompt with P" 'hascall "agent\tprompt\tworker-t004\t%s\t--wait\t--until\tworking\t--until\tblocked\t--timeout\t30000" "$P" && never 0 1'
 
@@ -175,7 +185,7 @@ fresh
 STUB_FAIL="worktree create" run bash "$script" start "${sargs[@]}"
 check "S4 exit 1" '[ $rc = 1 ]'
 check "S4 stopped line with the stub message" 'grep -q "^stopped: .*stub refused" <<<"$out"'
-check "S4 worker line has - ids" 'grep -qP "^worker\tworker-t004\tlocal\t-\t-\t.*\t-\$" <<<"$out"'
+check "S4 worker line has - ids" 'hasline "worker\tworker-t004\tlocal\t-\t-\t-\t-"'
 check "S4 no agent start, no prompt" '[ "$(cnt "^agent\tstart\t")" = 0 ] && never 0 0'
 
 fresh
@@ -199,13 +209,28 @@ check "S7 worker line with ids" 'hasline "worker\tworker-t004\tlocal\t%s\t%s\two
 check "S7 state blocked, pane text, the stub pane text" 'hasline "state\tblocked\tworker-t004\t%s" "$(pane)" && paneshown'
 check "S7 one prompt only, nothing closed" 'never 0 1'
 reset
-run bash "$script" goal worker-t004 --test "$testcmd"
+run bash "$script" goal T004 --test "$testcmd"
 check "S7 goal exit 0, exactly one prompt" '[ $rc = 0 ] && never 0 1'
+
+fresh; states idle
+run bash "$script" start "${sargs[@]}"
+check "S8 exit 0" '[ $rc = 0 ]'
+check "S8 agent get idle prints state working, no idle" 'hasline "state\tworking\tworker-t004\t%s" "$(pane)" && ! grep -q idle <<<"$out"'
+
+fresh
+STUB_WT_PATH="$tmp/elsewhere" run bash "$script" start "${sargs[@]}"
+check "S9 exit 1" '[ $rc = 1 ]'
+check "S9 stopped line names both paths" 'hasline "stopped: herdr made the worktree in %s, not %s" "$tmp/elsewhere" "$tmp/repo-worker-t004"'
+check "S9 worker line with the ids made so far" 'hasline "worker\tworker-t004\tlocal\t%s\t%s\tworker-t004\t%s" "$(wsid)" "$(pane)" "$tmp/elsewhere"'
+check "S9 no agent start, no prompt" '[ "$(cnt "^agent\tstart\t")" = 0 ] && never 0 0'
 
 fresh; run bash "$script" start 'bad id' --task "$task" --test "$testcmd" --lane "$lane" --roster "$roster"
 prej P1 "Task id must be letters, digits or dash, start with a letter or digit, and be at most 25 characters."
 fresh; run bash "$script" start T004 --task "$tmp/nofile" --test "$testcmd" --lane "$lane" --roster "$roster"
 prej P2 "Task file not found or empty: $tmp/nofile"
+: > "$tmp/empty"
+fresh; run bash "$script" start T004 --task "$tmp/empty" --test "$testcmd" --lane "$lane" --roster "$roster"
+prej P2b "Task file not found or empty: $tmp/empty"
 fresh; run bash "$script" start T004 --task "$task" --test 'foo (bar)' --lane "$lane" --roster "$roster"
 prej P3 "Test command must be one line with no ( or )."
 fresh; run bash "$script" start T004 --task "$task" --test "$testcmd" --lane $'a\nb' --roster "$roster"
@@ -213,6 +238,12 @@ prej P4 "Lane must be one line."
 printf 'worker-t004\tlocal\tworker-t004\tT004\nbroken\tline\n' > "$tmp/roster_bad"
 fresh; run bash "$script" start T004 --task "$task" --test "$testcmd" --lane "$lane" --roster "$tmp/roster_bad"
 prej P5 "Roster line 2 must be: name, machine, branch, task, split by TAB."
+printf 'worker-t004\tlocal\t\tworker-t004\tT004\n' > "$tmp/roster_empty"
+fresh; run bash "$script" start T004 --task "$task" --test "$testcmd" --lane "$lane" --roster "$tmp/roster_empty"
+prej P5c "Roster line 1 must be: name, machine, branch, task, split by TAB."
+printf 'worker-t004\tlocal\tworker-t004\tT004\nworker-t005\tlocal\tworker-t005\tT005\n\n' > "$tmp/roster_blank"
+fresh; run bash "$script" start T004 --task "$task" --test "$testcmd" --lane "$lane" --roster "$tmp/roster_blank"
+check "P5d roster with a trailing blank line starts, two roster rows" '[ $rc = 0 ] && [ "$(grep -c "^| worker-" "$(wt)/brief.md")" = 2 ]'
 printf 'worker-t009\tlocal\tworker-t009\tT009\n' > "$tmp/roster_none"
 fresh; run bash "$script" start T004 --task "$task" --test "$testcmd" --lane "$lane" --roster "$tmp/roster_none"
 prej P5b "Roster has no line for worker-t004."
@@ -224,33 +255,33 @@ prej P7 "Not inside a herdr pane. Run it from a herdr pane, or name a --machine.
 
 mk; states done
 printf 'RESULT FILE %s\n' "$(rnd)" > "$(wt)/result.md"
-run bash "$script" wait worker-t004
+run bash "$script" wait T004
 check "W1 exit 0" '[ $rc = 0 ]'
 check "W1 state finished" 'hasline "state\tfinished\tworker-t004\t%s" "$(pane)"'
 check "W1 finds the worker by label and workspace" 'hascall "worktree\tlist\t--workspace\t%s" "$(wsid)" && [ "$(cnt "^agent\twait\tworker-t004\t--timeout\t")" = 1 ]'
 check "W1 never-list, no prompt, no pane text" 'never 0 0 && nopane'
 
 mk; states working
-STUB_FAIL="agent wait" STUB_FAIL_CODE=timeout run bash "$script" wait worker-t004
+STUB_FAIL="agent wait" STUB_FAIL_CODE=timeout run bash "$script" wait T004
 check "W2 exit 3" '[ $rc = 3 ]'
 check "W2 state working with the pane" 'hasline "state\tworking\tworker-t004\t%s" "$(pane)"'
 check "W2 never-list" 'never 0 0'
 
 mk; states idle done; : > "$tmp/resume_result"
-run bash "$script" wait worker-t004
+run bash "$script" wait T004
 check "W3 exit 0" '[ $rc = 0 ]'
 check "W3 state finished" 'hasline "state\tfinished\tworker-t004\t%s" "$(pane)"'
 check "W3 two waits without --until, one resume check with it" '[ "$(grep -P "^agent\twait\t" "$tmp/calls" | grep -vc -- "--until")" = 2 ] && [ "$(grep -P "^agent\twait\t" "$tmp/calls" | grep -c -- "--until")" = 1 ]'
 check "W3 never-list" 'never 0 0'
 
 mk; states idle
-STUB_FAIL_UNTIL="agent wait" STUB_FAIL_CODE=timeout run bash "$script" wait worker-t004
+STUB_FAIL_UNTIL="agent wait" STUB_FAIL_CODE=timeout run bash "$script" wait T004
 check "W4 exit 5" '[ $rc = 5 ]'
 check "W4 state stopped, pane text, the stub pane text" 'hasline "state\tstopped\tworker-t004\t%s" "$(pane)" && paneshown'
 check "W4 never-list" 'never 0 0'
 
 mk; states blocked
-run bash "$script" wait worker-t004
+run bash "$script" wait T004
 check "W5 exit 4" '[ $rc = 4 ]'
 check "W5 state blocked with the worker name, pane text" 'hasline "state\tblocked\tworker-t004\t%s" "$(pane)" && paneshown'
 check "W5 never-list" 'never 0 0'
@@ -258,7 +289,7 @@ check "W5 never-list" 'never 0 0'
 g1() {
   mk
   printf 'RESULT FILE %s\n' "$(rnd)" > "$(wt)/result.md"
-  run bash "$1" result worker-t004
+  run bash "$1" result T004
   check "G1 exit 0" '[ $rc = 0 ]'
   check "G1 result line and the file text" 'hasline "result\tworker-t004\t%s/result.md" "$(wt)" && grep -qxF "RESULT FILE $(rnd)" <<<"$out"'
   check "G1 the pane is not printed and not read" 'nopane && [ "$(cnt "^agent\tread\t")" = 0 ]'
@@ -267,35 +298,35 @@ g1() {
 g1 "$script"
 
 mk
-run bash "$script" result worker-t004
+run bash "$script" result T004
 check "G2 exit 1" '[ $rc = 1 ]'
 check "G2 no result file line, pane text, the stub pane text" 'grep -qxF "no result file: $(wt)/result.md" <<<"$out" && paneshown'
 check "G2 never-list" 'never 0 0'
 
 mk; states done
-run bash "$script" close worker-t004
+run bash "$script" close T004
 check "C1 exit 0" '[ $rc = 0 ]'
 check "C1 one workspace close on the stub WS" 'hascall "workspace\tclose\t%s" "$(wsid)" && never 1 0'
 check "C1 closed and folder lines" 'hasline "closed\tworker-t004" && hasline "folder\t%s\tready to remove" "$(wt)"'
 
 mk; states working
-run bash "$script" close worker-t004
+run bash "$script" close T004
 check "C2 exit 1" '[ $rc = 1 ]'
-check "C2 a refuse line, no closed line, no workspace close" '[ -n "$out" ] && ! grep -q "^closed" <<<"$out" && never 0 0'
+check "C2 the refuse line, no closed line, no workspace close" '[ "$out" = "Worker worker-t004 is working. Close refused." ] && ! grep -q "^closed" <<<"$out" && never 0 0'
 
 mk; states done
-STUB_KEEP_AGENT=1 run bash "$script" close worker-t004
+STUB_KEEP_AGENT=1 run bash "$script" close T004
 check "C3 exit 1" '[ $rc = 1 ]'
 check "C3 close left agent line" 'grep -qxF "close left agent worker-t004" <<<"$out"'
 check "C3 one workspace close on the stub WS" 'hascall "workspace\tclose\t%s" "$(wsid)" && never 1 0'
 
 fresh
-run bash "$script" close worker-t004
+run bash "$script" close T004
 check "C4 exit 1" '[ $rc = 1 ]'
 check "C4 no worker line, no workspace close" 'grep -qxF "No worker worker-t004 on local." <<<"$out" && never 0 0'
 
 mk; states done
-STUB_FAIL="agent get" run bash "$script" close worker-t004
+STUB_FAIL="agent get" run bash "$script" close T004
 check "C5 exit 0" '[ $rc = 0 ]'
 check "C5 one workspace close on the stub WS" 'hascall "workspace\tclose\t%s" "$(wsid)" && never 1 0'
 check "C5 closed and folder lines" 'hasline "closed\tworker-t004" && hasline "folder\t%s\tready to remove" "$(wt)"'
@@ -329,7 +360,8 @@ sed -E '/Commit each finished unit with the st-git agent/d' "$script" > "$tmp/NC
 nc NC3 s1
 sed -E 's/cat( --)? [^|;&)]*result\.md[^|;&)]*/herdr agent read worker-t004 --source recent-unwrapped --lines 40 | jq -r .result.read.text/' "$script" > "$tmp/NC4.sh" 2>/dev/null
 nc NC4 g1
-sed -E '/git-guard\.json/d' "$script" > "$tmp/NC7.sh" 2>/dev/null
+sed -E '/>"\$WT\/\.stratum\/git-guard\.json"/d' "$script" > "$tmp/NC7.sh" 2>/dev/null
+check "NC7 sed deletes exactly one line" '[ "$(diff "$script" "$tmp/NC7.sh" | grep -c "^<")" = 1 ]'
 nc NC7 s1
 
 exit $fail
