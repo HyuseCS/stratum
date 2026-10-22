@@ -1,16 +1,27 @@
 #!/usr/bin/env bash
 usage() { echo "usage: st-advisor.sh plan|test|diff|check|continued ..."; exit 2; }
+cmd=run
+case ${1:-} in check|continued) cmd=$1; shift ;; esac
 point=${1:-}
-case "$point:$#" in plan:2|test:6|diff:3) ;; *) usage ;; esac
+case "$cmd $point $#" in "run plan 2"|"run test 6"|"run diff 3"|"check plan 2"|"check diff 3"|"continued plan 2"|"continued test 2"|"continued diff 2") ;; *) usage ;; esac
 f=${2%/}
 [ -f "$f/spec.md" ] || usage
+if [ $cmd != run ]; then
+  rec=$(grep -a "^## $point | " "$f/advisor.md" 2>/dev/null | tail -n1)
+  if [ -z "$rec" ]; then echo "no record: $point"; [ $cmd = check ] && exit 1; exit 2; fi
+  rest=${rec#* | * | sha256 }
+  rhash=${rest%% | *}
+  if [ $cmd = continued ]; then
+    printf '## %s | %s | sha256 %s | BLOCKED, user continued\n\n' "$point" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$rhash" >> "$f/advisor.md"
+    echo "BLOCKED, user continued sha256 $rhash"
+    exit 0
+  fi
+fi
 case $point in
   plan) [ -f "$f/plan.md" ] && [ -f "$f/tasks.md" ] || usage ;;
   test) [ -f "$3" ] && [ -f "$5" ] && [ -f "$6" ] || usage ;;
   diff) sha=$(git rev-parse --verify --quiet "$3^{commit}") && [ -n "$sha" ] || usage ;;
 esac
-command -v codex >/dev/null || { echo "no advisor: codex not found"; exit 0; }
-
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
@@ -25,6 +36,12 @@ case $point in
     } | sha256sum) ;;
 esac
 hash=${hash%% *}
+if [ $cmd = check ]; then
+  [ "$hash" = "$rhash" ] || { echo "advisor approval is stale"; exit 1; }
+  echo "${rest#* | } sha256 $hash"
+  exit 0
+fi
+command -v codex >/dev/null || { echo "no advisor: codex not found"; exit 0; }
 
 printf '%s\n' '{"type":"object","additionalProperties":false,"required":["verdict","summary","findings"],"properties":{"verdict":{"type":"string","enum":["APPROVED","REVISE","BLOCKED"]},"summary":{"type":"string"},"findings":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["claim","evidence","location","severity"],"properties":{"claim":{"type":"string"},"evidence":{"type":"string"},"location":{"type":"string"},"severity":{"type":"string","enum":["CRITICAL","HIGH","MEDIUM","LOW"]}}}}}}' > "$tmp/schema.json"
 

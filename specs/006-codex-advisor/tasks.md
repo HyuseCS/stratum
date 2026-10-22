@@ -148,7 +148,7 @@ answer is a one-line `BLOCKED: <reason>` with exit 1 and a record, never approva
 
 ### Implementation for User Story 3
 
-- [ ] T006 [US3] In `scripts/st-advisor.sh`, add `check plan|diff` and `continued` exactly as contracts/advisor.md sections 1, 5 and 6 say (FR-006, FR-008). `check` recomputes the hash with the same code as the run and reads the last line that starts `## <point> | `. Security: plan.md S3, S4. Run `bash tests/test_advisor.sh`: all `ok`.
+- [X] T006 [US3] In `scripts/st-advisor.sh`, add `check plan|diff` and `continued` exactly as contracts/advisor.md sections 1, 5 and 6 say (FR-006, FR-008). `check` recomputes the hash with the same code as the run and reads the last line that starts `## <point> | `. Security: plan.md S3, S4. Run `bash tests/test_advisor.sh`: all `ok`.
 
 **Checkpoint**: US1 to US3 work. A changed plan or diff is stale at the gate.
 
