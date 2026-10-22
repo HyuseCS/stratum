@@ -5,7 +5,7 @@ case ${1:-} in check|continued) cmd=$1; shift ;; esac
 point=${1:-}
 case "$cmd $point $#" in "run plan 2"|"run test 6"|"run diff 3"|"check plan 2"|"check diff 3"|"continued plan 2"|"continued test 2"|"continued diff 2") ;; *) usage ;; esac
 f=${2%/}
-[ -f "$f/spec.md" ] || usage
+[ -f "$f/spec.md" ] && [ -r "$f/spec.md" ] || usage
 if [ $cmd != run ]; then
   rec=$(grep -a "^## $point | " "$f/advisor.md" 2>/dev/null | tail -n1)
   if [ -z "$rec" ]; then echo "no record: $point"; [ $cmd = check ] && exit 1; exit 2; fi
@@ -18,8 +18,8 @@ if [ $cmd != run ]; then
   fi
 fi
 case $point in
-  plan) [ -f "$f/plan.md" ] && [ -f "$f/tasks.md" ] || usage ;;
-  test) [ -f "$3" ] && [ -f "$5" ] && [ -f "$6" ] || usage ;;
+  plan) [ -f "$f/plan.md" ] && [ -r "$f/plan.md" ] && [ -f "$f/tasks.md" ] && [ -r "$f/tasks.md" ] || usage ;;
+  test) [ -f "$3" ] && [ -r "$3" ] && [ -f "$5" ] && [ -r "$5" ] && [ -f "$6" ] && [ -r "$6" ] || usage ;;
   diff) sha=$(git rev-parse --verify --quiet "$3^{commit}") && [ -n "$sha" ] || usage ;;
 esac
 tmp=$(mktemp -d)
@@ -36,6 +36,7 @@ case $point in
     } | sha256sum) ;;
 esac
 hash=${hash%% *}
+[[ $hash =~ ^[0-9a-f]{64}$ ]] || { echo "cannot hash inputs"; exit 2; }
 if [ $cmd = check ]; then
   [ "$hash" = "$rhash" ] || { echo "advisor approval is stale"; exit 1; }
   echo "${rest#* | } sha256 $hash"

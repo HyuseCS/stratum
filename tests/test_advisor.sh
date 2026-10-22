@@ -348,6 +348,27 @@ run plan specs/001-demo
 rm -f "$proj/json.py"
 check "planted json.py is ignored" 'grep -x -A1 -- "-m" "$tmp/argv" | grep -qx gpt-test-1 && ! grep -qx -- "--evil" "$tmp/argv" && [[ "$(head -n1 <<<"$out")" == "APPROVED sha256 "* ]]'
 
+mkdir -p "$tmp/nosha"
+printf '#!/usr/bin/env bash\nexit 0\n' > "$tmp/nosha/sha256sum"
+chmod +x "$tmp/nosha/sha256sum"
+rm -f "$tmp/argv"
+n0=$(nrec)
+out=$(cd "$proj" && PATH="$tmp/nosha:$PATH" bash "$root/scripts/st-advisor.sh" plan specs/001-demo); rc=$?
+check "sha256sum prints nothing: plan run exit 2, no record" '[ $rc = 2 ] && [ "$out" = "cannot hash inputs" ] && [ ! -e "$tmp/argv" ] && [ "$(nrec)" = "$n0" ]'
+out=$(cd "$proj" && PATH="$tmp/nosha:$PATH" bash "$root/scripts/st-advisor.sh" check plan specs/001-demo); rc=$?
+check "sha256sum prints nothing: check plan exit 2" '[ $rc = 2 ] && [ "$out" = "cannot hash inputs" ]'
+
+if [ "$(id -u)" = 0 ]; then
+  echo "skip unreadable plan.md: running as root"
+else
+  rm -f "$tmp/argv"
+  n0=$(nrec)
+  chmod 000 "$proj/specs/001-demo/plan.md"
+  run plan specs/001-demo
+  chmod 644 "$proj/specs/001-demo/plan.md"
+  check "unreadable plan.md: usage, exit 2, no record" '[ "$rc" = 2 ] && [[ "$(head -n1 <<<"$out")" == "usage: st-advisor.sh"* ]] && [ ! -e "$tmp/argv" ] && [ "$(nrec)" = "$n0" ]'
+fi
+
 recf="$proj/specs/001-demo/advisor.md"
 check "record file has no blank line at EOF" '[ -z "$(tail -c1 "$recf")" ] && [ "$(tail -c2 "$recf" | wc -l)" != 2 ] && [ "$(grep -c "^$" "$recf")" = $(( $(nrec) - 1 )) ] && git -C "$proj" add specs/001-demo/advisor.md && git -C "$proj" diff --cached --check; r=$?; git -C "$proj" reset -q; [ $r = 0 ]'
 
