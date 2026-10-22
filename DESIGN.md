@@ -155,7 +155,8 @@ test first, build, `st-review` → commit → drift fix and shortcut list → co
 
 `st-quick`: one file, no gate, run the tests that cover it, commit. A small bounded fix across a few
 files goes to `st-build` in brief mode, then verify and commit. Moves up to Fast when it needs a
-change plan or touches a schema, access rules or money.
+change plan or touches a schema, access rules, money, contracts, personal data, secrets or a new
+dependency.
 
 ## 5. Tools
 
