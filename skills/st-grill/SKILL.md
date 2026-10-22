@@ -20,6 +20,8 @@ Format every question like so:
 Do you agree with O9?
 ```
 
+Word each question so "yes" accepts your recommended answer.
+
 Codes `Q`, `O` and `D` are stable for the whole session: never reuse or renumber one.
 
 After each answer:
