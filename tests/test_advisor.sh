@@ -379,6 +379,27 @@ out=$(cd "$proj" && PATH="$tmp/nosha:$PATH" bash "$root/scripts/st-advisor.sh" p
 check "sha256sum prints nothing: plan run exit 2, no record" '[ $rc = 2 ] && [ "$out" = "cannot hash inputs" ] && [ ! -e "$tmp/argv" ] && [ "$(nrec)" = "$n0" ]'
 out=$(cd "$proj" && PATH="$tmp/nosha:$PATH" bash "$root/scripts/st-advisor.sh" check plan specs/001-demo); rc=$?
 check "sha256sum prints nothing: check plan exit 2" '[ $rc = 2 ] && [ "$out" = "cannot hash inputs" ]'
+runpath() { rm -f "$tmp/argv"; n0=$(nrec); out=$(cd "$proj" && PATH="$1" bash "$root/scripts/st-advisor.sh" plan specs/001-demo); rc=$?; }
+noadv() { [ $rc = 0 ] && [ "$out" = "$1" ] && [ ! -e "$tmp/argv" ] && [ "$(nrec)" = "$n0" ]; }
+rm -f "$mf"
+runpath "$tmp/nosha:$PATH"
+check "sha256sum prints nothing, no mode file: no advisor, exit 0" 'noadv "no advisor: mode not set. Write .stratum/advisor.json with \"mode\": \"codex\", \"both\" or \"off\"."'
+printf '{"mode": "off"}' > "$mf"
+runpath "$tmp/nosha:$PATH"
+check "sha256sum prints nothing, mode off: no advisor, exit 0" 'noadv "no advisor: mode off"'
+printf '{"mode": "codex"}' > "$mf"
+runpath "$tmp/nosha:$tmp/sys"
+check "sha256sum prints nothing, no codex: no advisor, exit 0" 'noadv "no advisor: codex not found"'
+printf '{' > "$mf"
+runpath "$tmp/nosha:$PATH"
+check "sha256sum prints nothing, bad advisor.json: exit 2, no record" '[ $rc = 2 ] && [ "$out" = "cannot hash inputs" ] && [ ! -e "$tmp/argv" ] && [ "$(nrec)" = "$n0" ]'
+printf '{"mode": "codex", "model": "gpt-test-1"}' > "$mf"
+
+cp -a "$tmp/sys" "$tmp/nt"
+rm "$tmp/nt/timeout"
+ln -s "$tmp/bin/codex" "$tmp/nt/codex"
+runpath "$tmp/nt"
+check "timeout missing: BLOCKED timeout not found, record, no codex" 'blocked "timeout not found" && [ "$(sed -n 2p <<<"$out")" = "record: specs/001-demo/advisor.md" ] && [ ! -e "$tmp/argv" ] && [ "$(nrec)" = $((n0 + 1)) ] && last_header plan | grep -q "| BLOCKED$" && [ "$(grep -A1 -F "$(last_header plan)" "$proj/specs/001-demo/advisor.md" | tail -n1)" = "reason: timeout not found" ]'
 
 mkdir -p "$tmp/badcat"
 printf '#!/usr/bin/env bash\nhead -q -c 10 "$@"\nexit 1\n' > "$tmp/badcat/cat"

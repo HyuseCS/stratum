@@ -78,9 +78,9 @@ D3). A foreground Bash call is capped at 600000 ms.
   feature with one round at each point uses about 110,000 tokens; two rounds at each point about
   220,000.
 - `timeout` is GNU coreutils. Stock macOS lacks it. The repo already relies on GNU tools in the
-  same way (`sha256sum` and `xargs -0 -r` in `skills/st-triage/SKILL.md:14`). Without `timeout`
-  the call fails with exit 127 and the script prints `BLOCKED: <the shell's error line>`: visible,
-  never approval.
+  same way (`sha256sum` and `xargs -0 -r` in `skills/st-triage/SKILL.md:14`). A missing GNU
+  `timeout` is `BLOCKED: timeout not found`, recorded before Codex is called: visible, never
+  approval.
 
 ## R4. Diff point: plain `codex exec`, not `codex exec review` (issue Q6)
 
