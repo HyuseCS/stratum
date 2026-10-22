@@ -83,11 +83,11 @@ order given.
 
 ### Tests for User Story 2
 
-- [ ] T003 [US2] In `tests/test_on_demand.sh`, add the two `#15 FR-005 skill` rows of contracts/triage.md section 3 at the end of the `#15` heredoc from T001 (FR-005). Run it: only `#15 FR-005 skill` fails.
+- [X] T003 [US2] In `tests/test_on_demand.sh`, add the two `#15 FR-005 skill` rows of contracts/triage.md section 3 at the end of the `#15` heredoc from T001 (FR-005). Run it: only `#15 FR-005 skill` fails.
 
 ### Implementation for User Story 2
 
-- [ ] T004 [US2] `skills/st-triage/SKILL.md` (FR-005): step 4, after `per issue` add `, all in the same message so they run side by side`. Step 7, after `Show one report per issue` add `, in the order given`. The two steps now match contracts/triage.md section 1 with the markers removed. Run `bash tests/test_on_demand.sh`: all `ok`.
+- [X] T004 [US2] `skills/st-triage/SKILL.md` (FR-005): step 4, after `per issue` add `, all in the same message so they run side by side`. Step 7, after `Show one report per issue` add `, in the order given`. The two steps now match contracts/triage.md section 1 with the markers removed. Run `bash tests/test_on_demand.sh`: all `ok`.
 
 **Checkpoint**: both stories work. `bash tests/test_on_demand.sh` is all `ok`.
 
