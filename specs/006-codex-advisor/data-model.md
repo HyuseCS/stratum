@@ -94,8 +94,9 @@ No database. Two files and the answer Codex writes. Exact formats are in
     makes a diff approval stale without being named to Codex.
 - Hash failure (D20, D21): every input must be a readable regular file. `git ls-files`, `git diff`
   and `git diff --no-index` (exit 1 allowed, by design) must succeed, and the digest must be 64
-  lowercase hex characters. Else the script prints `cannot hash inputs`, exits 2 and writes no
-  record. `check` stops the same way, so an empty or partial digest never matches an old record.
+  lowercase hex characters. Else, or when `cat` or `sha256sum` fails, the script prints
+  `cannot hash inputs`, exits 2 and writes no record. `check` stops the same way, so an empty or
+  partial digest never matches an old record.
 - State over one gate pass: no record, then `APPROVED` (go on), or `REVISE` (fix, then one more
   run: round 2), or `BLOCKED` (stop; user continues: `BLOCKED, user continued`). After round 2 the
   user decides. A record whose hash no longer matches the current input is stale and counts as no

@@ -48,7 +48,8 @@ st-advisor.sh continued <plan|test|diff> <feature dir>
    A hash that cannot be built stops the run (D20, D21): `git ls-files`, `git diff` and each
    `git diff --no-index` (which may exit 1, by design) must succeed, and the digest must be 64
    lowercase hex characters. Else print `cannot hash inputs`, exit 2, no record, no Codex call.
-   `check` does the same, so a failed hash never matches an old record. No `pipefail`.
+   A failing `cat` or `sha256sum` also stops the run with `cannot hash inputs` (`pipefail`).
+   `check` does the same, so a failed hash never matches an old record.
 3. Read the settings (data-model.md, Advisor settings). No file: print
    `no advisor: mode not set. Write .stratum/advisor.json with "mode": "codex", "both" or "off".`,
    exit 0, no record, no Codex call (D11). Bad file: record `BLOCKED`, print

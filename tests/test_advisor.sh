@@ -375,6 +375,28 @@ check "sha256sum prints nothing: plan run exit 2, no record" '[ $rc = 2 ] && [ "
 out=$(cd "$proj" && PATH="$tmp/nosha:$PATH" bash "$root/scripts/st-advisor.sh" check plan specs/001-demo); rc=$?
 check "sha256sum prints nothing: check plan exit 2" '[ $rc = 2 ] && [ "$out" = "cannot hash inputs" ]'
 
+mkdir -p "$tmp/badcat"
+printf '#!/usr/bin/env bash\nhead -q -c 10 "$@"\nexit 1\n' > "$tmp/badcat/cat"
+chmod +x "$tmp/badcat/cat"
+rm -f "$tmp/argv"
+n0=$(nrec)
+out=$(cd "$proj" && PATH="$tmp/badcat:$PATH" bash "$root/scripts/st-advisor.sh" plan specs/001-demo); rc=$?
+check "cat fails after partial output: plan run exit 2, no record" '[ $rc = 2 ] && [ "$out" = "cannot hash inputs" ] && [ ! -e "$tmp/argv" ] && [ "$(nrec)" = "$n0" ]'
+out=$(cd "$proj" && PATH="$tmp/badcat:$PATH" bash "$root/scripts/st-advisor.sh" check plan specs/001-demo); rc=$?
+check "cat fails after partial output: check plan exit 2" '[ $rc = 2 ] && [ "$out" = "cannot hash inputs" ]'
+
+mkdir -p "$tmp/badsha"
+printf '#!/usr/bin/env bash\necho "0000000000000000000000000000000000000000000000000000000000000000  -"\nexit 1\n' > "$tmp/badsha/sha256sum"
+chmod +x "$tmp/badsha/sha256sum"
+rm -f "$tmp/argv"
+n0=$(nrec)
+out=$(cd "$proj" && PATH="$tmp/badsha:$PATH" bash "$root/scripts/st-advisor.sh" plan specs/001-demo); rc=$?
+check "sha256sum fails with a digest: plan run exit 2, no record" '[ $rc = 2 ] && [ "$out" = "cannot hash inputs" ] && [ ! -e "$tmp/argv" ] && [ "$(nrec)" = "$n0" ]'
+out=$(cd "$proj" && PATH="$tmp/badsha:$PATH" bash "$root/scripts/st-advisor.sh" check plan specs/001-demo); rc=$?
+check "sha256sum fails with a digest: check plan exit 2" '[ $rc = 2 ] && [ "$out" = "cannot hash inputs" ]'
+out=$(cd "$proj" && PATH="$tmp/badsha:$PATH" bash "$root/scripts/st-advisor.sh" diff specs/001-demo "$first"); rc=$?
+check "sha256sum fails with a digest: diff run exit 2, no record" '[ $rc = 2 ] && [ "$out" = "cannot hash inputs" ] && [ ! -e "$tmp/argv" ] && [ "$(nrec)" = "$n0" ]'
+
 if [ "$(id -u)" = 0 ]; then
   echo "skip unreadable plan.md: running as root"
 else

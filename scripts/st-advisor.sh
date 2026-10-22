@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -o pipefail
 usage() { echo "usage: st-advisor.sh plan|test|diff|check|continued ..."; exit 2; }
 cmd=run
 case ${1:-} in check|continued) cmd=$1; shift ;; esac
@@ -26,15 +27,15 @@ tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
 case $point in
-  plan) hash=$(cat "$f/spec.md" "$f/plan.md" "$f/tasks.md" | sha256sum) ;;
-  test) hash=$(cat "$5" "$6" | sha256sum) ;;
+  plan) hash=$(cat "$f/spec.md" "$f/plan.md" "$f/tasks.md" | sha256sum) || { echo "cannot hash inputs"; exit 2; } ;;
+  test) hash=$(cat "$5" "$6" | sha256sum) || { echo "cannot hash inputs"; exit 2; } ;;
   diff)
     git ls-files -z --others --exclude-standard -- . ":(exclude)$f/advisor.md" > "$tmp/untracked" &&
     (
       git diff "$sha" -- . ":(exclude)$f/advisor.md" || exit 1
       while IFS= read -r -d '' p; do git diff --no-index -- /dev/null "$p" || [ $? -eq 1 ] || exit 1; done < "$tmp/untracked"
     ) > "$tmp/diff" || { echo "cannot hash inputs"; exit 2; }
-    hash=$(sha256sum < "$tmp/diff") ;;
+    hash=$(sha256sum < "$tmp/diff") || { echo "cannot hash inputs"; exit 2; } ;;
 esac
 hash=${hash%% *}
 [[ $hash =~ ^[0-9a-f]{64}$ ]] || { echo "cannot hash inputs"; exit 2; }

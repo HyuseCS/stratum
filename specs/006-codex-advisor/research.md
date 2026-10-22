@@ -145,8 +145,9 @@ D3). A foreground Bash call is capped at 600000 ms.
   `check` matched an older record made on that same digest. The script now requires readable
   regular files, checks the exit of `git ls-files` and of each `git diff` (`git diff --no-index`
   exits 1 when files differ, allowed), and requires a digest of 64 lowercase hex characters, else
-  `cannot hash inputs`, exit 2, no record. No `pipefail`, because the `--no-index` exit 1 would
-  trip it.
+  `cannot hash inputs`, exit 2, no record. The script sets `pipefail`, so a failing `cat` or
+  `sha256sum` in the `cat | sha256sum` lines also gives `cannot hash inputs`. The
+  `git diff --no-index` exit 1 is handled inside the diff subshell, which is not a pipeline.
 
 ## R7. Full lane base commit for the diff point
 
