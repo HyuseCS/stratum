@@ -31,6 +31,7 @@ if ! $PATHS_ONLY; then
     [[ -d "$FEATURE_DIR" ]] || { echo "ERROR: Feature directory not found: $FEATURE_DIR. Run st-define first." >&2; exit 1; }
     $REQUIRE_SPEC && [[ ! -f "$FEATURE_DIR/spec.md" ]] && { echo "ERROR: spec.md not found in $FEATURE_DIR. Run st-define first." >&2; exit 1; }
     $REQUIRE_PLAN && [[ ! -f "$FEATURE_DIR/plan.md" ]] && { echo "ERROR: plan.md not found in $FEATURE_DIR. Run st-plan first." >&2; exit 1; }
+    $REQUIRE_PLAN && [[ ! -s "$FEATURE_DIR/plan.md" ]] && { echo "ERROR: plan.md is empty in $FEATURE_DIR. Fill it in, or delete it and run st-plan again." >&2; exit 1; }
     $REQUIRE_TASKS && [[ ! -f "$FEATURE_DIR/tasks.md" ]] && { echo "ERROR: tasks.md not found in $FEATURE_DIR. Run st-plan first." >&2; exit 1; }
 fi
 
