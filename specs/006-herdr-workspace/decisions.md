@@ -1,0 +1,12 @@
+# Decisions: issue #32 (open a herdr workspace from a layout template)
+
+- D1 (Q1): O1. The `full` and `basic` layouts live in the plugin as `scripts/st-herdr-workspace.sh`. `~/.config/herdr/templates.sh` stays as it is; the skill notes that the two can drift. Rejected: O2, one shared layout file in `~/.config/herdr/` sourced by both.
+- D2 (Q2): O3. `scripts/st-herdr-workspace.sh <folder> --label <name> [--machine <label>] [--template full|basic] [--agent claude|claude2]` does the checks, the herdr calls and prints the report; `skills/st-herdr-workspace/SKILL.md` is thin (parse the request, run the script, show the report). Tested with a stub `herdr` on `PATH`. User add: the workspace label is the issue or task it works on (for example `32-herdr-workspace`); when the request names none, one first name like a person (for example `ada`). Rejected: O4, skill text only with the model running each call.
+- D3 (Q3): O5. A missing project folder (checked on the target machine) stops the run with one line and no workspace is made. A dirty or behind git state does not stop the run; the report prints it. Rejected: O6, stop on dirty or behind with a `--force` flag.
+- D4 (Q4): O7. New workspace only; no path that adds the layout to an existing workspace. Rejected: O8, a `--workspace` option for an existing workspace.
+- D5 (fact, not asked): the remote folder and git checks run over `ssh <target>`, where `<target>` is the `target` field of `herdr machine list --json` for the given machine label or id.
+- D6 (orchestrator, not asked): the default agent is `claude`; `--agent claude2` picks the other, as the `full` template offers.
+- D7 (orchestrator, not asked): the script does not fail when `claude` or `lazygit` is not seen in its pane; it waits a short time with `herdr pane wait-output`, then reports `running` or `not seen` per pane.
+- D8 (orchestrator, not asked): the local path needs `HERDR_ENV=1`, as herdr's own skill demands; the `--machine` path does not, since herdr forwards it without an open TUI.
+- D9 (orchestrator, not asked): the new workspace takes focus at the end, as `templates.sh` does, because the user asked to open it.
+- D10 (user, spec gate): the spec is agreed as written. The autonomous worker (orchestrator opens a space per task, starts `claude` in it, relays the worker's questions to the user, gets its result, closes it) is the next feature, #11 and #17 as one spec. #32 stays the room: its report gives the pane ids the orchestrator will prompt later.
