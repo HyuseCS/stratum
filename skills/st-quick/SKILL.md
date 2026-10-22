@@ -8,7 +8,7 @@ description: Run a one-file, low-risk edit (text, typo, one-file visual fix) thr
 Plugin root is two levels up from this skill's base directory.
 
 1. Start the `stratum:st-quick` subagent with: plugin root, project root, and the edit.
-2. If it reports "move up a lane", tell the user in one line and run `/stratum:st-fast`.
+2. If it reports "move up a lane", tell the user in one line. A fix whose only reason is a second file goes to the `stratum:st-build` agent in brief mode; then verify its files with st-verify.sh and the `stratum:st-git` agent commits the exact files it touched, as `/stratum:st` says. If that agent reports "Needs the Fast lane", or the reason is anything else, run `/stratum:st-fast`.
 3. Otherwise verify with `bash <plugin root>/scripts/st-verify.sh '<the tests it ran, or true if none>' <the file>` (see `/stratum:st`).
 4. The `stratum:st-git` agent commits the one file.
 5. Tell the user what changed in one line. Push only on their "push".

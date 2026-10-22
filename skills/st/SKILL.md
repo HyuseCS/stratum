@@ -21,7 +21,7 @@ The highest area wins:
 | Privacy and access | access rules, data model, contracts, sign-in, personal or minors' data | Full |
 | New user story or feature | anything not in a current spec | Full |
 | Core runtime | background services, offline queue, workers, notices | Fast |
-| Screens | layout, components, navigation | Fast (Quick for a one-file visual fix) |
+| Screens | layout, components, navigation | Fast (Quick for a small fix in a few files) |
 | Text and docs | labels, typos, wording | Quick |
 
 Say it in one line: `Lane: <lane> (<area>: <why>). Say "full", "fast" or "quick" to override.`
@@ -32,7 +32,10 @@ Then run the lane. If the user overrides, use their lane.
 - **Full:** run `/stratum:st-define`, `/stratum:st-plan`, `/stratum:st-inspect`, `/stratum:st-build`,
   `/stratum:st-close` in order, stopping at each gate those skills name.
 - **Fast:** run `/stratum:st-fast`.
-- **Quick:** run `/stratum:st-quick`.
+- **Quick:** run `/stratum:st-quick` for one file. For a small bounded fix across a few files with
+  no plan, start the `stratum:st-build` agent with the brief, the plugin root and the project root,
+  never `general-purpose`. Then verify, and the `stratum:st-git` agent commits the exact files.
+  If the agent reports "Needs the Fast lane", run `/stratum:st-fast`.
 
 ## 3. Moving up a lane
 
