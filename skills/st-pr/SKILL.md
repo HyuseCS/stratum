@@ -40,7 +40,7 @@ Only when step 1 chose it. It replaces steps 2 to 4. Steps 5 and 6 run as writte
 3. The workflow runs in the background: wait for its task notification. If the tool result already holds the result object, use it. Never start a second run while one runs.
 4. Run the two commands from 1 again. If an output differs, show the difference and stop before the gate.
 5. `blocked` is true: show the warnings and stop before the gate. Nothing is pushed.
-6. A refused `scriptPath` goes to the `script` call of 2 first. If the call cannot start, the run fails, or it returns no `bodyPath`: say so in one line, then run steps 2 to 4 on the current path.
+6. A refused `scriptPath` goes to the `script` call of 2 first. If the call cannot start, the run fails, or it returns no `bodyPath`, or the file at `bodyPath` is missing: say so in one line, then run steps 2 to 4 on the current path.
 7. Else read the body at `bodyPath` and go to step 5 with the returned `title` and `warnings`.
    Revise at the gate edits the body in this session and never runs the workflow again.
 

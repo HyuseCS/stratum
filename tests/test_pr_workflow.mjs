@@ -57,14 +57,7 @@ async function run(fakes = {}, commits = makeCommits(25)) {
   };
   globalThis.parallel = async (thunks) =>
     Promise.all(thunks.map(async (t) => { try { return await t(); } catch { return null; } }));
-  globalThis.pipeline = async (items, ...stages) =>
-    Promise.all(items.map(async (item) => {
-      try {
-        let v = item;
-        for (const s of stages) v = await s(v);
-        return v;
-      } catch { return null; }
-    }));
+  globalThis.pipeline = () => { throw new Error("pipeline unused"); };
   globalThis.phase = (title) => { phases.push(title); };
   globalThis.log = () => {};
   const realNow = Date.now;
