@@ -46,7 +46,8 @@ Record in research.md:
 7. `bash $S close T900`: `closed worker-t900` and `folder ... ready to remove`. Then all three are
    empty: `herdr agent list | jq -r '.result.agents[].name' | grep -x worker-t900`,
    `herdr workspace list | jq -r '.result.workspaces[].label' | grep -x worker-t900`,
-   `pgrep -af -- '-n worker-t900'` (SC-005). The answer of `workspace close` (R1).
+   `pgrep -af -- '-n worker-t90[0]'` (SC-005; the bracket keeps pgrep from matching the shell
+   that runs it, lessons L14). The answer of `workspace close` (R1).
 
 The user removes `../stratum-003-demo`, `../stratum-003-demo-worker-t900` and the two branches when
 they want.
@@ -63,7 +64,8 @@ bash $S start T901 --task /tmp/t901.txt --test 'test -s demo/q.txt' --lane 'plai
 bash $S wait T901           # expected: state blocked, exit 4, the question in the pane text
 bash $S answer T901 --keys 1   # small: the orchestrator answers; record which key picks "hi"
 bash $S wait T901           # expected: state blocked again, the push question
-                            # big: the orchestrator asks the user first, then answer T901 --keys <the user's pick>
+                            # big: the orchestrator asks the user first; the recorded answer is no (nothing is pushed)
+bash $S answer T901 --keys 2   # "no"; record which key picks it
 bash $S wait T901           # expected: state finished
 ```
 
@@ -94,7 +96,7 @@ both in task order and close both.
 printf 'Create demo/h.txt with the line h.\n' > /tmp/t904.txt
 git rev-parse HEAD
 bash $S headless T904 --task /tmp/t904.txt --test 'grep -qx h demo/h.txt'
-git rev-parse HEAD; git status --porcelain; pgrep -af -- '-n worker-t904'
+git rev-parse HEAD; git status --porcelain; pgrep -af -- '-n worker-t90[4]'
 ```
 
 Expected: `headless worker-t904 success <turns> <cost>`, exit 0, the same HEAD before and after,

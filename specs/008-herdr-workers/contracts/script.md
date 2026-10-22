@@ -55,6 +55,7 @@ Each failure prints exactly one line (to stderr) and exits 1. The script builds 
 | 9 | `--machine`: `herdr machine list --json` exits 0 and is JSON | `herdr machine list failed.` (or its first stderr line) / `herdr machine list gave no machine list.` |
 | 10 | `--machine`: a `label` or `id` matches | `Unknown machine: <m>. Saved: <labels, comma separated>.` |
 | 11 | `--machine`: `herdr --machine <m> workspace list` exits 0 | `Machine <m> does not answer: <first stderr line from herdr>` |
+| 12 | `start`: no workspace in `H workspace list` has the label `N` (a read call, after rows 7 to 11; plan G10, lessons L11) | `A worker <N> already exists.` |
 
 Checks 9 to 11 are the ones in `scripts/st-herdr-workspace.sh` (#32 contract section 2, rows 4c0
 to 4d), copied with their words. `<target>` is the `target` field of the matched entry and
@@ -64,7 +65,9 @@ nothing else (S2).
 
 Written to `<WT>/brief.md`, where `<WT>` is `.result.worktree.path` from `worktree create`.
 Here: the script writes the file. On a saved machine: `ssh -o BatchMode=yes -- <target> "cat > <Q>/brief.md"`
-with the brief on stdin, `<Q>` = `printf %q` of `<WT>`.
+with the brief on stdin, `<Q>` = `printf %q` of `<WT>` with one leading `\~` turned back into `~`
+(the #32 fix, specs/007-herdr-workspace/research.md R3, `scripts/st-herdr-workspace.sh`), so a
+`~/...` path that herdr returns still expands on the saved machine. Every `<Q>` below is this one.
 
 With the brief, `start` writes `<WT>/.stratum/git-guard.json` with the one line `{"commit":"auto"}`
 (D24), after `mkdir -p <WT>/.stratum`. On a saved machine both files go in the same ssh call:
@@ -100,7 +103,7 @@ You are worker <N>, started by the Stratum orchestrator. Read this file first an
 ## Team rules
 
 1. Commit each finished unit with the st-git agent, exact paths only. Never commit brief.md or result.md.
-2. Fetch before you build on a teammate's work. On your machine the teammate's branch is already in this repo: `git log <branch>`, `git merge <branch>`. A teammate on another machine shares no commits with you: send it messages only, and do not build on its work.
+2. Before you build on a teammate's work, merge its branch: `git log <branch>`, `git merge <branch>`. A teammate on another machine shares no commits with you: send it messages only, and do not build on its work.
 3. Ask a teammate by name: on your machine, SendMessage to its name; on another machine, `herdr --machine <label> agent prompt <name> "<text>"`, with `<label>` from `herdr machine list` on your machine.
 4. Never merge and never push. The orchestrator reviews every branch and is the only one who merges.
 
@@ -154,9 +157,10 @@ No match: `No worker <N> on <m or local>.`, exit 1. More than one: `More than on
 
 - `<repo>`: `git rev-parse --show-toplevel` here, `--repo` on a saved machine. `<sha>`:
   `git rev-parse HEAD` here.
-- Step 3 answers `agent_not_ready`: print the `worker` line, `state blocked`, then `pane text:` and
-  the last 40 lines of `H agent read N --source recent-unwrapped --lines 40` (`.result.read.text`),
-  exit 4. No step 4.
+- Step 3 answers `agent_not_ready`, or step 4 answers `agent_blocked` (a dialog is up; herdr sends
+  no input): print the `worker` line, `state blocked`, then `pane text:` and the last 40 lines of
+  `H agent read N --source recent-unwrapped --lines 40` (`.result.read.text`), exit 4. After step 3
+  there is no step 4. `goal` is the next step once the dialog is answered.
 - Any other failure at or after step 1: print `stopped: <first stderr line>`, then the `worker`
   line with `-` for every id not made yet, exit 1. Nothing is closed, nothing is retried.
 
@@ -191,7 +195,7 @@ The result file check is `test -f <WT>/result.md` here and
 ```text
 F1, F2
 1 read <WT>/result.md                    here: the file; saved machine: ssh ... cat -- <Q>/result.md
-2 saved machine only: git fetch <target>:<WT> N:N, then git rev-parse --verify N
+2 saved machine only: GIT_SSH_COMMAND='ssh -o BatchMode=yes' git fetch <target>:<WT> N:N, then git rev-parse --verify N
 ```
 
 Missing file: `no result file: <WT>/result.md`, then `pane text:` and the 40 pane lines, exit 1.
@@ -295,7 +299,9 @@ stub log, never from built ids.
 | S3 | `agent start` fails with `agent_not_ready`: `state blocked`, `pane text:`, the stub pane text, no `agent prompt`, exit 4; then `goal` sends exactly one `agent prompt`, exit 0 |
 | S4 | `worktree create` fails: `stopped: ` with the stub message, `worker` line with `-` ids, no `agent start`, exit 1 |
 | S5 | `agent prompt` fails with `agent_prompt_stalled`: `stopped:` line, no second prompt, nothing closed, exit 1 |
-| P1-P8 | each check of section 2 rows 1 to 8: one line with the phrase, no herdr call, exit 1 |
+| S6 | `start` when `workspace list` already has the label `worker-t004`: one line `A worker worker-t004 already exists.`, no `worktree create`, no other mutating call, exit 1 (plan G10, lessons L11) |
+| S7 | `agent prompt` fails with `agent_blocked`: `worker` line, `state blocked`, `pane text:`, the stub pane text, no second prompt, nothing closed, exit 4; then `goal` sends exactly one `agent prompt` |
+| P1-P7 | each check of section 2 rows 1 to 7: one line with the phrase, no herdr call, exit 1 |
 | W1 | `wait`, stub settles `done`, result.md present: `state finished`, exit 0, zero `agent prompt` |
 | W2 | `wait`, agent wait times out: `state working` with the pane, exit 3 |
 | W3 | `wait`, settles `idle`, no result.md, resume check matches, then `done` with result.md: `state finished`, two `agent wait` without `--until`, exit 0 |
@@ -310,12 +316,17 @@ stub log, never from built ids.
 | C2 | `close`, state `working`: refuse line, no `workspace close`, exit 1 |
 | C3 | `close`, stub keeps the agent after close: `close left agent worker-t004`, exit 1 |
 | C4 | `close`, no workspace with the label: `No worker worker-t004 on local.`, no `workspace close`, exit 1 |
+| C5 | `close`, `agent get` fails (agent gone): one `workspace close` on the stub's WS, `closed`, `folder <WT> ready to remove`, exit 0 |
 | L1 | `list` with two worker workspaces and one other workspace: two `found` lines, the other label absent, states from the stub |
-| R1 | `start --machine laptop --repo '~/proj'`: every call `--machine laptop` but `machine list --json`; one ssh line `-o BatchMode=yes -- u@stubhost` with `cat > ` and the quoted path and the `git-guard.json` write; the brief on its stdin holds the roster and rules |
-| R2 | `result --machine laptop`: ssh `cat --` of the quoted result path, then `git fetch u@stubhost:<WT> worker-t004:worker-t004` in the git log; the test makes branch `worker-t004` in the temp repo first, and the `fetched` line has its sha |
+| R1 | `start --machine laptop --repo '~/proj'`: every call `--machine laptop` but `machine list --json`; `worktree create` has `--path ~/proj-worker-t004`; the stub answers that path as `.result.worktree.path`; one ssh line `-o BatchMode=yes -- u@stubhost` with `cat > ` and the `git-guard.json` write, holding `~/proj-worker-t004/` unescaped (no `\~`); the brief on its stdin holds the roster and rules |
+| R2 | `result --machine laptop`: ssh `cat --` of the quoted result path, then `git fetch u@stubhost:<WT> worker-t004:worker-t004` in the git log with `GIT_SSH_COMMAND=ssh -o BatchMode=yes` in its environment (the wrapper logs it); the test makes branch `worker-t004` in the temp repo first, and the `fetched` line has its sha |
 | R3 | `wait --machine laptop`: the result check is an ssh `test -f` |
 | R4-R7 | unknown machine, machine down, machine list fails, machine list junk: the #32 lines, no mutating call |
 | R8 | `start --machine laptop` with no `--repo`: section 2 row 8 line |
+| R9 | `close --machine laptop`: every herdr call starts `--machine laptop` but `machine list --json`; `closed` line |
+| R10 | `answer --machine laptop --keys 1`, state `blocked`: same `--machine` rule; one `agent send-keys` |
+| R11 | `goal --machine laptop --test <cmd>`: same `--machine` rule; exactly one `agent prompt` |
+| R12 | `list --machine laptop`: same `--machine` rule; `found` lines name `laptop` |
 | H1 | `headless`: stub claude argv has exactly the flags in section 4 step 3, the prompt `HP`, the brief file outside the repo; output `headless worker-t004 success <turns> <cost>` and the stub's result text; exit 0 |
 | H2 | stub claude commits in the repo: `worker committed: <old> -> <new>`, exit 1 |
 | H3 | stub claude exits 124: `timed out after 540 s`, exit 1 |

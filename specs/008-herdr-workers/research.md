@@ -202,6 +202,11 @@ branch `18-codex-advisor`.
   guard). The `HEAD` check is the second guard and can fail.
 - The test command must be one line with no `(` or `)`, so it fits inside `Bash(...)`.
 - `ponytail:` 540 s and 30 turns are constants.
+- `/goal` docs (https://code.claude.com/docs/en/goal.md): "A goal doesn't change your permission
+  mode", and "`/goal` works in non-interactive mode ... Setting a goal with `-p` runs the loop to
+  completion in a single invocation". So `/goal` under `-p --permission-mode dontAsk` is expected
+  to run, with a denied call failing instead of asking. If it does not start under `-p`, the
+  fallback is a plain prompt with no `/goal`, and the finding goes to the orchestrator (T015).
 - Not verified live: how `--max-turns` counts `/goal` turns, and the `subtype` when the turn
   limit ends the run. Quickstart section 5.
 

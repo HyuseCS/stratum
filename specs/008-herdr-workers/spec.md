@@ -71,7 +71,7 @@ through the orchestrator, both answers reach the worker, and the worker finishes
    pane, and the worker leaves `blocked`.
 3. **Given** the user types the answer in the pane directly, **When** the orchestrator next
    checks, **Then** it sees the worker working again and does not send a second answer.
-4. **Given** a permission prompt in the worker (for example Stratum's commit guard), **When** it
+4. **Given** a permission prompt in the worker (for example a tool permission prompt), **When** it
    shows, **Then** it is handled the same way as a question.
 
 ---
@@ -161,8 +161,8 @@ the change is in the working tree, nothing is committed by the worker, and no pr
 - Two workers edit the same file and the merge conflicts: the conflict goes to the user; the
   orchestrator does not resolve it.
 - herdr, the machine, or `claude` is missing on the target: nothing is made, one line says why.
-- The worker tries to commit and Stratum's git guard asks: that is a question (story 2). The
-  worker's own `st-git` path is the normal way to commit.
+- The worker runs `git commit`: it passes (D24). Amend, push, reset --hard and branch delete
+  still ask: that is a question (story 2).
 - The orchestrator session ends while workers run: the workers keep running in their panes; the
   next orchestrator session finds them by their labels and names and takes over.
 
@@ -191,8 +191,8 @@ the change is in the working tree, nothing is committed by the worker, and no pr
   (D14, D26).
 - **FR-007**: For a remote worker every herdr call MUST name the machine, and the worktree, brief
   and result MUST live on that machine. The branch is fetched here before review (D11).
-- **FR-008**: The team rules in every brief MUST say: commit each finished unit, fetch before
-  building on a teammate's work, ask a teammate by name (SendMessage on the same machine,
+- **FR-008**: The team rules in every brief MUST say: commit each finished unit, merge a
+  teammate's branch before building on its work (D25: same machine only), ask a teammate by name (SendMessage on the same machine,
   `herdr agent prompt` with the machine across machines), and never merge (D16).
 - **FR-009**: The orchestrator MUST review each worker branch with the Stratum review and MUST be
   the only one who merges. It merges on green, in task order; a conflict goes to the user (D16).
