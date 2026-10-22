@@ -195,4 +195,18 @@ phrases <<'EOF'
 EOF
 check "#16 general-purpose only as never" 'grep -qF general-purpose "$root/skills/st/SKILL.md" && ! grep -F general-purpose "$root/skills/st/SKILL.md" | grep -qvF never'
 
+phrases <<'EOF'
+#32 FR-001 skill	skills/st-herdr-workspace/SKILL.md	bash <plugin root>/scripts/st-herdr-workspace.sh
+#32 FR-009 label	skills/st-herdr-workspace/SKILL.md	`<number>-<short-name>` when an issue number is known
+#32 FR-009 label	skills/st-herdr-workspace/SKILL.md	one first name, like a person
+#32 FR-002 default	skills/st-herdr-workspace/SKILL.md	`full` by default
+#32 FR-008 default	skills/st-herdr-workspace/SKILL.md	`claude` by default
+#32 FR-011 no calls	skills/st-herdr-workspace/SKILL.md	Make no herdr call yourself.
+#32 FR-013 drift	skills/st-herdr-workspace/SKILL.md	The layouts live in `scripts/st-herdr-workspace.sh`. The user's `~/.config/herdr/templates.sh` can drift from them.
+#32 stop	skills/st-herdr-workspace/SKILL.md	On a one-line failure, show the line and stop.
+#32 no retry	skills/st-herdr-workspace/SKILL.md	After a failure, do not run it again
+#32 st-status tools	skills/st-status/SKILL.md	`herdr` and `jq` (optional, for `st-herdr-workspace`)
+EOF
+check "#32 skill" 'f="$root/skills/st-herdr-workspace/SKILL.md"; [ -f "$f" ] && grep -qx "name: st-herdr-workspace" "$f" && grep -q "^# /stratum:st-herdr-workspace" "$f"'
+
 exit $fail
