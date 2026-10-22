@@ -98,7 +98,14 @@ cat > "$tmp/bin/sleep" <<'EOF'
 #!/usr/bin/env bash
 ( IFS=$'\t'; printf 'sleep\t%s\n' "$*" >> "$STUB_T/calls" )
 EOF
-chmod +x "$tmp/bin/herdr" "$tmp/bin/ssh" "$tmp/bin/git" "$tmp/bin/sleep"
+cat > "$tmp/bin/timeout" <<'EOF'
+#!/usr/bin/env bash
+( IFS=$'\t'; printf '%s\n' "$*" > "$STUB_T/timeout_args" )
+if [ "$1" = -k ]; then shift 2; fi
+shift
+exec "$@"
+EOF
+chmod +x "$tmp/bin/herdr" "$tmp/bin/ssh" "$tmp/bin/git" "$tmp/bin/sleep" "$tmp/bin/timeout"
 export STUB_T="$tmp" STUB_REAL_GIT="$(command -v git)"
 
 cat > "$tmp/bin/claude" <<'EOF'
@@ -107,11 +114,14 @@ T=$STUB_T
 printf '%s\n' "$@" > "$T/claude_args"
 bp=$(sed -E 's/.*; read (.*) first and follow it$/\1/' <<<"$2")
 printf '%s\n' "$bp" > "$T/brief.path"
+printf '%s\n' "$PWD" > "$T/claude_pwd"
 cp "$bp" "$T/brief.copy" 2>/dev/null
 turns=$((RANDOM % 20 + 1)); cost="0.0$RANDOM"
 printf '%s\n%s\n' "$turns" "$cost" > "$T/claude_nums"
 case "${STUB_CLAUDE:-}" in
 slow) exit 124 ;;
+commitslow) git -c user.name=t -c user.email=t@t commit -q --allow-empty -m worker; exit 124 ;;
+errturns) jq -nc --argjson n "$turns" --argjson c "$cost" --arg r "ERRTURNS $(cat "$T/x")" '{type:"result",subtype:"error_max_turns",is_error:true,num_turns:$n,total_cost_usd:$c,session_id:"stubsession",result:$r}'; exit 1 ;;
 commit) git -c user.name=t -c user.email=t@t commit -q --allow-empty -m worker ;;
 commitjunk) git -c user.name=t -c user.email=t@t commit -q --allow-empty -m worker; echo 'not json at all'; exit 0 ;;
 junk) echo 'not json at all'; exit 0 ;;
@@ -119,7 +129,7 @@ esac
 jq -nc --argjson n "$turns" --argjson c "$cost" --arg r "HEADLESS $(cat "$T/x")" '{type:"result",subtype:"success",is_error:false,num_turns:$n,total_cost_usd:$c,session_id:"stubsession",result:$r}'
 EOF
 chmod +x "$tmp/bin/claude"
-for b in herdr ssh git sleep claude; do
+for b in herdr ssh git sleep timeout claude; do
   found=$(PATH="$tmp/bin:$PATH" command -v $b)
   if [ "$found" != "$tmp/bin/$b" ]; then echo "FAIL stub $b is first on PATH: found $found"; exit 1; fi
 done
@@ -159,7 +169,7 @@ fresh() {
   reset
 }
 run() {
-  out=$(cd "$repo" && PATH="$tmp/bin:$PATH" HERDR_ENV="${HENV-1}" HERDR_PANE_ID=w1P:p1 HERDR_TAB_ID=w1P:t1 HERDR_WORKSPACE_ID=w1P "$@" 2>&1); rc=$?
+  out=$(cd "${RUNDIR:-$repo}" && PATH="$tmp/bin:$PATH" HERDR_ENV="${HENV-1}" HERDR_PANE_ID=w1P:p1 HERDR_TAB_ID=w1P:t1 HERDR_WORKSPACE_ID=w1P env ${NOENV:+-u HERDR_ENV} "$@" 2>&1); rc=$?
 }
 mk() { fresh; run bash "$script" start "${sargs[@]}"; reset; }
 wsid() { jq -r .result.workspace.workspace_id "$tmp/wc.json"; }
@@ -601,7 +611,7 @@ check "R12 found lines name laptop, the other workspace is absent" '[ "$(grep -c
 check "R12 --machine rule, never-list" 'rnever 0 0'
 
 h1() {
-  fresh; rm -f "$tmp/claude_args" "$tmp/brief.path" "$tmp/brief.copy" "$tmp/claude_nums"
+  fresh; rm -f "$tmp/claude_args" "$tmp/brief.path" "$tmp/brief.copy" "$tmp/claude_nums" "$tmp/timeout_args"
   run bash "$1" headless T004 --task "$task" --test "$testcmd"
   local bp turns cost hp
   bp=$(cat "$tmp/brief.path" 2>/dev/null); turns=$(sed -n 1p "$tmp/claude_nums" 2>/dev/null); cost=$(sed -n 2p "$tmp/claude_nums" 2>/dev/null)
@@ -614,6 +624,7 @@ h1() {
   check "H1 headless line" 'hasline "headless\tworker-t004\tsuccess\t%s\t%s" "$turns" "$cost"'
   check "H1 result: line then the stub result text" '[ "$(grep -xF -A1 "result:" <<<"$out" | tail -n1)" = "HEADLESS $(rnd)" ]'
   check "H1 no herdr call" '[ ! -s "$tmp/calls" ]'
+  check "H1 timeout is called with -k 10 540 before claude" 'grep -qP "^-k\t10\t540\tclaude\t" "$tmp/timeout_args" 2>/dev/null'
 }
 h1 "$script"
 check "H5 brief file is gone after the run" 'bp=$(cat "$tmp/brief.path" 2>/dev/null); [ -n "$bp" ] && [ ! -e "$bp" ]'
@@ -632,12 +643,120 @@ check "H2b commit and junk output: exit 1, worker committed line wins" '[ $rc = 
 git -C "$repo" reset -q --hard "$sha"
 
 fresh
+STUB_CLAUDE=commitslow run bash "$script" headless T004 --task "$task" --test "$testcmd"
+new=$(git -C "$repo" rev-parse HEAD)
+check "H3b commit then timeout: exit 1, worker committed line wins, no timed out line" '[ $rc = 1 ] && [ "$new" != "$sha" ] && hasline "worker committed: %s -> %s" "$sha" "$new" && ! grep -q "timed out" <<<"$out"'
+git -C "$repo" reset -q --hard "$sha"
+
+fresh
 STUB_CLAUDE=slow run bash "$script" headless T004 --task "$task" --test "$testcmd"
 check "H3 exit 1, timed out line" '[ $rc = 1 ] && hasline "timed out after 540 s"'
 
 fresh
 STUB_CLAUDE=junk run bash "$script" headless T004 --task "$task" --test "$testcmd"
 check "H4 exit 1, no JSON line" '[ $rc = 1 ] && hasline "claude gave no JSON result."'
+
+fresh
+STUB_CLAUDE=errturns run bash "$script" headless T004 --task "$task" --test "$testcmd"
+turns=$(sed -n 1p "$tmp/claude_nums"); cost=$(sed -n 2p "$tmp/claude_nums")
+check "H6 error_max_turns: exit 1, headless line and result text print" '[ $rc = 1 ] && hasline "headless\tworker-t004\terror_max_turns\t%s\t%s" "$turns" "$cost" && [ "$(grep -xF -A1 "result:" <<<"$out" | tail -n1)" = "ERRTURNS $(rnd)" ]'
+
+fresh; rm -f "$tmp/claude_nums"
+NOENV=1 run bash "$script" headless T004 --task "$task" --test "$testcmd"
+turns=$(sed -n 1p "$tmp/claude_nums" 2>/dev/null); cost=$(sed -n 2p "$tmp/claude_nums" 2>/dev/null)
+check "H7 no HERDR_ENV: exit 0, same headless and result lines as H1, no herdr call" '[ $rc = 0 ] && hasline "headless\tworker-t004\tsuccess\t%s\t%s" "$turns" "$cost" && [ "$(grep -xF -A1 "result:" <<<"$out" | tail -n1)" = "HEADLESS $(rnd)" ] && [ ! -s "$tmp/calls" ]'
+
+fresh; rm -f "$tmp/claude_args"
+run bash "$script" headless T004 --task "$task" --test "$testcmd" --machine laptop
+check "H8 --machine: usage line, exit 2, no herdr call, no claude call" '[ $rc = 2 ] && [[ "$(head -n1 <<<"$out")" == usage:* ]] && [ ! -s "$tmp/calls" ] && [ ! -e "$tmp/claude_args" ]'
+
+fresh; rm -f "$tmp/claude_args" "$tmp/claude_pwd"
+mkdir -p "$repo/sub"
+RUNDIR="$repo/sub" run bash "$script" headless T004 --task "$task" --test "$testcmd"
+bp=$(cat "$tmp/brief.path" 2>/dev/null)
+check "H9 from a subfolder: exit 0, brief outside the repo, claude ran in the toplevel" '[ $rc = 0 ] && [ -n "$bp" ] && [[ "$bp" != "$repo"/* ]] && [ "$(cat "$tmp/claude_pwd" 2>/dev/null)" = "$repo" ]'
+fresh
+STUB_CLAUDE=commit RUNDIR="$repo/sub" run bash "$script" headless T004 --task "$task" --test "$testcmd"
+new=$(git -C "$repo" rev-parse HEAD)
+check "H9 from a subfolder: HEAD compare sees the worker commit" '[ $rc = 1 ] && [ "$new" != "$sha" ] && hasline "worker committed: %s -> %s" "$sha" "$new"'
+git -C "$repo" reset -q --hard "$sha"
+rmdir "$repo/sub"
+
+fresh; rm -f "$tmp/claude_args"
+run bash "$script" headless T004 --task "$task" --test 'grep -q a *'
+check "H10 headless rejects * in the test: one line, exit 1, no claude call" '[ $rc = 1 ] && [ "$out" = "Test command must not contain * for headless." ] && [ ! -e "$tmp/claude_args" ]'
+fresh
+run bash "$script" start T004 --task "$task" --test 'grep -q a *' --lane "$lane" --roster "$roster"
+check "H10 start still accepts * in the test" '! grep -qF "must not contain *" <<<"$out"'
+
+mphrase='Model must be one token of letters, digits, dot, underscore or dash.'
+mfile="$repo/.stratum/models.json"
+startargv() { printf 'agent\tstart\tworker-t004\t--kind\tclaude\t--pane\t%s\t--timeout\t120000\t--\t%s' "$(pane)" "$1"; }
+
+fresh; rm -f "$mfile"
+run bash "$script" start "${sargs[@]}" --model opus
+check "M1 exit 0" '[ $rc = 0 ]'
+check "M1 agent start args after -- are exactly the mode, name and model" 'hascall "$(startargv "--permission-mode	auto	-n	worker-t004	--model	opus")"'
+check "M1 brief has Model: opus" 'grep -qxF -- "- Model: opus" "$(wt)/brief.md"'
+
+fresh
+printf '{"st-worker":{"model":"sonnet","effort":"high"}}\n' > "$mfile"
+run bash "$script" start "${sargs[@]}"
+check "M2 exit 0" '[ $rc = 0 ]'
+check "M2 models.json model reaches the args" 'hascall "$(startargv "--permission-mode	auto	-n	worker-t004	--model	sonnet")"'
+check "M2 brief has Model: sonnet" 'grep -qxF -- "- Model: sonnet" "$(wt)/brief.md"'
+rm -f "$mfile"
+
+fresh
+run bash "$script" start "${sargs[@]}"
+check "M3 exit 0" '[ $rc = 0 ]'
+check "M3 args after -- have no --model" 'hascall "$(startargv "--permission-mode	auto	-n	worker-t004")"'
+check "M3 brief has Model: default" 'grep -qxF -- "- Model: default" "$(wt)/brief.md"'
+
+fresh
+run bash "$script" start "${sargs[@]}" --model 'a b'
+prej "M4 space" "$mphrase"
+fresh
+run bash "$script" start "${sargs[@]}" --model 'x;y'
+prej "M4 semicolon" "$mphrase"
+fresh
+printf '{"st-worker":{"model":"x;y"}}\n' > "$mfile"
+run bash "$script" start "${sargs[@]}"
+prej "M4 models.json value" "$mphrase"
+rm -f "$mfile"
+
+fresh; rm -f "$tmp/claude_args" "$tmp/brief.copy"
+run bash "$script" headless T004 --task "$task" --test "$testcmd" --model opus
+check "M5 exit 0" '[ $rc = 0 ]'
+check "M5 claude argv has --model opus right after -n worker-t004" '[[ "$(tr "\n" " " < "$tmp/claude_args")" == *"-n worker-t004 --model opus "* ]]'
+check "M5 headless brief has Model: opus" 'grep -qxF -- "- Model: opus" "$tmp/brief.copy"'
+
+fresh; rm -f "$tmp/claude_args" "$tmp/brief.copy"
+printf '{"st-worker":{"model":"haiku"}}\n' > "$mfile"
+run bash "$script" headless T004 --task "$task" --test "$testcmd"
+check "M6 exit 0" '[ $rc = 0 ]'
+check "M6 claude argv has --model haiku right after -n worker-t004" '[[ "$(tr "\n" " " < "$tmp/claude_args")" == *"-n worker-t004 --model haiku "* ]]'
+check "M6 headless brief has Model: haiku" 'grep -qxF -- "- Model: haiku" "$tmp/brief.copy"'
+rm -f "$mfile"
+
+fresh; rm -f "$tmp/claude_args" "$tmp/brief.copy"
+run bash "$script" headless T004 --task "$task" --test "$testcmd"
+check "M6 no file: exit 0" '[ $rc = 0 ]'
+check "M6 no file: no --model in claude argv" '[ -s "$tmp/claude_args" ] && ! grep -qxF -- --model "$tmp/claude_args"'
+check "M6 no file: headless brief has Model: default" 'grep -qxF -- "- Model: default" "$tmp/brief.copy"'
+
+fresh; rm -f "$tmp/claude_args"
+run bash "$script" start "${sargs[@]}" --model
+check "M7 start --model without a value: usage line, exit 2, no call" '[ $rc = 2 ] && [[ "$(head -n1 <<<"$out")" == usage:* ]] && [ ! -s "$tmp/calls" ]'
+fresh
+run bash "$script" start "${sargs[@]}" --model opus --model sonnet
+check "M7 start --model twice: usage line, exit 2, no call" '[ $rc = 2 ] && [[ "$(head -n1 <<<"$out")" == usage:* ]] && [ ! -s "$tmp/calls" ]'
+fresh; rm -f "$tmp/claude_args"
+run bash "$script" headless T004 --task "$task" --test "$testcmd" --model
+check "M7 headless --model without a value: usage line, exit 2, no call" '[ $rc = 2 ] && [[ "$(head -n1 <<<"$out")" == usage:* ]] && [ ! -s "$tmp/calls" ] && [ ! -e "$tmp/claude_args" ]'
+fresh; rm -f "$tmp/claude_args"
+run bash "$script" headless T004 --task "$task" --test "$testcmd" --model opus --model sonnet
+check "M7 headless --model twice: usage line, exit 2, no call" '[ $rc = 2 ] && [[ "$(head -n1 <<<"$out")" == usage:* ]] && [ ! -s "$tmp/calls" ] && [ ! -e "$tmp/claude_args" ]'
 
 sed -E '/--allowedTools/d' "$script" > "$tmp/NC6.sh" 2>/dev/null
 check "NC6 sed deletes exactly one line" '[ "$(diff "$script" "$tmp/NC6.sh" | grep -c "^<")" = 1 ]'

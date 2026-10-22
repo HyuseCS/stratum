@@ -127,6 +127,12 @@ class ModelHookTest(unittest.TestCase):
         for a in AGENT_NAMES:
             self.assertIn(a, r)
 
+    def test_st_worker_key_allowed(self):
+        self.write_models('{"st-worker": {"model": "sonnet"}}')
+        self.assertNotIn("deny", self.run_hook(self.call(subagent_type="stratum:st-git")))
+        r = self.deny('{"st-nobody": {"model": "sonnet"}}', self.call(subagent_type="stratum:st-git"))
+        self.assertIn("st-nobody", r)
+
     def test_deny_entry_not_object(self):
         r = self.deny('{"st-close": "haiku"}')
         self.assertIn("st-close", r)
