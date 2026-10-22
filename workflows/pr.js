@@ -1,5 +1,5 @@
 export const meta = {
-  name: 'st-pr',
+  name: 'pr',
   description: 'st-pr steps 2 to 4 on a big branch: facts, draft, verify, fix',
   phases: [{ title: 'Facts' }, { title: 'Draft' }, { title: 'Verify' }, { title: 'Fix' }],
 }
