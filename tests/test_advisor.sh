@@ -123,6 +123,12 @@ run diff specs/001-demo "$first"
 lst=$(awk '/^Untracked files:/{f=1;next} f' "$tmp/prompt" 2>/dev/null)
 check "FR-013 untracked filter: any case, keys, rc files, credentials" 'grep -qxF notes.md <<<"$lst" && grep -qxF config.json <<<"$lst" && ! grep -qxiE "\.env|server\.pem|prod\.env|id_rsa|id_ed25519\.pub|\.npmrc|\.netrc|credentials\.json|app\.jks|release\.keystore" <<<"$lst"'
 for p in "${sec[@]}" notes.md config.json; do rm -f "$proj/$p"; done
+echo k > "$proj/.stratum/constitution.md"
+run diff specs/001-demo "$first"
+rm -f "$proj/.stratum/constitution.md"
+check "diff point names the constitution when it exists" 'grep "^Inputs: " "$tmp/prompt" | grep -qF ".stratum/constitution.md"'
+run diff specs/001-demo "$first"
+check "diff point Inputs line has no constitution when none exists" 'grep -q "^Inputs: " "$tmp/prompt" && ! grep "^Inputs: " "$tmp/prompt" | grep -qF constitution'
 
 mkdir -p "$tmp/sys"
 IFS=: read -ra pdirs <<<"$PATH"
@@ -341,6 +347,15 @@ run continued plan specs/001-demo
 cout=$out; crc=$rc
 run check plan specs/001-demo
 check "continued records the user's choice" '[ $crc = 0 ] && [ "$cout" = "BLOCKED, user continued sha256 $h" ] && last_header plan | grep -q "| BLOCKED, user continued$" && stale'
+
+answer ''
+run plan specs/001-demo
+brc=$rc; bout=$out
+run continued plan specs/001-demo
+cout=$out; crc=$rc; ch=${out##* }
+n0=$(nrec)
+run check plan specs/001-demo
+check "check after continued on an unchanged plan: exit 0, continued line, no new record" '[ "$brc" = 1 ] && [ "$(head -n1 <<<"$bout")" = "BLOCKED: empty answer" ] && [ $crc = 0 ] && [ "$cout" = "BLOCKED, user continued sha256 $(plan_hash)" ] && [ $rc = 0 ] && [ "$out" = "BLOCKED, user continued sha256 $ch" ] && [ "$(nrec)" = "$n0" ]'
 
 chmod 444 "$proj/specs/001-demo/advisor.md"
 run continued plan specs/001-demo 2>/dev/null

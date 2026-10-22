@@ -104,9 +104,11 @@ printf '%s\n' '{"type":"object","additionalProperties":false,"required":["verdic
       cat "$6"
       [ -z "$(tail -c1 "$6")" ] || echo ;;
     diff)
+      rules=
+      [ -f .stratum/constitution.md ] && rules=' Read the project rules in .stratum/constitution.md.'
       printf '%s\n' \
         'Point: diff. Review the full diff before the build is called done: hidden regressions, broken project rules, missed requirements.' \
-        "Inputs: run git diff $sha -- . ':(exclude)$f/advisor.md' ':(exclude,icase).env*' ':(exclude,icase)*/.env*' ':(exclude,icase)*.env' ':(exclude,icase)*.pem' ':(exclude,icase)*.key' ':(exclude,icase)*.p12' ':(exclude,icase)*.pfx' ':(exclude,icase)*.jks' ':(exclude,icase)*.keystore' ':(exclude,icase)id_rsa*' ':(exclude,icase)*/id_rsa*' ':(exclude,icase)id_ed25519*' ':(exclude,icase)*/id_ed25519*' ':(exclude,icase)id_ecdsa*' ':(exclude,icase)*/id_ecdsa*' ':(exclude,icase).npmrc' ':(exclude,icase)*/.npmrc' ':(exclude,icase).netrc' ':(exclude,icase)*/.netrc' ':(exclude,icase).pypirc' ':(exclude,icase)*/.pypirc' ':(exclude,icase)credentials*' ':(exclude,icase)*/credentials*' and read each untracked file listed below. Env and secret files are left out of that diff. The feature dir is $f." \
+        "Inputs: run git diff $sha -- . ':(exclude)$f/advisor.md' ':(exclude,icase).env*' ':(exclude,icase)*/.env*' ':(exclude,icase)*.env' ':(exclude,icase)*.pem' ':(exclude,icase)*.key' ':(exclude,icase)*.p12' ':(exclude,icase)*.pfx' ':(exclude,icase)*.jks' ':(exclude,icase)*.keystore' ':(exclude,icase)id_rsa*' ':(exclude,icase)*/id_rsa*' ':(exclude,icase)id_ed25519*' ':(exclude,icase)*/id_ed25519*' ':(exclude,icase)id_ecdsa*' ':(exclude,icase)*/id_ecdsa*' ':(exclude,icase).npmrc' ':(exclude,icase)*/.npmrc' ':(exclude,icase).netrc' ':(exclude,icase)*/.netrc' ':(exclude,icase).pypirc' ':(exclude,icase)*/.pypirc' ':(exclude,icase)credentials*' ':(exclude,icase)*/credentials*' and read each untracked file listed below. Env and secret files are left out of that diff. The feature dir is $f.$rules" \
         'Untracked files:'
       list=
       shopt -s nocasematch
