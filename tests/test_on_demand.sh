@@ -200,7 +200,7 @@ phrases <<'EOF'
 #18 FR-001 build diff point	skills/st-build/SKILL.md	bash <plugin root>/scripts/st-advisor.sh diff <feature dir> <base>
 #18 FR-001 build base	skills/st-build/SKILL.md	The base: on a branch, `git merge-base main HEAD`.
 #18 FR-001 build quick	skills/st-build/SKILL.md	The Quick lane has no advisor.
-#18 FR-001 build worktree	skills/st-build/SKILL.md	run it in the main session after the subagent reports both failures
+#18 FR-001 build worktree	skills/st-build/SKILL.md	run it in the main session from that worktree's root after the subagent reports both failures
 #18 FR-001 inspect plan point	skills/st-inspect/SKILL.md	bash <plugin root>/scripts/st-advisor.sh plan <feature dir>
 #18 FR-001 fast test point	skills/st-fast/SKILL.md	bash <plugin root>/scripts/st-advisor.sh test <feature dir> <task file> <test path> <failure 1 file> <failure 2 file>
 #18 FR-001 fast diff point	skills/st-fast/SKILL.md	bash <plugin root>/scripts/st-advisor.sh diff <feature dir> <base from step 1>

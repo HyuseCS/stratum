@@ -27,7 +27,7 @@ subagent absolute paths: plugin root, project root, feature dir, and its task ID
    `FAIL` back to `st-build`.
 4. **Two tries.** If the test is still red after 2 `st-build` tries, run the advisor (see Advisor): save the task text and both failure outputs to files in your scratchpad, then run
    `bash <plugin root>/scripts/st-advisor.sh test <feature dir> <task file> <test path> <failure 1 file> <failure 2 file>`: root cause or rabbit hole?
-   For a `[P]` task in a worktree, run it in the main session after the subagent reports both failures, and start `st-debug` from the main session too.
+   For a `[P]` task in a worktree, run it in the main session from that worktree's root after the subagent reports both failures, and start `st-debug` from the main session too, with the worktree path; it diagnoses, fixes and verifies in that worktree.
    Then start the `st-debug` agent (`stratum:st-debug`) with the task, the test, both failure outputs, and the advisor's answer.
 5. **Commit.** The `st-git` agent (`stratum:st-git`) commits the exact paths of the task, with tasks.md, and `<feature dir>/advisor.md` if it changed.
 
@@ -58,7 +58,7 @@ Never delete a remote branch: the user does that. If the project is another repo
 When all tasks are ticked, run the advisor on the feature's full diff (see Advisor):
 `bash <plugin root>/scripts/st-advisor.sh diff <feature dir> <base>`: hidden regressions, broken rules from the constitution.
 The base: on a branch, `git merge-base main HEAD`. On `main`, `git rev-parse "$(git log --diff-filter=A --format=%H -- <feature dir>/spec.md | tail -1)^"`.
-Before you say the build is done, run `bash <plugin root>/scripts/st-advisor.sh check diff <feature dir> <base>`, then have `st-git` commit `<feature dir>/advisor.md`.
+Before you say the build is done, run `bash <plugin root>/scripts/st-advisor.sh check diff <feature dir> <base>`, then have `st-git` commit `<feature dir>/advisor.md` if it changed.
 Then say so, list the small decisions and findings (fixed and dropped), and name the
 next phase: `/stratum:st-close`.
 

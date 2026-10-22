@@ -26,7 +26,7 @@ to `/stratum:st-full`.
    against the source (see `/stratum:st`). Send the real, small ones to `stratum:st-build`; big
    ones go to the user.
 6. Before the commit, run `bash <plugin root>/scripts/st-advisor.sh check diff <feature dir> <base from step 1>`. If review fixes made it stale, run the diff point once more if a round is left; else tell the user.
-   The `stratum:st-git` agent commits exact paths, with `<feature dir>/advisor.md`.
+   The `stratum:st-git` agent commits exact paths, with `<feature dir>/advisor.md` if it changed.
 7. Start the `stratum:st-close` agent with the base from step 1, for the drift fix and the shortcut
    list (no gap report, no lessons unless something went wrong). Do this only after the step 6
    commit landed: the shortcut list sees only committed work. If the commit did not land, stop

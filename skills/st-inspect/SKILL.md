@@ -35,7 +35,7 @@ Plugin root (`<plugin root>`) is two levels up from this skill's base directory.
 
 ## Gate: user OKs the build
 
-Run `bash <plugin root>/scripts/st-advisor.sh check plan <feature dir>` and show its line; `advisor approval is stale` counts as no approval. Have `st-git` commit `<feature dir>/advisor.md`.
+Run `bash <plugin root>/scripts/st-advisor.sh check plan <feature dir>` and show its line; `advisor approval is stale` counts as no approval. Have `st-git` commit `<feature dir>/advisor.md` if it changed.
 Show in short form: coverage, remaining findings by severity, small fixes made,
 findings dropped, and the verdict.
 Ask: "OK to build?" Start `/stratum:st-build` only on yes.
