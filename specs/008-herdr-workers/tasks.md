@@ -130,7 +130,7 @@ and conflict steps (FR-009) are built in T004 and tested by T002.
 
 - [X] T014 [US5] Add `headless` to `scripts/st-worker.sh` per contracts/script.md section 4: `HEAD` before and after, the headless brief in a `mktemp` file removed by `trap`, `timeout 540 claude -p ...` with the exact flags, `--allowedTools ...` on one unique line (NC6), the `headless` and `result:` output lines, and the exit rules. `ponytail:` markers on 540 s and 30 turns. Done when `bash tests/test_st_worker.sh` is green. Lessons L10.
 
-- [ ] T015 [US5] Live headless run: quickstart section 5. Record in `specs/008-herdr-workers/research.md` R12: the `headless` line, `num_turns`, how `--max-turns` counted the goal turns, the same `HEAD` before and after, the untracked file, no process left by `pgrep -af -- '-n worker-t90[4]'` (SC-006; lessons L14), and whether `dontAsk` denied a Bash call that was not the test command. If `/goal` does not start under `-p`, the fallback is a plain prompt with no `/goal`; send that finding to the orchestrator before changing `scripts/st-worker.sh`.
+- [X] T015 [US5] Live headless run: quickstart section 5. Record in `specs/008-herdr-workers/research.md` R12: the `headless` line, `num_turns`, how `--max-turns` counted the goal turns, the same `HEAD` before and after, the untracked file, no process left by `pgrep -af -- '-n worker-t90[4]'` (SC-006; lessons L14), and whether `dontAsk` denied a Bash call that was not the test command. If `/goal` does not start under `-p`, the fallback is a plain prompt with no `/goal`; send that finding to the orchestrator before changing `scripts/st-worker.sh`.
 
 **Checkpoint**: all five stories work on this machine.
 

@@ -319,6 +319,30 @@ branch `18-codex-advisor`.
   fallback is a plain prompt with no `/goal`, and the finding goes to the orchestrator (T015).
 - Not verified live: how `--max-turns` counts `/goal` turns, and the `subtype` when the turn
   limit ends the run. Quickstart section 5.
+- Live T015 (2026-10-23, quickstart section 5, from `/home/hyuse/Desktop/stratum-003-demo` on
+  `worker-demo-base`, Claude Code 2.1.302): `headless worker-t904 success 9 0.73994277`, exit 0,
+  `real 0m48.174s`. `HEAD` `e92e4a8456775274740952e175f9a7f26d5f3beb` before and after.
+  `git status --porcelain` gives only `?? demo/h.txt`, and `grep -qx h demo/h.txt` exits 0.
+  `pgrep -af -- '-n worker-t90[4]'` prints nothing, exit 1 (SC-006 holds). Result text, first
+  lines: `Done. Both parts of the goal are now shown by command output.` /
+  ``- `grep -qx h demo/h.txt && echo PASS` printed `PASS`, so the test exits 0.``
+- Live T015: `/goal` starts under `-p`. The session transcript has `Goal set: ...` and a
+  session-scoped Stop hook. The goal ran 2 goal turns: turn 1 ended `met: false` ("insufficient
+  evidence in transcript": the quiet `grep -qx` printed nothing), turn 2 ended `met: true`.
+- Live T015: `num_turns` 9 is the count of model requests over both goal turns (5 in goal turn 1,
+  4 in goal turn 2), not the count of goal turns. So `--max-turns 30` caps model requests summed
+  over all goal turns in the one call. The result text does not give a goal-turn count. The
+  `subtype` when the limit ends the run is still not verified (the limit was not reached).
+- Live T015: `dontAsk` denied one Bash call that was not the test command:
+  `grep -qx h demo/h.txt; echo "exit=$?"; git status --porcelain --untracked-files=all`. The
+  result text does not mention the denial; only the transcript shows it, and the script discards
+  the JSON. Three other Bash calls that are not the test command ran with no denial:
+  `git status --porcelain --untracked-files=all`, `grep -qx h demo/h.txt && echo PASS`,
+  `git log --oneline -1`. So read-only commands run under `dontAsk`, and "the only shell command
+  is the test command" above is not exact. No commit ran, and the `HEAD` check held.
+- Live T015: the headless worker loads the user's hooks and `~/.claude/CLAUDE.md` (the result
+  text starts with `[Full lane | Inspect]` from a UserPromptSubmit hook). `--strict-mcp-config`
+  limits MCP servers only.
 
 ## R13. Brief and advisor line (FR-002, D21)
 
