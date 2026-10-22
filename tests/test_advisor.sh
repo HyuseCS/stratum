@@ -282,5 +282,60 @@ check "continued records the user's choice" '[ $crc = 0 ] && [ "$cout" = "BLOCKE
 run continued diff specs/002-empty
 check "continued without a record" '[ $rc = 2 ] && [ "$out" = "no record: diff" ]'
 
+mf="$proj/.stratum/advisor.json"
+answer '{"verdict":"APPROVED","summary":"fine","findings":[]}'
+
+rm -f "$mf" "$tmp/argv"
+n0=$(nrec)
+run plan specs/001-demo
+printf '{"mode": "codex"}' > "$mf"
+check "no mode file: no advisor, exit 0, no codex" '[ $rc = 0 ] && [ "$out" = "no advisor: mode not set. Write .stratum/advisor.json with \"mode\": \"codex\", \"both\" or \"off\"." ] && [ ! -e "$tmp/argv" ] && [ "$(nrec)" = "$n0" ]'
+
+printf '{"mode": "codex"}' > "$mf"
+rm -f "$tmp/argv"
+run plan specs/001-demo
+check "mode codex" '[ -f "$tmp/argv" ] && ! grep -qxF "mode both: also consult /advisor if one is set" <<<"$out"'
+
+printf '{"mode": "both"}' > "$mf"
+rm -f "$tmp/argv"
+run plan specs/001-demo
+check "mode both" '[ "$(sed -n 1p <<<"$out")" = "mode both: also consult /advisor if one is set" ] && [[ "$(sed -n 2p <<<"$out")" == "APPROVED sha256 "* ]] && [ -f "$tmp/argv" ]'
+
+printf '{"mode": "off"}' > "$mf"
+rm -f "$tmp/argv"
+n0=$(nrec)
+run plan specs/001-demo
+check "mode off" '[ $rc = 0 ] && [ "$out" = "no advisor: mode off" ] && [ ! -e "$tmp/argv" ] && [ "$(nrec)" = "$n0" ]'
+
+rm -f "$tmp/argv"
+n0=$(nrec)
+out=$(cd "$proj" && PATH="$tmp/sys" bash "$root/scripts/st-advisor.sh" plan specs/001-demo); rc=$?
+check "mode off without codex" '[ $rc = 0 ] && [ "$out" = "no advisor: mode off" ] && [ ! -e "$tmp/argv" ] && [ "$(nrec)" = "$n0" ]'
+
+badjson() {
+  local ok=1 c
+  for c in '{' '{"mode": "x"}' '[]' '{"mode": 1}' '{"mode": "codex", "modle": "x"}' '{"model": "gpt-test-1"}' '{"mode": "codex", "model": "--dangerously-bypass-approvals-and-sandbox"}' '{"mode": "codex", "model": "a b"}' '{"mode": "codex", "model": "x\n"}' '{"mode": "codex", "effort": "high\"x"}' '{"mode": "codex", "effort": "high\n"}' '{"mode": "codex", "effort": 3}'; do
+    printf '%s' "$c" > "$mf"
+    rm -f "$tmp/argv"
+    n0=$(nrec)
+    run plan specs/001-demo
+    [ $rc = 1 ] && [ "$(head -n1 <<<"$out")" = "BLOCKED: bad advisor.json" ] && [ ! -e "$tmp/argv" ] && [ "$(nrec)" = $((n0 + 1)) ] && last_header plan | grep -q "| BLOCKED$" || { ok=0; echo "  bad case: $c rc=$rc out=$(head -n1 <<<"$out")" >&2; }
+  done
+  [ $ok = 1 ]
+}
+check "bad advisor.json: BLOCKED, no codex, 12 cases" 'badjson'
+
+printf '{"mode": "codex", "model": "gpt-test-1", "effort": "high"}' > "$mf"
+rm -f "$tmp/argv"
+run plan specs/001-demo
+check "FR-014 model and effort from the file" 'grep -x -A1 -- "-m" "$tmp/argv" | grep -qx gpt-test-1 && grep -x -A1 -- "-c" "$tmp/argv" | grep -qxF "model_reasoning_effort=\"high\"" && grep -x -A1 -- "-s" "$tmp/argv" | grep -qx read-only'
+
+printf '{"mode": "codex", "model": "gpt-test-1"}' > "$mf"
+rm -f "$tmp/argv"
+run plan specs/001-demo
+check "FR-014 model only" '[ -f "$tmp/argv" ] && grep -x -A1 -- "-m" "$tmp/argv" | grep -qx gpt-test-1 && ! grep -qx -- "-c" "$tmp/argv"'
+
+printf '{"mode": "codex"}' > "$mf"
+
 check "no repo writes" '[ "$(git -C "$root" status --porcelain)" = "$repo_before" ]'
 exit $fail
