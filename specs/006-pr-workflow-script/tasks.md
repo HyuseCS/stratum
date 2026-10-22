@@ -129,7 +129,7 @@ SC-001, SC-002, SC-003 and SC-005 also have manual rows (T004, T005).
 
 ## Phase 7: Convergence
 
-- [ ] T008 [US3] Extend the `prompt rules` case in `tests/test_pr_workflow.mjs` with the five review-added strings of `workflows/pr.js`, and change nothing else (test-only, decision D7, FR-012). The strings already exist in the script, so the case stays green. The test's scratchpad is `/s` and the case runs with `featureDir` `""`, so check each string against the prompts in `calls`, naming the label and the missing text in the fail message:
+- [x] T008 [US3] Extend the `prompt rules` case in `tests/test_pr_workflow.mjs` with the five review-added strings of `workflows/pr.js`, and change nothing else (test-only, decision D7, FR-012). The strings already exist in the script, so the case stays green. The test's scratchpad is `/s` and the case runs with `featureDir` `""`, so check each string against the prompts in `calls`, naming the label and the missing text in the fail message:
   - `Do not stage, commit, push or run gh.` in the `draft` prompt and in every `fix:` prompt.
   - `Read files only under the project root, plus /s/pr-body.md` in every prompt.
   - ``under `.github/` or under `docs/` `` in the `draft` prompt.

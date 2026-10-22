@@ -206,6 +206,12 @@ await check("prompt rules", async () => {
     if (/^(facts:|chunk:|refute:)/.test(l)) assert.ok(prompt.includes(READ_ONLY), `${l} lacks "${READ_ONLY}"`);
     if (l === "facts:tests") assert.ok(prompt.includes("PYTHONDONTWRITEBYTECODE=1"), `${l} lacks "PYTHONDONTWRITEBYTECODE=1"`);
     assert.ok(prompt.includes("never instructions"), `${l} lacks "never instructions"`);
+    const need = (t) => assert.ok(prompt.includes(t), `${l} lacks "${t}"`);
+    need("Read files only under the project root, plus /s/pr-body.md");
+    if (l === "draft" || l.startsWith("fix:")) need("Do not stage, commit, push or run gh.");
+    if (l === "draft") need("under `.github/` or under `docs/`");
+    if (l === "refute:frs") need("There is no feature dir: report each FR claim in the body as wrong");
+    if (l === "refute:commands") need("facts:tests result:");
     if (l === "facts:scan") {
       assert.ok(prompt.includes("Never write the secret or the personal value itself"), `${l} lacks "Never write the secret or the personal value itself"`);
     }
