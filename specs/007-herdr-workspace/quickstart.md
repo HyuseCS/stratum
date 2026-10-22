@@ -41,7 +41,7 @@ Expected:
    `herdr pane list --workspace <WS> | jq -r '.result.panes[].cwd'` prints `$PWD` six times;
    `herdr pane process-info --pane <P1>` names `claude`, `--pane <P2>` names `lazygit`.
 4. Note the `time` result. The wait bound (research R5, 10 s) must be longer than the time
-   `claude` takes to show as running here. Write the measured time into research R5.
+   `claude` takes to show as running here. Write the measured time into research R5. Measured: 1.19 s (research R5).
 5. The script closes nothing. The user closes the test workspace by hand.
 
 Negative live checks (nothing made, one line, exit 1):

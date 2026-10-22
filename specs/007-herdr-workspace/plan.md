@@ -96,6 +96,8 @@ until a foreground process `name` is `claude` (for `claude` and `claude2`) or `l
   by the stub test (T005). The live check is T007, run only when the laptop answers. Also not
   verified until then: `pane process-info` over `--machine`, the `claude2` alias on the laptop,
   and the laptop's login shell reading `printf %q` output.
+  T007 was not run (2026-10-23, port 22 timed out). Still needs the live check: D8 from a
+  non-herdr terminal, `pane process-info` over `--machine`, the `claude2` alias, the laptop login shell.
 
 ## ponytail notes
 

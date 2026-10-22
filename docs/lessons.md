@@ -172,3 +172,25 @@
   earlier approach fails, and none did. Only `research.md` recorded the skip.
 - Rule: When you tick a conditional task whose condition is false, write `Not run, <earlier result>
   passed.` in the task text.
+
+## 2026-10-23: 007-herdr-workspace
+
+### L18. A negative control run after earlier cases changed shared state cannot fail
+
+- What happened: The NC1 and NC3 controls (broken copies of the script) ran after cases that had already changed the stub's shared state, so a red result could not be told from a changed baseline. Fixed in 7330d29.
+- Rule: Right before each broken copy runs, the test asserts the real script is green on the same input and state, and the control counts only when that baseline is green and the broken copy is red.
+
+### L19. Stub ids with a guessable pattern let a script build ids instead of reading them
+
+- What happened: The stub `herdr` gave ids like `w1:p1`, so a script that built ids from a counter would pass. Fixed in 022defd: stub ids have a random part, and expectations come from the stub's log (the R2 case runs with `stubid0001`).
+- Rule: A stub gives every id a random part per run, and the test reads the expected ids from the stub's log, so a script that builds an id fails.
+
+### L20. A report row written before the call it describes lies on a stop
+
+- What happened: US1 review F10: the report listed a program on a pane before `pane run` had succeeded, so a stop at the first `pane run` still showed `claude`. Fixed in 022defd (`prog` set after `pane run`; case L20).
+- Rule: A report row shows a program or state only after the call that sets it succeeded, and a test that stops the run at that call asserts the row still says `shell` and `-`.
+
+### L21. `herdr pane wait-output` matches the shell's echo of the typed command
+
+- What happened: D7 used `pane wait-output` to see `claude` and `lazygit` start. The planner (F2) found it matches the echo of the typed command, so it cannot fail. D20 replaced it with `pane process-info` (71cc766, 0054744).
+- Rule: "Program started" is decided from `herdr pane process-info` foreground process names, and a test where `process-info` fails must report `not seen` (case L16).

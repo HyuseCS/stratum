@@ -32,9 +32,10 @@ calls allowed before section 4 step 1 are `machine list --json` and `workspace l
 | 3 | agent | `Agent must be claude or claude2.` |
 | 4a | local: `HERDR_ENV` is `1` | `Not inside a herdr pane. Run it from a herdr pane, or name a --machine.` |
 | 4b | remote: folder starts with `/` or `~` | `A remote folder must start with / or ~.` |
+| 4c0 | remote: `herdr machine list --json` exits 0 and gives JSON | `herdr machine list failed.` (when herdr gives no stderr line; else its first stderr line) / `herdr machine list gave no machine list.` (jq cannot read it) |
 | 4c | remote: machine in `herdr machine list --json` (`.label == m or .id == m`) | `Unknown machine: <m>. Saved: <labels, comma separated>.` |
 | 4d | remote: `herdr --machine <m> workspace list` exits 0 | `Machine <m> does not answer: <first stderr line from herdr>` |
-| 5 | folder exists on the target (probe, section 3) | `Folder not found on <local\|m>: <folder>` / `ssh to <target> failed: <first stderr line>` (ssh exit 255) |
+| 5 | folder exists on the target (probe, section 3); also when the probe's first output line is not an absolute path (`[[ $D == /* ]]`) | `Folder not found on <local\|m>: <folder>` / `ssh to <target> failed: <first stderr line>` (ssh exit 255) |
 
 ## 3. Target probe (FR-006, FR-007, D3, D5)
 
@@ -116,6 +117,27 @@ pane	<P5>	<T3>	shell	-	<cwd>
 pane	<P6>	<T3>	shell	-	<cwd>
 ```
 
+- Row rule: a `pane` row is added once the pane exists, with program `shell` and state `-`. It shows
+  its program (`<agent>` or `lazygit`) and `not seen` only after `pane run` for it succeeded. A stop
+  before that `pane run` leaves the row as `shell	-`.
 - `<cwd>` is the pane's `cwd` from step 12. If step 12 fails or has no entry for the pane: `?`.
 - On a stop, the report lists only the ids made so far, after the `stopped:` line.
 - `basic`: the `workspace`, `folder`, `tab T1 Main` lines and two `shell` pane lines.
+
+## 6. Test cases (`tests/test_herdr_workspace.sh`)
+
+| Case | What it asserts |
+|------|-----------------|
+| R8 | stub ssh prints a non-absolute first line: one line `Folder not found on laptop: ~/proj x`, no mutating call |
+| R9 | remote with an absolute folder: ssh command has the folder quoted, no `~` rewrite |
+| R10 | `machine list --json` fails: one line `herdr machine list failed.`, no ssh |
+| R11 | `machine list --json` prints junk: one line `herdr machine list gave no machine list.`, no ssh |
+| L14 | `<cwd>` comes from the read back (`pane list`), not from the folder |
+| L15 | `pane list` fails: `?` in every pane `<cwd>`, exit 0 |
+| L16 | `pane process-info` fails: both programs `not seen`, `workspace focus` still once, exit 0 |
+| L17 | clean git repo with no upstream: `<branch>, clean, no upstream` |
+| L18 | folder `<proj>/../proj dir`: `folder` line and every `--cwd` show the normalized path |
+| L19 | folder `~/proj dir` locally: `--cwd` is the absolute path |
+| L20 | stop at the first `pane run`: report has `tab Main`, P1 and P2 as `shell	-`, no `lazygit` run |
+| B1 | `basic` locally: one split, no `tab create`, no `pane run`, no `process-info`, two `shell` rows |
+| B2 | `basic` over `--machine`: same as B1, every call through `--machine` |

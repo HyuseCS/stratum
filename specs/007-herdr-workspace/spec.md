@@ -4,9 +4,9 @@
 
 **Created**: 2026-10-23
 
-**Status**: Draft
+**Status**: Built
 
-**Input**: User description: "GitHub issue #32 on HyuseCS/stratum: a skill that opens a project folder as a herdr workspace with the user's template layout, on this machine or on a saved remote machine. One request, no keybinding, no fzf popup." The issue body is the source. Decisions D1 to D9 are in `decisions.md`.
+**Input**: User description: "GitHub issue #32 on HyuseCS/stratum: a skill that opens a project folder as a herdr workspace with the user's template layout, on this machine or on a saved remote machine. One request, no keybinding, no fzf popup." The issue body is the source. Decisions D1 to D10 and D20 are in `decisions.md`.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -171,5 +171,10 @@ program running, and the report says so.
 - The user's `~/.config/herdr/templates.sh` stays as it is. Its `full` and `basic` layouts as of
   2026-10-23 are the source for the two templates.
 - A started `claude` loads the user's normal plugins and settings; the skill does not change them.
+- The script runs no `git fetch`, so ahead and behind are as of the last fetch (research R5a).
+- After a stop (a herdr call failed), the workspace is not focused (research R5a).
+- A pane row in the report appears once the pane exists, as `shell`. It shows its program
+  (`claude`, `claude2`, `lazygit`) only after `pane run` for it succeeded
+  (`scripts/st-herdr-workspace.sh`, `prog` array and the stop path).
 - Opening a workspace changes only herdr state and starts `claude` and `lazygit`. No repo file
   changes.
