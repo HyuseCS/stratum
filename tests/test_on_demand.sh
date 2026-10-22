@@ -145,6 +145,8 @@ phrases <<'EOF'
 #16 brief mode	agents/st-build.md	Needs the Fast lane
 #16 st routes brief	skills/st/SKILL.md	the `stratum:st-build` agent
 #16 st routes brief	skills/st/SKILL.md	never `general-purpose`
+#37 quick handoff	skills/st-quick/SKILL.md	commits the exact files it touched
+#37 quick handoff	skills/st-quick/SKILL.md	Needs the Fast lane
 EOF
 check "#16 general-purpose only as never" 'grep -qF general-purpose "$root/skills/st/SKILL.md" && ! grep -F general-purpose "$root/skills/st/SKILL.md" | grep -qvF never'
 
