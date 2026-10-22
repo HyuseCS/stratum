@@ -299,7 +299,6 @@ run plan specs/001-demo
 printf '{"mode": "codex"}' > "$mf"
 check "no mode file: no advisor, exit 0, no codex" '[ $rc = 0 ] && [ "$out" = "no advisor: mode not set. Write .stratum/advisor.json with \"mode\": \"codex\", \"both\" or \"off\"." ] && [ ! -e "$tmp/argv" ] && [ "$(nrec)" = "$n0" ]'
 
-printf '{"mode": "codex"}' > "$mf"
 rm -f "$tmp/argv"
 run plan specs/001-demo
 check "mode codex" '[ -f "$tmp/argv" ] && ! grep -qxF "mode both: also consult /advisor if one is set" <<<"$out"'
@@ -336,14 +335,18 @@ check "bad advisor.json: BLOCKED, no codex, 12 cases" 'badjson'
 printf '{"mode": "codex", "model": "gpt-test-1", "effort": "high"}' > "$mf"
 rm -f "$tmp/argv"
 run plan specs/001-demo
-check "FR-014 model and effort from the file" 'grep -x -A1 -- "-m" "$tmp/argv" | grep -qx gpt-test-1 && grep -x -A1 -- "-c" "$tmp/argv" | grep -qxF "model_reasoning_effort=\"high\"" && grep -x -A1 -- "-s" "$tmp/argv" | grep -qx read-only'
+check "FR-014 model and effort from the file" '[ "$(grep -cx -- -c "$tmp/argv")" = 1 ] && [ "$(sed -n 2,7p "$tmp/argv")" = "$(printf "%s\n" -s read-only -m gpt-test-1 -c "model_reasoning_effort=\"high\"")" ] && grep -x -A1 -- "-m" "$tmp/argv" | grep -qx gpt-test-1 && grep -x -A1 -- "-c" "$tmp/argv" | grep -qxF "model_reasoning_effort=\"high\"" && grep -x -A1 -- "-s" "$tmp/argv" | grep -qx read-only'
 
 printf '{"mode": "codex", "model": "gpt-test-1"}' > "$mf"
 rm -f "$tmp/argv"
 run plan specs/001-demo
 check "FR-014 model only" '[ -f "$tmp/argv" ] && grep -x -A1 -- "-m" "$tmp/argv" | grep -qx gpt-test-1 && ! grep -qx -- "-c" "$tmp/argv"'
 
-printf '{"mode": "codex"}' > "$mf"
+printf 'print("codex\\n--evil")\nraise SystemExit\n' > "$proj/json.py"
+rm -f "$tmp/argv"
+run plan specs/001-demo
+rm -f "$proj/json.py"
+check "planted json.py is ignored" 'grep -x -A1 -- "-m" "$tmp/argv" | grep -qx gpt-test-1 && ! grep -qx -- "--evil" "$tmp/argv" && [[ "$(head -n1 <<<"$out")" == "APPROVED sha256 "* ]]'
 
 check "no repo writes" '[ "$(git -C "$root" status --porcelain)" = "$repo_before" ]'
 exit $fail

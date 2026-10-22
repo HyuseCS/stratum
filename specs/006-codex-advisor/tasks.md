@@ -164,7 +164,7 @@ and `effort` that reach Codex as `-m` and `-c model_reasoning_effort="..."`. A b
 
 ### Tests for User Story 4
 
-- [ ] T007 [US4] Add the US4 checks to `tests/test_advisor.sh` (FR-010, FR-014; lessons L1, L5). Write `$proj/.stratum/advisor.json` per case, remove `$tmp/argv` before each run.
+- [X] T007 [US4] Add the US4 checks to `tests/test_advisor.sh` (FR-010, FR-014; lessons L1, L5). Write `$proj/.stratum/advisor.json` per case, remove `$tmp/argv` before each run.
   - `no mode file: no advisor, exit 0, no codex`: remove `.stratum/advisor.json`. Stdout is exactly `no advisor: mode not set. Write .stratum/advisor.json with "mode": "codex", "both" or "off".`, exit 0, `$tmp/argv` absent, `## ` count unchanged (D11). Restore the file after.
   - `mode codex`: `{"mode": "codex"}`. `$tmp/argv` exists, no line `mode both: also consult /advisor if one is set`.
   - `mode both`: `{"mode": "both"}`. Line 1 is `mode both: also consult /advisor if one is set`, line 2 starts `APPROVED sha256 `, `$tmp/argv` exists.
