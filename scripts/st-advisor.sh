@@ -59,8 +59,8 @@ case $point in
   diff)
     git ls-files -z --others --exclude-standard -- . ":(exclude)$f/advisor.md" > "$tmp/untracked" &&
     (
-      git diff "$sha" -- . ":(exclude)$f/advisor.md" || exit 1
-      while IFS= read -r -d '' p; do git diff --no-index -- /dev/null "$p" || [ $? -eq 1 ] || exit 1; done < "$tmp/untracked"
+      git diff --no-ext-diff --no-color --no-renames --default-prefix "$sha" -- . ":(exclude)$f/advisor.md" || exit 1
+      while IFS= read -r -d '' p; do [[ $p == */ ]] && continue; git diff --no-ext-diff --no-color --no-renames --default-prefix --no-index -- /dev/null "$p" || [ $? -eq 1 ] || exit 1; done < "$tmp/untracked"
     ) > "$tmp/diff" || { echo "cannot hash inputs"; exit 2; }
     hash=$(sha256sum < "$tmp/diff") || { echo "cannot hash inputs"; exit 2; } ;;
 esac
@@ -109,6 +109,7 @@ printf '%s\n' '{"type":"object","additionalProperties":false,"required":["verdic
         'Untracked files:'
       list=
       while IFS= read -r -d '' p; do
+        [[ $p == */ ]] && continue
         case ${p##*/} in .env*|*.pem|*.key|*.p12|*.pfx) ;; *) list+="$p"$'\n' ;; esac
       done < "$tmp/untracked"
       [ -n "$list" ] || list=$'none\n'

@@ -272,6 +272,23 @@ echo 'x = 3' >> "$proj/a.py"
 run check diff specs/001-demo "$first"
 check "tracked edit makes diff stale" 'stale'
 
+printf '[diff]\n\texternal = /bin/true\n[color]\n\tui = always\n' > "$tmp/gitconfig"
+GIT_CONFIG_GLOBAL="$tmp/gitconfig" run diff specs/001-demo "$first"
+echo 'x = 4' >> "$proj/a.py"
+GIT_CONFIG_GLOBAL="$tmp/gitconfig" run check diff specs/001-demo "$first"
+check "diff hash ignores the user's diff.external and color" 'stale'
+GIT_CONFIG_GLOBAL="$tmp/gitconfig" run diff specs/001-demo "$first"
+echo newbytes > "$proj/ext_new.txt"
+GIT_CONFIG_GLOBAL="$tmp/gitconfig" run check diff specs/001-demo "$first"
+rm -f "$proj/ext_new.txt"
+check "untracked file under diff.external makes diff stale" 'stale'
+
+git init -q "$proj/nested"
+out=$(adv diff specs/001-demo "$first" 2>"$tmp/nested_err"); rc=$?
+lst=$(awk '/^Untracked files:/{f=1;next} f' "$tmp/prompt" 2>/dev/null)
+rm -rf "$proj/nested"
+check "untracked nested repo: diff run exit 0, not listed, no access error" '[ $rc = 0 ] && ! grep -qxF "nested/" <<<"$lst" && ! grep -qF "Could not access" "$tmp/nested_err"'
+
 printf 'TOKEN=oldsecret\n' > "$proj/.env"
 mkdir -p "$proj/sub"
 printf 'keyval1\n' > "$proj/sub/k.key"

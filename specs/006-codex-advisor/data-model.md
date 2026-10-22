@@ -92,7 +92,10 @@ No database. Two files and the answer Codex writes. Exact formats are in
     order) `git diff --no-index -- /dev/null <path>`. `<base>` is the full SHA. Every untracked
     path is hashed, including the secret-looking ones that the prompt's `Untracked files:` list
     leaves out (basename `.env*`, `*.pem`, `*.key`, `*.p12`, `*.pfx`, D12). So a new `.env`
-    makes a diff approval stale without being named to Codex.
+    makes a diff approval stale without being named to Codex. Both diffs run with
+    `--no-ext-diff --no-color --no-renames --default-prefix`, so the user's git config cannot
+    change the digest. An untracked entry ending in `/` (a nested repository or worktree) is
+    skipped in the hash and in the `Untracked files:` list.
 - Hash failure (D20, D21): every input must be a readable regular file. `git ls-files`, `git diff`
   and `git diff --no-index` (exit 1 allowed, by design) must succeed, and the digest must be 64
   lowercase hex characters. Else, or when `cat` or `sha256sum` fails, the script prints

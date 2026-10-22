@@ -44,7 +44,10 @@ st-advisor.sh continued <plan|test|diff> <feature dir>
    two failure files joined in order. `diff` hashes
    `git diff <sha> -- . ':(exclude)<f>/advisor.md'` followed by
    `git diff --no-index -- /dev/null <path>` for each untracked path (same exclusion, D9). Every
-   untracked path is in the hash, secret-looking ones too (D12).
+   untracked path is in the hash, secret-looking ones too (D12). Both hash diffs run with
+   `--no-ext-diff --no-color --no-renames --default-prefix`, so the user's git config cannot change
+   the digest. An untracked entry ending in `/` (a nested repository or worktree) is skipped in the
+   hash and in the prompt's untracked list.
    A hash that cannot be built stops the run (D20, D21): `git ls-files`, `git diff` and each
    `git diff --no-index` (which may exit 1, by design) must succeed, and the digest must be 64
    lowercase hex characters. Else print `cannot hash inputs`, exit 2, no record, no Codex call.
@@ -153,7 +156,7 @@ the hash (section 2, D12). If every untracked path is left out, the list is `non
   row except the no-file row and `off`.
 - Reasons, exactly: `timed out`, `<codex error line>` (the last stderr line that starts `ERROR:`,
   else `codex exited <rc>`, D16, research R2), `empty answer`,
-  `malformed answer`, `no verdict`, `REVISE with no findings`, `APPROVED with findings`, `bad advisor.json`.
+  `malformed answer`, `no verdict`, `REVISE with no findings`, `APPROVED with findings`, `bad advisor.json`, `timeout not found`.
 - Finding line: `- [<severity>] <location>: <claim> Evidence: <evidence>`.
 - Every Codex text (summary, each finding field, the error line) has each `\r` and `\n` replaced
   by a space before it is printed or recorded.
