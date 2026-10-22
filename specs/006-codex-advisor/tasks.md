@@ -49,7 +49,7 @@ prompt rules).
 
 ### Tests for User Story 1
 
-- [ ] T001 [US1] Create `tests/test_advisor.sh` with the harness and the US1 checks, and add `bash tests/test_advisor.sh` to the README tests list (FR-001 script part, FR-003, FR-007, FR-009, FR-012, FR-013, FR-014, FR-017; lessons L1, L8).
+- [X] T001 [US1] Create `tests/test_advisor.sh` with the harness and the US1 checks, and add `bash tests/test_advisor.sh` to the README tests list (FR-001 script part, FR-003, FR-007, FR-009, FR-012, FR-013, FR-014, FR-017; lessons L1, L8).
   - Frame from `tests/test_verify.sh`: `set -u`, `root="${ST_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"` (as `tests/test_on_demand.sh:3`), `tmp=$(mktemp -d)`, `trap 'rm -rf "$tmp"' EXIT`, `fail=0`, the same `check` helper, `exit $fail`.
   - Scratch project `$tmp/proj`: `git init -q`, commit (with `-c user.name=t -c user.email=t@t`) `specs/001-demo/spec.md`, `specs/001-demo/plan.md` (holds the token `PLANBODY7f3a`), `specs/001-demo/tasks.md`, `a.py`, and `.stratum/advisor.json` as `{"mode": "codex"}` (no file means off since D11, so every Codex case needs it). Run the script as `(cd "$proj" && bash "$root/scripts/st-advisor.sh" ...)`; capture stdout and exit code.
   - `$tmp/bin/codex` (fake, `chmod +x`): writes each argument on its own line to `$tmp/argv`, stdin to `$tmp/prompt`, copies the `--output-schema` file to `$tmp/schema.json`, prints `$FAKE_ERR` to stderr if set, copies `$tmp/answer` to the `-o` path if `$tmp/answer` exists, exits `${FAKE_RC:-0}`.
@@ -76,7 +76,7 @@ prompt rules).
 
 ### Implementation for User Story 1
 
-- [ ] T002 [US1] Create `scripts/st-advisor.sh` with the `plan`, `test` and `diff` forms for a valid answer (FR-001, FR-003, FR-007, FR-009, FR-012, FR-013). No `-m` or `-c` yet (T008 adds them from the file). Security: plan.md S1 (OpenAI), S2 (read-only), S3 (untrusted answer and arguments).
+- [X] T002 [US1] Create `scripts/st-advisor.sh` with the `plan`, `test` and `diff` forms for a valid answer (FR-001, FR-003, FR-007, FR-009, FR-012, FR-013). No `-m` or `-c` yet (T008 adds them from the file). Security: plan.md S1 (OpenAI), S2 (read-only), S3 (untrusted answer and arguments).
   - Frame from `scripts/st-verify.sh`: `#!/usr/bin/env bash`, one-line results. Inline `python3 - <<'PY'` as in `hooks/st-handoff-facts.sh:8`, reading files with `open(p, "rb")` and `json.loads` (lessons L3).
   - Arguments, hash input, Codex call, schema, prompt, output and record: exactly contracts/advisor.md sections 1 to 6 and data-model.md. Codex call: `timeout -k 10 540 codex exec -s read-only --ephemeral --output-schema <tmp>/schema.json -o <tmp>/answer.json -`, stdin from the prompt file, stdout and stderr to temp files, temp dir removed on exit.
   - Diff hash input: `git diff <sha> -- . ':(exclude)<f>/advisor.md'`, then `git diff --no-index -- /dev/null <path>` for each path of `git ls-files -z --others --exclude-standard -- . ':(exclude)<f>/advisor.md'` (research R6). Every Codex text has `\r` and `\n` replaced by a space before print or record.
