@@ -101,7 +101,7 @@ Heading `# /stratum:st-inspect`. Same frame as `skills/st-check/SKILL.md` (orche
 
 - Start step 2: the FR-005 order line. Start step 3: set `phase` to `inspect`.
 - Steps: note `git status --porcelain` and `git diff` of plan.md, one agent start (no second agent, no passing of findings), compare both after it returns (S1), then findings (S2, S3), the
-  rerun (S4), the advisor (S5). Gate (S6): "the verdict" in place of "validate's verdict".
+  rerun (S4), the advisor (S5), the task rerun (S7). Gate (S6): "the verdict" in place of "validate's verdict".
 
 ### Phrase table: skill
 
@@ -113,6 +113,7 @@ Heading `# /stratum:st-inspect`. Same frame as `skills/st-check/SKILL.md` (orche
 | S3 | `` Fixes to spec, plan or tasks go to the `st-plan` subagent `` · `` have `st-git` commit them `` |
 | S4 | `` If any CRITICAL finding was fixed, run `st-inspect` once more `` |
 | S5 | `a simpler or better approach` · `tasks to cut or merge` · `missed auth invariants` · `big ones go to the user before the gate` |
+| S7 | `a fix removed or renamed a task` |
 | S6 | `OK to build?` · `findings dropped` |
 
 One agent (FR-005, SC-001): exactly 1 line of the skill holds `` (`stratum: ``.

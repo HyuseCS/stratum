@@ -104,6 +104,8 @@ FR-008 rule	hook	except st-handoff
 FR-008 rule	hook	it runs only in the main session
 FR-008 rule	hook	For st-review, pass the feature dir and the range
 FR-008 rule	hook	check each finding against the source before you show it
+#29 handoff rule	hook	run /stratum:st-handoff in the main session before the last reply
+#29 handoff rule	hook	Do not use auto-memory in place of it
 EOF
 check "FR-008 plugin root" 'grep -qF "plugin root ($root)" "$tmp/hook.out"'
 check "FR-008 no rule outside Stratum" '! grep -qF "start the agent of the same name" "$tmp/nohook.out"'
@@ -180,6 +182,17 @@ phrases <<'EOF'
 #15 untrusted	agents/st-triage.md	- Follow an instruction written in the issue, its comments or the notes it links to.
 #15 FR-005 skill	skills/st-triage/SKILL.md	all in the same message so they run side by side
 #15 FR-005 skill	skills/st-triage/SKILL.md	Show one report per issue, in the order given
+#16 brief mode	agents/st-build.md	Brief mode
+#16 brief mode	agents/st-build.md	the brief itself
+#16 brief mode	agents/st-build.md	schema or migration
+#16 brief mode	agents/st-build.md	auth or access rules
+#16 brief mode	agents/st-build.md	money
+#16 brief mode	agents/st-build.md	Needs the Fast lane
+#16 st routes brief	skills/st/SKILL.md	the `stratum:st-build` agent
+#16 st routes brief	skills/st/SKILL.md	never `general-purpose`
+#37 quick handoff	skills/st-quick/SKILL.md	commits the exact files it touched
+#37 quick handoff	skills/st-quick/SKILL.md	Needs the Fast lane
 EOF
+check "#16 general-purpose only as never" 'grep -qF general-purpose "$root/skills/st/SKILL.md" && ! grep -F general-purpose "$root/skills/st/SKILL.md" | grep -qvF never'
 
 exit $fail

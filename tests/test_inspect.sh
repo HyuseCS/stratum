@@ -77,6 +77,7 @@ S5	skill	a simpler or better approach
 S5	skill	tasks to cut or merge
 S5	skill	missed auth invariants
 S5	skill	big ones go to the user before the gate
+S7	skill	a fix removed or renamed a task
 S6	skill	OK to build?
 S6	skill	findings dropped
 EOF
@@ -144,5 +145,14 @@ README st-init	readme	writes the `AGENTS.md` and `CLAUDE.md` pointers
 README python3	readme	git guard, model overrides hook, phase hook, statusline, handoff facts
 EOF
 check "statusline test passes under LC_ALL=C" 'out=$(LC_ALL=C bash "$root/tests/test_statusline.sh" 2>&1); [ $? = 0 ] && ! grep -qv "^ok" <<<"$out"'
+phrases <<'EOF'
+lessons st-plan read	agents/st-plan.md	one gate row for each lesson that applies
+lessons st-plan cite	agents/st-plan.md	names its number in the task line
+lessons st-inspect read	agent	that no plan.md gate or tasks.md task cites by number
+lessons st-close agent	agents/st-close.md	read this file at the next feature's Plan and Inspect
+lessons st-close skill	skills/st-close/SKILL.md	each lesson's Rule line is one testable sentence
+lessons design	DESIGN.md	The Plan and Inspect agents read the file at the next feature.
+lessons readme	readme	cites the lessons that apply
+EOF
 
 exit $fail

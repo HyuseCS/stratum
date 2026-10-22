@@ -43,6 +43,8 @@ No stored data changes shape. The entities are plugin files, one hook line, and 
   the project root and, for `st-impeccable`, the target. When the report arrives, run both again:
   any difference is a finding to check. The user asks for any other skill in the background
   (except `st-handoff`) -> one line: it runs only in the main session.
+  The same text also tells the model to run `st-handoff` in the main session when the user ends
+  the session or says they will continue later, and not to use auto-memory in its place.
 
 ## Handoff run mode
 

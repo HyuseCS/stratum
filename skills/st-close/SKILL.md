@@ -30,7 +30,9 @@ Plugin root (`<plugin root>`) is two levels up from this skill's base directory.
    - On send back: resume the same `st-close` with `SendMessage` to append the tasks (converge
      step 7), run `/stratum:st-build`, then run step 2 again without a gap report.
    - Defer and drop: `st-close` records them in spec.md.
-5. **Lessons.** `st-close` appends proposed lessons to `docs/lessons.md`. Show the user any
+5. **Lessons.** `st-close` appends proposed lessons to `docs/lessons.md`. st-plan and st-inspect
+   read that file at the next feature's Plan and Inspect, so
+   each lesson's Rule line is one testable sentence. Show the user any
    proposed constitution or harness change. Never apply one without their OK.
 6. **Shortcuts.** `st-close` reports the rows from `scripts/st-shortcuts.sh`. Show each row.
    For each, the user picks fix now or keep.

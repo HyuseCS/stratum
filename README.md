@@ -64,7 +64,7 @@ The lane follows the highest impact area the change touches.
 | Privacy and access | access rules, data model, contracts, sign-in, personal data | Full |
 | New user story or feature | anything not in a current spec | Full |
 | Core runtime | background services, offline queue, workers, notices | Fast |
-| Screens | layout, components, navigation | Fast (Quick for a one-file visual fix) |
+| Screens | layout, components, navigation | Fast (Quick for a small fix in a few files) |
 | Text and docs | labels, typos, wording | Quick |
 
 **Full lane:** five phases and three gates.
@@ -72,7 +72,7 @@ The lane follows the highest impact area the change touches.
 | # | Phase | What happens | Gate |
 |---|-------|--------------|------|
 | 1 | Define | Grilling, then the spec, then clarify (if needed) and checklist | You agree the spec |
-| 2 | Plan | `st-plan` writes the plan and tasks. Open decisions come to you one at a time. | Asked: make GitHub issues? |
+| 2 | Plan | `st-plan` writes the plan and tasks. Open decisions come to you one at a time. It reads `docs/lessons.md` and cites the lessons that apply. | Asked: make GitHub issues? |
 | 3 | Inspect | `st-inspect` checks the files agree and the plan can be built | You OK the build |
 | 4 | Build | Per task: failing test, build, check, commit. Per story: one `st-review` pass, design review for screens. | None unless blocked |
 | 5 | Close | Fix spec drift, optional gap report, proposed lessons, shortcut list | Push only when you say "push" |
@@ -80,7 +80,7 @@ The lane follows the highest impact area the change touches.
 **Fast lane:** a short change plan in `specs/<feature>/changes/`, your OK, test-first build,
 `st-review`, commit, drift fix and shortcut list, commit docs.
 
-**Quick lane:** one file, no gate, related tests, commit. It moves up a lane if it needs more.
+**Quick lane:** one file, no gate, related tests, commit. A small fix across a few files goes to `st-build` in brief mode. It moves up a lane if it needs a change plan.
 
 ### Skills
 
@@ -115,12 +115,12 @@ All skills are called as `/stratum:<name>`.
 |-------|-------|-----|
 | `st-plan` | Opus | Plan, research, data model, contracts, quickstart, tasks |
 | `st-inspect` | Opus | Spec, plan, and tasks agree; setup, test coverage, breaking changes, security |
-| `st-build` | Opus | Builds tasks; loads design rules for screens |
+| `st-build` | Opus | Builds tasks or a brief; loads design rules for screens |
 | `st-test` | Sonnet | Writes each test and shows it fails first |
 | `st-review` | Opus | Reviews each finished story |
 | `st-debug` | Opus | Takes over after 2 failed tries |
 | `st-fast` | Sonnet | Fast-lane change plans |
-| `st-quick` | Sonnet | Quick-lane edits |
+| `st-quick` | Sonnet | Quick-lane edits (one file) |
 | `st-close` | Sonnet | Drift fixes, gap report, lessons, shortcut list |
 | `st-git` | Sonnet | Commits each finished task, exact paths only |
 | `st-impeccable` | Opus | Background impeccable audit, read-only |

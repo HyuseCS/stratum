@@ -57,7 +57,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 |-------|------|-------|-------------|-----|
 | `st-plan` | Spec Kit plan + tasks | Opus | No | Plan, research, data model, contracts, quickstart, tasks. Returns open decisions as a list. |
 | `st-inspect` | Spec Kit analyze + vc validate | Opus | No | Spec, plan and tasks agree, and the plan is buildable: setup, test coverage, breaking changes, security. |
-| `st-build` | vc execute | Opus | Yes | Builds tasks. Loads the design skills for screen tasks. |
+| `st-build` | vc execute | Opus | Yes | Builds tasks, or a brief with no plan. Loads the design skills for screen tasks. |
 | `st-test` | vc tester | Sonnet | Yes | Writes each test and shows it fails before the build. |
 | `st-review` | vc code-reviewer | Opus | No | Reviews each finished story. |
 | `st-debug` | vc debugger | Opus | Yes | Takes over after 2 failed tries. |
@@ -112,7 +112,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 | Privacy and access | access rules, data model, contracts, sign-in, personal or minors' data | Full |
 | New user story or feature | anything not in a current spec | Full |
 | Core runtime | background services, offline queue, workers, notices | Fast |
-| Screens | layout, components, navigation | Fast (Quick for a one-file visual fix) |
+| Screens | layout, components, navigation | Fast (Quick for a small fix in a few files) |
 | Text and docs | labels, typos, wording | Quick |
 
 ### Full lane
@@ -142,8 +142,8 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
    change.
 2. Gap report (optional): unticked tasks or FRs without code and test. The user sends them back
    to Build, defers, or drops them. At most one send-back per feature.
-3. Lessons: append to `docs/lessons.md`. Changes to the constitution or the harness are proposed,
-   never applied by the agent.
+3. Lessons: append to `docs/lessons.md`. The Plan and Inspect agents read the file at the next feature.
+   Changes to the constitution or the harness are proposed, never applied by the agent.
 4. Shortcuts: `scripts/st-shortcuts.sh` lists the `ponytail:` markers the feature's diff adds. The
    user picks fix now (st-build, st-verify, st-git commit) or keep (no record: st-ponytail-debt
    finds the marker).
@@ -155,8 +155,10 @@ test first, build, `st-review` → commit → drift fix and shortcut list → co
 
 ### Quick lane
 
-`st-quick`: one file, no gate, run the tests that cover it, commit. Moves up to Fast if it needs a
-second file or touches any area above text and docs.
+`st-quick`: one file, no gate, run the tests that cover it, commit. A small bounded fix across a few
+files goes to `st-build` in brief mode, then verify and commit. Moves up to Fast when it needs a
+change plan or touches a schema, access rules, money, contracts, personal data, secrets or a new
+dependency.
 
 ## 5. Tools
 
