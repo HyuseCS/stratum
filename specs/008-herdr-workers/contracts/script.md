@@ -9,22 +9,28 @@ D24 and D25 (decisions.md) are written into sections 3 and 4.
 ## 1. Usage
 
 ```text
-st-worker.sh start <id> --task <file> --test <cmd> --lane <text> --roster <file> [--machine <m> --repo <path>]
+st-worker.sh start <id> --task <file> --test <cmd> --lane <text> --roster <file> [--machine <m> --repo <path>] [--model <name>]
 st-worker.sh goal <id> --test <cmd> [--machine <m>]
 st-worker.sh wait <id> [--machine <m>]
 st-worker.sh answer <id> [--machine <m>] (--text <text> | --keys <key>...)
 st-worker.sh result <id> [--machine <m>]
 st-worker.sh close <id> [--machine <m>]
 st-worker.sh list [--machine <m>]
-st-worker.sh headless <id> --task <file> --test <cmd>
+st-worker.sh headless <id> --task <file> --test <cmd> [--model <name>]
 ```
 
 - `<id>`: `^[A-Za-z0-9][A-Za-z0-9-]{0,24}$`. The worker name is `worker-` + the id in lower case
   (research R2), always: an id that already starts with `worker-` gets the prefix again. `N`
   below is that name.
 - `--keys` is last; every argument after it is one key for `agent send-keys`.
+- `answer`: a key or a text value that starts with `-` is refused with
+  `Answer values must not start with -.`, exit 2, before any herdr call. No `--` is passed to
+  herdr: live T008, `herdr agent send-keys worker-t901 -- 1` failed with `invalid_key: unsupported key --`.
 - `--repo` is required with `--machine` on `start`, and only there.
-- `headless` has no `--machine` (D15: the headless path runs in the orchestrator's folder).
+- `headless` has no `--machine` (D15: the headless path runs in the orchestrator's folder):
+  `headless --machine ...` is a usage error, exit 2, no call.
+- `--model` (D27, FR-017): at most once and not empty; given twice or empty is a usage error,
+  exit 2.
 - Every value is one argument. No `eval`, no `bash -c` on user text.
 
 Exit codes:
@@ -48,15 +54,17 @@ Each failure prints exactly one line (to stderr) and exits 1. The script builds 
 | 1 | id shape | `Task id must be letters, digits or dash, start with a letter or digit, and be at most 25 characters.` |
 | 2 | `--task` file exists and is not empty (`start`, `headless`) | `Task file not found or empty: <file>` |
 | 3 | `--test` one line, not empty, no `(` or `)` | `Test command must be one line with no ( or ).` |
+| 3b | `headless` only: `--test` has no `*` (a `*` makes `Bash(<test>)` a wildcard rule) | `Test command must not contain * for headless.` |
 | 4 | `--lane` one line, not empty | `Lane must be one line.` |
 | 5 | roster: every line has 4 TAB fields and a `worker-` name; one line is `N` | `Roster line <n> must be: name, machine, branch, task, split by TAB.` / `Roster has no line for <N>.` |
 | 6 | the `/goal` prompt (section 4) is at most 4000 characters | `The /goal prompt is over 4000 characters.` |
-| 7 | local: `HERDR_ENV` is `1` | `Not inside a herdr pane. Run it from a herdr pane, or name a --machine.` |
+| 7 | local, every subcommand but `headless` (exempt: it makes no herdr call): `HERDR_ENV` is `1` | `Not inside a herdr pane. Run it from a herdr pane, or name a --machine.` |
 | 8 | `start` with `--machine`: `--repo` given and starts with `/` or `~` | `A saved machine needs --repo <path> starting with / or ~.` |
 | 9 | `--machine`: `herdr machine list --json` exits 0 and is JSON | `herdr machine list failed.` (or its first stderr line) / `herdr machine list gave no machine list.` |
 | 10 | `--machine`: a `label` or `id` matches | `Unknown machine: <m>. Saved: <labels, comma separated>.` |
 | 11 | `--machine`: `herdr --machine <m> workspace list` exits 0 | `Machine <m> does not answer: <first stderr line from herdr>` |
 | 12 | `start`: no workspace in `H workspace list` has the label `N` (a read call, after rows 7 to 11; plan G10, lessons L11) | `A worker <N> already exists.` |
+| 13 | `start`, `headless`: the model (from `--model`, or `st-worker.model` in models.json, section 4) matches `^[A-Za-z0-9._-]+$` | `Model must be one token of letters, digits, dot, underscore or dash.` (no herdr or claude call) |
 
 Checks 9 to 11 are the ones in `scripts/st-herdr-workspace.sh` (#32 contract section 2, rows 4c0
 to 4d), copied with their words. `<target>` is the `target` field of the matched entry and
@@ -97,6 +105,7 @@ You are worker <N>, started by the Stratum orchestrator. Read this file first an
 - Test command: `<test>`
 - Lane: <lane>. If it names a skill, start it with the Skill tool. Run only task <id>; skip every other task, ticked or not.
 - Branch: <N>
+- Model: <model or default>
 - Your machine: <m or local>. `local` is the orchestrator's machine.
 - Result file: <WT>/result.md
 
@@ -156,7 +165,7 @@ No match: `No worker <N> on <m or local>.`, exit 1. More than one: `More than on
 1 H worktree create --cwd <repo> --branch N --base <sha> --path <repo parent>/<repo name>-N --label N --no-focus
                                          -> WS, T, PANE, WT
 2 write brief.md and .stratum/git-guard.json (section 3)
-3 H agent start N --kind claude --pane PANE --timeout 120000 -- --permission-mode auto -n N
+3 H agent start N --kind claude --pane PANE --timeout 120000 -- --permission-mode auto -n N [--model M]
 4 H agent prompt N P --wait --until working --until blocked --timeout 30000
 5 H agent get N                          -> state
 ```
@@ -178,6 +187,13 @@ No match: `No worker <N> on <m or local>.`, exit 1. More than one: `More than on
 - Any other failure at or after step 1: print `stopped: <first stderr line>`, then the `worker`
   line with `-` for every id not made yet, exit 1. Nothing is closed, nothing else is retried.
 
+Model `M` (D27, D28, `start` and `headless`): `--model <name>` if given. Else
+`jq -r '."st-worker".model // empty'` of `<top>/.stratum/models.json`, where `<top>` is the calling
+folder's `git rev-parse --show-toplevel` (as for the guard file). A missing file, an unparsable
+file or a missing `st-worker.model` means no model, and no `--model` is passed (`ponytail:`
+ignored, not an error). A present value from either source goes through section 2 row 13 before
+any command line. `effort` is not read: `claude` has no flag for it here.
+
 `goal` (after a `start` that ended `blocked`): steps 4 and 5.
 
 `wait` (research R6), bound 540 s from the first call:
@@ -198,16 +214,25 @@ The result file check is `test -f <WT>/result.md` here and
 `answer`:
 
 ```text
+0 a value starts with -                  -> "Answer values must not start with -.", exit 2, no herdr call
 1 H agent get N                          state != blocked -> "not blocked: <state>", exit 1, nothing sent
 2 --keys: H agent send-keys N <key>...
   --text: H pane send-text <pane> <text>; H agent send-keys N enter
-3 H agent get N                          -> state; exit 4 if still blocked, else 0
+3 H agent wait N --until working --timeout 5000   a timeout error only means still blocked
+4 H agent get N                          -> state; exit 4 if still blocked, else 0
 ```
 
 Step 1 is one line of the script: the `blocked` check and the `not blocked: <state>` print
-together (NC5 deletes exactly that line). Step 3 prints the `state` line of section 5,
+together (NC5 deletes exactly that line). Step 3 is there because live T008 showed `blocked`
+lingering about 2 s after a dialog key (research R7). `ponytail:` fixed 5 s bound. Step 4 prints
+the `state` line of section 5,
 `state<TAB><state><TAB><N><TAB><pane>`, with every state but `blocked` printed as `working`,
 as `start` and `goal` do. `answer` never prints the pane text.
+
+A typed answer to an AskUserQuestion dialog is two `answer` calls. Live T008 (research R7): the
+dialog lists numbered options, then `Type something.` and `Chat about this`; a digit key picks
+an option. So first `answer <id> --keys <number of "Type something.">`, which is expected to leave
+the worker `blocked` at the text field (exit 4; not yet seen live), then `answer <id> --text <text>`.
 
 `result`:
 
@@ -242,7 +267,7 @@ F1, F2
 ```text
 1 cd "$(git rev-parse --show-toplevel)"; old=$(git rev-parse HEAD)
 2 brief to a mktemp file outside the repo (headless text below), removed on exit
-3 timeout 540 claude -p <HP> --output-format json --max-turns 30 -n N
+3 timeout -k 10 540 claude -p <HP> --output-format json --max-turns 30 -n N [--model M]
     --tools Read,Edit,Write,Glob,Grep,Bash
     --allowedTools Read Edit Write Glob Grep "Bash(<test>)"
     --permission-mode dontAsk --permission-prompts none --strict-mcp-config
@@ -262,14 +287,21 @@ Headless brief:
 ## Facts
 
 - Test command: `<test>`
+- Model: <model or default>
 - Work in this folder. Leave the change uncommitted: never commit, never push.
 - Run the test command exactly as written, as one Bash call.
 - You cannot ask questions. If you need a decision, stop and say in your last reply what is missing.
 ```
 
-Exit 124 from `timeout`: `timed out after 540 s`, exit 1. No JSON: `claude gave no JSON result.`,
-exit 1. `old != new`: `worker committed: <old> -> <new>`, exit 1. `is_error` true or `subtype` not
-`success`: exit 1 after the output.
+`-k 10` sends SIGKILL 10 s after the SIGTERM at 540 s, so a run never passes the Bash tool's
+600 s. The exit rules are checked in this order, the first that holds wins:
+1. `old != new`: `worker committed: <old> -> <new>`, exit 1.
+2. Exit 124 or 137 from `timeout`: `timed out after 540 s`, exit 1.
+3. No JSON: `claude gave no JSON result.`, exit 1.
+4. `is_error` true or `subtype` not `success`: the `headless` line and `result:` text print, exit 1.
+
+`ponytail:` the commit guard compares `HEAD` only; a push, a stash or a commit on another branch
+is not seen. Widen to `git for-each-ref` if a live run shows a need (research R12).
 
 Rules the test enforces, for every subcommand:
 
@@ -279,7 +311,8 @@ Rules the test enforces, for every subcommand:
   no call has `--machine`.
 - `agent prompt` only in `start` and `goal`, exactly once each. Never in `wait`, `answer`,
   `result`, `close`, `list`.
-- `agent start` argv after `--` is exactly `--permission-mode auto -n N` (FR-013).
+- `agent start` argv after `--` is exactly `--permission-mode auto -n N`, plus `--model M` when a
+  model is set (FR-013, FR-017).
 - `workspace close` only on the `WS` from F1, at most once.
 
 ## 5. Output
@@ -304,7 +337,8 @@ result:                                                           (headless, the
 
 ## 6. Test cases (`tests/test_st_worker.sh`)
 
-Stubs on `PATH`: `herdr`, `ssh`, `claude`, and a `git` wrapper that logs `fetch` and passes every
+Stubs on `PATH`: `herdr`, `ssh`, `claude`, `timeout` (logs its arguments, then execs the rest of
+the argv), and a `git` wrapper that logs `fetch` and passes every
 other call to the real git. The stub `herdr` logs each argv as one TAB-joined line, gives ids with
 a random part per run (L19), makes the `--path` folder on `worktree create`, answers `agent get`
 from a state list the case sets, returns pane text `STUB PANE <random>`, and fails a named call on
@@ -332,9 +366,10 @@ stub log, never from built ids.
 | W3 | `wait`, settles `idle`, no result.md, resume check matches, then `done` with result.md: `state finished`, two `agent wait` without `--until`, exit 0 |
 | W4 | `wait`, settles `idle`, no result.md, resume check times out: `state stopped`, pane text, exit 5 |
 | W5 | `wait`, `blocked`: `state blocked`, the worker name, pane text, exit 4 |
-| A1 | `answer --keys 1`, states `blocked` before and `working` after: one `agent send-keys worker-t004 1`, the line `state<TAB>working<TAB>worker-t004<TAB><pane>`, exit 0 |
+| A1 | `answer --keys 1`, states `blocked` before and `working` after: one `agent send-keys worker-t004 1`, then one `agent wait worker-t004 --until working --timeout 5000` before the last `agent get`, the line `state<TAB>working<TAB>worker-t004<TAB><pane>`, exit 0 |
 | A2 | `answer --text yes`, state `working`: `not blocked: working`, no `send-keys`, no `send-text`, exit 1 (US2 scenario 3) |
-| A3 | `answer --text "use main"`, states `blocked` before and after: `pane send-text <pane> use main`, then `agent send-keys worker-t004 enter`, the line `state<TAB>blocked<TAB>worker-t004<TAB><pane>`, exit 4 |
+| A3 | `answer --text "use main"`, states `blocked` before and after (the stub's `agent wait --until working` times out): `pane send-text <pane> use main`, then `agent send-keys worker-t004 enter`, then the `agent wait`, the line `state<TAB>blocked<TAB>worker-t004<TAB><pane>`, exit 4 |
+| A4 | `answer --keys -x` and `answer --text -x`: each prints `Answer values must not start with -.`, exit 2, no herdr call |
 | G1 | `result` here with result.md: prints `RESULT FILE <random>`, not `STUB PANE`, exit 0 |
 | G2 | `result` here, no result.md: `no result file: `, `pane text:`, the stub pane text, exit 1 |
 | C1 | `close`, state `done`: one `workspace close` on the stub's WS, `closed`, `folder <WT> ready to remove`, exit 0 |
@@ -352,11 +387,24 @@ stub log, never from built ids.
 | R10 | `answer --machine laptop --keys 1`, state `blocked`: same `--machine` rule; one `agent send-keys` |
 | R11 | `goal --machine laptop --test <cmd>`: same `--machine` rule; exactly one `agent prompt` |
 | R12 | `list --machine laptop`: same `--machine` rule; `found` lines name `laptop` |
-| H1 | `headless`: stub claude argv has exactly the flags in section 4 step 3, the prompt `HP`, the brief file outside the repo; output `headless worker-t004 success <turns> <cost>` and the stub's result text; exit 0 |
+| H1 | `headless`: stub claude argv has exactly the flags in section 4 step 3, the prompt `HP`, the brief file outside the repo; output `headless worker-t004 success <turns> <cost>` and the stub's result text; exit 0; the `timeout` log has `-k 10 540` |
 | H2 | stub claude commits in the repo: `worker committed: <old> -> <new>`, exit 1 |
 | H3 | stub claude exits 124: `timed out after 540 s`, exit 1 |
+| H3b | stub claude commits, then exits 124: the `worker committed` line wins, not `timed out`, exit 1 |
 | H4 | stub claude prints junk: `claude gave no JSON result.`, exit 1 |
 | H5 | the brief file is gone after the run |
+| H6 | stub claude prints `subtype` `error_max_turns` and `is_error` true: the `headless` line and the result text print, exit 1 |
+| H7 | `HERDR_ENV` unset: `headless` still runs, exit 0 |
+| H8 | `headless --machine laptop`: exit 2, no herdr, ssh or claude call |
+| H9 | run from a subfolder of the repo: the script `cd`s to the toplevel first, the brief is outside the repo, the `HEAD` compare works (H2's commit is still caught) |
+| H10 | `headless --test 'a *'`: one line `Test command must not contain * for headless.`, no claude call, exit 1 |
+| M1 | `start --model opus`: `agent start` argv ends `-n worker-t004 --model opus`; the brief has `- Model: opus` |
+| M2 | `start` with no `--model`, models.json `{"st-worker":{"model":"sonnet"}}`: `--model sonnet` in the `agent start` argv; brief `- Model: sonnet` |
+| M3 | `start` with no `--model` and no models.json: no `--model` in any argv; brief `- Model: default` (S1 stays as it is) |
+| M4 | `start --model 'a b'` and `start --model 'x;y'`: the row 13 line, exit 1, no herdr call |
+| M5 | `headless --model opus`: the claude argv has `--model opus` right after `-n worker-t004` |
+| M6 | `headless` with no `--model`, models.json `{"st-worker":{"model":"sonnet"}}`: `--model sonnet` right after `-n worker-t004` |
+| M7 | `--model` given twice, or `--model ''`: usage, exit 2, no call |
 | NC1 | copy without the line that adds `--machine` to `H`: R1 goes red (SC-007) |
 | NC2 | copy without the roster rows: S1 goes red (SC-007) |
 | NC3 | copy without team rule 1: S1 goes red (SC-007) |

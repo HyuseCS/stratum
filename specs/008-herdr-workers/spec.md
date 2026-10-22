@@ -41,6 +41,8 @@ process or session left afterwards, only the worktree and the branch.
    ready to remove, and no worker process or session is left.
 5. **Given** the worker fails or is stopped, **When** the orchestrator reports, **Then** the pane
    stays open so the user can read it, and nothing is merged.
+6. **Given** the user names a model, **When** the worker starts, **Then** its `claude` runs with
+   that model and the brief says `Model: <model>` (FR-017).
 
 ---
 
@@ -147,6 +149,8 @@ the change is in the working tree, nothing is committed by the worker, and no pr
    timeout.
 2. **Given** the headless worker would need a decision, **When** its turns end, **Then** the reply
    says what is missing and the orchestrator brings it to the user; nothing was committed.
+3. **Given** the user names a model, **When** the orchestrator runs the task headless, **Then**
+   `claude -p` runs with that model (FR-017).
 
 ---
 
@@ -215,6 +219,14 @@ the change is in the working tree, nothing is committed by the worker, and no pr
   and the close, for both machines.
 - **FR-016**: The orchestrator MUST be able to find running workers again after its own session
   ended, by their labels and agent names, and take over their wait and close.
+- **FR-017**: The orchestrator MAY name a model for a worker. The script passes it to the pane
+  worker's `claude` (`herdr agent start ... -- --permission-mode auto -n <name> --model <model>`)
+  or to `claude -p` for a headless worker. Without it, the `model` of the `st-worker` entry in
+  `.stratum/models.json` is passed if present, else nothing is passed and the user's default
+  applies. The value MUST be one token matching `[A-Za-z0-9._-]+`, checked before any command
+  line. The brief MUST say `Model: <model or default>`. `hooks/st-models.py` accepts `st-worker`
+  beside the agent names, `tests/test_model_hook.py` covers it, and `skills/st-model/SKILL.md`
+  lists `st-worker` (D27, D28).
 
 ### Key Entities
 

@@ -96,7 +96,7 @@ quickstart section 2 run live.
 
 - [X] T010 [US3] Add `--machine` to `scripts/st-worker.sh`: checks rows 8 to 11 of contracts/script.md section 2 (rows 9 to 11 copied with their words from `scripts/st-herdr-workspace.sh`), `H+=(--machine "<m>")` on one unique line (NC1), the target only from `machine list --json`, the ssh calls of sections 3 and 4 with `printf %q` paths and the leading `\~` turned back into `~` (as `scripts/st-herdr-workspace.sh` does), and `GIT_SSH_COMMAND='ssh -o BatchMode=yes' git fetch <target>:<WT> <N>:<N>` then `git rev-parse --verify <N>` in `result`. Done when `bash tests/test_st_worker.sh` is green.
 
-- [ ] T011 [US3] Live remote run: quickstart section 6. Runnable only when `herdr --machine laptop workspace list` exits 0; the laptop times out on port 22 today (plan B1). If it still does not answer, tick it with `Not run, <first herdr error line>.` (lessons L17) and leave plan B1 as it is. If it runs, record the results and the laptop's herdr and Claude Code versions in `specs/008-herdr-workers/research.md` and close plan B1 in `specs/008-herdr-workers/plan.md`.
+- [X] T011 [US3] Not run, `herdr --machine laptop workspace list` (2026-10-23, 11 s): `Error: Custom { kind: ConnectionAborted, error: "machine 'laptop' (session default): remote SSH connection failed: ssh: connect to host 100.73.64.64 port 22: Connection timed out" }`. Live remote run: quickstart section 6. Runnable only when `herdr --machine laptop workspace list` exits 0; the laptop times out on port 22 today (plan B1). If it still does not answer, tick it with `Not run, <first herdr error line>.` (lessons L17) and leave plan B1 as it is. If it runs, record the results and the laptop's herdr and Claude Code versions in `specs/008-herdr-workers/research.md` and close plan B1 in `specs/008-herdr-workers/plan.md`.
 
 **Checkpoint**: US1 to US3 work; the remote live check waits on the laptop.
 
@@ -142,6 +142,16 @@ and conflict steps (FR-009) are built in T004 and tested by T002.
 
 ---
 
+---
+
+## Phase 9: Addition, worker model (D27, D28)
+
+**Goal**: an optional model per worker, from `--model` or the `st-worker` entry of `.stratum/models.json` (FR-017).
+
+- [X] T017 [US1] Add the cases M1 to M7 of contracts/script.md section 6 to `tests/test_st_worker.sh` (models.json written in the temp repo for M2 and M6), the `#17 D27 model` row of contracts/skill.md section 2 to `tests/test_on_demand.sh`, a case in `tests/test_model_hook.py` where models.json holds `{"st-worker":{"model":"sonnet"}}` and an `st-git` start is not denied, and, in `tests/test_model_files.sh`, a check that `skills/st-model/SKILL.md` names `` `st-worker` ``. Run all four and show they fail before T018. Lessons L1, L18.
+
+- [X] T018 [US1] Build FR-017: `scripts/st-worker.sh` (`--model` for `start` and `headless`, the models.json read, row 13, the `- Model:` brief line, `--model M` after `-n N`), `skills/st-worker/SKILL.md` (the `--model` line of contracts/skill.md step 1), `hooks/st-models.py` (accept `st-worker` beside the names from `agents/*.md`), `skills/st-model/SKILL.md` (list `st-worker` with the agents). Done when `bash tests/test_st_worker.sh`, `bash tests/test_on_demand.sh`, `PYTHONDONTWRITEBYTECODE=1 python3 -B tests/test_model_hook.py` and `bash tests/test_model_files.sh` are green.
+
 ## FR to task map
 
 | FR | Test | Build |
@@ -162,6 +172,7 @@ and conflict steps (FR-009) are built in T004 and tested by T002.
 | FR-014 | T002 st-build check; T016 diff | T004 |
 | FR-015 | the test file and NC1 to NC7 | T001, T006, T009, T013 |
 | FR-016 | T001 L1 and every subcommand found by id | T003 |
+| FR-017 | T017 M1 to M7, hook case, phrase row, st-model check | T018 |
 
 ## Dependencies & Execution Order
 
@@ -170,7 +181,7 @@ and conflict steps (FR-009) are built in T004 and tested by T002.
 - US1 (T001 to T005) first. T001 -> T003 -> T005. T002 -> T004 -> T005. T002 and T004 run beside T001 and T003.
 - US2, US3 and US5 each need T003. They share `tests/test_st_worker.sh` and `scripts/st-worker.sh`, so their test and build tasks run one after another, never in parallel (lessons L6): T006 -> T007 -> T009 -> T010 -> T013 -> T014.
 - Live tasks T008, T012, T015 run after their build task; T011 only when the laptop answers.
-- T016 last.
+- T017 and T018 (Phase 9) run before T016. T016 last.
 
 ### User Story Dependencies
 
@@ -209,4 +220,4 @@ then US5 (headless). Each phase ends green on `bash tests/test_st_worker.sh`.
 ## Notes
 
 - `docs/lessons.md` is written at Close by `st-close`, not by a Build task.
-- 16 tasks: Setup 0, Foundational 0, US1 5, US2 3, US3 3, US4 1, US5 3, Polish 1.
+- 18 tasks: Setup 0, Foundational 0, US1 5, US2 3, US3 3, US4 1, US5 3, Polish 1, Addition 2 (T017, T018).

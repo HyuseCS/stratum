@@ -62,10 +62,10 @@ printf 'Ask with AskUserQuestion which word to write, options hi and hello, and 
 printf 'worker-t901\tlocal\tworker-t901\tT901\n' > /tmp/roster.txt
 bash $S start T901 --task /tmp/t901.txt --test 'test -s demo/q.txt' --lane 'plain edit, no lane' --roster /tmp/roster.txt
 bash $S wait T901           # expected: state blocked, exit 4, the question in the pane text
-bash $S answer T901 --keys 1   # small: the orchestrator answers; record which key picks "hi"
+bash $S answer T901 --keys <n>   # small: the orchestrator answers; <n> is the option number of hi as the pane shows it
 bash $S wait T901           # expected: state blocked again, the push question
                             # big: the orchestrator asks the user first; the recorded answer is no (nothing is pushed)
-bash $S answer T901 --keys 2   # "no"; record which key picks it
+bash $S answer T901 --keys <n>   # <n> is the option number of no as the pane shows it
 bash $S wait T901           # expected: state finished
 ```
 
@@ -73,6 +73,10 @@ The end-of-run list names the word question as answered by the orchestrator, and
 question. Then once more with the user typing the answer in the pane first: `answer` must print
 `not blocked: working` and send nothing (US2 scenario 3). Record which keys or text reach the
 free-text field of the dialog.
+
+Recorded live (T008): the worker sets the option order, so read the number from the pane each
+time. Both live keys were `1` (`hi` was option 1, and both push dialogs had `no` as option 1).
+One key picks and submits the option; no `enter` is needed.
 
 ## 4. Team live (US4, SC-004)
 

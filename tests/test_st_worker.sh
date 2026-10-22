@@ -435,12 +435,12 @@ check "L1 two found lines, states from the stub" '[ "$(grep -cP "^found\t" <<<"$
 check "L1 the other workspace is absent" '! grep -q notaworker <<<"$out" && ! grep -q "stubC" <<<"$out"'
 check "L1 never-list, no prompt, no close" 'never 0 0'
 
-sendlog() { grep -P '^(agent\t(get|send-keys)|pane\tsend-text)\t' "$tmp/calls"; }
+sendlog() { grep -P '^(agent\t(get|send-keys|wait)|pane\tsend-text)\t' "$tmp/calls"; }
 a1() {
   mk; states blocked working
   run bash "$1" answer T004 --keys 1
   check "A1 exit 0" '[ $rc = 0 ]'
-  check "A1 agent get, one send-keys, agent get, in order" '[ "$(sendlog)" = "$(printf "agent\tget\tworker-t004\nagent\tsend-keys\tworker-t004\t1\nagent\tget\tworker-t004")" ]'
+  check "A1 agent get, one send-keys, agent wait until working, agent get, in order" '[ "$(sendlog)" = "$(printf "agent\tget\tworker-t004\nagent\tsend-keys\tworker-t004\t1\nagent\twait\tworker-t004\t--until\tworking\t--timeout\t5000\nagent\tget\tworker-t004")" ]'
   check "A1 state line after the answer" 'hasline "state\tworking\tworker-t004\t%s" "$(pane)"'
   check "A1 never-list, no prompt" 'never 0 0'
 }
@@ -455,7 +455,7 @@ a3() {
   mk; states blocked blocked
   run bash "$1" answer T004 --text "use main"
   check "A3 exit 4" '[ $rc = 4 ]'
-  check "A3 agent get, send-text, send-keys enter, agent get, in order" '[ "$(sendlog)" = "$(printf "agent\tget\tworker-t004\npane\tsend-text\t%s\tuse main\nagent\tsend-keys\tworker-t004\tenter\nagent\tget\tworker-t004" "$(pane)")" ]'
+  check "A3 agent get, send-text, send-keys enter, agent wait until working, agent get, in order" '[ "$(sendlog)" = "$(printf "agent\tget\tworker-t004\npane\tsend-text\t%s\tuse main\nagent\tsend-keys\tworker-t004\tenter\nagent\twait\tworker-t004\t--until\tworking\t--timeout\t5000\nagent\tget\tworker-t004" "$(pane)")" ]'
   check "A3 state blocked line" 'hasline "state\tblocked\tworker-t004\t%s" "$(pane)"'
   check "A3 never-list, no prompt" 'never 0 0'
 }

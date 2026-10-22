@@ -15,7 +15,7 @@ def problems(models):
     out = []
     for agent, entry in models.items():
         name = json.dumps(agent)[:80]
-        if agent not in AGENTS:
+        if agent not in AGENTS and agent != "st-worker":
             out.append(f"unknown agent {name}. Allowed agents: {', '.join(AGENTS)}.")
         elif not isinstance(entry, dict):
             out.append(f"{name} must be an object with optional keys model, effort.")

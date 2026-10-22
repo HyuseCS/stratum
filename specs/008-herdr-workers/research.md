@@ -423,6 +423,20 @@ branch `18-codex-advisor`.
 - Test: an ordered phrase check on the skill text in `tests/test_on_demand.sh` (FR-015 covers the
   order, not a stub run).
 
+## R16. Worker model (FR-017, D27, D28)
+
+- Facts: `.stratum/models.json` maps a name to `{"model": ..., "effort": ...}` (the template is
+  `templates/models.json`). It is git-ignored (`.gitignore:9`), and `skills/st-model/SKILL.md`
+  manages it. `hooks/st-models.py` checks every key on each Agent start: names must be in
+  `agents/*.md`, keys only `model` and `effort`, models only `sonnet`, `opus`, `haiku`, `fable`.
+  Proved in the scratchpad: a file with only `{"st-worker":{"model":"sonnet"}}` made the hook deny
+  an `st-git` start with `unknown agent "st-worker"`. So D28 adds `st-worker` to the names the
+  hook accepts, with a case in `tests/test_model_hook.py`.
+- Decision: the script passes only `model`, as `--model <model>` after `-n N` (pane worker args
+  after `--`, and `claude -p`). `effort` is not passed: `claude` has no flag for it in these
+  calls. A file value is limited to the hook's model list; a `--model` value from the request can
+  be any one token (`^[A-Za-z0-9._-]+$`, contracts/script.md section 2 row 13).
+
 ## Open decisions
 
 None. D24 (R7) and D25 (R9) are settled in decisions.md.

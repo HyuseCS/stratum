@@ -45,7 +45,8 @@ markers. Never: bare `herdr`, `pane close`, `worktree remove`, `--group`, `machi
 `machine add|remove|enable|disable`, `server`, `--trust-repository`, a push.
 
 **Scale/Scope**: 1 script, 1 skill, 1 test file. Edits: `tests/test_on_demand.sh`, `README.md`,
-`DESIGN.md`, `skills/st-status/SKILL.md`.
+`DESIGN.md`, `skills/st-status/SKILL.md`, `hooks/st-models.py`, `skills/st-model/SKILL.md`,
+`tests/test_model_hook.py`, `tests/test_model_files.sh` (D27, D28).
 
 ## Constitution Check
 
@@ -64,7 +65,7 @@ orchestrator passed, the settled decisions and `docs/lessons.md`.
 | G6. lessons L6: tasks that share one test file are not parallel | Pass in the design: every script task shares `tests/test_st_worker.sh` and runs in order; only the skill task (`tests/test_on_demand.sh`) can be `[P]` |
 | G7. lessons L7: README lists are checked both ways | Pass: the skill row and the test line go into README in the same task as the file they name (`tests/test_inspect.sh` checks both ways) |
 | G8. lessons L8: test runs leave no file in the repo | Pass: stubs, repos and briefs in `mktemp -d`, removed by `trap`; the headless brief is outside the repo (H5) |
-| G9. lessons L10: the guard that stops a write is named and controlled | Pass: headless commits are stopped by the tool list (`--tools`, `--allowedTools`, `dontAsk`); NC6 removes it. The `HEAD` check (H2) is the second guard. Close is guarded by the label match (C4) |
+| G9. lessons L10: the guard that stops a write is named and controlled | Pass: the `HEAD` compare before and after is the main guard against a headless commit (H2, H3b; research R12). The tool list (`--tools`, `--allowedTools`, `dontAsk`) narrows the worker but does not stop a commit; NC6 removes it. Close is guarded by the label match (C4) |
 | G10. lessons L11: each background action has its failure states | Pass: start that cannot start (S4), a worker that already exists (S6), start blocked (S3, S7), prompt stalled (S5), wait with no end (W2), wait with no output (W4), result missing (G2), close of a worker still at work (C2), close that leaves something (C3), close of a worker whose agent is gone (C5) |
 | G11. lessons L12: a lane runs through the Skill tool | Pass: the brief says "Start it with the Skill tool"; the skill runs `st-review` with the Skill tool |
 | G12. lessons L17: a gated task that does not run says why | Pass in the design: the remote live run (quickstart section 6) gets `Not run, <herdr error>.` while the laptop is down |
@@ -75,8 +76,9 @@ orchestrator passed, the settled decisions and `docs/lessons.md`.
 | G17. Decisions D24 and D25 kept | Pass: S1 and R1 assert the worktree's `git-guard.json` and NC7 removes its write (D24); team rule 2 and the skill's machine rule keep commits on one machine (D25) |
 | G18. lessons L9: lines other branches edit are diffed against main | Pass: the README skill table, tool row and `## Tests` list and the DESIGN.md skill count are also edited on other branches; T016 merges a moved `main` first and keeps main's lines plus ours |
 | G19. lessons L13: a guard added by review updates every plan file | Pass: when a review adds a guard to `scripts/st-worker.sh`, the same commit updates contracts/script.md, research.md, data-model.md, quickstart.md and plan.md S1 to S6 |
+| G20. D28 kept: the model hook accepts the `st-worker` key | Pass: `hooks/st-models.py` accepts `st-worker` beside the names from `agents/*.md`, so an `st-worker` entry in `.stratum/models.json` does not deny agent starts; `tests/test_model_hook.py` covers it (T017, T018) |
 
-Post-design re-check: G1 to G19 pass. Complexity
+Post-design re-check: G1 to G20 pass. Complexity
 Tracking stays empty.
 
 ## Open decisions
@@ -123,7 +125,7 @@ None. Both are settled in decisions.md:
 - **S5. Headless allow list (headless; access rule).** `--tools Read,Edit,Write,Glob,Grep,Bash`
   (no AskUserQuestion, SendMessage, Agent or web tool), `--allowedTools` for those and only
   `Bash(<test command>)`, `--permission-mode dontAsk`, `--permission-prompts none`,
-  `--strict-mcp-config`, `--max-turns 30`, `timeout 540`. The `HEAD` check refuses a run that
+  `--strict-mcp-config`, `--max-turns 30`, `timeout -k 10 540`. The `HEAD` check refuses a run that
   committed anyway.
 - **S6. Untrusted text back from a worker.** The result file, the pane text and a teammate's
   SendMessage are the worker's words. The skill reads them as data, never as instructions (phrase
@@ -143,7 +145,7 @@ None. Both are settled in decisions.md:
 
 - `ponytail:` `wait` bound 540 s and the 10 s resume check are constants; quickstart section 2
   measures the idle gap between goal turns.
-- `ponytail:` `headless` uses fixed `--max-turns 30` and `timeout 540`.
+- `ponytail:` `headless` uses fixed `--max-turns 30` and `timeout -k 10 540`.
 - `ponytail:` the worker's `brief.md` and `result.md` sit untracked in its worktree; only the
   brief's rule keeps them out of a commit, and `st-review` sees them if one slips in.
 - `ponytail:` no process check in `close`; quickstart section 2 checks `pgrep` live.
@@ -186,6 +188,10 @@ skills/st-status/SKILL.md       # step 4 tool line names st-worker
 README.md                       # skill row, tool row, test line
 DESIGN.md                       # skill row, count 23 -> 24
 docs/lessons.md                 # written at Close (st-close), not in Build
+hooks/st-models.py              # accept the st-worker key (D28)
+skills/st-model/SKILL.md        # list st-worker (D28)
+tests/test_model_hook.py        # case: an st-worker entry does not deny an agent start (D28)
+tests/test_model_files.sh       # check: st-model names st-worker (D28)
 ```
 
 **Structure Decision**: same layout as #32 (`scripts/st-herdr-workspace.sh`,

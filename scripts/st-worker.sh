@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-usage() { echo "usage: st-worker.sh start <id> --task <file> --test <cmd> --lane <text> --roster <file> [--machine <m> --repo <path>] | goal <id> --test <cmd> [--machine <m>] | wait <id> [--machine <m>] | answer <id> [--machine <m>] --keys <key>... | --text <text> | result <id> [--machine <m>] | close <id> [--machine <m>] | list [--machine <m>] | headless <id> --task <file> --test <cmd>" >&2; exit 2; }
+usage() { echo "usage: st-worker.sh start <id> --task <file> --test <cmd> --lane <text> --roster <file> [--machine <m> --repo <path>] [--model <name>] | goal <id> --test <cmd> [--machine <m>] | wait <id> [--machine <m>] | answer <id> [--machine <m>] --keys <key>... | --text <text> | result <id> [--machine <m>] | close <id> [--machine <m>] | list [--machine <m>] | headless <id> --task <file> --test <cmd> [--model <name>]" >&2; exit 2; }
 fail() { echo "$1" >&2; exit 1; }
 [ $# -gt 0 ] || usage
 cmd=$1; shift
@@ -18,6 +18,10 @@ while [ $# -gt 0 ]; do
     "start --lane") lane=$2 ;;
     "start --roster") roster=$2 ;;
     "start --repo") repo=$2 ;;
+    "start --model" | "headless --model")
+      [ -z "${model+x}" ] && [ -n "$2" ] || usage
+      model=$2
+      ;;
     "headless --machine") usage ;;
     *" --machine") m=$2 ;;
     "answer --text") text=$2 ;;
@@ -47,6 +51,11 @@ if [ "$cmd" = start ] || [ "$cmd" = headless ]; then
 fi
 if [ "$cmd" = start ] || [ "$cmd" = goal ] || [ "$cmd" = headless ]; then
   [[ -n $test && $test != *$'\n'* && $test != *[\(\)]* ]] || fail "Test command must be one line with no ( or )."
+fi
+[ "$cmd" != headless ] || [[ $test != *\** ]] || fail "Test command must not contain * for headless."
+if [ "$cmd" = start ] || [ "$cmd" = headless ]; then
+  [ -n "${model+x}" ] || { top=$(git rev-parse --show-toplevel 2>/dev/null) && model=$(jq -r '."st-worker".model // empty' "$top/.stratum/models.json" 2>/dev/null); } || model=
+  [ -z "$model" ] || [[ $model =~ ^[A-Za-z0-9._-]+$ ]] || fail "Model must be one token of letters, digits, dot, underscore or dash."
 fi
 if [ "$cmd" = start ]; then
   [[ -n $lane && $lane != *$'\n'* ]] || fail "Lane must be one line."
@@ -142,7 +151,7 @@ brief() {
   printf '%s\n\n' "# Brief: $N" "You are worker $N, started by the Stratum orchestrator. Read this file first and follow it." "## Task $id"
   cat -- "$task"
   printf '\n%s\n\n' '## Facts'
-  printf '%s\n' "- Test command: \`$test\`" "- Lane: $lane. If it names a skill, start it with the Skill tool. Run only task $id; skip every other task, ticked or not." "- Branch: $N" "- Your machine: ${m:-local}. \`local\` is the orchestrator's machine." "- Result file: $WT/result.md"
+  printf '%s\n' "- Test command: \`$test\`" "- Lane: $lane. If it names a skill, start it with the Skill tool. Run only task $id; skip every other task, ticked or not." "- Branch: $N" "- Model: ${model:-default}" "- Your machine: ${m:-local}. \`local\` is the orchestrator's machine." "- Result file: $WT/result.md"
   printf '\n%s\n\n%s\n%s\n' '## Roster' '| Name | Machine | Branch | Task |' '|------|---------|--------|------|'
   printf '| %s | %s | %s | %s |\n' "${R[@]}"
   printf '\n%s\n\n' '## Team rules'
@@ -182,7 +191,7 @@ start)
   fi
   busy=10 # ponytail: fixed 10 s agent_pane_busy retry bound, same shape as D20 in specs/007-herdr-workspace, raise it if a live run measures a slower pane shell
   for ((i = 1; ; i++)); do
-    "${H[@]}" agent start "$N" --kind claude --pane "$PANE" --timeout 120000 -- --permission-mode auto -n "$N" >/dev/null 2>"$e" && break
+    "${H[@]}" agent start "$N" --kind claude --pane "$PANE" --timeout 120000 -- --permission-mode auto -n "$N" ${model:+--model "$model"} >/dev/null 2>"$e" && break
     c=$(code)
     if [ "$c" = agent_pane_busy ] && [ "$i" -lt "$busy" ]; then
       sleep 1
@@ -253,6 +262,8 @@ answer)
     h pane send-text "$PANE" "$text"
     h agent send-keys "$N" enter
   fi
+  settle=5000 # ponytail: fixed 5 s wait for blocked to clear after an answer (live T008 saw about 2 s), raise it if a live run measures a longer lag
+  "${H[@]}" agent wait "$N" --until working --timeout "$settle" >/dev/null 2>&1 || true
   look
   [ "$S" = blocked ] || S=working
   printf 'state\t%s\t%s\t%s\n' "$S" "$N" "$PANE"
@@ -308,19 +319,19 @@ headless)
     printf '%s\n\n' "# Brief: $N (headless)" "## Task $id"
     cat -- "$task"
     printf '\n%s\n\n' '## Facts'
-    printf '%s\n' "- Test command: \`$test\`" '- Work in this folder. Leave the change uncommitted: never commit, never push.' '- Run the test command exactly as written, as one Bash call.' '- You cannot ask questions. If you need a decision, stop and say in your last reply what is missing.'
+    printf '%s\n' "- Test command: \`$test\`" "- Model: ${model:-default}" '- Work in this folder. Leave the change uncommitted: never commit, never push.' '- Run the test command exactly as written, as one Bash call.' '- You cannot ask questions. If you need a decision, stop and say in your last reply what is missing.'
   } >"$t"
   cd "$top"
   HP="/goal \`$test\` exits 0 and the change is left uncommitted; read $t first and follow it"
   bound=540 # ponytail: fixed 540 s bound to stay under the Bash tool's 600 s cap, raise it if the cap moves
   turns=30 # ponytail: fixed 30-turn cap per headless run, raise it if quickstart section 5 measures goal runs that need more
   rc=0
-  j=$(timeout "$bound" claude -p "$HP" --output-format json --max-turns "$turns" -n "$N" --tools Read,Edit,Write,Glob,Grep,Bash \
+  j=$(timeout -k 10 "$bound" claude -p "$HP" --output-format json --max-turns "$turns" -n "$N" ${model:+--model "$model"} --tools Read,Edit,Write,Glob,Grep,Bash \
     --allowedTools Read Edit Write Glob Grep "Bash($test)" \
     --permission-mode dontAsk --permission-prompts none --strict-mcp-config) || rc=$?
   new=$(git rev-parse HEAD)
   [ "$old" = "$new" ] || fail "worker committed: $old -> $new"
-  [ "$rc" != 124 ] || fail "timed out after $bound s"
+  [ "$rc" != 124 ] && [ "$rc" != 137 ] || fail "timed out after $bound s"
   jq -e 'type == "object"' <<<"$j" >/dev/null 2>&1 || fail "claude gave no JSON result."
   printf 'headless\t%s\t%s\n' "$N" "$(jq -r '[.subtype, .num_turns, .total_cost_usd] | @tsv' <<<"$j")"
   echo 'result:'

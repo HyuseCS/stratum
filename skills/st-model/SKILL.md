@@ -8,7 +8,7 @@ description: Set the model or effort a Stratum agent uses in this project, saved
 Plugin root is two levels up from this skill's base directory.
 
 Agents: `st-build`, `st-close`, `st-debug`, `st-fast`, `st-git`, `st-impeccable`, `st-inspect`,
-`st-plan`, `st-ponytail-audit`, `st-ponytail-debt`, `st-quick`, `st-review`, `st-test`, `st-triage`.
+`st-plan`, `st-ponytail-audit`, `st-ponytail-debt`, `st-quick`, `st-review`, `st-test`, `st-triage`, `st-worker`.
 
 | Value | Effect on the agent's entry |
 |-------|-----------------------------|
