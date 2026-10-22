@@ -223,6 +223,8 @@ run check plan specs/001-demo
 check "check plan stale after a one-line change" 'stale'
 
 run plan specs/001-demo
+run check plan specs/001-demo
+check "check plan fresh after the second run" '[ $rc = 0 ]'
 echo "more" >> "$proj/specs/001-demo/tasks.md"
 run check plan specs/001-demo
 check "check plan stale after a tasks.md change" 'stale'
@@ -241,13 +243,13 @@ check "no record" '[ $rc = 1 ] && [ "$out" = "no record: plan" ]'
 answer '{"verdict":"APPROVED","summary":"fine","findings":[]}'
 run diff specs/001-demo "$first"
 run check diff specs/001-demo "$first"
-check "diff stays fresh with an untracked record" '[ $rc = 0 ]'
+check "diff stays fresh with an untracked record" '[ $rc = 0 ] && [[ "$out" == "APPROVED sha256 "* ]]'
 
 git -C "$proj" add specs/001-demo/advisor.md
 gitc commit -q -m rec -- specs/001-demo/advisor.md
 run diff specs/001-demo "$first"
 run check diff specs/001-demo "$first"
-check "diff stays fresh after the record append" '[ $rc = 0 ]'
+check "diff stays fresh after the record append" '[ $rc = 0 ] && [[ "$out" == "APPROVED sha256 "* ]]'
 
 echo k > "$proj/extra.txt"
 run check diff specs/001-demo "$first"
@@ -274,10 +276,16 @@ run check plan specs/001-demo
 check "finding text cannot forge a record header" '[ "$n1" = $((n0 + 1)) ] && [[ "$out" == "REVISE sha256 "* ]]'
 
 FAKE_RC=1 run plan specs/001-demo
+echo "later" >> "$proj/specs/001-demo/plan.md"
 run continued plan specs/001-demo
 cout=$out; crc=$rc
 run check plan specs/001-demo
-check "continued records the user's choice" '[ $crc = 0 ] && [ "$cout" = "BLOCKED, user continued sha256 $h" ] && last_header plan | grep -q "| BLOCKED, user continued$" && [ $rc = 0 ] && [ "$out" = "$cout" ]'
+check "continued records the user's choice" '[ $crc = 0 ] && [ "$cout" = "BLOCKED, user continued sha256 $h" ] && last_header plan | grep -q "| BLOCKED, user continued$" && stale'
+
+chmod 444 "$proj/specs/001-demo/advisor.md"
+run continued plan specs/001-demo 2>/dev/null
+chmod 644 "$proj/specs/001-demo/advisor.md"
+check "continued fails loudly when the record cannot be written" '[ $rc = 1 ] && ! grep -qF "BLOCKED, user continued" <<<"$out"'
 
 run continued diff specs/002-empty
 check "continued without a record" '[ $rc = 2 ] && [ "$out" = "no record: diff" ]'
