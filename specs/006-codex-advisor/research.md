@@ -140,6 +140,13 @@ D3). A foreground Bash call is capped at 600000 ms.
   appended to it, while `git ls-files --others --exclude-standard` (no pathspec) listed it. The
   `:(exclude)` pathspec works on `ls-files --others` too.
 - Hashing uses `sha256sum`, like `skills/st-triage/SKILL.md:14`.
+- Hash failure (D20, D21; found by diff-point Codex rounds 2 and 3, reproduced by hand): a missing
+  `sha256sum`, an unreadable input or a failing `git` command left an empty or partial digest, and
+  `check` matched an older record made on that same digest. The script now requires readable
+  regular files, checks the exit of `git ls-files` and of each `git diff` (`git diff --no-index`
+  exits 1 when files differ, allowed), and requires a digest of 64 lowercase hex characters, else
+  `cannot hash inputs`, exit 2, no record. No `pipefail`, because the `--no-index` exit 1 would
+  trip it.
 
 ## R7. Full lane base commit for the diff point
 

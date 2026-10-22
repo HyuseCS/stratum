@@ -146,6 +146,10 @@ Post-design re-check: all gates pass. No violations, so Complexity Tracking stay
   write `advisor.md` in each worktree and conflict at merge. The st-build text has such a subagent
   stop after 2 red tries and report both failures, and runs the test point in the main session
   (contract 7.1).
+- **F6.** Found at the diff point (D20, D21). The hash step ignored failures of `sha256sum`, `cat`
+  and `git`, so an empty or partial digest could match an old record. Fixed after the plan:
+  readable regular files only, `git` exits checked, a 64 hex digest required, else
+  `cannot hash inputs`, exit 2, no record (contract section 2, research R6).
 
 ## Project Structure
 

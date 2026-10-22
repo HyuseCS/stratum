@@ -67,6 +67,7 @@ L2, L10).
 | C11 | stop leaving secret-looking paths out of the `Untracked files:` list | `diff point names full base and untracked files` |
 | C12 | leave secret-looking paths out of the diff hash as well | `untracked .env makes diff stale` |
 | C13 | delete the prompt line `Never quote a secret value in a finding.` | `FR-013 prompt: never quote a secret` |
+| E1 | remove the 64-hex digest test and the `git` exit checks from the diff hash (the checks use a `sha256sum` stub that prints nothing, and a `chmod 000` untracked file) | `sha256sum prints nothing: plan run exit 2, no record`, `sha256sum prints nothing: check plan exit 2`, `unreadable untracked file: diff run exit 2, no record, no codex`, `unreadable untracked file: check diff exit 2` (D20, D21; the unreadable-file checks are skipped as root) |
 | D1 | delete the line `Never run `codex` to build or fix.` from the copy of `skills/st-build/SKILL.md` | `#18 FR-012 review only` |
 
 ## 3. Live runs (real Codex)
@@ -74,8 +75,8 @@ L2, L10).
 Only L1 uses quota: one Codex call, about 37,000 tokens. Ask the user first. L2 reads the L1
 record and calls no Codex. L3 runs logged out, L4 and L5 never start Codex: no quota.
 
-This repo has no `.stratum/advisor.json`. For L1 to L3, write it as `{"mode": "codex"}` first,
-and remove it after unless the user wants it committed.
+This repo now commits `.stratum/advisor.json` as `{"mode": "codex"}` (D19), so L1 to L3 need no
+setup. For L4 and L5, use a scratch clone and change or delete the file there.
 
 - L1, plan point: `bash scripts/st-advisor.sh plan specs/006-codex-advisor` with a Bash timeout
   of 600000 ms. Expect exit 0 or 1, line 1 `APPROVED sha256 ...`, `REVISE sha256 ...` or
@@ -97,8 +98,8 @@ and remove it after unless the user wants it committed.
   `bash scripts/st-advisor.sh plan specs/006-codex-advisor` prints exactly
   `no advisor: mode not set. Write .stratum/advisor.json with "mode": "codex", "both" or "off".`,
   exit 0, and writes no record.
-- After L1 to L3, remove `specs/006-codex-advisor/advisor.md` and `.stratum/advisor.json` unless the user wants them kept.
-  Restore `tasks.md` if L2 left it changed.
+- After L1 to L3, keep `specs/006-codex-advisor/advisor.md` and `.stratum/advisor.json`: both are
+  committed on purpose (D18, D19). Restore `tasks.md` if L2 left it changed.
 
 ## 4. By hand
 

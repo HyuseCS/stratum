@@ -136,3 +136,30 @@
   Assumptions, research R6 and the data model kept the old wording until this close.
 - Rule: When a review adds a guard, update spec Assumptions, research and the data model in the
   same commit, not only the contract and plan.
+
+## 2026-10-23: 006-codex-advisor
+
+### L14. A hash step that ignored tool failures let a stale approval pass
+
+- What happened: Diff-point Codex rounds 2 and 3 found that a missing `sha256sum`, an unreadable file or a failing `git` command left an empty or partial digest, and `check` matched it against an older record (D20, D21). Round 2's fix covered `cat` and `sha256sum` only; round 3 found the `git` exit codes still ignored.
+- Rule: A script that hashes an input to gate an approval must have one test per producer (each tool in the pipeline, each unreadable input) where that producer fails, and the test must fail unless the script exits non-zero with no record written.
+
+### L15. A fixed defect had a second entry point that the first fix left open
+
+- What happened: The hash failure above took three review rounds because each fix closed one producer (D20) and the next round found another (D21). Both rounds were used on one gate pass, and the user had to approve an extra round.
+- Rule: When a review finding is a failure mode of a shared step, list every command that feeds that step before the fix and give each one a failing test in the same commit.
+
+### L16. Commit lines in the skills assumed the advisor always wrote a record
+
+- What happened: The first skill text told `st-git` to commit `<feature dir>/advisor.md` at three gates. With mode off, no codex or no record, the file does not exist, and the commit would fail. The diff-point review found it (D19) and the lines now say "if it changed".
+- Rule: A skill line that commits a generated file must say "if it changed", and the phrase table must hold a row for that wording at every gate that names the file.
+
+### L17. A parallel worktree task ran the advisor from the wrong directory
+
+- What happened: The `[P]` escalation text sent the test-point advisor run and `st-debug` to the main session without a path. The record, the diff and the fix would land outside the worktree that held the failing test. The diff-point review found it (D19); the text now says to run from the worktree root and pass the worktree path to `st-debug`.
+- Rule: Any skill text that moves work from a worktree subagent to the main session must name the worktree path that the next command runs in, and the phrase table must hold that wording.
+
+### L18. A guard test must have its own negative control before the fix is trusted
+
+- What happened: The D20 hash fix was proven red before and green after with a `sha256sum` stub that prints nothing, and the D21 fix with a `chmod 000` untracked file. The first Codex-reported cause (`cat` and `sha256sum`) was real but incomplete (L15).
+- Rule: Each guard added after a review finding must have a test that is red on the previous commit of the script, and the fix commit message must name that test.

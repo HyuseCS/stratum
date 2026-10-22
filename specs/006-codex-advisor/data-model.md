@@ -40,7 +40,7 @@ No database. Two files and the answer Codex writes. Exact formats are in
 - From the script, when the answer is not usable: `BLOCKED` with a reason (FR-004).
 - From the user: `BLOCKED, user continued`, written by `st-advisor.sh continued` (FR-006).
 - Exit status of a run: `APPROVED` and `REVISE` exit 0, `BLOCKED` exits 1, `no advisor` exits 0,
-  bad arguments exit 2.
+  bad arguments exit 2, `cannot hash inputs` exits 2.
 
 ## Finding
 
@@ -58,7 +58,8 @@ No database. Two files and the answer Codex writes. Exact formats are in
   `--output-schema` (research R1).
 - Mapping to results, in this order (first match wins):
   1. Codex timed out (exit 124 or 137): `BLOCKED: timed out`.
-  2. Codex exited non-zero: `BLOCKED: <reason>` (research R2).
+  2. Codex exited non-zero: `BLOCKED: <reason>`, the last stderr line that starts `ERROR:`, else
+     `codex exited <rc>` (D16, research R2).
   3. `-o` file missing or empty (only whitespace): `BLOCKED: empty answer`.
   4. Not JSON, or not an object: `BLOCKED: malformed answer`.
   5. `verdict` missing or not one of the three: `BLOCKED: no verdict`.
@@ -73,6 +74,8 @@ No database. Two files and the answer Codex writes. Exact formats are in
 - One entry per run of `plan`, `test`, `diff` that reaches a verdict (every row of the answer
   mapping above, plus `BLOCKED: bad advisor.json`) and per `continued` call (FR-007). No entry
   for `no advisor` lines or bad arguments.
+- Format: an empty line goes before a record when the file already has content, never after one
+  (contract section 6).
 - Fields: point, UTC date and time, SHA256 of the input, verdict, then a summary or reason line
   and one line per finding.
 - The header line is the only line that starts with `## `. The latest header line for a point is
@@ -89,6 +92,10 @@ No database. Two files and the answer Codex writes. Exact formats are in
     path is hashed, including the secret-looking ones that the prompt's `Untracked files:` list
     leaves out (basename `.env*`, `*.pem`, `*.key`, `*.p12`, `*.pfx`, D12). So a new `.env`
     makes a diff approval stale without being named to Codex.
+- Hash failure (D20, D21): every input must be a readable regular file. `git ls-files`, `git diff`
+  and `git diff --no-index` (exit 1 allowed, by design) must succeed, and the digest must be 64
+  lowercase hex characters. Else the script prints `cannot hash inputs`, exits 2 and writes no
+  record. `check` stops the same way, so an empty or partial digest never matches an old record.
 - State over one gate pass: no record, then `APPROVED` (go on), or `REVISE` (fix, then one more
   run: round 2), or `BLOCKED` (stop; user continues: `BLOCKED, user continued`). After round 2 the
   user decides. A record whose hash no longer matches the current input is stale and counts as no
