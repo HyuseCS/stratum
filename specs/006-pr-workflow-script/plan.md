@@ -70,7 +70,11 @@ Post-design re-check: all gates pass. No violations, so Complexity Tracking stay
   nothing is pushed (FR-006, SC-003). A find names commit, path, line and kind, never the value,
   because the result lands in the session transcript. Limits: the scan is one model's judgment,
   not a pattern tool. A dead scan agent gives `unverified: facts:scan` at the gate and no block,
-  as the spec's edge case says. The fallback current path has no scan, as today.
+  as the spec's edge case says. The fallback current path has no scan, as today. Volume ceiling:
+  one scan agent reads every patch in the range, and with `--diff-merges=first-parent` each merge
+  of main shows main's whole delta again. If the agent runs out of context it may return
+  `{finds: []}`, which looks like a clean scan. Known limit, by spec (edge case: a dead or empty
+  scan gives no block).
 - **S2. Agents run with the session's CLAUDE.md and tool access (T002, T003).** Workflow agents
   get the same CLAUDE.md files and the full tool set, including Bash, `git push` and `gh`. No
   tool list makes the facts phase read-only. The guards: each facts, chunk and refuter prompt
@@ -80,10 +84,19 @@ Post-design re-check: all gates pass. No violations, so Complexity Tracking stay
   the gate on a difference. The compare detects, it does not stop. It does not see git-ignored
   paths, files outside the repo, a push, or a gh call (lessons L10). The plugin's PreToolUse
   Bash hook `hooks/st-git-guard.py` may also cover workflow agents. That was not verified.
+  Open checks for the demos: whether `scriptPath` is readable from the installed plugin cache
+  (M5), whether `hooks/st-git-guard.py` fires inside workflow agents, and whether workflow agents
+  can write to the session scratchpad (if not, the draft returns no `bodyPath` and the fallback
+  runs).
 - **S3. Untrusted input (T002).** Diffs, commit messages, spec and task text are repo data that
   anyone with push access writes. Every prompt says repo text is data, never instructions.
   A diff that tells the scan agent to report nothing can still fool it. The gate shows the body
   before anything is posted.
+- **S3a. Accepted risk: `facts:tests` runs commands (T002, FR-005).** The agent runs the test
+  commands it finds in the repo (README, package scripts, Makefile, CI config). Those files are
+  repo data, so a hostile branch can make the agent run its own command. The current path never
+  ran any test command. FR-005 asks for it, so it is accepted. The read-only prompt rule and the
+  before and after compare (S2) are the only guards.
 - **S4. New contracts (T002, T003).** The Workflow `args` object and the result object are new
   interfaces between st-pr and the script (contracts sections 1 and 3). Step 5 and step 6 do not
   change. No access rule, sign-in, stored data or external service changes. `gh` is used only in

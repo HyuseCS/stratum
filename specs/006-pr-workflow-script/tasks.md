@@ -124,3 +124,15 @@ it. Coverage: FR-001 to FR-004, FR-006, FR-010 to FR-013 have test rows in T001 
 FR-005, FR-007, FR-008 and FR-009 are prompt-only: what the agents do is not testable with fakes.
 Their checks are the `prompt rules` case (the prompt holds the rule) and the manual row M3.
 SC-001, SC-002, SC-003 and SC-005 also have manual rows (T004, T005).
+
+---
+
+## Phase 7: Convergence
+
+- [ ] T008 [US3] Extend the `prompt rules` case in `tests/test_pr_workflow.mjs` with the five review-added strings of `workflows/pr.js`, and change nothing else (test-only, decision D7, FR-012). The strings already exist in the script, so the case stays green. The test's scratchpad is `/s` and the case runs with `featureDir` `""`, so check each string against the prompts in `calls`, naming the label and the missing text in the fail message:
+  - `Do not stage, commit, push or run gh.` in the `draft` prompt and in every `fix:` prompt.
+  - `Read files only under the project root, plus /s/pr-body.md` in every prompt.
+  - ``under `.github/` or under `docs/` `` in the `draft` prompt.
+  - `There is no feature dir: report each FR claim in the body as wrong` in the `refute:frs` prompt.
+  - `facts:tests result:` in the `refute:commands` prompt.
+  - Run `node tests/test_pr_workflow.mjs`: all 16 cases `ok`. Control, on a scratch copy (lessons L2): for each of the five strings, `s=$(mktemp -d); sed "s/<string>//" workflows/pr.js > "$s/pr.js"; ST_PR_SCRIPT="$s/pr.js" node tests/test_pr_workflow.mjs | grep '^FAIL'` prints a `FAIL prompt rules` line that names the removed string. Edit no repo file other than the test (partial, FR-005, FR-007, FR-008, FR-009).
