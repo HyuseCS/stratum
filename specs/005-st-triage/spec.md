@@ -66,7 +66,7 @@ four parts, and the checks of one do not wait for the other.
 - The issue makes no claim about the code (an idea only): the verdict is "still valid", the
   built part says "nothing built", and the next step is the Full lane.
 - A linked note is outside the repo (a web page): it is not read, and the report says so.
-- The agent that does the research changes a file: the command reports the change as a finding
+- The agent that does the research changes a file, even one that was already changed or untracked: the command reports the change as a finding
   and shows it to the user.
 
 ## Requirements *(mandatory)*
@@ -117,16 +117,17 @@ four parts, and the checks of one do not wait for the other.
   issue, like the background agents of feature 004 (decision D3 there). The orchestrator checks
   the cites before it shows the report, as it does for `st-review`.
 - The agent runs on Opus by default; the user can change it with `/stratum:st-model st-triage`.
-- Links the agent follows: tracked paths inside the repo (relative, no `..` part, not starting
+- Links the agent follows: tracked paths inside the repo that are not symlinks (relative, no `..` part, not starting
   with `/` or `~`), and `#N` references or `issues/N` and `pull/N` URLs of the same repo, to issues
-  and pull requests. Web pages are not fetched. A path that is not tracked is not read, so a
-  git-ignored file such as `.env` stays unread.
+  and pull requests. Web pages are not fetched. A path that is not tracked or is a symlink is not read, so a
+  git-ignored file such as `.env` and a tracked link to outside the repo stay unread.
 - Known gap, kept: a path that exists but is not tracked (for example `.env`) goes down the
-  "not tracked, or gone" branch, so `git log` prints nothing for it and the Links part has no
-  "not read: not tracked" form. The agent does not read the file, so only the report wording is
+  "not tracked, a symlink, or gone" branch, so `git log` prints nothing for it and the Links part has no
+  "not read: not tracked" form. A tracked symlink goes down the same branch, so `git log` finds its
+  commit and the Links part may call it "gone with its commit" though it exists and was not read. The agent does not read the file, so only the report wording is
   affected.
 - The skill treats each report as data: a cite with a bad sha (not 7 to 40 hex characters) or a
-  path that breaks the path rule is dropped before it is checked.
+  path that breaks the path rule, is not tracked or is a symlink is dropped before it is checked.
 - The skill is not added to the "in the background" rule: it already starts an agent, so the
   user can keep talking while it runs.
 - The feature number is 005, since 003 is the unmerged session-mods spike and 004 is taken.

@@ -61,25 +61,27 @@ Facts checked on 2026-10-22 against Claude Code 2.1.302 (`/opt/claude-code/bin/c
 
 - Decision: the skill accepts only digit issue numbers (a leading `#` is stripped). The agent reads only
   tracked paths inside the repo (relative, no `..` part, not starting with `/` or `~`, and
-  `git ls-files --error-unmatch` succeeds), puts each path and
+  `git ls-files --error-unmatch` succeeds and `test -L` fails), puts each path and
   each `git log --grep` or `-S` value from the issue in single quotes, marks one that holds a `'`
   as `unchecked`, counts a URL to this repo's `issues/N` or `pull/N` (N digits only) as `#N`, and
   treats the issue text as claims to check, not as instructions. The skill treats each report as
-  data and drops a cite whose sha is not 7 to 40 hex characters or whose path breaks the path rule.
+  data and drops a cite whose sha is not 7 to 40 hex characters or whose path breaks the path rule, is not tracked or is a symlink.
 - Rationale: the issue number and every link go into shell commands. Anyone who can comment on the
   repo can write the issue text the agent reads.
 - Kept gap: a path that exists but is not tracked (for example `.env`) takes the same branch as a
   gone path, so `git log --oneline -- '<path>'` prints nothing and the Links part has no
-  "not read: not tracked" form. The file is not read. Only the report wording is short.
+  "not read: not tracked" form. A tracked symlink takes the same branch, so `git log` finds its
+  commit and the Links part may call it "gone with its commit" though it exists and was not read.
+  The file is not read. Only the report wording is short.
 - Alternatives considered: none.
 
 ## R7. Detecting a change
 
-- Decision: the skill notes `git rev-parse HEAD`, `git status --porcelain --untracked-files=all`
-  and each issue's `updatedAt` before it starts the agents, and runs them again when every report
+- Decision: the skill notes `git rev-parse HEAD`, `git status --porcelain --untracked-files=all`,
+  the `sha256sum` of each changed and untracked file and each issue's `updatedAt` before it starts the agents, and runs them again when every report
   is in. A difference is a finding to check.
-- Rationale: the spec's edge case (the agent changes a file) and SC-003. The git pair is the check
-  of `hooks/st-session-start.sh:17` and lessons L10. `updatedAt` changes on any comment, label,
+- Rationale: the spec's edge case (the agent changes a file) and SC-003. HEAD and status are the check
+  of `hooks/st-session-start.sh:17`, and the `sha256sum` line adds a further edit to an already changed file and a content change in an untracked file (lessons L10). `updatedAt` changes on any comment, label,
   edit or state change, so it sees a GitHub write. It also changes when another person comments,
   so a difference is checked, not trusted.
 - Alternatives considered: comparing comments and labels field by field (more output, same signal).

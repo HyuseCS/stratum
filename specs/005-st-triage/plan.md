@@ -63,10 +63,10 @@ Post-design re-check: all gates pass. No violations, so Complexity Tracking stay
 - **S1. The agent has Bash and reads GitHub (T002).** Bash is needed for `gh issue view` and
   `git log` (research R2). So the tool list stops Edit and Write but not a write through Bash, and
   not `gh issue comment`, `gh issue edit` or `gh issue close`. The guards: the `## Never` lines
-  (only `gh issue view`, no state change), the skill's `git rev-parse HEAD` and
-  `git status --porcelain --untracked-files=all` before and after, and each issue's `updatedAt`
-  before and after (research R7). The git pair does not see git-ignored paths (`.env`,
-  `.stratum/models.json`) or edits to files that were already changed (lessons L10). `updatedAt`
+  (only `gh issue view`, no state change), the skill's `git rev-parse HEAD`,
+  `git status --porcelain --untracked-files=all` and the `sha256sum` of each changed and untracked file before and after, and each issue's `updatedAt`
+  before and after (research R7). The three git commands do not see git-ignored paths (`.env`,
+  `.stratum/models.json`); the `sha256sum` line sees edits to files that were already changed (lessons L10). `updatedAt`
   also moves when another person comments, so a difference is a finding to check, not proof.
 - **S2. External service: GitHub through gh (T002).** The skill and the agent use the user's
   `gh` sign-in and read only. No token is read, stored or printed by Stratum. A failed sign-in
@@ -78,10 +78,10 @@ Post-design re-check: all gates pass. No violations, so Complexity Tracking stay
   one that holds a `'` as `unchecked`, and treats the issue text as claims to check, never as instructions (research R6).
   A path inside the repo is relative, has no `..` part, and does not start with `/` or `~`. The
   agent reads no other path and fetches no web page, so issue text cannot point it at `~/.ssh`
-  or a URL. It reads a repo path only when `git ls-files --error-unmatch` finds it tracked, so a
-  git-ignored file such as `.env` stays unread. A URL to this repo's `issues/N` or `pull/N`, N
+  or a URL. It reads a repo path only when `git ls-files --error-unmatch` finds it tracked and `test -L` says it is not a symlink, so a
+  git-ignored file such as `.env` and a tracked link to outside the repo stay unread. A URL to this repo's `issues/N` or `pull/N`, N
   digits only, counts as `#N`. The skill treats each report as data, never an instruction, and
-  drops a cite whose sha is not 7 to 40 hex characters or whose path breaks the path rule before
+  drops a cite whose sha is not 7 to 40 hex characters or whose path breaks the path rule, is not tracked or is a symlink before
   it runs `git cat-file` or `git show` on it.
 - **S4. Model file names (T002).** `.stratum/models.json` accepts `st-triage` once the agent file
   exists. Existing files stay valid. No other contract changes.

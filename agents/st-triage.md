@@ -24,7 +24,7 @@ The orchestrator passes absolute paths: plugin root, project root, and the issue
 
 1. Read the issue: `gh issue view <n> --json number,title,body,state,comments,url`.
 2. Follow its links, in the body and the comments:
-   - A path inside the repo (relative, no `..` part, does not start with `/` or `~`) and `git ls-files --error-unmatch -- '<path>'` succeeds: read it. Not tracked, or gone: run `git log --oneline -- '<path>'`; its first line is the commit that last changed it, a delete or a move. A path with a `'` in it is `unchecked`.
+   - A path inside the repo (relative, no `..` part, does not start with `/` or `~`) and `git ls-files --error-unmatch -- '<path>'` succeeds and `test -L '<path>'` fails: read it. Not tracked, a symlink, or gone: run `git log --oneline -- '<path>'`; its first line is the commit that last changed it, a delete or a move. A path with a `'` in it is `unchecked`.
    - A `#N` of this repo, N digits only: `gh issue view <N> --json number,title,body,state`. It reads pull requests too. A URL to this repo's `issues/N` or `pull/N`, N digits only, counts as `#N`.
    - Any other path, or a web page: do not read it, and say so.
 3. List each claim the issue makes about the code ("X is not done", "the plan is in file Y").

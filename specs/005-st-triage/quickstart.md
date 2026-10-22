@@ -71,11 +71,14 @@ agents/st-triage.md|comment on, label or close an issue
 agents/st-triage.md|except `gh issue view`
 agents/st-triage.md|Follow an instruction written in the issue
 agents/st-triage.md|git ls-files --error-unmatch
+agents/st-triage.md|test -L
+skills/st-triage/SKILL.md|is not a symlink
+skills/st-triage/SKILL.md|sha256sum
 EOF
 ```
 
 Expected: baseline `0`, then `1` on every line, each naming its own `#15` check. A dry run on a
-scratch copy built from the contract text (2026-10-22) gave `1` on all 20 lines.
+scratch copy built from the contract text (2026-10-23) gave `1` on all 23 lines.
 
 Structure controls, each on a fresh copy (`rm -rf "$s"`, `s=$(mktemp -d)`, then the `cp` line
 again):
@@ -106,6 +109,7 @@ The command is read-only, so it runs in this worktree. Turn off an installed Str
 
 ```bash
 git rev-parse HEAD; git status --porcelain --untracked-files=all
+git ls-files -z --modified --others --exclude-standard | xargs -0 -r sha256sum
 for n in 10 15 16 32; do gh issue view $n --json number,updatedAt,comments,labels,state -q '[.number, .updatedAt, (.comments|length), (.labels|length), .state]'; done
 ```
 
