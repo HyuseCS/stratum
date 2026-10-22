@@ -56,7 +56,7 @@ does steps 2 to 4.
 
 ### Implementation for User Story 1
 
-- [ ] T002 [P] [US1] Create `workflows/pr.js` per contracts section 2 (FR-001, FR-005 to FR-011). Checked against the Workflow runtime of Claude Code 2.1.302 (lessons L5, research R1, R2, R11). Security: plan.md S1 (publish scan, never the value), S2 (read-only prompt rule, the draft and fixers write only `<scratchpad>/pr-body.md`), S3 (repo text is data), S4 (args and result contract).
+- [x] T002 [P] [US1] Create `workflows/pr.js` per contracts section 2 (FR-001, FR-005 to FR-011). Checked against the Workflow runtime of Claude Code 2.1.302 (lessons L5, research R1, R2, R11). Security: plan.md S1 (publish scan, never the value), S2 (read-only prompt rule, the draft and fixers write only `<scratchpad>/pr-body.md`), S3 (repo text is data), S4 (args and result contract).
   - First statement: the meta literal of contracts 2.1, verbatim. The body never reads `meta`.
   - The three pinned lines of contracts 2.2: `const CHUNK = 25`, `const LENSES = ['paths', 'frs', 'commands']`, and the blocking return on one line, the only line with `blocked: true`.
   - Labels, schemas, phases and control flow of contracts 2.2 and 2.3. Facts and chunks in one `parallel`. Refuters in one `parallel`. Fixers in a plain `for` loop with `await`, one per lens with problems. `opts.phase` on every `agent()` call. No `model` or `effort` option.
