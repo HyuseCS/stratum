@@ -77,6 +77,7 @@ S5	skill	a simpler or better approach
 S5	skill	tasks to cut or merge
 S5	skill	missed auth invariants
 S5	skill	big ones go to the user before the gate
+S7	skill	a fix removed or renamed a task
 S6	skill	OK to build?
 S6	skill	findings dropped
 EOF

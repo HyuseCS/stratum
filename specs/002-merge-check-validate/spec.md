@@ -92,6 +92,8 @@ blocked with "unknown agent" and the 10 allowed names.
 
 - The Inspect agent finds a CRITICAL issue that the orchestrator then fixes: the agent runs once
   more, and it replaces its older `## Validate` section instead of adding a second one.
+- A fix removes or renames a task and its old ID still appears in `## Validate` of `plan.md`: the
+  agent runs once more.
 - The Inspect agent edits a file other than `plan.md`, or `plan.md` outside `## Validate`: the
   orchestrator sees it in `git status` or the diff and treats it as a finding.
 - A project whose state.json still says `phase: check` (mid-feature during the update): the next
@@ -147,7 +149,7 @@ From the old phase skill:
 - S1. `git status` before and after the agent: only `plan.md` may change.
 - S2. Each finding checked against the source; false ones dropped, small ones fixed, big ones to the user one at a time.
 - S3. Fixes to spec, plan or tasks go to `st-plan`; `st-git` commits them.
-- S4. After a CRITICAL fix, the agent runs once more.
+- S4. After a CRITICAL fix, the agent runs once more. S7: the same after a fix removes or renames a task whose old ID is in `## Validate`.
 - S5. Advisor step: risks and improvements (FR-006).
 - S6. Gate: "OK to build?", showing coverage, findings by severity, fixes made, findings dropped and the verdict.
 
