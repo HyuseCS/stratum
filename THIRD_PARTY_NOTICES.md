@@ -28,3 +28,6 @@ keeps its original license. Full license texts are in `licenses/`. Pinned upstre
   into Stratum's phase skills.
 - **vibecode-pro-max-kit agents:** rewritten to read Spec Kit-style `specs/` files instead of the
   `process/` tree; renamed to `st-*`.
+- **ponytail:** renamed to `st-ponytail*` (`/st-ponytail...` triggers, hooks under `hooks/ponytail/`); the
+  shortcut comment marker stays `ponytail:` (upstream uses `shortcut:` since #1068); the gain card
+  cites the upstream benchmark file by URL; the upstream band/board mod is not shipped.

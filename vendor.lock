@@ -1,7 +1,7 @@
 {
   "spec-kit": { "repo": "github/spec-kit", "ref": "v1.2.3", "commit": "5ea8b1cf0a38699340a38e00d02770308997d8c0", "license": "MIT" },
   "vibecode-pro-max-kit": { "repo": "withkynam/vibecode-pro-max-kit", "ref": "main", "commit": "3bcb2f9891308fcaa305e2b64027bd0a7dc8251e", "license": "MIT" },
-  "ponytail": { "repo": "DietrichGebert/ponytail", "ref": "main", "commit": "c982cd411abb53323c4baa1baa3c2f020b8d0b08", "version": "4.10.3", "license": "MIT" },
+  "ponytail": { "repo": "DietrichGebert/ponytail", "ref": "main", "commit": "09c434ab73ca43761c5d8b0c5d341926c2fba710", "version": "5.3.2", "license": "MIT" },
   "mattpocock-skills": { "repo": "mattpocock/skills", "ref": "main", "commit": "5beb35b040e3de97e54fa9e386d7e42d15c295c2", "license": "MIT" },
   "ui-ux-pro-max": { "repo": "nextlevelbuilder/ui-ux-pro-max-skill", "ref": "main", "commit": "076a2b3a31394ad788afaa71f55d0bf789e7b3ec", "license": "MIT" },
   "impeccable": { "repo": "pbakaus/impeccable", "ref": "main", "commit": "c4cfe525de176bd4c8b3291e91082a253e1bc0d7", "license": "Apache-2.0" },

@@ -1,9 +1,8 @@
 ---
 name: st-ponytail-help
 description: >
-  Quick-reference card for all ponytail modes, skills, and commands.
-  One-shot display, not a persistent mode. Trigger: /st-ponytail-help,
-  "ponytail help", "what ponytail commands", "how do I use ponytail".
+  Quick reference for ponytail levels, skills and commands. One-shot display.
+  Use for /st-ponytail-help, "ponytail help", "how do I use ponytail".
 ---
 
 # Ponytail Help
@@ -15,9 +14,9 @@ write flag files, or persist anything.
 
 | Level | Trigger | What change |
 |-------|---------|-------------|
-| **Lite** | `/st-ponytail lite` | Build what's asked, name the lazier alternative in one line. |
-| **Full** | `/st-ponytail` | The ladder enforced: YAGNI → stdlib → native → one line → minimum. Default. |
-| **Ultra** | `/st-ponytail ultra` | YAGNI extremist. Deletion before addition. Challenges requirements before building. |
+| **Lite** | `/st-ponytail lite` | Build what was asked, name the smaller option in one line. |
+| **Full** | `/st-ponytail` | The smallest complete change, a check where the logic needs one, and a reply that names what was skipped and any risk. Default. |
+| **Ultra** | `/st-ponytail ultra` | Also questions the request and pushes back before building. |
 
 Level sticks until changed or session end.
 
@@ -25,15 +24,15 @@ Level sticks until changed or session end.
 
 | Skill | Trigger | What it does |
 |-------|---------|--------------|
-| **ponytail** | `/st-ponytail` | Lazy mode itself. Simplest solution that works. |
-| **st-ponytail-review** | `/st-ponytail-review` | Over-engineering review: `L42: yagni: factory, one product. Inline.` |
-| **st-ponytail-audit** | `/st-ponytail-audit` | Whole-repo over-engineering audit: ranked list of what to delete. |
-| **st-ponytail-debt** | `/st-ponytail-debt` | Harvest `ponytail:` shortcut comments into a tracked ledger. |
+| **ponytail** | `/st-ponytail` | Lazy mode itself: least new code, clear replies that name skipped work and risks. |
+| **st-ponytail-review** | `/st-ponytail-review` | Quality review of a diff: bugs, security, load, missing tests, speed, what to cut. Each finding says what goes wrong and how to fix it. |
+| **st-ponytail-audit** | `/st-ponytail-audit` | The same quality review for the whole repo, ranked. |
+| **st-ponytail-debt** | `/st-ponytail-debt` | Harvest `ponytail:` comments into a tracked ledger. |
 | **st-ponytail-gain** | `/st-ponytail-gain` | Measured-impact scoreboard: less code, less cost, more speed. |
 | **st-ponytail-help** | `/st-ponytail-help` | This card. |
 
-In Codex CLI and the IDE extension, invoke skills with `$ponytail`,
-`$st-ponytail-review`, or `$st-ponytail-help`. Claude Code and OpenCode use the
+In Codex CLI and the IDE extension, invoke skills with `$stratum:st-ponytail`,
+`$stratum:st-ponytail-review`, or `$stratum:st-ponytail-help`. Claude Code and OpenCode use the
 slash-command forms above (OpenCode ships all six as slash commands).
 
 ## Deactivate

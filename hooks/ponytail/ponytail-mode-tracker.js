@@ -7,6 +7,7 @@ const {
   clearMode,
   cursorRuleNotice,
   cursorRulePath,
+  isCodex,
   isCursor,
   isQoder,
   readMode,
@@ -41,6 +42,7 @@ function finish() {
     // Match /ponytail commands
     let modeSwitched = false;
     let deactivated = false;
+    let defaultNotice = '';
     if (/^[/@$](?:stratum:)?(?:st-)?ponytail/.test(prompt)) {
       const parts = prompt.split(/\s+/);
       const cmd = parts[0].replace(/^[@$]/, '/').replace(/^\/stratum:/, '/').replace(/^\/st-/, '/');
@@ -61,9 +63,12 @@ function finish() {
           const dmode = parts[2];
           if (dmode === 'off' || dmode === 'lite' || dmode === 'full' || dmode === 'ultra') {
             writeDefaultMode(dmode);
-            writeHookOutput('UserPromptSubmit', dmode, 'PONYTAIL DEFAULT SET — new sessions start in ' + dmode + '.');
+            defaultNotice = 'PONYTAIL DEFAULT SET — new sessions start in ' + dmode + '.';
+            if (!isQoder) writeHookOutput('UserPromptSubmit', dmode, defaultNotice);
           }
-          return; // don't fall through to the session-mode switch
+          // Qoder still needs this turn's ruleset: the block below folds the
+          // notice into it. mode stays null, so the session level is untouched.
+          if (!isQoder) return; // don't fall through to the session-mode switch
         }
         if (arg === 'lite') mode = 'lite';
         else if (arg === 'full') mode = 'full';
@@ -79,17 +84,19 @@ function finish() {
           } else {
             mode = getDefaultMode() === 'off' ? 'full' : getDefaultMode();
           }
-        } else {
-          mode = getDefaultMode();
         }
       }
 
       if (isReportOnly) {
-        writeHookOutput(
-          'UserPromptSubmit',
-          mode,
-          'PONYTAIL MODE ACTIVE — level: ' + mode,
-        );
+        // On Qoder the ruleset block below already reports; a second write
+        // here would put two JSON objects on stdout.
+        if (!isQoder) {
+          writeHookOutput(
+            'UserPromptSubmit',
+            mode,
+            'PONYTAIL MODE ACTIVE — level: ' + mode,
+          );
+        }
       } else if (mode && mode !== 'off') {
         setMode(mode);
         modeSwitched = true;
@@ -97,18 +104,21 @@ function finish() {
         // switch happens we fold the confirmation into the ruleset output
         // below (one JSON on stdout) instead of emitting two separate writes.
         if (!isQoder) {
-          // Cursor has no /ponytail command that would load the skill body
-          // for the new level, so the tracker delivers that level's ruleset
-          // along with the confirmation (#817).
+          // Cursor (#817) and Codex have no /ponytail command that would load
+          // the skill body for the new level, and the SessionStart ruleset is
+          // filtered to the start level, so the tracker delivers that level's
+          // ruleset along with the confirmation.
           const header = 'PONYTAIL MODE CHANGED — level: ' + mode;
           writeHookOutput(
             'UserPromptSubmit',
             mode,
-            isCursor ? header + '\n\n' + getPonytailInstructions(mode) : header,
+            (isCodex || isCursor) ? header + '\n\n' + getPonytailInstructions(mode) : header,
           );
         }
       } else if (mode === 'off') {
-        clearMode();
+        if (isQoder) setMode('off');
+        else clearMode();
+
         deactivated = true;
         writeHookOutput('UserPromptSubmit', 'off', 'PONYTAIL MODE OFF');
       }
@@ -116,7 +126,9 @@ function finish() {
 
     // Detect deactivation
     if (!modeSwitched && !deactivated && isDeactivationCommand(prompt)) {
-      clearMode();
+      if (isQoder) setMode('off');
+      else clearMode();
+
       deactivated = true;
       writeHookOutput('UserPromptSubmit', 'off', 'PONYTAIL MODE OFF');
     }
@@ -138,10 +150,12 @@ function finish() {
       if (currentMode && currentMode !== 'off') {
         // ponytail: one JSON per invocation — mode-switch confirmation is
         // folded into the ruleset header so Qoder gets both in one write.
-        const header = modeSwitched
+        const header = (defaultNotice ? defaultNotice + '\n\n' : '') + (modeSwitched
           ? 'PONYTAIL MODE CHANGED — level: ' + currentMode + '\n\n'
-          : '';
+          : '');
         writeHookOutput('UserPromptSubmit', currentMode, header + getPonytailInstructions(currentMode));
+      } else if (defaultNotice) {
+        writeHookOutput('UserPromptSubmit', currentMode, defaultNotice);
       }
     }
   } catch (e) {
