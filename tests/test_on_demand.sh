@@ -136,4 +136,16 @@ Q2 fast docs commit	skills/st-fast/SKILL.md	commits the docs `st-close` changed
 Q2 fast docs commit	DESIGN.md	shortcut list → commit docs
 EOF
 
+phrases <<'EOF'
+#16 brief mode	agents/st-build.md	Brief mode
+#16 brief mode	agents/st-build.md	the brief itself
+#16 brief mode	agents/st-build.md	schema or migration
+#16 brief mode	agents/st-build.md	auth or access rules
+#16 brief mode	agents/st-build.md	money
+#16 brief mode	agents/st-build.md	Needs the Fast lane
+#16 st routes brief	skills/st/SKILL.md	the `stratum:st-build` agent
+#16 st routes brief	skills/st/SKILL.md	never `general-purpose`
+EOF
+check "#16 general-purpose only as never" 'grep -qF general-purpose "$root/skills/st/SKILL.md" && ! grep -F general-purpose "$root/skills/st/SKILL.md" | grep -qvF never'
+
 exit $fail
