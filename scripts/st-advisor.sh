@@ -147,6 +147,8 @@ if not isinstance(a.get("summary"), str) or not isinstance(fs, list) or not all(
     blocked("malformed answer")
 if a["verdict"] == "REVISE" and not fs:
     blocked("REVISE with no findings")
+if a["verdict"] == "APPROVED" and fs:
+    blocked("APPROVED with findings")
 v = a["verdict"]
 summary = clean(a["summary"])
 found = [f"- [{clean(x['severity'])}] {clean(x['location'])}: {clean(x['claim'])} Evidence: {clean(x['evidence'])}" for x in a["findings"]]

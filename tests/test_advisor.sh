@@ -180,6 +180,11 @@ answer '{"verdict":"REVISE","summary":"s","findings":[]}'
 run plan specs/001-demo
 check "REVISE with no findings" 'blocked "REVISE with no findings"'
 
+answer '{"verdict":"APPROVED","summary":"blocking bug","findings":[{"claim":"auth bypass","evidence":"x","location":"a.py:1","severity":"CRITICAL"}]}'
+n0=$(nrec)
+run plan specs/001-demo
+check "APPROVED with findings" '[ $rc = 1 ] && [ "$(head -n1 <<<"$out")" = "BLOCKED: APPROVED with findings" ] && [ "$(nrec)" = $((n0 + 1)) ] && last_header plan | grep -q "| BLOCKED$" && [ "$(grep -A1 -F "$(last_header plan)" "$proj/specs/001-demo/advisor.md" | tail -n1)" = "reason: APPROVED with findings" ]'
+
 answer '{"verdict":"APPROVED","summary":"bad \ud800 x","findings":[]}'
 n0=$(nrec)
 out=$(adv plan specs/001-demo 2>&1); rc=$?

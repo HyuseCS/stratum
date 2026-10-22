@@ -153,7 +153,7 @@ the hash (section 2, D12). If every untracked path is left out, the list is `non
   row except the no-file row and `off`.
 - Reasons, exactly: `timed out`, `<codex error line>` (the last stderr line that starts `ERROR:`,
   else `codex exited <rc>`, D16, research R2), `empty answer`,
-  `malformed answer`, `no verdict`, `REVISE with no findings`, `bad advisor.json`.
+  `malformed answer`, `no verdict`, `REVISE with no findings`, `APPROVED with findings`, `bad advisor.json`.
 - Finding line: `- [<severity>] <location>: <claim> Evidence: <evidence>`.
 - Every Codex text (summary, each finding field, the error line) has each `\r` and `\n` replaced
   by a space before it is printed or recorded.

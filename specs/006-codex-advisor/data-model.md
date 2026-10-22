@@ -47,7 +47,7 @@ No database. Two files and the answer Codex writes. Exact formats are in
 - Fields: `claim`, `evidence`, `location` (file and line when known, else free text), `severity`
   (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`). All four are required strings (FR-003, Key Entities).
 - `APPROVED` with zero findings is valid. `REVISE` with zero findings is
-  `BLOCKED: REVISE with no findings`.
+  `BLOCKED: REVISE with no findings`. `APPROVED` with findings is `BLOCKED: APPROVED with findings`.
 - Untrusted text: Codex read repo content to write it. Newlines and carriage returns in each field
   become spaces before the finding is printed or recorded, so no finding can start a record line
   (plan.md S3).
@@ -65,7 +65,8 @@ No database. Two files and the answer Codex writes. Exact formats are in
   5. `verdict` missing or not one of the three: `BLOCKED: no verdict`.
   6. `findings` missing or not a list, or a finding that is not an object with the four string
      fields: `BLOCKED: malformed answer`.
-  7. `REVISE` with an empty list: `BLOCKED: REVISE with no findings`.
+  7. `REVISE` with an empty list: `BLOCKED: REVISE with no findings`. `APPROVED` with a non-empty
+     list: `BLOCKED: APPROVED with findings`.
   8. `BLOCKED` from Codex: `BLOCKED: <summary>`, then the finding lines.
   9. Else the verdict, as given.
 
