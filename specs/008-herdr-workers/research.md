@@ -28,7 +28,10 @@ branch `18-codex-advisor`.
     (live: `agent get w1P:p1`).
   - `agent list` answers `.result.agents[]` with the same AgentInfo fields; `.name` is null for an
     unnamed agent (live).
-  - `agent read` answers `pane_read`: `.result.read.text`.
+  - `agent read` prints the pane as plain text, not JSON (live, T005 third attempt, below):
+    `herdr agent read --help` offers only `--format text|ansi`, and `--json` is an unknown option.
+    The script prints that output as is. The schema's `pane_read` / `.result.read.text` is not what
+    the CLI prints.
   - `workspace list` answers `.result.workspaces[]` with `workspace_id` and `label` (live).
   - `worktree list --workspace <ws>` answers `.result.worktrees[]` with `path`, `branch`,
     `open_workspace_id` (live, `--workspace w1P`).
@@ -85,6 +88,9 @@ branch `18-codex-advisor`.
   Whether the flags or the name target change the output format, or whether a JSON flag exists
   for this call, is not tested. `tests/test_st_worker.sh` mocks herdr with the JSON shape, so the
   suite stays green with this break. Finding to the orchestrator. The script is not changed.
+- Follow-up (orchestrator, 2026-10-23): `herdr agent read --help` offers only `--format text|ansi`,
+  and `--json` is an unknown option, so no JSON form exists. contracts/script.md section 4 now prints
+  the plain output as is, and the stub answers plain `STUB PANE <random>`.
 
 ## R2. Worker names, labels and branch (FR-001, FR-016)
 

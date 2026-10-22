@@ -95,7 +95,7 @@ You are worker <N>, started by the Stratum orchestrator. Read this file first an
 ## Facts
 
 - Test command: `<test>`
-- Lane: <lane>. Start it with the Skill tool. Run only task <id>; skip every other task, ticked or not.
+- Lane: <lane>. If it names a skill, start it with the Skill tool. Run only task <id>; skip every other task, ticked or not.
 - Branch: <N>
 - Your machine: <m or local>. `local` is the orchestrator's machine.
 - Result file: <WT>/result.md
@@ -172,7 +172,8 @@ No match: `No worker <N> on <m or local>.`, exit 1. More than one: `More than on
   the normal stop below.
 - Step 3 answers `agent_not_ready`, or step 4 answers `agent_blocked` (a dialog is up; herdr sends
   no input): print the `worker` line, `state blocked`, then `pane text:` and the last 40 lines of
-  `H agent read N --source recent-unwrapped --lines 40` (`.result.read.text`), exit 4. After step 3
+  `H agent read N --source recent-unwrapped --lines 40`, the command's plain text output printed as
+  is (`agent read` prints raw pane lines, not JSON), exit 4. After step 3
   there is no step 4. `goal` is the next step once the dialog is answered.
 - Any other failure at or after step 1: print `stopped: <first stderr line>`, then the `worker`
   line with `-` for every id not made yet, exit 1. Nothing is closed, nothing else is retried.

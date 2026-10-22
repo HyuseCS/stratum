@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
-usage() { echo "usage: st-worker.sh start <id> --task <file> --test <cmd> --lane <text> --roster <file> [--machine <m> --repo <path>] | goal <id> --test <cmd> [--machine <m>] | wait <id> [--machine <m>] | answer <id> [--machine <m>] --keys <key>... | --text <text> | result <id> [--machine <m>] | close <id> [--machine <m>] | list [--machine <m>]" >&2; exit 2; }
+usage() { echo "usage: st-worker.sh start <id> --task <file> --test <cmd> --lane <text> --roster <file> [--machine <m> --repo <path>] | goal <id> --test <cmd> [--machine <m>] | wait <id> [--machine <m>] | answer <id> [--machine <m>] --keys <key>... | --text <text> | result <id> [--machine <m>] | close <id> [--machine <m>] | list [--machine <m>] | headless <id> --task <file> --test <cmd>" >&2; exit 2; }
 fail() { echo "$1" >&2; exit 1; }
 [ $# -gt 0 ] || usage
 cmd=$1; shift
 case $cmd in
-  start | goal | wait | answer | result | close) [ $# -gt 0 ] || usage; id=$1; shift ;;
+  start | goal | wait | answer | result | close | headless) [ $# -gt 0 ] || usage; id=$1; shift ;;
   list) ;;
   *) usage ;;
 esac
@@ -13,11 +13,12 @@ m= repo=
 while [ $# -gt 0 ]; do
   [ $# -ge 2 ] || usage
   case "$cmd $1" in
-    "start --task") task=$2 ;;
-    "start --test" | "goal --test") test=$2 ;;
+    "start --task" | "headless --task") task=$2 ;;
+    "start --test" | "goal --test" | "headless --test") test=$2 ;;
     "start --lane") lane=$2 ;;
     "start --roster") roster=$2 ;;
     "start --repo") repo=$2 ;;
+    "headless --machine") usage ;;
     *" --machine") m=$2 ;;
     "answer --text") text=$2 ;;
     "answer --keys")
@@ -31,6 +32,7 @@ done
 case $cmd in
   start) [ -n "${task+x}" ] && [ -n "${test+x}" ] && [ -n "${lane+x}" ] && [ -n "${roster+x}" ] && { [ -z "$repo" ] || [ -n "$m" ]; } || usage ;;
   goal) [ -n "${test+x}" ] || usage ;;
+  headless) [ -n "${task+x}" ] && [ -n "${test+x}" ] || usage ;;
   answer) [ "${text+x}${keys+x}" = x ] || usage ;;
 esac
 
@@ -39,10 +41,10 @@ if [ "$cmd" != list ]; then
   [[ $id =~ ^[A-Za-z0-9][A-Za-z0-9-]{0,24}$ ]] || fail "Task id must be letters, digits or dash, start with a letter or digit, and be at most 25 characters."
   N=worker-${id,,}
 fi
-if [ "$cmd" = start ]; then
+if [ "$cmd" = start ] || [ "$cmd" = headless ]; then
   [ -f "$task" ] && [ -s "$task" ] || fail "Task file not found or empty: $task"
 fi
-if [ "$cmd" = start ] || [ "$cmd" = goal ]; then
+if [ "$cmd" = start ] || [ "$cmd" = goal ] || [ "$cmd" = headless ]; then
   [[ -n $test && $test != *$'\n'* && $test != *[\(\)]* ]] || fail "Test command must be one line with no ( or )."
 fi
 if [ "$cmd" = start ]; then
@@ -64,13 +66,15 @@ if [ "$cmd" = start ] || [ "$cmd" = goal ]; then
   P="/goal \`$test\` exits 0, the change is committed on branch $N, and result.md is written; read brief.md in this folder first and follow it"
   [ ${#P} -le 4000 ] || fail "The /goal prompt is over 4000 characters."
 fi
-[ -n "$m" ] || [ "${HERDR_ENV:-}" = 1 ] || fail "Not inside a herdr pane. Run it from a herdr pane, or name a --machine."
+[ "$cmd" = headless ] || [ -n "$m" ] || [ "${HERDR_ENV:-}" = 1 ] || fail "Not inside a herdr pane. Run it from a herdr pane, or name a --machine."
 [ "$cmd" != start ] || [ -z "$m" ] || [[ $repo == [/~]* ]] || fail "A saved machine needs --repo <path> starting with / or ~."
 
 H=(herdr)
 WS= PANE= BR= WT= S= Q=
 e=$(mktemp)
-trap 'rm -f "$e"' EXIT
+t=$(mktemp)
+exec 4>&1
+trap 'rm -f "$e" "$t"' EXIT
 if [ -n "$m" ]; then
   ms=$(herdr machine list --json 2>"$e") || { msg=$(head -1 "$e"); fail "${msg:-herdr machine list failed.}"; }
   target=$(jq -r --arg m "$m" 'first(.[] | select(.label == $m or .id == $m) | .target) // empty' <<<"$ms" 2>/dev/null) || fail "herdr machine list gave no machine list."
@@ -88,7 +92,7 @@ stop() {
 h() { r=$("${H[@]}" "$@" 2>"$e") || stop "$(head -1 "$e")"; }
 rsh() {
   ssh -o BatchMode=yes -- "$target" "$*" 2>"$e" && return
-  [ $? != 255 ] || stop "ssh to $target failed: $(head -1 "$e")"
+  [ $? != 255 ] || stop "ssh to $target failed: $(head -1 "$e")" >&4
   return 1
 }
 quote() {
@@ -104,7 +108,7 @@ look() {
 }
 panetext() {
   echo 'pane text:'
-  "${H[@]}" agent read "$N" --source recent-unwrapped --lines 40 2>/dev/null | jq -r .result.read.text 2>/dev/null || true
+  "${H[@]}" agent read "$N" --source recent-unwrapped --lines 40 2>/dev/null || true
 }
 st() {
   printf 'state\t%s\t%s\t%s\n' "$1" "$N" "$PANE"
@@ -137,7 +141,7 @@ brief() {
   printf '%s\n\n' "# Brief: $N" "You are worker $N, started by the Stratum orchestrator. Read this file first and follow it." "## Task $id"
   cat -- "$task"
   printf '\n%s\n\n' '## Facts'
-  printf '%s\n' "- Test command: \`$test\`" "- Lane: $lane. Start it with the Skill tool. Run only task $id; skip every other task, ticked or not." "- Branch: $N" "- Your machine: ${m:-local}. \`local\` is the orchestrator's machine." "- Result file: $WT/result.md"
+  printf '%s\n' "- Test command: \`$test\`" "- Lane: $lane. If it names a skill, start it with the Skill tool. Run only task $id; skip every other task, ticked or not." "- Branch: $N" "- Your machine: ${m:-local}. \`local\` is the orchestrator's machine." "- Result file: $WT/result.md"
   printf '\n%s\n\n%s\n%s\n' '## Roster' '| Name | Machine | Branch | Task |' '|------|---------|--------|------|'
   printf '| %s | %s | %s | %s |\n' "${R[@]}"
   printf '\n%s\n\n' '## Team rules'
@@ -156,6 +160,7 @@ case $cmd in
 start)
   top=$(git rev-parse --show-toplevel 2>/dev/null) && sha=$(git rev-parse HEAD 2>/dev/null) || fail "Run start inside a git repo with a commit."
   [ -n "$m" ] || repo=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
+  G=$(jq -c '.commit="auto"' <(cat "$top/.stratum/git-guard.json" 2>/dev/null || echo '{}')) || stop "cannot read $top/.stratum/git-guard.json"
   h workspace list
   c=$(jq -er --arg n "$N" '[.result.workspaces[] | select(.label == $n)] | length' <<<"$r") || stop "no .result.workspaces in the herdr answer"
   [ "$c" = 0 ] || fail "A worker $N already exists."
@@ -166,14 +171,13 @@ start)
   get BR .result.worktree.branch
   get WT .result.worktree.path
   [ -n "$m" ] || [ "$WT" = "$path" ] || stop "herdr made the worktree in $WT, not $path"
-  G=$(jq -c '.commit="auto"' <(cat "$top/.stratum/git-guard.json" 2>/dev/null || echo '{}')) || stop "cannot read $top/.stratum/git-guard.json"
   if [ -z "$m" ]; then
     brief >"$WT/brief.md" || stop "cannot write $WT/brief.md"
     mkdir -p "$WT/.stratum" || stop "cannot make $WT/.stratum"
     printf '%s\n' "$G" >"$WT/.stratum/git-guard.json" || stop "cannot write the commit guard file in $WT/.stratum"
   else
     quote
-    brief | rsh "cat > $Q/brief.md && mkdir -p $Q/.stratum && printf '%s\n' $(printf %q "$G") > $Q/.stratum/git-guard.json" || stop "cannot write brief.md and .stratum/git-guard.json in $WT on $m: $(head -1 "$e")"
+    rsh "cat > $Q/brief.md && mkdir -p $Q/.stratum && printf '%s\n' $(printf %q "$G") > $Q/.stratum/git-guard.json" < <(brief) || stop "cannot write brief.md and .stratum/git-guard.json in $WT on $m: $(head -1 "$e")"
   fi
   busy=10 # ponytail: fixed 10 s agent_pane_busy retry bound, same shape as D20 in specs/007-herdr-workspace, raise it if a live run measures a slower pane shell
   for ((i = 1; ; i++)); do
@@ -243,9 +247,9 @@ answer)
   look
   [ "$S" = blocked ] || fail "not blocked: $S"
   if [ -n "${keys+x}" ]; then
-    h agent send-keys "$N" "${keys[@]}"
+    h agent send-keys "$N" -- "${keys[@]}"
   else
-    h pane send-text "$PANE" "$text"
+    h pane send-text "$PANE" -- "$text"
     h agent send-keys "$N" enter
   fi
   look
@@ -261,8 +265,9 @@ result)
     cat -- "$WT/result.md"
     exit 0
   fi
-  txt=$(rsh cat -- "$Q/result.md") || noresult
-  printf 'result\t%s\t%s/result.md\n%s\n' "$N" "$WT" "$txt"
+  rsh cat -- "$Q/result.md" >"$t" || noresult
+  printf 'result\t%s\t%s/result.md\n' "$N" "$WT"
+  cat -- "$t"
   GIT_SSH_COMMAND='ssh -o BatchMode=yes' git fetch "$target:$WT" "$N:$N" >/dev/null 2>"$e" || stop "$(head -1 "$e")"
   f=$(git rev-parse --verify "$N" 2>"$e") || stop "$(head -1 "$e")"
   printf 'fetched\t%s\t%s\n' "$N" "$f"
@@ -295,5 +300,30 @@ list)
     n=$((n + 1))
   done 3<<<"$x"
   [ "$n" != 0 ] || echo "no workers on ${m:-local}"
+  ;;
+headless)
+  top=$(git rev-parse --show-toplevel 2>/dev/null) && old=$(git rev-parse HEAD 2>/dev/null) || fail "Run headless inside a git repo with a commit."
+  {
+    printf '%s\n\n' "# Brief: $N (headless)" "## Task $id"
+    cat -- "$task"
+    printf '\n%s\n\n' '## Facts'
+    printf '%s\n' "- Test command: \`$test\`" '- Work in this folder. Leave the change uncommitted: never commit, never push.' '- Run the test command exactly as written, as one Bash call.' '- You cannot ask questions. If you need a decision, stop and say in your last reply what is missing.'
+  } >"$t"
+  cd "$top"
+  HP="/goal \`$test\` exits 0 and the change is left uncommitted; read $t first and follow it"
+  bound=540 # ponytail: fixed 540 s bound to stay under the Bash tool's 600 s cap, raise it if the cap moves
+  turns=30 # ponytail: fixed 30-turn cap per headless run, raise it if quickstart section 5 measures goal runs that need more
+  rc=0
+  j=$(timeout "$bound" claude -p "$HP" --output-format json --max-turns "$turns" -n "$N" --tools Read,Edit,Write,Glob,Grep,Bash \
+    --allowedTools Read Edit Write Glob Grep "Bash($test)" \
+    --permission-mode dontAsk --permission-prompts none --strict-mcp-config) || rc=$?
+  new=$(git rev-parse HEAD)
+  [ "$old" = "$new" ] || fail "worker committed: $old -> $new"
+  [ "$rc" != 124 ] || fail "timed out after $bound s"
+  jq -e 'type == "object"' <<<"$j" >/dev/null 2>&1 || fail "claude gave no JSON result."
+  printf 'headless\t%s\t%s\n' "$N" "$(jq -r '[.subtype, .num_turns, .total_cost_usd] | @tsv' <<<"$j")"
+  echo 'result:'
+  jq -r '.result // empty' <<<"$j"
+  jq -e '.is_error != true and .subtype == "success"' <<<"$j" >/dev/null || exit 1
   ;;
 esac

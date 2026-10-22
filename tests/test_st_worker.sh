@@ -65,7 +65,7 @@ case "$1 $2" in
 "agent list")
   jq -c '{result:{agents:.}}' "$T/agents.json" ;;
 "agent read")
-  jq -nc --arg t "STUB PANE $X" '{result:{read:{text:$t}}}' ;;
+  printf 'STUB PANE %s\n' "$X" ;;
 "agent wait")
   if [[ " $* " == *" --until "* ]] && [ -e "$T/resume_result" ]; then
     printf 'RESULT FILE %s\n' "$X" > "$(jq -r .result.worktree.path "$T/wc.json")/result.md"
@@ -101,14 +101,6 @@ EOF
 chmod +x "$tmp/bin/herdr" "$tmp/bin/ssh" "$tmp/bin/git" "$tmp/bin/sleep"
 export STUB_T="$tmp" STUB_REAL_GIT="$(command -v git)"
 
-found=$(PATH="$tmp/bin:$PATH" command -v herdr)
-if [ "$found" != "$tmp/bin/herdr" ]; then echo "FAIL stub herdr is first on PATH: found $found"; exit 1; fi
-
-for b in ssh git sleep; do
-  found=$(PATH="$tmp/bin:$PATH" command -v $b)
-  if [ "$found" != "$tmp/bin/$b" ]; then echo "FAIL stub $b is first on PATH: found $found"; exit 1; fi
-done
-
 cat > "$tmp/bin/claude" <<'EOF'
 #!/usr/bin/env bash
 T=$STUB_T
@@ -121,13 +113,16 @@ printf '%s\n%s\n' "$turns" "$cost" > "$T/claude_nums"
 case "${STUB_CLAUDE:-}" in
 slow) exit 124 ;;
 commit) git -c user.name=t -c user.email=t@t commit -q --allow-empty -m worker ;;
+commitjunk) git -c user.name=t -c user.email=t@t commit -q --allow-empty -m worker; echo 'not json at all'; exit 0 ;;
 junk) echo 'not json at all'; exit 0 ;;
 esac
 jq -nc --argjson n "$turns" --argjson c "$cost" --arg r "HEADLESS $(cat "$T/x")" '{type:"result",subtype:"success",is_error:false,num_turns:$n,total_cost_usd:$c,session_id:"stubsession",result:$r}'
 EOF
 chmod +x "$tmp/bin/claude"
-found=$(PATH="$tmp/bin:$PATH" command -v claude)
-if [ "$found" != "$tmp/bin/claude" ]; then echo "FAIL stub claude is first on PATH: found $found"; exit 1; fi
+for b in herdr ssh git sleep claude; do
+  found=$(PATH="$tmp/bin:$PATH" command -v $b)
+  if [ "$found" != "$tmp/bin/$b" ]; then echo "FAIL stub $b is first on PATH: found $found"; exit 1; fi
+done
 
 repo="$tmp/repo"
 mkdir -p "$repo/.stratum"
@@ -196,7 +191,7 @@ s1() {
   check "S1 exit 0" '[ $rc = 0 ]'
   check "S1 one worktree create, argv as built" '[ "$(cnt "^worktree\tcreate\t")" = 1 ] && hascall "worktree\tcreate\t--cwd\t%s\t--branch\tworker-t004\t--base\t%s\t--path\t%s\t--label\tworker-t004\t--no-focus" "$repo" "$sha" "$tmp/repo-worker-t004"'
   check "S1 brief has the task text" 'grep -qxF "TASK BODY $(rnd)" "$b"'
-  check "S1 brief heading, test, lane, branch, machine, result path" 'grep -qxF "# Brief: worker-t004" "$b" && grep -qxF -- "- Test command: \`$testcmd\`" "$b" && grep -qxF -- "- Lane: $lane. Start it with the Skill tool. Run only task T004; skip every other task, ticked or not." "$b" && grep -qxF -- "- Branch: worker-t004" "$b" && grep -qxF -- "- Your machine: local. \`local\` is the orchestrator'"'"'s machine." "$b" && grep -qxF -- "- Result file: $(wt)/result.md" "$b"'
+  check "S1 brief heading, test, lane, branch, machine, result path" 'grep -qxF "# Brief: worker-t004" "$b" && grep -qxF -- "- Test command: \`$testcmd\`" "$b" && grep -qxF -- "- Lane: $lane. If it names a skill, start it with the Skill tool. Run only task T004; skip every other task, ticked or not." "$b" && grep -qxF -- "- Branch: worker-t004" "$b" && grep -qxF -- "- Your machine: local. \`local\` is the orchestrator'"'"'s machine." "$b" && grep -qxF -- "- Result file: $(wt)/result.md" "$b"'
   check "S1 brief has every roster row" 'grep -qxF "| worker-t004 | local | worker-t004 | T004 |" "$b" && grep -qxF "| worker-t005 | local | worker-t005 | T005 |" "$b"'
   check "S1 brief has the four team rules" '[ "$(grep -cxFf "$rules" "$b")" = 4 ]'
   check "S1 brief rule 1 names .stratum/git-guard.json" 'grep -q "^1\. .*Never commit .*\.stratum/git-guard\.json\.\$" "$b"'
@@ -435,7 +430,7 @@ a1() {
   mk; states blocked working
   run bash "$1" answer T004 --keys 1
   check "A1 exit 0" '[ $rc = 0 ]'
-  check "A1 agent get, one send-keys, agent get, in order" '[ "$(sendlog)" = "$(printf "agent\tget\tworker-t004\nagent\tsend-keys\tworker-t004\t1\nagent\tget\tworker-t004")" ]'
+  check "A1 agent get, one send-keys, agent get, in order" '[ "$(sendlog)" = "$(printf "agent\tget\tworker-t004\nagent\tsend-keys\tworker-t004\t--\t1\nagent\tget\tworker-t004")" ]'
   check "A1 state line after the answer" 'hasline "state\tworking\tworker-t004\t%s" "$(pane)"'
   check "A1 never-list, no prompt" 'never 0 0'
 }
@@ -450,7 +445,7 @@ a3() {
   mk; states blocked blocked
   run bash "$1" answer T004 --text "use main"
   check "A3 exit 4" '[ $rc = 4 ]'
-  check "A3 agent get, send-text, send-keys enter, agent get, in order" '[ "$(sendlog)" = "$(printf "agent\tget\tworker-t004\npane\tsend-text\t%s\tuse main\nagent\tsend-keys\tworker-t004\tenter\nagent\tget\tworker-t004" "$(pane)")" ]'
+  check "A3 agent get, send-text, send-keys enter, agent get, in order" '[ "$(sendlog)" = "$(printf "agent\tget\tworker-t004\npane\tsend-text\t%s\t--\tuse main\nagent\tsend-keys\tworker-t004\tenter\nagent\tget\tworker-t004" "$(pane)")" ]'
   check "A3 state blocked line" 'hasline "state\tblocked\tworker-t004\t%s" "$(pane)"'
   check "A3 never-list, no prompt" 'never 0 0'
 }
@@ -474,7 +469,7 @@ sed -E '/\| %s \| %s \| %s \| %s \|/d' "$script" > "$tmp/NC2.sh" 2>/dev/null
 nc NC2 s1
 sed -E '/Commit each finished unit with the st-git agent/d' "$script" > "$tmp/NC3.sh" 2>/dev/null
 nc NC3 s1
-sed -E 's/cat( --)? [^|;&)]*result\.md[^|;&)]*/herdr agent read worker-t004 --source recent-unwrapped --lines 40 | jq -r .result.read.text/' "$script" > "$tmp/NC4.sh" 2>/dev/null
+sed -E 's/cat( --)? [^|;&)]*result\.md[^|;&)]*/herdr agent read worker-t004 --source recent-unwrapped --lines 40/' "$script" > "$tmp/NC4.sh" 2>/dev/null
 nc NC4 g1
 sed -E '/>"\$WT\/\.stratum\/git-guard\.json"/d' "$script" > "$tmp/NC7.sh" 2>/dev/null
 check "NC7 sed deletes exactly one line" '[ "$(diff "$script" "$tmp/NC7.sh" | grep -c "^<")" = 1 ]'
@@ -528,6 +523,13 @@ r1() {
 }
 r1 "$script"
 
+rfresh; rrun bash "$script" start "${rsargs[@]}"
+check "R1b exit 0" '[ $rc = 0 ]'
+check "R1b ssh writes brief.md under ~/proj-worker-t004, no \\~" 'sshs | grep -qF -- "cat > ~/proj-worker-t004/brief.md" && ! grep -qF -- "\\~" "$tmp/ssh"'
+
+rfresh; STUB_SSH_RC=255 rrun bash "$script" start "${rsargs[@]}"
+check "R1c ssh down on start: exit 1, one stopped line, one worker line" '[ $rc = 1 ] && [ "$(grep -c "^stopped: ssh to u@stubhost failed" <<<"$out")" = 1 ] && [ "$(grep -c "^stopped:" <<<"$out")" = 1 ] && [ "$(grep -cP "^worker\t" <<<"$out")" = 1 ]'
+
 rmk
 git -C "$repo" branch -q worker-t004
 bsha=$(git -C "$repo" rev-parse worker-t004)
@@ -539,6 +541,10 @@ check "R2 one git fetch of target:WT worker-t004:worker-t004 with GIT_SSH_COMMAN
 check "R2 fetched line has the branch sha" 'hasline "fetched\tworker-t004\t%s" "$bsha"'
 check "R2 the pane is not printed, never-list" 'nopane && rnever 0 0'
 git -C "$repo" branch -q -D worker-t004
+
+rmk
+STUB_SSH_RC=255 rrun bash "$script" result T004 --machine laptop
+check "R2b ssh down on result: exit 1, one stopped line, no result file line, no pane text" '[ $rc = 1 ] && [ "$(grep -c "^stopped: ssh to u@stubhost failed" <<<"$out")" = 1 ] && [ "$(grep -c "^stopped:" <<<"$out")" = 1 ] && ! grep -q "^no result file" <<<"$out" && nopane && ! grep -qxF "pane text:" <<<"$out"'
 
 rmk; states done; : > "$tmp/ssh_has_result"
 rrun bash "$script" wait T004 --machine laptop
@@ -571,7 +577,7 @@ check "R9 closed and folder lines" 'hasline "closed\tworker-t004" && hasline "fo
 rmk; states blocked working
 rrun bash "$script" answer T004 --machine laptop --keys 1
 check "R10 exit 0" '[ $rc = 0 ]'
-check "R10 one agent send-keys, --machine rule" '[ "$(rcnt "agent\tsend-keys\t")" = 1 ] && rcall "agent\tsend-keys\tworker-t004\t1" && rnever 0 0'
+check "R10 one agent send-keys, --machine rule" '[ "$(rcnt "agent\tsend-keys\t")" = 1 ] && rcall "agent\tsend-keys\tworker-t004\t--\t1" && rnever 0 0'
 
 rmk
 rrun bash "$script" goal T004 --machine laptop --test "$testcmd"
@@ -611,6 +617,12 @@ old=$(git -C "$repo" rev-parse HEAD)
 STUB_CLAUDE=commit run bash "$script" headless T004 --task "$task" --test "$testcmd"
 new=$(git -C "$repo" rev-parse HEAD)
 check "H2 exit 1, worker committed line" '[ $rc = 1 ] && [ "$new" != "$old" ] && hasline "worker committed: %s -> %s" "$old" "$new"'
+git -C "$repo" reset -q --hard "$sha"
+
+fresh
+STUB_CLAUDE=commitjunk run bash "$script" headless T004 --task "$task" --test "$testcmd"
+new=$(git -C "$repo" rev-parse HEAD)
+check "H2b commit and junk output: exit 1, worker committed line wins" '[ $rc = 1 ] && [ "$new" != "$sha" ] && hasline "worker committed: %s -> %s" "$sha" "$new" && ! grep -q "no JSON" <<<"$out"'
 git -C "$repo" reset -q --hard "$sha"
 
 fresh
