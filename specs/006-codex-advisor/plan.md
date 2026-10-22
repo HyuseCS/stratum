@@ -2,7 +2,7 @@
 
 **Branch**: `18-codex-advisor` | **Date**: 2026-10-23 | **Spec**: [spec.md](spec.md)
 
-**Input**: Feature specification from `/specs/006-codex-advisor/spec.md`, decisions D1 to D10 in
+**Input**: Feature specification from `/specs/006-codex-advisor/spec.md`, decisions D1 to D15 in
 [decisions.md](decisions.md), GitHub issue #18.
 
 ## Summary
@@ -101,11 +101,14 @@ Post-design re-check: all gates pass. No violations, so Complexity Tracking stay
   which OpenAI model gets the project's files and how much quota a call uses; the README names the
   keys. Secret-looking untracked paths stay in the diff hash but out of the prompt list (D12,
   T001 and T005 checks, controls C11 and C12).
-  Open note, no test: Inspect could not check whether codex-cli 0.163.0 loads a project
-  `.codex/config.toml` from the repo. The codex-plugin-cc README says project overrides load only
-  when the project is trusted. If it does load one, a committed `.codex/config.toml` could change
-  the model, the reasoning or other settings for the advisor call. `-s read-only` on the command
-  line still sets the sandbox.
+  Committed project `.codex/config.toml` (D15): not yet known whether codex-cli 0.163.0 loads
+  one from the repo (the codex-plugin-cc README says project overrides load only when the project
+  is trusted). If it does, a committed file could change the model, provider or host of the
+  advisor call. `-s read-only` on the command line still sets the sandbox. No code guard. T011
+  probes it once, logged out and with no quota, in a scratch repo whose committed config sets
+  `model = "probe-model-x"`. If the stderr `model:` line shows `probe-model-x`, T011 adds the
+  contract 7.5 optional sentence to the README and its phrase row, and re-runs the README
+  checks.
 - **S4. Record integrity (T006).** The hash ties a verdict to the input it was given. It does not
   prove who wrote the record: anyone with push access can commit a forged record with a matching
   hash. Accepted for a review aid. `check` reads the last header for the point.
@@ -192,25 +195,15 @@ No violations.
 
 ## Validate
 
-Date: 2026-10-23. Verdict: BLOCKED
+Date: 2026-10-23. Verdict: CONDITIONAL
 
 | Check | Verdict | Findings |
 |-------|---------|----------|
-| 1. Setup and dependencies | PASS | bash 5.3.20, Python 3.14.8, git 2.56.0, GNU `timeout` and `sha256sum` 9.12, codex-cli 0.163.0, claude 2.1.302, node 24, rsync present. `codex exec --help` lists `-s`, `-m`, `-c`, `--ephemeral`, `--output-schema`, `-o`. Existing tests green, no files left |
-| 2. Test coverage per requirement | CONCERN | F2, F6, F7 |
-| 3. Breaking changes | FAIL | F1 |
-| 4. Security and privacy | CONCERN | F2, F3, F4, F5 |
+| 1. Setup and dependencies | PASS | bash 5.3.20, Python 3.14.8, git 2.56.0, GNU `timeout` and `sha256sum` 9.12, codex-cli 0.163.0 (`/usr/bin/codex`), claude 2.1.302, node 24.14.1, rsync 3.5.1. `codex exec --help` lists `-s` (read-only), `-m`, `-c`, `--ephemeral`, `--output-schema`, `-o`. Current suite green, `git status --porcelain` empty after |
+| 2. Test coverage per requirement | CONCERN | F1 |
+| 3. Breaking changes | PASS | Contract section 7 applied to a scratch clone of `9682f7d`, with stub `scripts/st-advisor.sh` and `tests/test_advisor.sh` and the T009 rows: `test_on_demand` 100 ok, `test_inspect` 65 ok, `test_model_files` 24 ok, `test_shortcuts` 16 ok, `test_verify` 22 ok, `test_session_hooks` 27 ok. Real `tests/test_inspect.sh` with `ST_INSPECT_SKILL=<copy>`: 0 FAIL. No file means off (D11), so old projects keep the old flow. Rollback: revert the commits |
+| 4. Security and privacy | CONCERN | F2 |
 
-F1. tests/test_inspect.sh:79 asserts `big ones go to the user before the gate` in skills/st-inspect/SKILL.md (line 33). The new step 4 in contracts/advisor.md:222-227 drops that phrase, so T010 (tasks.md:194, "test_inspect stays ok") cannot go green without a test edit, which tasks.md:13 forbids. Proven: contract 7.2 applied to a copy, `ST_INSPECT_SKILL=<copy> bash tests/test_inspect.sh` prints `FAIL S5`. -> st-plan: end the 7.2 block with `; big ones go to the user before the gate.` (or keep the phrase elsewhere in step 4) and name it in T010.
+F1. tasks.md:65 `FR-014 no model or effort flag without keys` runs "with no `.stratum/advisor.json`". Since D11 no file means off, so Codex never runs and `$tmp/argv` is never written. `! grep ... "$tmp/argv"` on an absent file passes (proven: exit 0). The check passes before T002 and can never fail after T008. Control C2 (quickstart.md:56) would add 0 FAIL at T011. This contradicts tasks.md:54 (every Codex case needs the file), tasks.md:75 and quickstart.md:36 (every check red except `no repo writes`) and G1 (plan.md:55). -> st-plan: run the check with the committed `{"mode": "codex"}` and require `[ -f "$tmp/argv" ]` first. Simpler option: one exact-argv check against the contract section 3 line, which covers FR-012 argv and FR-014 without keys together.
 
-F2. data-model.md:10-13, contracts/advisor.md section 3, tasks.md:178 (T008) say `model` and `effort` "match" a `^...$` pattern. With Python `re.match`, `$` accepts a trailing newline: `re.match(r"^[a-z]{1,16}$", "high\n")` is True, `re.fullmatch` is False. research.md:196-199 claims the pattern stops a newline in the `-c` value. T007 (tasks.md:171) has no trailing-newline case, so the claimed guard has no check that can fail. -> st-plan: state `re.fullmatch` in data-model, contract and T008; add `{"effort": "high\n"}` and `{"model": "x\n"}` to the T007 bad list and to controls C9 and C10.
-
-F3. contracts/advisor.md:110-112 and data-model.md:79-81: the diff prompt tells Codex to read every untracked, not-ignored file. An untracked `.env` that is not in `.gitignore` is listed, against the prompt's own line 2 (contracts/advisor.md:80). Codex evidence text is recorded verbatim in `<f>/advisor.md`, which the lanes commit (contracts/advisor.md:179, 188, 259), so a quoted secret lands in git. -> st-plan: add a prompt sentence "Never quote a secret value in a finding." User decision (changes D6, no hard block): also leave env and key files (`.env*`, `*.pem`, `*.key`) out of the untracked list sent to Codex while still hashing them.
-
-F4. plan.md:102-107 names only the `/advisor` swap. A project set up before this feature has no `.stratum/advisor.json` and `st-init` will not run again, so after the upgrade its plan, diff and test outputs go to OpenAI by default with no question (D2 default `codex`). -> user decision: confirm D2 covers existing projects (then add this to Breaking Changes and the README), or print a one-time notice when the file is missing.
-
-F5. plan.md:78-79 (S2): whether Codex's shell commands see the user's environment variables is unknown and has no check; any secret in the environment can go to OpenAI. -> user decision: accept and say so in the README, or test it once with a logged-out run that prints `env` (no quota).
-
-F6. tasks.md:64, 72, 74 and quickstart.md:36: "every check is red" after T001 is false. `FR-012 script has no write flag` is `! grep ... <missing file>`, grep exits 2, so it passes before the script exists; `no repo writes` also passes. -> st-plan: guard with `[ -f "$root/scripts/st-advisor.sh" ] &&`, and list `no repo writes` as passing early.
-
-F7. spec.md SC-002 (a Full-lane run without Codex keeps the same gates) has no task and no quickstart section 4 row; only the script-level `codex missing` check exists. -> st-plan: add an H3 row to quickstart section 4.
+F2. plan.md:104-108 (S3 open note): the plan has no decision and no check on whether codex-cli 0.163.0 loads a committed project `.codex/config.toml`. The note relies on "loads only when the project is trusted", but `~/.codex/config.toml` on this machine marks `/home/hyuse/Desktop/stratum` as trusted. A committed project config could set `model_provider` or a base URL and send the project's files to another host. `-s read-only` does not cover this. -> user decision: accept it and name it in the README (as D13 did), or test it once at T011 with a logged-out run in a scratch repo that holds `.codex/config.toml` (no quota, as research call 6).

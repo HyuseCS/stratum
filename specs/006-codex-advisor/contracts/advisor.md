@@ -242,6 +242,7 @@ Step 4 (lines 29-33) becomes:
    Codex reviews spec, plan and tasks in the read-only sandbox. Risks: missed auth invariants, schema or contract breaks, hidden breaking changes.
    Improvements: a simpler or better approach, tasks to cut or merge.
    Handle its answer as in "Advisor" in `<plugin root>/skills/st-build/SKILL.md`; big ones go to the user before the gate.
+   A later re-run of `st-inspect` (step 5) changes `plan.md` and costs a round.
 ```
 
 The gate's first line (line 38) gains a sentence before it:
@@ -315,6 +316,16 @@ The Built in **Advisor.** bullet (lines 159-162) becomes:
   With no `codex` on PATH you get one line, `no advisor: codex not found`, and the flow runs as before, with `/advisor` if you set one.
   Optional `model` and `effort` keys in the same file pick the Codex model and reasoning effort, for example `{"mode": "codex", "model": "gpt-6-astra", "effort": "high"}`. Without them Codex uses your own Codex config.
 ```
+
+Optional line (D15). T010 does not add it. T011 adds it as the last line of the bullet only if
+its probe shows that Codex loads a committed project `.codex/config.toml`:
+
+```markdown
+  A committed .codex/config.toml in the project can change the Codex model, provider or host, like any committed code.
+```
+
+Its phrase row, added to `tests/test_on_demand.sh` by T011 in the same case only:
+`#18 D15 readme<TAB>README.md<TAB>A committed .codex/config.toml in the project can change the Codex model, provider or host, like any committed code.`
 
 Project files tree: after the `state.json` line add
 

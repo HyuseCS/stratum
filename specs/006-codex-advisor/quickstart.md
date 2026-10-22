@@ -33,7 +33,7 @@ Expected red states during the build. Do not "fix" them by editing a test:
 
 | After | Red | Why |
 |-------|-----|-----|
-| T001 | every check in `tests/test_advisor.sh` except `no repo writes`, which passes early | `scripts/st-advisor.sh` does not exist |
+| T001 | every check in `tests/test_advisor.sh` except `no repo writes`, which passes early. `FR-014 no model or effort flag without keys` is red because `$tmp/argv` is never written | `scripts/st-advisor.sh` does not exist |
 | T003 | the US2 checks (`codex missing`, `codex error`, `empty answer` x2, `malformed answer`, `no verdict` x2, `bad finding`, `REVISE with no findings`, `timed out`, `timeout argv`, `bad args`) | failure mapping not built. A US2 check that T002's code already passes is named in the T003 report, with why |
 | T005 | every `check` and `continued` check, including `diff stays fresh with an untracked record` and `untracked .env makes diff stale` | the two forms do not exist |
 | T007 | `no mode file`, `mode both`, `mode off`, `mode off without codex`, `bad advisor.json` x12, `FR-014 model and effort from the file`, `FR-014 model only` | settings not read. `mode codex` passes early: T002 always runs Codex |
@@ -53,7 +53,7 @@ L2, L10).
 | ID | Change in the copy of `scripts/st-advisor.sh` | Red check |
 |----|-----------------------------------------------|-----------|
 | C1 | `-s read-only` to `-s workspace-write` | `FR-012 argv read-only`, `FR-012 script has no write flag` |
-| C2 | always add `-m o3` after `exec` | `FR-014 no model or effort flag without keys` |
+| C2 | always add `-m o3` after `exec` | `FR-014 no model or effort flag without keys` (exactly one more `FAIL`: the check runs with the harness `{"mode": "codex"}` file and requires `$tmp/argv` to exist; `FR-014 model and effort from the file` still finds `-m` then `gpt-test-1`) |
 | C3 | remove the `':(exclude)<f>/advisor.md'` pathspec from the diff hash | `diff stays fresh after the record append` |
 | C3b | remove the `':(exclude)<f>/advisor.md'` pathspec from the `git ls-files --others` line only | `diff stays fresh with an untracked record` |
 | C4 | remove the untracked-file loop from the diff hash | `untracked file makes diff stale` |
