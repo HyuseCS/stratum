@@ -119,7 +119,7 @@ checks over ssh and `--machine` on every herdr call.
 
 ### Implementation for User Story 3
 
-- [ ] T009 [US3] Wrap steps 4 to 9 and the running check of `scripts/st-herdr-workspace.sh` in the `full` branch, as `templates.sh` does with `if [ "$1" = full ]` (contracts/script.md section 4, `basic`). Done when every case and control in `tests/test_herdr_workspace.sh` is green.
+- [X] T009 [US3] Wrap steps 4 to 9 and the running check of `scripts/st-herdr-workspace.sh` in the `full` branch, as `templates.sh` does with `if [ "$1" = full ]` (contracts/script.md section 4, `basic`). Done when every case and control in `tests/test_herdr_workspace.sh` is green.
 
 **Checkpoint**: all three stories pass the stub test.
 

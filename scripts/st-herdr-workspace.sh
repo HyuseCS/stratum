@@ -79,31 +79,35 @@ rep=($'tab\t'"$T1"$'\tMain' "${rep[@]}")
 h pane split "$P1" --direction right --cwd "$D" --no-focus
 get P2 .result.pane.pane_id
 row pane "$P2" "$T1"
-h pane run "$P1" "$agent"
-prog[$P1]=$agent st[$P1]="not seen"
-h pane run "$P2" lazygit
-prog[$P2]=lazygit st[$P2]="not seen"
-for name in "Dev Servers" VM; do
-  h tab create --workspace "$WS" --cwd "$D" --label "$name" --no-focus
-  get t .result.tab.tab_id
-  get p .result.root_pane.pane_id
-  row tab "$t" "$name"
-  row pane "$p" "$t"
-  h pane split "$p" --direction right --cwd "$D" --no-focus
-  get p .result.pane.pane_id
-  row pane "$p" "$t"
-done
+if [ "$template" = full ]; then
+  h pane run "$P1" "$agent"
+  prog[$P1]=$agent st[$P1]="not seen"
+  h pane run "$P2" lazygit
+  prog[$P2]=lazygit st[$P2]="not seen"
+  for name in "Dev Servers" VM; do
+    h tab create --workspace "$WS" --cwd "$D" --label "$name" --no-focus
+    get t .result.tab.tab_id
+    get p .result.root_pane.pane_id
+    row tab "$t" "$name"
+    row pane "$p" "$t"
+    h pane split "$p" --direction right --cwd "$D" --no-focus
+    get p .result.pane.pane_id
+    row pane "$p" "$t"
+  done
+fi
 h workspace focus "$WS"
 
-wait=10 # ponytail: fixed 10 s running-check bound, raise it if quickstart section 2 measures a slower claude start
-for ((i = 1; i <= wait; i++)); do
-  [ "$i" = 1 ] || sleep 1
-  for p in "$P1" "$P2"; do
-    n=lazygit
-    [ "$p" != "$P1" ] || n=claude
-    if [ "${st[$p]}" != running ] && "${H[@]}" pane process-info --pane "$p" 2>/dev/null | jq -e --arg n "$n" 'any(.result.process_info.foreground_processes[]?; .name == $n)' >/dev/null 2>&1; then st[$p]=running; fi
+if [ "$template" = full ]; then
+  wait=10 # ponytail: fixed 10 s running-check bound, raise it if quickstart section 2 measures a slower claude start
+  for ((i = 1; i <= wait; i++)); do
+    [ "$i" = 1 ] || sleep 1
+    for p in "$P1" "$P2"; do
+      n=lazygit
+      [ "$p" != "$P1" ] || n=claude
+      if [ "${st[$p]}" != running ] && "${H[@]}" pane process-info --pane "$p" 2>/dev/null | jq -e --arg n "$n" 'any(.result.process_info.foreground_processes[]?; .name == $n)' >/dev/null 2>&1; then st[$p]=running; fi
+    done
+    if [ "${st[$P1]}${st[$P2]}" = runningrunning ]; then break; fi
   done
-  if [ "${st[$P1]}${st[$P2]}" = runningrunning ]; then break; fi
-done
+fi
 
 report
