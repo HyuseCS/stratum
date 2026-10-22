@@ -423,6 +423,58 @@ branch `18-codex-advisor`.
 - Test: an ordered phrase check on the skill text in `tests/test_on_demand.sh` (FR-015 covers the
   order, not a stub run).
 
+## R15. Team live (US4, SC-004, D16, D25)
+
+- Live T012 (2026-10-23, quickstart section 4, from `/home/hyuse/Desktop/stratum-003-demo` on
+  `worker-demo-base`, Claude Code 2.1.302). Ids bumped to T912 and T913, because
+  `/home/hyuse/Desktop/stratum-worker-t902` already exists (T008), as T005 bumped t900 to t910.
+  The task texts are the quickstart's with `worker-t912` for `worker-t902`. Base:
+  `264e47494d1294b0fe2b0232ffaa04fc55fcecb7`.
+- `start T912` (07:52:23) printed `worker	worker-t912	local	w21	w21:p1	worker-t912	/home/hyuse/Desktop/stratum-worker-t912`
+  and `state	working`, exit 0. `start T913` (07:52:29) printed
+  `worker	worker-t913	local	w22	w22:p1	worker-t913	/home/hyuse/Desktop/stratum-worker-t913`
+  and `state	working`, exit 0 (07:52:34).
+- Both briefs hold both roster rows (`grep '^| worker-' brief.md` in each worktree):
+  `| worker-t912 | local | worker-t912 | T912 |` and `| worker-t913 | local | worker-t913 | T913 |`.
+- SendMessage by name: the T913 pane, read about 25 s after its start, shows
+  `“Ask worker-t912 to report demo/a.txt commit” → sent to worker-t912 — another Claude session on this machine`.
+  The T912 pane says `Teammate worker-t913 asked for the sha. I sent it so it can merge my branch.`
+  and later shows `Message from @worker-t913: worker-t913: merged worker-t912 at edf26f5, demo/b.txt built and its test passes.`
+  So messages went both ways by name.
+- The merge: the pane had scrolled past the Bash line by the end, so the proof is git.
+  `git reflog show worker-t913` gives `edf26f5 worker-t913@{1}: merge worker-t912: Fast-forward`,
+  then `c3be81b worker-t913@{0}: commit: T913: add demo/b.txt with the content of demo/a.txt`.
+  T913's `result.md`: `Built: merged worker-t912 (edf26f5) and added demo/b.txt with the content of demo/a.txt`.
+  A fast-forward makes no merge commit, so `git log --merges` shows none.
+- Both finish: `wait T912` (07:53:01 to 07:54:36) `state	finished	worker-t912	w21:p1`, exit 0.
+  `wait T913` (07:54:39 to 07:55:06) `state	finished	worker-t913	w22:p1`, exit 0. No `blocked`,
+  no question, no permission dialog. Each goal took 2 turns (`✔ Goal achieved (2m · 2 turns ...)`).
+  `result T912`: `Commit: edf26f582bdfbd587f812c399e4facbe34080586`, `Open: none`.
+  `result T913`: `Commit: c3be81bed9fb9b3d033fcf480ec0641fbade0fef`, `Open: none`.
+- Review listing (the `/stratum:st-review` Skill call was skipped in this run; the listing was run):
+  `git log --oneline <base>..worker-t912` gives `edf26f5 T912: add demo/a.txt with the line a`,
+  `git diff --stat` gives `demo/a.txt | 1 +`. `git log --oneline <base>..worker-t913` gives
+  `c3be81b T913: add demo/b.txt ...` and `edf26f5`, `git diff --stat` gives `demo/a.txt | 1 +`
+  and `demo/b.txt | 1 +`. Each worktree test exits 0 there, and `git status --short` in each
+  worktree shows only `?? brief.md` and `?? result.md`.
+- Merges in task order (07:55:23): `git merge --no-ff --no-edit worker-t912` made `9515329`,
+  `grep -qx a demo/a.txt` exit 0. `git merge --no-ff --no-edit worker-t913` made `eea6003`,
+  `grep -qx a demo/b.txt` exit 0. No conflict: `edf26f5` came in with the first merge.
+- Close (07:55:27): `closed	worker-t912` / `folder	/home/hyuse/Desktop/stratum-worker-t912	ready to remove`,
+  `closed	worker-t913` / `folder	/home/hyuse/Desktop/stratum-worker-t913	ready to remove`, exit 0
+  each. `close` did not refuse, and both panes showed the goal done. Before, `pgrep -af -- '-n worker-t91[23]'`
+  showed both `claude` processes. 2 s after, `agent list` and `workspace list` have no
+  `worker-t912` or `worker-t913` (grep exit 1 each) and `pgrep` exit 1 (SC-005).
+  `git ls-remote --heads origin 'worker-t91*'` prints nothing: nothing was pushed.
+- End-of-run answer list: empty. No worker asked a question.
+- Timings: first `start` to both finished 2 min 43 s (07:52:23 to 07:55:06), to both closed
+  3 min 5 s.
+- Finding: the brief's team rule 2 says "merge its branch" and rule 4 says "Never merge". T913
+  read rule 2 as the teammate case and merged without asking. The wording clash stays open.
+- Finding: the T912 pane says its st-git agent did not read a plugin root file because the brief
+  gives no plugin root. The commit still went through. The brief has no plugin root line.
+- Not run: cross-machine messages (D25, laptop down).
+
 ## R16. Worker model (FR-017, D27, D28)
 
 - Facts: `.stratum/models.json` maps a name to `{"model": ..., "effort": ...}` (the template is

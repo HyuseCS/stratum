@@ -110,7 +110,7 @@ quickstart section 2 run live.
 built in T003 and tested by S1 with a two-line roster; the D25 machine rule and the review, merge
 and conflict steps (FR-009) are built in T004 and tested by T002.
 
-- [ ] T012 [US4] Live team run: quickstart section 4, after T007. Two workers on this machine, the second builds on the first. Record in `specs/008-herdr-workers/research.md` (new item R15): both briefs hold both roster rows, worker-t903's transcript shows a SendMessage to `worker-t902` and a `git merge worker-t902`, both finish, the skill merges both in task order with `/stratum:st-review` run on each branch first, and both are closed (SC-004). Cross-machine messages are not run here (D25; laptop down).
+- [X] T012 [US4] Live team run: quickstart section 4, after T007. Two workers on this machine, the second builds on the first. Record in `specs/008-herdr-workers/research.md` (new item R15): both briefs hold both roster rows, worker-t903's transcript shows a SendMessage to `worker-t902` and a `git merge worker-t902`, both finish, the skill merges both in task order with `/stratum:st-review` run on each branch first, and both are closed (SC-004). Cross-machine messages are not run here (D25; laptop down).
 
 **Checkpoint**: teams work on one machine.
 
