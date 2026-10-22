@@ -1,4 +1,4 @@
-# 006 read-lessons
+# 007 read-lessons
 
 What: `st-close` appends lessons to `docs/lessons.md`, but no agent reads them (issue #28). Plan and
 Inspect now read the file. Plan cites the lessons that apply in the plan.md gates and in the task
