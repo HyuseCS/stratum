@@ -23,6 +23,11 @@ fi
 next() { local n; n=$(cat "$T/n_$1" 2>/dev/null || echo 0); n=$((n+1)); echo $n > "$T/n_$1"; echo $n; }
 emit() { printf '%s\n' "$1" | tee -a "$T/resp"; }
 case "$1 $2" in
+"machine list")
+  printf '%s\n' '[{"id":"stubid0001","label":"laptop","target":"u@stubhost","session":"default","enabled":true,"selected":false}]' ;;
+"workspace list")
+  if [ -n "${STUB_DOWN:-}" ]; then echo 'Error: stub machine down' >&2; exit 1; fi
+  emit '{"result":{}}' ;;
 "workspace create")
   next t > /dev/null; next p > /dev/null
   echo "stubW:p1$X stubW:t1$X" > "$T/panes"
@@ -45,17 +50,25 @@ case "$1 $2" in
 *) emit '{"result":{}}' ;;
 esac
 EOF
+cat > "$tmp/bin/ssh" <<'EOF'
+#!/usr/bin/env bash
+( IFS=$'\t'; printf '%s\n' "$*" >> "$STUB_T/ssh" )
+if [ -n "${STUB_SSH_RC:-}" ]; then echo 'ssh: stub failure' >&2; exit "$STUB_SSH_RC"; fi
+printf '%s\n' '/home/u/proj x' '# branch.oid 0123' '# branch.head main' '# branch.upstream origin/main' '# branch.ab +3 -2'
+EOF
 printf '#!/bin/sh\nexit 0\n' > "$tmp/bin/sleep"
-chmod +x "$tmp/bin/herdr" "$tmp/bin/sleep"
+chmod +x "$tmp/bin/herdr" "$tmp/bin/sleep" "$tmp/bin/ssh"
 export STUB_T="$tmp"
 
 found=$(PATH="$tmp/bin:$PATH" command -v herdr)
 if [ "$found" != "$tmp/bin/herdr" ]; then echo "FAIL stub herdr is first on PATH: found $found"; exit 1; fi
+found=$(PATH="$tmp/bin:$PATH" command -v ssh)
+if [ "$found" != "$tmp/bin/ssh" ]; then echo "FAIL stub ssh is first on PATH: found $found"; exit 1; fi
 found=$(PATH="$tmp/bin:$PATH" command -v sleep)
 if [ "$found" != "$tmp/bin/sleep" ]; then echo "FAIL stub sleep is first on PATH: found $found"; exit 1; fi
 
 run() {
-  : > "$tmp/calls"; : > "$tmp/resp"; rm -f "$tmp"/n_* "$tmp/panes"
+  : > "$tmp/calls"; : > "$tmp/resp"; : > "$tmp/ssh"; rm -f "$tmp"/n_* "$tmp/panes"
   printf 'x%04x\n' $RANDOM > "$tmp/x"
   out=$(PATH="$tmp/bin:$PATH" HERDR_PANE_ID=w1P:p1 HERDR_TAB_ID=w1P:t1 HERDR_WORKSPACE_ID=w1P "$@" 2>&1); rc=$?
 }
@@ -206,16 +219,57 @@ check "L16 exit 0" '[ $rc = 0 ]'
 check "L16 not seen for P1 and P2" '[ "$(grep -P "^pane\t" <<<"$out")" = "$(panes_exp claude "not seen" "not seen" "$proj")" ]'
 check "L16 workspace focus present" '[ "$(cnt "^workspace\tfocus\t")" = 1 ]'
 
+rem() {
+  local n=$1 m=$3
+  unset HERDR_ENV
+  STUB_CWD='/home/u/proj x' run bash "$2" '~/proj x' --label 32-herdr-workspace --machine "$m"
+  export HERDR_ENV=1
+  check "$n exit 0" '[ $rc = 0 ]'
+  calls_ok "$n" '/home/u/proj x' "$m"
+  check "$n one ssh line to the saved target" '[ "$(grep -c . "$tmp/ssh")" = 1 ] && grep -qP "^-o\tBatchMode=yes\t--\tu@stubhost\t" "$tmp/ssh"'
+  check "$n ssh command has ~ unescaped" 'awk -F"\t" "{print \$NF}" "$tmp/ssh" | grep -qF -- "cd -- ~/proj\\ x"'
+  check "$n workspace line ends with $m" 'grep -qxF "$(printf "workspace\tstubW\t32-herdr-workspace\t%s" "$m")" <<<"$out"'
+  check "$n folder line has ahead 3, behind 2" 'grep -P "^folder\t" <<<"$out" | grep -qF "ahead 3, behind 2"'
+}
+r1() { rem R1 "$1" laptop; }
+
+rrej() {
+  local n=$1 phrase=$2 nssh=$3; shift 3
+  unset HERDR_ENV
+  run bash "$script" "$@" --label 32-herdr-workspace
+  export HERDR_ENV=1
+  check "$n exit 1" '[ $rc = 1 ]'
+  check "$n one line with the phrase" '[ "$(printf "%s\n" "$out" | grep -c .)" = 1 ] && grep -qF -- "$phrase" <<<"$out"'
+  check "$n no mutating call" '! norm | grep -qP "^(workspace\t(create|focus)|tab\t(create|rename)|pane\t(split|run))\t"'
+  check "$n ssh lines: $nssh" '[ "$(grep -c . "$tmp/ssh")" = $nssh ]'
+}
+
+r1 "$script"
+rem R2 "$script" stubid0001
+rrej R3 "Unknown machine: nosuch. Saved: laptop." 0 '~/proj x' --machine nosuch
+STUB_DOWN=1 rrej R4 "Machine laptop does not answer: Error: stub machine down" 0 '~/proj x' --machine laptop
+STUB_SSH_RC=1 rrej R5 "Folder not found on laptop: ~/proj x" 1 '~/proj x' --machine laptop
+STUB_SSH_RC=255 rrej R6 "ssh to u@stubhost failed: ssh: stub failure" 1 '~/proj x' --machine laptop
+rrej R7 "A remote folder must start with / or ~." 0 proj --machine laptop
+
 nc() {
+  local fn=${2:-l1}
   check "$1 sed changed the script" '[ -f "$script" ] && ! cmp -s "$script" "$tmp/$1.sh"'
   local f=$fail; fail=0; q=1
-  l1 "$tmp/$1.sh"
+  local base=0
+  if [ -n "${2:-}" ]; then "$fn" "$script"; base=$fail; fail=0; fi
+  "$fn" "$tmp/$1.sh"
   q=; local red=$fail; fail=$f
+  check "$1 real script is green" '[ $base = 0 ]'
   check "$1 goes red" '[ $red = 1 ]'
 }
 sed -E '/pane split/{s/ --cwd ("[^"]*"|[^ ]+)//;:a;n;ba}' "$script" > "$tmp/NC1.sh" 2>/dev/null
 nc NC1
 sed -E '/pane split/{s/pane split +("[^"]*"|[^ ]+)/pane split "$HERDR_PANE_ID"/;:a;n;ba}' "$script" > "$tmp/NC3.sh" 2>/dev/null
 nc NC3
+sed -E '/H\+=\(--machine/d' "$script" > "$tmp/NC2.sh" 2>/dev/null
+nc NC2 r1
+sed -E '/^Q=\$\{Q\/#/d' "$script" > "$tmp/NC4.sh" 2>/dev/null
+nc NC4 r1
 
 exit $fail

@@ -88,7 +88,7 @@ checks over ssh and `--machine` on every herdr call.
 
 ### Tests for User Story 2
 
-- [ ] T005 [US2] Add the remote cases to `tests/test_herdr_workspace.sh` (FR-004, FR-005, FR-006 remote, FR-007 remote, FR-011; lessons L2). Depends on T002.
+- [X] T005 [US2] Add the remote cases to `tests/test_herdr_workspace.sh` (FR-004, FR-005, FR-006 remote, FR-007 remote, FR-011; lessons L2). Depends on T002.
   - Stub `herdr`: `machine list --json` -> `[{"id":"stubid0001","label":"laptop","target":"u@stubhost","session":"default","enabled":true,"selected":false}]`; `STUB_DOWN=1` makes `workspace list` print `Error: stub machine down` on stderr and exit 1.
   - Stub `ssh` in `$tmp/bin/ssh`: append argv TAB-joined to `$tmp/ssh`; exit `$STUB_SSH_RC` with `ssh: stub failure` on stderr when it is set; else print `/home/u/proj x`, then `# branch.oid 0123`, `# branch.head main`, `# branch.upstream origin/main`, `# branch.ab +3 -2`. Print these lines with `printf '%s\n' '# branch.oid 0123' '# branch.head main' ...`, never as heredoc lines, so no line of the test file starts with `#`: `scripts/st-verify.sh` flags an added line that starts with `#` and a space as a comment.
   - Case R1: `HERDR_ENV` unset, `STUB_CWD='/home/u/proj x'`, folder `~/proj x`, `--machine laptop`. Expect exit 0; `calls_ok` with machine `laptop` and folder `/home/u/proj x` (the ssh output, never `~`); exactly one ssh line, which starts `-o<TAB>BatchMode=yes<TAB>--<TAB>u@stubhost` and whose last field holds `cd -- ~/proj\ x` (the `~` not escaped); report `workspace` line ends `laptop`, `folder` line has `ahead 3, behind 2`.
