@@ -8,7 +8,7 @@
 
 **Input**: User description: "Fix GitHub issue #18: use Codex (the `codex` CLI) as the Stratum orchestrator's advisor instead of `/advisor`. A second model from another vendor reviews the work at the three advisor points, returns structured findings with a verdict, and its approval is tied to a hash of what it reviewed. Codex is review-only."
 
-Decisions from the grilling session are in `decisions.md` (D1 to D7).
+Decisions are in `decisions.md` (D1 to D11).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -58,15 +58,15 @@ Every advisor call appends a record to `specs/<feature>/advisor.md`: the point, 
 
 **Acceptance Scenarios**:
 
-1. **Given** an `APPROVED` record for the plan, **When** `plan.md` is unchanged at the gate, **Then** the gate shows `APPROVED` with the record's hash.
-2. **Given** an `APPROVED` record for the plan, **When** `plan.md` changed after the record, **Then** the gate shows "advisor approval is stale" and treats it as no approval.
+1. **Given** an `APPROVED` record for the plan, **When** `spec.md`, `plan.md` and `tasks.md` are unchanged at the gate, **Then** the gate shows `APPROVED` with the record's hash.
+2. **Given** an `APPROVED` record for the plan, **When** any of `spec.md`, `plan.md` or `tasks.md` changed after the record, **Then** the gate shows "advisor approval is stale" and treats it as no approval.
 3. **Given** two records for the same point, **When** the gate reads them, **Then** the latest record counts.
 
 ---
 
 ### User Story 4 - The user chooses the mode (Priority: P2)
 
-A project owner sets the advisor mode in `.stratum/advisor.json`: `codex` (default), `both` (Codex, then `/advisor` if set), or `off` (the flow as today). `st-init` asks one question and writes the file.
+A project owner sets the advisor mode in `.stratum/advisor.json`: `codex`, `both` (Codex, then `/advisor` if set), or `off` (the flow as today). No file means `off` and a one-line hint. `st-init` asks one question and writes the file for new projects.
 
 **Why this priority**: Some users want both reviewers, some want none. The off switch is also the privacy control.
 
@@ -74,7 +74,7 @@ A project owner sets the advisor mode in `.stratum/advisor.json`: `codex` (defau
 
 **Acceptance Scenarios**:
 
-1. **Given** no `.stratum/advisor.json`, **When** the advisor runs, **Then** the mode is `codex`.
+1. **Given** no `.stratum/advisor.json`, **When** the advisor runs, **Then** it prints `no advisor: mode not set` with the instruction to write the file, exits with success, and Codex does not run.
 2. **Given** `{"mode": "both"}`, **When** the advisor runs, **Then** Codex runs and the first output line tells the orchestrator to also consult `/advisor` if one is set.
 3. **Given** `{"mode": "off"}`, **When** the advisor runs, **Then** it prints `no advisor: mode off`, exits 0, and the flow runs as before this feature.
 4. **Given** `st-init` runs in a project without the file, **When** it reaches the advisor step, **Then** it asks one question with `codex` as the recommended answer and writes the file.
@@ -120,10 +120,10 @@ Codex never changes a file, never builds, never fixes. It runs in the read-only 
 - **FR-007**: Every call MUST append a record to `specs/<feature>/advisor.md` with: the point, the date and time, the SHA256 of the input (the bytes of `spec.md`, `plan.md` and `tasks.md` joined in that order at the plan point, the bytes of `git diff <base> -- . ':(exclude)specs/<feature>/advisor.md'` followed by `git diff --no-index /dev/null <path>` for each untracked file (same exclusion) at the diff point, the bytes of both failure outputs joined at the test point), the verdict and the findings.
 - **FR-008**: At a gate the orchestrator MUST compare the latest record's hash for that point with the current input. A mismatch is "advisor approval is stale" and counts as no approval.
 - **FR-009**: The prompt MUST name paths and a base commit, not paste file contents, except the test point, where the task text, test path and both failure outputs are pasted because they are in no file.
-- **FR-010**: The mode MUST come from `.stratum/advisor.json`: `codex` (default when the file is missing), `both`, or `off`. `both` runs Codex and tells the orchestrator to also consult `/advisor` if one is set. `off` prints `no advisor: mode off` and the flow runs as before this feature. A file that is not valid or has an unknown mode is `BLOCKED: bad advisor.json`.
+- **FR-010**: The mode MUST come from `.stratum/advisor.json`: `codex`, `both`, or `off`. A missing file means `off`: the advisor prints `no advisor: mode not set` with the one-line instruction to write the file, exits with success, and nothing is sent to OpenAI. `both` runs Codex and tells the orchestrator to also consult `/advisor` if one is set. `off` prints `no advisor: mode off` and the flow runs as before this feature. A file that is not valid or has an unknown mode is `BLOCKED: bad advisor.json`.
 - **FR-011**: When `codex` is not on PATH the advisor MUST print `no advisor: codex not found`, exit with success, and the flow MUST run as before this feature, with `/advisor` if the user set one.
 - **FR-012**: Codex MUST run in the read-only sandbox at every point, with no flag that allows writes or bypasses the sandbox. Codex is used for review only, never to build or fix.
-- **FR-013**: The prompt MUST tell Codex to review only, to stay inside the named inputs, and never to open env or secret files.
+- **FR-013**: The prompt MUST tell Codex to review only, to stay inside the named inputs, never to open env or secret files, and never to quote a secret value in a finding. At the diff point, untracked paths matching `.env*`, `*.pem`, `*.key`, `*.p12` or `*.pfx` MUST be left out of the list sent to Codex but MUST stay in the hashed input.
 - **FR-014**: The Codex model and reasoning effort MUST come from the optional `model` and `effort` keys in `.stratum/advisor.json` when present, else from the user's own Codex configuration. `st-init` writes only `mode`.
 - **FR-015**: `st-init` MUST ask one question about the advisor mode, with `codex` as the recommended answer, and write `.stratum/advisor.json`, unless the file exists.
 - **FR-016**: The README "Built in" advisor bullet, `skills/st-inspect/SKILL.md` step 4, `skills/st-build/SKILL.md` steps "Two tries" and the end-of-build advisor paragraph, and `skills/st-fast/SKILL.md` steps 3 and 4 MUST describe the Codex advisor, the wait, the verdict handling, the modes, the record, and the no-Codex path. The README MUST state what each call sends to OpenAI and that `mode: off` is the switch.
@@ -154,4 +154,5 @@ Codex never changes a file, never builds, never fixes. It runs in the read-only 
 - The read-only sandbox blocks writes but not reads. The prompt, not a technical block, keeps Codex out of env and secret files.
 - The time and token cost per point are unknown until the Plan phase measures them on a real plan and a real diff. The time limit is set from those measurements, under the 10-minute cap of a foreground orchestrator call.
 - One record file per feature is enough. Fast-lane changes record to their feature's `advisor.md`.
-- The existing `/advisor` path is unchanged. Mode `both` adds Codex before it, mode `off` and a missing `codex` leave it as the only advisor.
+- The existing `/advisor` path is unchanged. Mode `both` adds Codex before it; mode `off`, a missing mode file and a missing `codex` leave it as the only advisor.
+- Projects set up before this feature have no `.stratum/advisor.json`, so they stay on the old flow until the owner writes the file.

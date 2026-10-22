@@ -25,9 +25,13 @@ st-advisor.sh continued <plan|test|diff> <feature dir>
   orchestrator writes all three to its scratchpad.
 - `<base>` is any commit name. The script resolves it with
   `git rev-parse --verify --quiet "<base>^{commit}"` and uses only the full SHA it prints.
-- Bad arguments (wrong count, unknown form, no `<feature dir>/spec.md`, a base that is not a
-  commit, a missing task or failure file): `usage: st-advisor.sh plan|test|diff|check|continued ...`
-  on one line, exit 2, no record, no Codex call.
+- Bad arguments (wrong count, unknown form, no `<feature dir>/spec.md`, for `plan` no
+  `<feature dir>/plan.md` or `<feature dir>/tasks.md`, a base that is not a commit, a missing task
+  or failure file): `usage: st-advisor.sh plan|test|diff|check|continued ...` on one line, exit 2,
+  no record, no Codex call.
+- `check` reads the records first. No record for the point: `no record: <point>`, exit 1, even
+  when `plan.md` or `tasks.md` does not exist yet. With a record, it hashes the current input; a
+  missing plan file is then the usage line, exit 2.
 - `continued` with no record for that point: `no record: <point>`, exit 2.
 - Arguments go to commands as quoted argv. No `eval`, no `bash -c`.
 
@@ -38,8 +42,11 @@ st-advisor.sh continued <plan|test|diff> <feature dir>
    `<f>/spec.md`, `<f>/plan.md` and `<f>/tasks.md` joined in that order (D10). `test` hashes the
    two failure files joined in order. `diff` hashes
    `git diff <sha> -- . ':(exclude)<f>/advisor.md'` followed by
-   `git diff --no-index -- /dev/null <path>` for each untracked path (same exclusion, D9).
-3. Read the settings (data-model.md, Advisor settings). Bad file: record `BLOCKED`, print
+   `git diff --no-index -- /dev/null <path>` for each untracked path (same exclusion, D9). Every
+   untracked path is in the hash, secret-looking ones too (D12).
+3. Read the settings (data-model.md, Advisor settings). No file: print
+   `no advisor: mode not set. Write .stratum/advisor.json with "mode": "codex", "both" or "off".`,
+   exit 0, no record, no Codex call (D11). Bad file: record `BLOCKED`, print
    `BLOCKED: bad advisor.json`, exit 1. `off`: print `no advisor: mode off`, exit 0. `both`: print
    `mode both: also consult /advisor if one is set` first and go on.
 4. `command -v codex` fails: print `no advisor: codex not found`, exit 0, no record.
@@ -57,6 +64,11 @@ files in the temp dir:
 timeout -k 10 540 codex exec -s read-only [-m <model>] [-c model_reasoning_effort="<effort>"] --ephemeral --output-schema <tmp>/schema.json -o <tmp>/answer.json -
 ```
 
+- Codex runs only when `.stratum/advisor.json` exists and is valid with mode `codex` or `both`
+  (D11).
+- `model` and `effort` are checked with Python `re.fullmatch` against
+  `[A-Za-z0-9][A-Za-z0-9._:/-]{0,63}` and `[a-z]{1,16}` (not `re.match` with `$`, which accepts a
+  trailing newline).
 - `-m <model>` only when `advisor.json` sets `model`. `-c model_reasoning_effort="<effort>"` (one
   argv element, the quotes are part of it) only when it sets `effort`. Without the keys, neither
   is passed (FR-014, research R11).
@@ -73,11 +85,12 @@ timeout -k 10 540 codex exec -s read-only [-m <model>] [-c model_reasoning_effor
 
 ## 4. Prompt
 
-Every prompt starts with these three lines, as written:
+Every prompt starts with these four lines, as written:
 
 ```text
 You are a reviewer for Stratum. Review only: never create, change or delete a file, and never build or fix anything.
 Read only the inputs named below and the files they cite. Never open .env files, keys, credentials, tokens or other secret files.
+Never quote a secret value in a finding.
 Answer with verdict APPROVED (nothing to fix), REVISE (findings to fix) or BLOCKED (you cannot review, or the work must stop). Each finding has a claim, the evidence, a location (file:line when known) and a severity.
 ```
 
@@ -112,10 +125,15 @@ Untracked files:
 <one path per line, or the line: none>
 ```
 
+The `Untracked files:` list leaves out each path whose basename matches `.env*`, `*.pem`,
+`*.key`, `*.p12` or `*.pfx` (shell `case` on `${path##*/}`, any directory). Those paths stay in
+the hash (section 2, D12). If every untracked path is left out, the list is `none`.
+
 ## 5. Output and exit status
 
 | Case | stdout | Exit |
 |------|--------|------|
+| no `.stratum/advisor.json` | `no advisor: mode not set. Write .stratum/advisor.json with "mode": "codex", "both" or "off".` | 0 |
 | mode `off` | `no advisor: mode off` | 0 |
 | no `codex` on PATH | `no advisor: codex not found` | 0 |
 | `APPROVED` or `REVISE` | `<VERDICT> sha256 <64 hex>`, `summary: <text>`, one line per finding, `record: <f>/advisor.md` | 0 |
@@ -123,7 +141,7 @@ Untracked files:
 | any other `BLOCKED` | `BLOCKED: <reason>`, `record: <f>/advisor.md` | 1 |
 
 - Mode `both` adds `mode both: also consult /advisor if one is set` as the first line of every
-  row except `off`.
+  row except the no-file row and `off`.
 - Reasons, exactly: `timed out`, `<codex error line>` (research R2), `empty answer`,
   `malformed answer`, `no verdict`, `REVISE with no findings`, `bad advisor.json`.
 - Finding line: `- [<severity>] <location>: <claim> Evidence: <evidence>`.
@@ -169,7 +187,7 @@ Step 4 (lines 28-30) becomes:
 ```markdown
 4. **Two tries.** If the test is still red after 2 `st-build` tries, run the advisor (see Advisor): save the task text and both failure outputs to files in your scratchpad, then run
    `bash <plugin root>/scripts/st-advisor.sh test <feature dir> <task file> <test path> <failure 1 file> <failure 2 file>`: root cause or rabbit hole?
-   For a `[P]` task in a worktree, run it in the main session after the subagent reports both failures.
+   For a `[P]` task in a worktree, run it in the main session after the subagent reports both failures, and start `st-debug` from the main session too.
    Then start the `st-debug` agent (`stratum:st-debug`) with the task, the test, both failure outputs, and the advisor's answer.
 ```
 
@@ -206,12 +224,12 @@ The advisor is Codex (the `codex` CLI), a model from another vendor. It runs at 
 
 - Run `bash <plugin root>/scripts/st-advisor.sh <point> ...` from the project root in the foreground, with a Bash timeout of 600000 ms, and wait for it. No background run, no polling.
 - Codex only reviews, in the read-only sandbox. Never run `codex` to build or fix.
-- `no advisor: codex not found` or `no advisor: mode off`: go on as before; consult `/advisor` only if the user set one.
+- `no advisor: codex not found`, `no advisor: mode not set` (show the user its line) or `no advisor: mode off`: go on as before; consult `/advisor` only if the user set one.
 - First line `mode both: also consult /advisor if one is set`: after Codex, consult `/advisor` on the same input if one is set.
 - `APPROVED`: go on.
 - `REVISE`: handle each finding like a review finding: check it against the source, fix the real small ones, bring big ones to the user, drop the false ones. Then run the same point once more on the changed input. Two rounds at most per point per gate pass, then the user decides. A later gate pass starts a new count.
 - `BLOCKED: <reason>`: stop and show the user the reason. Nothing passes the gate. If the user says to continue, run `bash <plugin root>/scripts/st-advisor.sh continued <point> <feature dir>` and skip the point. Do not retry it in this gate pass.
-- Each run appends a record to `<feature dir>/advisor.md`: the point, the time, the SHA256 of the input, the verdict and the findings. The mode comes from `.stratum/advisor.json` (`codex`, `both` or `off`).
+- Each run appends a record to `<feature dir>/advisor.md`: the point, the time, the SHA256 of the input, the verdict and the findings. The mode comes from `.stratum/advisor.json` (`codex`, `both` or `off`). No file means off, with the `mode not set` line.
 - At a gate, `check` compares the latest record with the current input. `advisor approval is stale` or `no record` counts as no approval: run the point once more, as a round. Skip the check after a `no advisor` line.
 ```
 
@@ -223,7 +241,7 @@ Step 4 (lines 29-33) becomes:
 4. **Advisor.** Run `bash <plugin root>/scripts/st-advisor.sh plan <feature dir>` from the project root in the foreground, with a Bash timeout of 600000 ms, and wait for it.
    Codex reviews spec, plan and tasks in the read-only sandbox. Risks: missed auth invariants, schema or contract breaks, hidden breaking changes.
    Improvements: a simpler or better approach, tasks to cut or merge.
-   Handle its answer as in "Advisor" in `<plugin root>/skills/st-build/SKILL.md`. Run a second round after step 5.
+   Handle its answer as in "Advisor" in `<plugin root>/skills/st-build/SKILL.md`; big ones go to the user before the gate.
 ```
 
 The gate's first line (line 38) gains a sentence before it:
@@ -265,12 +283,19 @@ New step after step 10 (Tool check); step 11 (Report) becomes 12:
 
 ```markdown
 11. **Advisor.** If `.stratum/advisor.json` is missing, ask the user in one question: advisor mode `codex` (recommended: Codex reviews the plan, a test red after 2 tries, and the full diff; needs `codex` logged in), `both` (Codex, then `/advisor` if set), or `off` (no Codex, nothing sent to OpenAI)?
-   Write `.stratum/advisor.json` as `{"mode": "<answer>"}`. It is committed. Say how to change it later: edit the file. Optional `model` and `effort` keys pick the Codex model and reasoning effort; without them Codex uses the user's own config.
+   Write `.stratum/advisor.json` as `{"mode": "<answer>"}`. It is committed. New projects get the file here; without it the advisor is off. Say how to change it later: edit the file. Optional `model` and `effort` keys pick the Codex model and reasoning effort; without them Codex uses the user's own config.
 ```
 
-In the Report step, the committed file list
-`(.stratum/state.json, .stratum/constitution.md, .gitignore, AGENTS.md, CLAUDE.md, .claude/settings.json)`
-gains `.stratum/advisor.json` after `.stratum/constitution.md`.
+In the Report step (`skills/st-init/SKILL.md:62-65`), the committed file list reads, as it is in
+the file:
+
+```markdown
+   still needs to do. Commit only the created or changed project files (`.stratum/state.json`,
+   `.stratum/constitution.md`, `.gitignore`, `AGENTS.md`, `CLAUDE.md`, `.claude/settings.json`),
+```
+
+Insert `.stratum/advisor.json`, with backticks, after `.stratum/constitution.md`, keeping the
+line wrap of the file.
 
 ### 7.5 `README.md`
 
@@ -283,8 +308,10 @@ The Built in **Advisor.** bullet (lines 159-162) becomes:
   A failed, empty, malformed or late answer (540 seconds) is `BLOCKED`, never approval.
   Each run appends the point, a SHA256 of the input, the verdict and the findings to `specs/<feature>/advisor.md`. An approval of a plan or diff that changed since then is stale.
   What leaves the machine: each call sends the prompt and the files Codex reads to OpenAI, on your Codex login and quota (about 37,000 tokens per plan or diff review). The prompt names paths and a base commit; at the test point it holds the task text, the test path and both failure outputs.
-  The prompt tells Codex to stay inside the named inputs and never open env or secret files. The sandbox does not block reads.
-  `.stratum/advisor.json` sets the mode: `{"mode": "codex"}` (the default), `{"mode": "both"}` (Codex, then `/advisor` if you set one), or `{"mode": "off"}`. `"mode": "off"` is the off switch: nothing goes to OpenAI.
+  The prompt tells Codex to stay inside the named inputs, never open env or secret files, and never quote a secret value. The sandbox does not block reads.
+  At the diff point, untracked `.env*`, `*.pem`, `*.key`, `*.p12` and `*.pfx` files are left out of the list Codex is given. Whether Codex's own shell sees your environment variables is not checked.
+  `.stratum/advisor.json` sets the mode: `{"mode": "codex"}`, `{"mode": "both"}` (Codex, then `/advisor` if you set one), or `{"mode": "off"}`. `"mode": "off"` is the off switch: nothing goes to OpenAI.
+  With no file the advisor is off and prints `no advisor: mode not set. Write .stratum/advisor.json with "mode": "codex", "both" or "off".` `st-init` writes the file for new projects. A project set up before this feature has no file, so the advisor stays off until you write it.
   With no `codex` on PATH you get one line, `no advisor: codex not found`, and the flow runs as before, with `/advisor` if you set one.
   Optional `model` and `effort` keys in the same file pick the Codex model and reasoning effort, for example `{"mode": "codex", "model": "gpt-6-astra", "effort": "high"}`. Without them Codex uses your own Codex config.
 ```
@@ -338,7 +365,11 @@ Tests list (T001 adds it, so `tests/test_inspect.sh` "README tests" stays green)
 | #18 FR-008 stale fast | skills/st-fast/SKILL.md | `bash <plugin root>/scripts/st-advisor.sh check diff <feature dir> <base from step 1>` |
 | #18 FR-010 modes | skills/st-build/SKILL.md | `The mode comes from `.stratum/advisor.json` (`codex`, `both` or `off`).` |
 | #18 FR-010 modes | skills/st-build/SKILL.md | `First line `mode both: also consult /advisor if one is set`` |
-| #18 FR-011 no codex | skills/st-build/SKILL.md | ``no advisor: codex not found` or `no advisor: mode off`: go on as before` |
+| #18 FR-010 no file | skills/st-build/SKILL.md | `No file means off, with the `mode not set` line.` |
+| #18 FR-010 no file | README.md | `With no file the advisor is off and prints `no advisor: mode not set. Write .stratum/advisor.json with "mode": "codex", "both" or "off".`` |
+| #18 FR-010 no file | README.md | `A project set up before this feature has no file, so the advisor stays off until you write it.` |
+| #18 FR-011 no codex | skills/st-build/SKILL.md | ``no advisor: mode not set` (show the user its line) or `no advisor: mode off`: go on as before` |
+| #18 FR-011 no codex | skills/st-build/SKILL.md | ``no advisor: codex not found`, `no advisor: mode not set`` |
 | #18 FR-012 review only | skills/st-build/SKILL.md | `Never run `codex` to build or fix.` |
 | #18 FR-016 inspect rules | skills/st-inspect/SKILL.md | `Handle its answer as in "Advisor" in `<plugin root>/skills/st-build/SKILL.md`` |
 | #18 FR-016 fast rules | skills/st-fast/SKILL.md | `Handle each advisor answer as in "Advisor" in `<plugin root>/skills/st-build/SKILL.md` (verdicts, rounds, modes, record, no Codex)` |
@@ -351,6 +382,9 @@ Tests list (T001 adds it, so `tests/test_inspect.sh` "README tests" stays green)
 | #18 FR-016 readme | README.md | `With no `codex` on PATH you get one line, `no advisor: codex not found`` |
 | #18 FR-016 readme | README.md | `A failed, empty, malformed or late answer (540 seconds) is `BLOCKED`, never approval.` |
 | #18 FR-016 readme | README.md | `An approval of a plan or diff that changed since then is stale.` |
+| #18 FR-013 readme | README.md | `untracked `.env*`, `*.pem`, `*.key`, `*.p12` and `*.pfx` files are left out of the list Codex is given` |
+| #18 D13 readme | README.md | `Whether Codex's own shell sees your environment variables is not checked.` |
+| #18 inspect keep | skills/st-inspect/SKILL.md | `; big ones go to the user before the gate.` |
 | #18 FR-014 readme | README.md | `Optional `model` and `effort` keys in the same file pick the Codex model and reasoning effort` |
 | #18 FR-014 init | skills/st-init/SKILL.md | `Optional `model` and `effort` keys pick the Codex model and reasoning effort` |
 | #18 FR-001 build worktree stop | skills/st-build/SKILL.md | `a subagent whose test is still red after 2 tries stops and reports both failures` |

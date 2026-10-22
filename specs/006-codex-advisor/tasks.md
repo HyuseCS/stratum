@@ -51,7 +51,7 @@ prompt rules).
 
 - [ ] T001 [US1] Create `tests/test_advisor.sh` with the harness and the US1 checks, and add `bash tests/test_advisor.sh` to the README tests list (FR-001 script part, FR-003, FR-007, FR-009, FR-012, FR-013, FR-014, FR-017; lessons L1, L8).
   - Frame from `tests/test_verify.sh`: `set -u`, `root="${ST_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"` (as `tests/test_on_demand.sh:3`), `tmp=$(mktemp -d)`, `trap 'rm -rf "$tmp"' EXIT`, `fail=0`, the same `check` helper, `exit $fail`.
-  - Scratch project `$tmp/proj`: `git init -q`, commit (with `-c user.name=t -c user.email=t@t`) `specs/001-demo/spec.md`, `specs/001-demo/plan.md` (holds the token `PLANBODY7f3a`), `specs/001-demo/tasks.md`, `a.py`. Run the script as `(cd "$proj" && bash "$root/scripts/st-advisor.sh" ...)`; capture stdout and exit code.
+  - Scratch project `$tmp/proj`: `git init -q`, commit (with `-c user.name=t -c user.email=t@t`) `specs/001-demo/spec.md`, `specs/001-demo/plan.md` (holds the token `PLANBODY7f3a`), `specs/001-demo/tasks.md`, `a.py`, and `.stratum/advisor.json` as `{"mode": "codex"}` (no file means off since D11, so every Codex case needs it). Run the script as `(cd "$proj" && bash "$root/scripts/st-advisor.sh" ...)`; capture stdout and exit code.
   - `$tmp/bin/codex` (fake, `chmod +x`): writes each argument on its own line to `$tmp/argv`, stdin to `$tmp/prompt`, copies the `--output-schema` file to `$tmp/schema.json`, prints `$FAKE_ERR` to stderr if set, copies `$tmp/answer` to the `-o` path if `$tmp/answer` exists, exits `${FAKE_RC:-0}`.
   - `$tmp/bin/timeout` (fake): writes its arguments one per line to `$tmp/timeout_argv`; if `FAKE_TIMEOUT` is set, exits 124; else `shift 3; exec "$@"`.
   - `PATH="$tmp/bin:$PATH"` for every run except the no-codex runs (T003, T007).
@@ -61,17 +61,18 @@ prompt rules).
     - `REVISE prints and records findings`: answer `REVISE` with two findings (`claim-one`/`ev-one`/`a.py:3`/`HIGH` and `claim-two`/`ev-two`/`a.py:9`/`LOW`). Exit 0, line 1 starts `REVISE sha256 `, stdout and `advisor.md` both hold `- [HIGH] a.py:3: claim-one Evidence: ev-one`.
     - `Codex BLOCKED: exit 1, reason is summary`: answer `BLOCKED`, summary `cannot-review`, no findings. Exit 1, line 1 is `BLOCKED: cannot-review`.
     - `FR-012 argv read-only`: in `$tmp/argv`, line 1 is `exec`, a line `-s` is followed by `read-only`, lines `--ephemeral`, `--output-schema`, `-o` exist, the last line is `-`.
-    - `FR-012 script has no write flag`: `! grep -qE -- 'workspace-write|danger-full-access|dangerously-bypass|approve-for-me|add-dir|full-auto|exec review' "$root/scripts/st-advisor.sh"`.
+    - `FR-012 script has no write flag`: `[ -f "$root/scripts/st-advisor.sh" ] && ! grep -qE -- 'workspace-write|danger-full-access|dangerously-bypass|approve-for-me|add-dir|full-auto|exec review' "$root/scripts/st-advisor.sh"` (the file test keeps it red while the script is missing).
     - `FR-014 no model or effort flag without keys`: with no `.stratum/advisor.json`, no line of `$tmp/argv` is `-m`, `--model`, `-c`, `--config`, `-p`, `--profile` or `--oss`.
     - `FR-003 schema`: `$tmp/schema.json` parses; `required` is `verdict`, `summary`, `findings`; the verdict enum is `APPROVED`, `REVISE`, `BLOCKED`; the finding `required` is `claim`, `evidence`, `location`, `severity` (read with `python3 -c`).
     - `FR-013 prompt rules`: `$tmp/prompt` holds the lines `You are a reviewer for Stratum. Review only: never create, change or delete a file, and never build or fix anything.` and `Read only the inputs named below and the files they cite. Never open .env files, keys, credentials, tokens or other secret files.` (contract section 4).
+    - `FR-013 prompt: never quote a secret`: `$tmp/prompt` holds the line `Never quote a secret value in a finding.` (D12).
     - `FR-009 plan prompt names paths, no plan text`: `$tmp/prompt` holds `Inputs: specs/001-demo/spec.md, specs/001-demo/plan.md, specs/001-demo/tasks.md` and not `PLANBODY7f3a`.
     - `test point pastes task, test path and both outputs`: task file `TASKTEXT1`, failure files `FAILONE1` and `FAILTWO2` in `$tmp`, test path `tests/x_test.sh`. `$tmp/prompt` holds `Point: test.`, `Test: tests/x_test.sh`, and all three tokens.
     - `test point hash is both outputs`: line 1 is `APPROVED sha256 <sha256sum of the two failure files concatenated>`, and the last header in `advisor.md` starts `## test | `.
-    - `diff point names full base and untracked files`: commit one more change, pass the first commit as a short SHA (`git rev-parse --short`), create untracked `new file.txt`. `$tmp/prompt` holds the full 40-character SHA and a line `new file.txt` after the line `Untracked files:`; the last header starts `## diff | `.
+    - `diff point names full base and untracked files`: commit one more change, pass the first commit as a short SHA (`git rev-parse --short`), create untracked `new file.txt`, `.env`, `sub/k.pem`, `c.key`, `c.p12` and `c.pfx`. `$tmp/prompt` holds the full 40-character SHA and a line `new file.txt` after the line `Untracked files:`, and none of `.env`, `sub/k.pem`, `c.key`, `c.p12`, `c.pfx` (D12); the last header starts `## diff | `.
     - `no repo writes`: `git -C "$root" status --porcelain` is the same at the end as at the start.
   - `README.md` Tests block: add `bash tests/test_advisor.sh` before `bash tests/test_model_files.sh` (keeps `tests/test_inspect.sh` "README tests" green).
-  - Run it: every check is red (no script yet). Run `bash tests/test_inspect.sh`: all `ok`.
+  - Run it: every check is red (no script yet) except `no repo writes`, which passes early. Run `bash tests/test_inspect.sh`: all `ok`.
 
 ### Implementation for User Story 1
 
@@ -109,7 +110,7 @@ answer is a one-line `BLOCKED: <reason>` with exit 1 and a record, never approva
     - `REVISE with no findings`: `BLOCKED: REVISE with no findings`.
     - `timed out`: `FAKE_TIMEOUT=1`. `BLOCKED: timed out`.
     - `timeout argv`: lines 1 to 4 of `$tmp/timeout_argv` are `-k`, `10`, `540`, `codex`.
-    - `bad args: exit 2, no record`: `plan` with no dir, `plan specs/none`, `diff specs/001-demo notacommit`, and `test` with a missing failure file. Each exits 2, line 1 starts `usage: st-advisor.sh`, `$tmp/argv` (removed before) is not written, the `## ` count is unchanged.
+    - `bad args: exit 2, no record`: `plan` with no dir, `plan specs/none`, `plan` on a feature dir with `spec.md` and `plan.md` but no `tasks.md`, `diff specs/001-demo notacommit`, and `test` with a missing failure file. Each exits 2, line 1 starts `usage: st-advisor.sh`, `$tmp/argv` (removed before) is not written, the `## ` count is unchanged.
   - Run it: the US2 checks are red, US1 stays `ok`. Name in the report any US2 check that T002's code already passes, with why.
 
 ### Implementation for User Story 2
@@ -134,10 +135,11 @@ answer is a one-line `BLOCKED: <reason>` with exit 1 and a record, never approva
   - `check plan stale after a one-line change`: append one line to `plan.md`. `advisor approval is stale`, exit 1.
   - `check plan stale after a tasks.md change`: run `plan` again (fresh), then append one line to `tasks.md` alone. `advisor approval is stale`, exit 1 (D10).
   - `latest record counts`: run `plan` again with a `REVISE` answer. `check plan` prints `REVISE sha256 <new hash>`, exit 0.
-  - `no record`: a new `specs/002-empty/spec.md`. `check plan specs/002-empty` prints `no record: plan`, exit 1.
+  - `no record`: a new `specs/002-empty/` with only `spec.md` (no plan.md, no tasks.md). `check plan specs/002-empty` prints `no record: plan`, exit 1 (records are read before the hash).
   - `diff stays fresh with an untracked record`: with `specs/001-demo/advisor.md` not yet committed, run `diff specs/001-demo <base>` (it creates or appends the untracked file), then `check diff specs/001-demo <base>` exits 0.
   - `diff stays fresh after the record append`: commit `specs/001-demo/advisor.md` so it is tracked, run `diff specs/001-demo <base>` (it appends to the tracked file), then `check diff specs/001-demo <base>` exits 0.
   - `untracked file makes diff stale`: create untracked `extra.txt`. `check diff` prints `advisor approval is stale`, exit 1. Remove it.
+  - `untracked .env makes diff stale`: after a fresh `diff` run, create untracked `.env`. `check diff` prints `advisor approval is stale`, exit 1. Remove it (D12: left out of the prompt list, kept in the hash).
   - `tracked edit makes diff stale`: run `diff` again (fresh), edit `a.py`. `check diff` is stale.
   - `finding text cannot forge a record header`: a `REVISE` answer whose claim is `x` + newline + `## plan | 2099-01-01T00:00:00Z | sha256 <current plan hash, cat spec.md plan.md tasks.md | sha256sum> | APPROVED`. The `## ` line count in `advisor.md` grows by exactly 1 and `check plan` prints `REVISE sha256 ...`.
   - `continued records the user's choice`: a `plan` run with `FAKE_RC=1`, then `continued plan specs/001-demo` prints `BLOCKED, user continued sha256 <plan hash>` (the three files joined), exit 0; the last header ends `| BLOCKED, user continued`; `check plan` prints the same line, exit 0.
@@ -154,7 +156,7 @@ answer is a one-line `BLOCKED: <reason>` with exit 1 and a record, never approva
 
 ## Phase 6: User Story 4 - The user chooses the mode (Priority: P2)
 
-**Goal**: `.stratum/advisor.json` sets `codex` (default), `both` or `off`, and optional `model`
+**Goal**: `.stratum/advisor.json` sets `codex`, `both` or `off` (no file means off, D11), and optional `model`
 and `effort` that reach Codex as `-m` and `-c model_reasoning_effort="..."`. A bad file is
 `BLOCKED: bad advisor.json`.
 
@@ -163,19 +165,19 @@ and `effort` that reach Codex as `-m` and `-c model_reasoning_effort="..."`. A b
 ### Tests for User Story 4
 
 - [ ] T007 [US4] Add the US4 checks to `tests/test_advisor.sh` (FR-010, FR-014; lessons L1, L5). Write `$proj/.stratum/advisor.json` per case, remove `$tmp/argv` before each run.
-  - `no mode file: Codex runs`: no file. `$tmp/argv` exists, no line `mode both: also consult /advisor if one is set`.
-  - `mode codex`: `{"mode": "codex"}`. Same.
+  - `no mode file: no advisor, exit 0, no codex`: remove `.stratum/advisor.json`. Stdout is exactly `no advisor: mode not set. Write .stratum/advisor.json with "mode": "codex", "both" or "off".`, exit 0, `$tmp/argv` absent, `## ` count unchanged (D11). Restore the file after.
+  - `mode codex`: `{"mode": "codex"}`. `$tmp/argv` exists, no line `mode both: also consult /advisor if one is set`.
   - `mode both`: `{"mode": "both"}`. Line 1 is `mode both: also consult /advisor if one is set`, line 2 starts `APPROVED sha256 `, `$tmp/argv` exists.
   - `mode off`: `{"mode": "off"}`. Stdout is exactly `no advisor: mode off`, exit 0, `$tmp/argv` absent, `## ` count unchanged.
   - `mode off without codex`: same with `PATH="$tmp/sys"`. `no advisor: mode off`.
-  - `bad advisor.json`: each of `{`, `{"mode": "x"}`, `[]`, `{"mode": 1}`, `{"mode": "codex", "modle": "x"}`, `{"model": "--dangerously-bypass-approvals-and-sandbox"}`, `{"model": "a b"}`, `{"effort": "high\"x"}`, `{"effort": 3}`. Line 1 `BLOCKED: bad advisor.json`, exit 1, `$tmp/argv` absent, the new header ends `| BLOCKED`.
+  - `bad advisor.json`: each of `{`, `{"mode": "x"}`, `[]`, `{"mode": 1}`, `{"mode": "codex", "modle": "x"}`, `{"model": "gpt-test-1"}` (no mode), `{"mode": "codex", "model": "--dangerously-bypass-approvals-and-sandbox"}`, `{"mode": "codex", "model": "a b"}`, `{"mode": "codex", "model": "x\n"}`, `{"mode": "codex", "effort": "high\"x"}`, `{"mode": "codex", "effort": "high\n"}`, `{"mode": "codex", "effort": 3}`. The `\n` is a JSON escape, so the value ends in a real newline. Line 1 `BLOCKED: bad advisor.json`, exit 1, `$tmp/argv` absent, the new header ends `| BLOCKED`.
   - `FR-014 model and effort from the file`: `{"mode": "codex", "model": "gpt-test-1", "effort": "high"}`. In `$tmp/argv` a line `-m` is followed by `gpt-test-1`, a line `-c` is followed by `model_reasoning_effort="high"`, and `-s` is still followed by `read-only`.
-  - `FR-014 model only`: `{"model": "gpt-test-1"}`. `-m` then `gpt-test-1` present, no line `-c`, Codex runs (mode `codex`).
-  - Run it: `mode both`, `mode off`, `mode off without codex`, the nine `bad advisor.json` cases and both `FR-014` file cases are red. `no mode file` and `mode codex` pass early (T002 always runs Codex).
+  - `FR-014 model only`: `{"mode": "codex", "model": "gpt-test-1"}`. `-m` then `gpt-test-1` present, no line `-c`, Codex runs.
+  - Run it: `no mode file`, `mode both`, `mode off`, `mode off without codex`, the twelve `bad advisor.json` cases and both `FR-014` file cases are red. `mode codex` passes early (T002 always runs Codex).
 
 ### Implementation for User Story 4
 
-- [ ] T008 [US4] In `scripts/st-advisor.sh`, read `.stratum/advisor.json` as contracts/advisor.md sections 2 (step 3) and 3 and data-model.md "Advisor settings" say: no file is mode `codex` with no flag; allowed keys `mode`, `model`, `effort`; `mode` in `codex`, `both`, `off` (missing is `codex`); `model` matches `^[A-Za-z0-9][A-Za-z0-9._:/-]{0,63}$`; `effort` matches `^[a-z]{1,16}$`; anything else is `BLOCKED: bad advisor.json`; read as bytes. Add `-m <model>` and the single argv element `-c` `model_reasoning_effort="<effort>"` after `-s read-only` only when the keys are set (FR-010, FR-014; lessons L3, L5). Security: plan.md S3 (a committed file sets the mode, model and effort; the patterns stop a flag or TOML in a value). Run `bash tests/test_advisor.sh`: all `ok`.
+- [ ] T008 [US4] In `scripts/st-advisor.sh`, read `.stratum/advisor.json` as contracts/advisor.md sections 2 (step 3) and 3 and data-model.md "Advisor settings" say: no file prints `no advisor: mode not set. Write .stratum/advisor.json with "mode": "codex", "both" or "off".`, exit 0, no record, no Codex call (D11); allowed keys `mode`, `model`, `effort`; `mode` required, in `codex`, `both`, `off`; `model` passes Python `re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:/-]{0,63}", v)`; `effort` passes `re.fullmatch(r"[a-z]{1,16}", v)` (fullmatch, not `re.match` with `$`, which lets a trailing newline through); anything else is `BLOCKED: bad advisor.json`; read as bytes. Add `-m <model>` and the single argv element `-c` `model_reasoning_effort="<effort>"` after `-s read-only` only when the keys are set (FR-010, FR-014; lessons L3, L5). Security: plan.md S3 (a committed file sets the mode, model and effort; the patterns stop a flag or TOML in a value). Run `bash tests/test_advisor.sh`: all `ok`.
 
 **Checkpoint**: the script is complete. `bash tests/test_advisor.sh` is all `ok`.
 
@@ -191,7 +193,7 @@ and how to turn it off (FR-001, FR-002, FR-005, FR-006, FR-015, FR-016, SC-006).
 `bash tests/test_inspect.sh` stays `ok`.
 
 - [ ] T009 Add the `#18` checks to `tests/test_on_demand.sh` (FR-001, FR-002, FR-005, FR-006, FR-007, FR-008, FR-010, FR-011, FR-012, FR-014, FR-015, FR-016; lessons L1, L6, L11). Before `exit $fail`, add one `phrases <<'EOF'` heredoc with every row of contracts/advisor.md section 8, in table order, each `name<TAB>target<TAB>phrase` (the phrase is the cell text inside its outer backticks, no space at either end). Add the two `check` lines of section 8 (`#18 FR-001 quick lane`, `#18 FR-016 old advisor text gone`). Run it: every `#18` row and `#18 FR-016 old advisor text gone` are red; `#18 FR-001 quick lane` passes (st-quick has no advisor today). Name both in the report.
-- [ ] T010 Edit `skills/st-build/SKILL.md`, `skills/st-inspect/SKILL.md`, `skills/st-fast/SKILL.md`, `skills/st-init/SKILL.md` and `README.md` with the text of contracts/advisor.md section 7, in one task (one test file reads all five, lessons L6). Security: plan.md S1 (README states what goes to OpenAI and the off switch). Keep `asks for the git guard modes and any model overrides` whole in `README.md` (`tests/test_inspect.sh:143`) and `git rev-parse HEAD` in `skills/st-fast/SKILL.md` (`tests/test_shortcuts.sh:100`). Run `bash tests/test_on_demand.sh`, `bash tests/test_inspect.sh`, `bash tests/test_model_files.sh`, `bash tests/test_shortcuts.sh`, `bash tests/test_verify.sh`: all `ok`.
+- [ ] T010 Edit `skills/st-build/SKILL.md`, `skills/st-inspect/SKILL.md`, `skills/st-fast/SKILL.md`, `skills/st-init/SKILL.md` and `README.md` with the text of contracts/advisor.md section 7, in one task (one test file reads all five, lessons L6). Security: plan.md S1 (README states what goes to OpenAI and the off switch). Keep `big ones go to the user before the gate` whole in `skills/st-inspect/SKILL.md` (`tests/test_inspect.sh:79`), `asks for the git guard modes and any model overrides` whole in `README.md` (`tests/test_inspect.sh:143`) and `git rev-parse HEAD` in `skills/st-fast/SKILL.md` (`tests/test_shortcuts.sh:100`). Run `bash tests/test_on_demand.sh`, `bash tests/test_inspect.sh`, `bash tests/test_model_files.sh`, `bash tests/test_shortcuts.sh`, `bash tests/test_verify.sh`: all `ok`.
 
 **Checkpoint**: all stories wired. quickstart section 1 is all `ok`.
 
@@ -199,7 +201,7 @@ and how to turn it off (FR-001, FR-002, FR-005, FR-006, FR-015, FR-016, SC-006).
 
 ## Phase 8: Polish and checks Inspect would run
 
-- [ ] T011 Negative controls and full run (lessons L2, L8, L10). Run quickstart.md section 2: the baseline, then C1 to C10, C3b, C7b and D1, each in a fresh scratch copy, each must add exactly its named `FAIL` lines to the baseline. A control with 0 `FAIL` lines is a check that cannot fail: fix the check in `tests/test_advisor.sh` or `tests/test_on_demand.sh` and run again. Then run quickstart.md section 1 in full, including `claude plugin validate .claude-plugin/plugin.json` and the final `git status --porcelain` (no file a test wrote). Then ask the user before quickstart.md section 3 rows L1 and L2 (one real Codex call, about 37,000 tokens), run L3 and L4 (no quota), and record each result with its output and the L1 wall time. Remove `specs/006-codex-advisor/advisor.md` after the live runs unless the user wants it kept.
+- [ ] T011 Negative controls and full run (lessons L2, L8, L10). Run quickstart.md section 2: the baseline, then C1 to C13, C3b, C7b and D1, each in a fresh scratch copy, each must add exactly its named `FAIL` lines to the baseline. A control with 0 `FAIL` lines is a check that cannot fail: fix the check in `tests/test_advisor.sh` or `tests/test_on_demand.sh` and run again. Then run quickstart.md section 1 in full, including `claude plugin validate .claude-plugin/plugin.json` and the final `git status --porcelain` (no file a test wrote). Then ask the user before quickstart.md section 3 row L1, the only row that uses quota (one real Codex call, about 37,000 tokens; L2 reads the L1 record and calls no Codex), run L3, L4 and L5 (no quota), and record each result with its output and the L1 wall time. Remove `specs/006-codex-advisor/advisor.md` and `.stratum/advisor.json` after the live runs unless the user wants them kept.
 
 ---
 

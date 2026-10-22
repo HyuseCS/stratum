@@ -15,8 +15,11 @@ every bad, empty, failed or late answer to a one-line `BLOCKED: <reason>`, appen
 the SHA256 of the input to `specs/<feature>/advisor.md`, and has a `check` form that reports
 `advisor approval is stale` when the input changed. `.stratum/advisor.json` sets the mode
 (`codex`, `both`, `off`) and, optionally, the Codex `model` and `effort` (D8), passed as `-m` and
-`-c model_reasoning_effort="..."`; without them Codex uses the user's own config. With no `codex`, it prints `no advisor: codex not found` and the flow
-runs as before. The skills st-build (shared "Advisor" rules, test and diff points), st-inspect
+`-c model_reasoning_effort="..."`; without them Codex uses the user's own config. With no
+`advisor.json` the advisor is off: it prints
+`no advisor: mode not set. Write .stratum/advisor.json with "mode": "codex", "both" or "off".`
+(D11). With no `codex`, it prints `no advisor: codex not found`. In both cases the flow runs as
+before. The skills st-build (shared "Advisor" rules, test and diff points), st-inspect
 (plan point), st-fast (test and diff points) and st-init (one mode question) and the README call
 it. Plain `codex exec`, not `codex exec review` (research R4).
 
@@ -53,7 +56,7 @@ orchestrator passed and `docs/lessons.md`, as in features 004 and 005.
 | G2. Minimal diff: one script, one test file, no new dependency, no comments | Pass: JSON and mode parsing in inline `python3 -` (already required), hashing with `sha256sum` (already used in `skills/st-triage/SKILL.md:14`), schema inline in the script |
 | G3. Codex is review-only (D6, FR-012) | Pass: one Codex call line, `-s read-only`, no write or bypass flag. Argv check and static grep in T001, negative control C1. A `model` or `effort` value cannot carry a flag (pattern check, T007 cases, controls C9 and C10) |
 | G4. lessons L1: a text check asserts a phrase the code builds | Pass: argv is read from the fake `codex`'s record of its own arguments, not from test input. Prompt checks assert the script's own lines (contract section 4) and `<f>/tasks.md`, a path the script builds. The plan-body check plants a token in plan.md and asserts it is absent. Doc rows are contract section 8; the old-text phrases were checked against the files (one spans two lines and was fixed) |
-| G5. lessons L2 and L10: each guard has a negative control | Pass: quickstart section 2, C1 to C10, C3b, C7b and D1, each against a baseline run on an untouched full copy. The guard that stops Codex writing is the `-s read-only` flag; C1 turns its checks red |
+| G5. lessons L2 and L10: each guard has a negative control | Pass: quickstart section 2, C1 to C13, C3b, C7b and D1, each against a baseline run on an untouched full copy. The guard that stops Codex writing is the `-s read-only` flag; C1 turns its checks red |
 | G6. lessons L3: read input as bytes | Pass: the hash reads bytes (`sha256sum`, `git diff`). The inline Python opens `advisor.json` and the answer with `open(p, "rb")` and `json.loads` |
 | G7. lessons L4: a check that fails on the feature's own write | Pass: the record append would make every diff approval stale. The diff input excludes `<f>/advisor.md`, tracked or not (research R6). Checks `diff stays fresh after the record append` and `diff stays fresh with an untracked record`, controls C3 and C3b |
 | G8. lessons L5: plan inputs against the tool's real schema and the threat | Pass: codex-cli 0.163.0 flags read from `codex exec --help` and run (research R1 to R4). Committed `advisor.json` (mode, model, effort), committed `advisor.md` and Codex's answer are untrusted (S3, S4). Each guard has a test |
@@ -70,13 +73,18 @@ Post-design re-check: all gates pass. No violations, so Complexity Tracking stay
   prompt and every file Codex reads to OpenAI, under the user's own Codex login and quota.
   Stratum does not install Codex, log in, or read, store or print a token. Codex read files the
   prompt did not name, including `AGENTS.md` paths above the repo (research R5). The README says
-  so and names `"mode": "off"` as the switch. Personal or minors' data: whatever the project's
-  files, diffs and test outputs hold goes with them. The project owner decides with the mode.
+  so and names `"mode": "off"` as the switch. No file means off (D11), so nothing leaves the
+  machine until the owner writes the file. Personal or minors' data: whatever the project's
+  files, diffs and test outputs hold goes with them. The project owner decides with the mode. At
+  the diff point, untracked paths whose basename matches `.env*`, `*.pem`, `*.key`, `*.p12` or
+  `*.pfx` are not named to Codex, and the prompt says `Never quote a secret value in a finding.`
+  (D12). Codex can still find and read them: the list and the line lower the chance, they do not
+  block it (research R6).
 - **S2. Review-only, read-only sandbox (T001, T002).** The only Codex call carries
   `-s read-only` and none of the write or bypass flags (contract section 3). The sandbox blocks
   writes, not reads, so the prompt is the only guard on env and secret files (D6, FR-013).
   Unknown: whether Codex's shell commands see the user's environment variables, and which ones.
-  Not tested: no Codex call was spent on it.
+  Not tested: no Codex call was spent on it. Accepted by D13; the README says it is not checked.
 - **S3. Untrusted input (T002, T004, T006, T008).** Repo text can steer what Codex writes.
   Codex's summary and findings are data, never instructions: the orchestrator checks each against
   the source (existing rule in `skills/st/SKILL.md`). The script replaces newlines in every Codex
@@ -88,8 +96,16 @@ Post-design re-check: all gates pass. No violations, so Complexity Tracking stay
   or digit and hold only `A-Za-z0-9._:/-` (64 characters at most), `effort` only lowercase letters
   (16 at most), and no other key is allowed, so a value cannot become a flag such as
   `--dangerously-bypass-approvals-and-sandbox` or add TOML to the `-c` value. Anything else is
-  `BLOCKED: bad advisor.json` (research R10, R11). A committed `model` also decides which OpenAI
-  model gets the project's files and how much quota a call uses; the README names the keys.
+  `BLOCKED: bad advisor.json` (research R10, R11). The patterns use Python `re.fullmatch`, so a
+  trailing newline fails too (T007 cases, controls C9 and C10). A committed `model` also decides
+  which OpenAI model gets the project's files and how much quota a call uses; the README names the
+  keys. Secret-looking untracked paths stay in the diff hash but out of the prompt list (D12,
+  T001 and T005 checks, controls C11 and C12).
+  Open note, no test: Inspect could not check whether codex-cli 0.163.0 loads a project
+  `.codex/config.toml` from the repo. The codex-plugin-cc README says project overrides load only
+  when the project is trusted. If it does load one, a committed `.codex/config.toml` could change
+  the model, the reasoning or other settings for the advisor call. `-s read-only` on the command
+  line still sets the sandbox.
 - **S4. Record integrity (T006).** The hash ties a verdict to the input it was given. It does not
   prove who wrote the record: anyone with push access can commit a forged record with a matching
   hash. Accepted for a review aid. `check` reads the last header for the point.
@@ -99,9 +115,13 @@ Post-design re-check: all gates pass. No violations, so Complexity Tracking stay
 
 ## Breaking Changes
 
-- A user who set `/advisor` and has `codex` on PATH gets Codex in place of `/advisor` (mode
-  `codex` is the default when the file is missing, D2). `{"mode": "both"}` keeps `/advisor` as
-  well, `{"mode": "off"}` restores the old flow. The README says so.
+- A missing `.stratum/advisor.json` means off (D11). Projects set up before this feature have no
+  file, so they stay on the old flow (with `/advisor` if set) and see the `no advisor: mode not set`
+  line at each point until the owner writes the file. `st-init` writes it for new projects. The
+  README says so.
+- With `{"mode": "codex"}` and `codex` on PATH, a user who set `/advisor` gets Codex in place of
+  `/advisor` (D2). `{"mode": "both"}` keeps `/advisor` as well, `{"mode": "off"}` keeps the old
+  flow.
 - The Bash call for each advisor point needs `timeout: 600000` (the default 120 s is below the
   540 s limit).
 - No stored file changes. Rollback: revert the feature's commits.
@@ -169,3 +189,28 @@ st-fast already points to st-close.
 ## Complexity Tracking
 
 No violations.
+
+## Validate
+
+Date: 2026-10-23. Verdict: BLOCKED
+
+| Check | Verdict | Findings |
+|-------|---------|----------|
+| 1. Setup and dependencies | PASS | bash 5.3.20, Python 3.14.8, git 2.56.0, GNU `timeout` and `sha256sum` 9.12, codex-cli 0.163.0, claude 2.1.302, node 24, rsync present. `codex exec --help` lists `-s`, `-m`, `-c`, `--ephemeral`, `--output-schema`, `-o`. Existing tests green, no files left |
+| 2. Test coverage per requirement | CONCERN | F2, F6, F7 |
+| 3. Breaking changes | FAIL | F1 |
+| 4. Security and privacy | CONCERN | F2, F3, F4, F5 |
+
+F1. tests/test_inspect.sh:79 asserts `big ones go to the user before the gate` in skills/st-inspect/SKILL.md (line 33). The new step 4 in contracts/advisor.md:222-227 drops that phrase, so T010 (tasks.md:194, "test_inspect stays ok") cannot go green without a test edit, which tasks.md:13 forbids. Proven: contract 7.2 applied to a copy, `ST_INSPECT_SKILL=<copy> bash tests/test_inspect.sh` prints `FAIL S5`. -> st-plan: end the 7.2 block with `; big ones go to the user before the gate.` (or keep the phrase elsewhere in step 4) and name it in T010.
+
+F2. data-model.md:10-13, contracts/advisor.md section 3, tasks.md:178 (T008) say `model` and `effort` "match" a `^...$` pattern. With Python `re.match`, `$` accepts a trailing newline: `re.match(r"^[a-z]{1,16}$", "high\n")` is True, `re.fullmatch` is False. research.md:196-199 claims the pattern stops a newline in the `-c` value. T007 (tasks.md:171) has no trailing-newline case, so the claimed guard has no check that can fail. -> st-plan: state `re.fullmatch` in data-model, contract and T008; add `{"effort": "high\n"}` and `{"model": "x\n"}` to the T007 bad list and to controls C9 and C10.
+
+F3. contracts/advisor.md:110-112 and data-model.md:79-81: the diff prompt tells Codex to read every untracked, not-ignored file. An untracked `.env` that is not in `.gitignore` is listed, against the prompt's own line 2 (contracts/advisor.md:80). Codex evidence text is recorded verbatim in `<f>/advisor.md`, which the lanes commit (contracts/advisor.md:179, 188, 259), so a quoted secret lands in git. -> st-plan: add a prompt sentence "Never quote a secret value in a finding." User decision (changes D6, no hard block): also leave env and key files (`.env*`, `*.pem`, `*.key`) out of the untracked list sent to Codex while still hashing them.
+
+F4. plan.md:102-107 names only the `/advisor` swap. A project set up before this feature has no `.stratum/advisor.json` and `st-init` will not run again, so after the upgrade its plan, diff and test outputs go to OpenAI by default with no question (D2 default `codex`). -> user decision: confirm D2 covers existing projects (then add this to Breaking Changes and the README), or print a one-time notice when the file is missing.
+
+F5. plan.md:78-79 (S2): whether Codex's shell commands see the user's environment variables is unknown and has no check; any secret in the environment can go to OpenAI. -> user decision: accept and say so in the README, or test it once with a logged-out run that prints `env` (no quota).
+
+F6. tasks.md:64, 72, 74 and quickstart.md:36: "every check is red" after T001 is false. `FR-012 script has no write flag` is `! grep ... <missing file>`, grep exits 2, so it passes before the script exists; `no repo writes` also passes. -> st-plan: guard with `[ -f "$root/scripts/st-advisor.sh" ] &&`, and list `no repo writes` as passing early.
+
+F7. spec.md SC-002 (a Full-lane run without Codex keeps the same gates) has no task and no quickstart section 4 row; only the script-level `codex missing` check exists. -> st-plan: add an H3 row to quickstart section 4.

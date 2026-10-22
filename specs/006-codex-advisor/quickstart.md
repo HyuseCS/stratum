@@ -33,10 +33,10 @@ Expected red states during the build. Do not "fix" them by editing a test:
 
 | After | Red | Why |
 |-------|-----|-----|
-| T001 | every check in `tests/test_advisor.sh` | `scripts/st-advisor.sh` does not exist |
+| T001 | every check in `tests/test_advisor.sh` except `no repo writes`, which passes early | `scripts/st-advisor.sh` does not exist |
 | T003 | the US2 checks (`codex missing`, `codex error`, `empty answer` x2, `malformed answer`, `no verdict` x2, `bad finding`, `REVISE with no findings`, `timed out`, `timeout argv`, `bad args`) | failure mapping not built. A US2 check that T002's code already passes is named in the T003 report, with why |
-| T005 | every `check` and `continued` check, including `diff stays fresh with an untracked record` | the two forms do not exist |
-| T007 | `mode both`, `mode off`, `mode off without codex`, `bad advisor.json` x9, `FR-014 model and effort from the file`, `FR-014 model only` | settings not read. `no mode file` and `mode codex` pass early: T002 always runs Codex |
+| T005 | every `check` and `continued` check, including `diff stays fresh with an untracked record` and `untracked .env makes diff stale` | the two forms do not exist |
+| T007 | `no mode file`, `mode both`, `mode off`, `mode off without codex`, `bad advisor.json` x12, `FR-014 model and effort from the file`, `FR-014 model only` | settings not read. `mode codex` passes early: T002 always runs Codex |
 | T009 | every `#18` row and `#18 FR-016 old advisor text gone` in `tests/test_on_demand.sh`. `#18 FR-001 quick lane` passes early: st-quick has no advisor today | skill and README text not written |
 
 ## 2. Negative controls (each check can fail)
@@ -62,13 +62,20 @@ L2, L10).
 | C7 | map a missing `-o` file to `APPROVED` | `empty answer (no file)` |
 | C7b | hash `plan.md` alone at the plan point | `check plan stale after a tasks.md change` and `plan APPROVED: exit 0, verdict line with the plan hash` |
 | C8 | paste the bytes of `plan.md` into the plan prompt | `FR-009 plan prompt names paths, no plan text` |
-| C9 | drop the `model` pattern check | `bad advisor.json` (the `--dangerously-bypass-approvals-and-sandbox` and `a b` cases) |
-| C10 | drop the `effort` pattern check | `bad advisor.json` (the `high\"x` case) |
+| C9 | drop the `model` pattern check; then, in a second copy, change `re.fullmatch` to `re.match` with `^...$` for `model` | `bad advisor.json` (first: the `--dangerously-bypass-approvals-and-sandbox`, `a b` and `x\n` cases; second: the `x\n` case) |
+| C10 | drop the `effort` pattern check; then, in a second copy, change `re.fullmatch` to `re.match` with `^...$` for `effort` | `bad advisor.json` (first: the `high\"x` and `high\n` cases; second: the `high\n` case) |
+| C11 | stop leaving secret-looking paths out of the `Untracked files:` list | `diff point names full base and untracked files` |
+| C12 | leave secret-looking paths out of the diff hash as well | `untracked .env makes diff stale` |
+| C13 | delete the prompt line `Never quote a secret value in a finding.` | `FR-013 prompt: never quote a secret` |
 | D1 | delete the line `Never run `codex` to build or fix.` from the copy of `skills/st-build/SKILL.md` | `#18 FR-012 review only` |
 
 ## 3. Live runs (real Codex)
 
-L1 and L4 cost one Codex call (about 37,000 tokens of the user's quota). Ask the user first.
+Only L1 uses quota: one Codex call, about 37,000 tokens. Ask the user first. L2 reads the L1
+record and calls no Codex. L3 runs logged out, L4 and L5 never start Codex: no quota.
+
+This repo has no `.stratum/advisor.json`. For L1 to L3, write it as `{"mode": "codex"}` first,
+and remove it after unless the user wants it committed.
 
 - L1, plan point: `bash scripts/st-advisor.sh plan specs/006-codex-advisor` with a Bash timeout
   of 600000 ms. Expect exit 0 or 1, line 1 `APPROVED sha256 ...`, `REVISE sha256 ...` or
@@ -86,12 +93,20 @@ L1 and L4 cost one Codex call (about 37,000 tokens of the user's quota). Ask the
 - L4, mode off: in a scratch clone with `.stratum/advisor.json` set to `{"mode": "off"}`,
   `bash scripts/st-advisor.sh plan specs/006-codex-advisor` prints `no advisor: mode off`, exit 0,
   and writes no record.
-- After L1 to L3, remove `specs/006-codex-advisor/advisor.md` unless the user wants it kept.
+- L5, no mode file: with no `.stratum/advisor.json`,
+  `bash scripts/st-advisor.sh plan specs/006-codex-advisor` prints exactly
+  `no advisor: mode not set. Write .stratum/advisor.json with "mode": "codex", "both" or "off".`,
+  exit 0, and writes no record.
+- After L1 to L3, remove `specs/006-codex-advisor/advisor.md` and `.stratum/advisor.json` unless the user wants them kept.
   Restore `tasks.md` if L2 left it changed.
 
 ## 4. By hand
 
 - H1 (SC-001): in a Full-lane run of a small feature with Codex installed, the three points each
   print a verdict and leave a record with no human step. Count 3 of 3 in `advisor.md`.
+- H3 (SC-002): with `codex` off PATH (for example `PATH` without `/usr/bin/codex` through a
+  symlink dir, as in the test) and `.stratum/advisor.json` set to `{"mode": "codex"}`, dry-run a
+  Full lane of a small feature. Every gate is the same as before this feature, and each of the
+  three points adds one `no advisor: codex not found` line and no record.
 - H2 (SC-006): read the README Advisor bullet alone and answer: what Codex reviews, when, what
   leaves the machine, how to turn it off.

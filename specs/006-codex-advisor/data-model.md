@@ -5,19 +5,26 @@ No database. Two files and the answer Codex writes. Exact formats are in
 
 ## Advisor settings (`.stratum/advisor.json`)
 
-- Fields (spec Key Entities "Advisor settings", FR-010, FR-014, D8):
-  - `mode`: optional, one of `codex`, `both`, `off`. Missing means `codex`.
-  - `model`: optional string, matches `^[A-Za-z0-9][A-Za-z0-9._:/-]{0,63}$`. Passed as
-    `-m <model>`.
-  - `effort`: optional string, matches `^[a-z]{1,16}$`. Passed as
+- Fields (spec Key Entities "Advisor settings", FR-010, FR-014, D8, D11):
+  - `mode`: required in the file, one of `codex`, `both`, `off`.
+  - `model`: optional string; Python `re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:/-]{0,63}", v)`.
+    Passed as `-m <model>`.
+  - `effort`: optional string; `re.fullmatch(r"[a-z]{1,16}", v)`. Passed as
     `-c model_reasoning_effort="<effort>"`.
+  - `fullmatch`, not `re.match` with `$`: `$` also matches before a trailing newline, so
+    `"high\n"` would pass.
   - No other key is allowed.
 - Example: `{"mode": "codex", "model": "gpt-6-astra", "effort": "high"}`.
 - Committed with the project (research R9, R10). `st-init` step 11 writes `{"mode": "<answer>"}`
   only, when the file is missing. The user adds `model` or `effort` by hand.
-- Validation: no file means mode `codex` and no model or effort flag. A file that is not a JSON
-  object, has another key, has a non-string value, a mode not in the three, or a `model` or
-  `effort` that breaks its pattern is `BLOCKED: bad advisor.json` (research R11). Read as bytes and
+- No file means off (D11): the script prints
+  `no advisor: mode not set. Write .stratum/advisor.json with "mode": "codex", "both" or "off".`,
+  exits 0, writes no record and does not run Codex. Projects set up before this feature have no
+  file and keep the old flow until the owner writes it.
+- Validation: a file that is not a JSON object, has another key, has no `mode`, has a non-string
+  value, a mode not in the three, or a `model` or `effort` that fails its `fullmatch` is
+  `BLOCKED: bad advisor.json` (research R11). A file that sets `model` without `mode` is bad: the
+  owner chooses the mode, Stratum never assumes `codex`. Read as bytes and
   decoded by `json.loads` (lessons L3).
 - Without `model` and `effort`, Codex takes both from the user's own config. Stratum checks
   their shape, not whether OpenAI accepts them: a wrong value comes back as a Codex error, which
@@ -78,7 +85,10 @@ No database. Two files and the answer Codex writes. Exact formats are in
   - `test`: the bytes of failure output 1, then the bytes of failure output 2.
   - `diff`: `git diff <base> -- . ':(exclude)<feature>/advisor.md'`, then for each untracked path
     (`git ls-files -z --others --exclude-standard -- . ':(exclude)<feature>/advisor.md'`, in that
-    order) `git diff --no-index -- /dev/null <path>`. `<base>` is the full SHA.
+    order) `git diff --no-index -- /dev/null <path>`. `<base>` is the full SHA. Every untracked
+    path is hashed, including the secret-looking ones that the prompt's `Untracked files:` list
+    leaves out (basename `.env*`, `*.pem`, `*.key`, `*.p12`, `*.pfx`, D12). So a new `.env`
+    makes a diff approval stale without being named to Codex.
 - State over one gate pass: no record, then `APPROVED` (go on), or `REVISE` (fix, then one more
   run: round 2), or `BLOCKED` (stop; user continues: `BLOCKED, user continued`). After round 2 the
   user decides. A record whose hash no longer matches the current input is stale and counts as no

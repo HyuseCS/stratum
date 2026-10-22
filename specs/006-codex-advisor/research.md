@@ -115,6 +115,12 @@ D3). A foreground Bash call is capped at 600000 ms.
   spec or tasks kept the approval (plan.md F1, resolved).
 - Test point: SHA256 of the bytes of the first failure output followed by the bytes of the
   second, no separator.
+- Diff point, secret-looking untracked files (D12, FR-013): the `Untracked files:` list in the
+  prompt leaves out each path whose basename matches `.env*`, `*.pem`, `*.key`, `*.p12` or
+  `*.pfx`. They stay in the hash, so adding one still makes an approval stale. The prompt also
+  says `Never quote a secret value in a finding.` Codex can still run `git status` and read such a
+  file (the sandbox blocks writes, not reads, R5); the list and the prompt line lower the chance,
+  they do not block it.
 - Diff point (D9, FR-007 as amended), gap 1 (the record changes the diff): `git diff <base>` includes
   `specs/<feature>/advisor.md` once it is tracked, so appending the record would make every diff
   approval stale. The diff input excludes it:
@@ -157,6 +163,10 @@ D3). A foreground Bash call is capped at 600000 ms.
 
 ## R9. How st-init asks a one-question step
 
+- D11: a missing file means off (`no advisor: mode not set. Write .stratum/advisor.json with
+  "mode": "codex", "both" or "off".`, exit 0). So st-init's step is how new projects get the
+  file; projects set up before this feature have none and keep the old flow until the owner
+  writes it.
 - Decision: the new step copies step 3 (git guard): "If `<file>` is missing, ask the user in one
   question: ... (recommended) or ...", then write the file. It goes after step 10 (tool check) as
   step 11. The Report step becomes 12 and lists `.stratum/advisor.json` among the committed files.
@@ -169,22 +179,27 @@ D3). A foreground Bash call is capped at 600000 ms.
 
 ## R10. Mode file is committed: threat check (lessons L5)
 
-- A committed `.stratum/advisor.json` is input anyone with push access controls. Its only effect
-  is the mode: `codex` (the default anyway), `both`, or `off`. No path, flag or model comes from
-  it, so it cannot add a write flag or change what Codex reads. Anything else is
-  `BLOCKED: bad advisor.json`.
+- A committed `.stratum/advisor.json` is input anyone with push access controls. It sets the
+  mode (`codex`, `both` or `off`; no file means off, D11) and, since D8, an optional `model` and
+  `effort` that reach Codex as `-m <model>` and `-c model_reasoning_effort="<effort>"`. No path
+  and no other flag comes from it. A committed `model` can choose which OpenAI model gets the
+  project's files and how much quota a call costs. The `fullmatch` patterns in R11 keep a value
+  from becoming another flag or adding TOML. Anything else is `BLOCKED: bad advisor.json`.
 - `specs/<feature>/advisor.md` is committed too. A forged record with the right hash would pass
   the stale check: the hash ties a verdict to an input, it does not prove who wrote the record.
   Accepted; named in plan.md S4.
-- Since D8 the file can also set `model` and `effort`. Their shape rules are in R11.
 
 ## R11. Model and effort from `.stratum/advisor.json` (FR-014, D8)
 
 - Decision: when the file sets `model`, the call adds `-m <model>`. When it sets `effort`, the
   call adds `-c model_reasoning_effort="<effort>"` (one argv element). Without the keys neither
-  flag is passed and Codex uses the user's `~/.codex/config.toml`. `model` must match
-  `^[A-Za-z0-9][A-Za-z0-9._:/-]{0,63}$` and `effort` must match `^[a-z]{1,16}$`; anything else, a
-  non-string value, or a key other than `mode`, `model`, `effort` is `BLOCKED: bad advisor.json`.
+  flag is passed and Codex uses the user's `~/.codex/config.toml`. `model` must pass Python
+  `re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:/-]{0,63}", v)` and `effort`
+  `re.fullmatch(r"[a-z]{1,16}", v)`. Anything else, a non-string value, a file with no `mode`,
+  or a key other than `mode`, `model`, `effort` is `BLOCKED: bad advisor.json`.
+- `fullmatch`, not `re.match` with `^...$` (inspect F2): in Python `$` also matches before a
+  final newline, so `"high\n"` would pass `re.match(r"^[a-z]{1,16}$", v)` and put a newline
+  into the `-c` value. The T007 bad list holds `"high\n"` and `"x\n"` for that reason.
 - Rationale: call 6 (logged out, no quota):
   `printf 'hi' | CODEX_HOME=<empty dir> timeout 60 codex exec --ignore-user-config -m gpt-6-astra -c model_reasoning_effort="bogus" -s read-only --ephemeral -o o6.json -`.
   Exit 1 after 17,001 ms (401, as in R2). The stderr header shows `model: gpt-6-astra` and
