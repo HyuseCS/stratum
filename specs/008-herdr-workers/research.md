@@ -234,6 +234,51 @@ branch `18-codex-advisor`.
   run. The script does not change: `answer` sends what it is given.
 - Not verified live: that herdr marks Claude Code's AskUserQuestion dialog `blocked`, and which
   keys pick an option or reach the free-text field. Quickstart section 3.
+- Live T008 (2026-10-23): stopped at the first answer. `start T901` (07:31:14) printed the
+  `worker` line (`w1Z`, `w1Z:p1`, branch `worker-t901`, `/home/hyuse/Desktop/stratum-worker-t901`)
+  and `state working`, exit 0. `wait T901` returned at 07:32:48 with `state blocked`, exit 4: herdr
+  marks the AskUserQuestion dialog `blocked`. The pane text ended with the dialog:
+  `☐ Word` / `Which word should T901 write to demo/q.txt?` / `❯ 1. hi` (`Write the single line hi`)
+  / `2. hello` (`Write the single line hello`) / `3. Type something.` / `4. Chat about this` /
+  `Enter to select · ↑/↓ to navigate · Esc to cancel`. So `1` is the key for hi and `2` for hello.
+  The free text is option 3: `answer --text` as built (send-text, then enter) does not select it
+  first; it needs `3` before the text. Not tried. `answer T901 --keys 1` printed
+  `stopped: {"error":{"code":"invalid_key","message":"unsupported key --"},"id":"cli:agent:send-keys"}`,
+  exit 1: `st-worker.sh` sends `herdr agent send-keys worker-t901 -- 1`, and herdr takes `--` as a
+  key (`Usage: herdr agent send-keys <TARGET> <KEY>...`). `pane send-text <pane> -- <text>` has the
+  same `--`. Contract section 4 has no `--`. Nothing was sent: the dialog was still up after.
+  Not reached: the push question, `not blocked: working` (T902), a permission dialog, the
+  end-of-run answer list. No answers were given.
+- Live T008, after the `--` fix: both workers ran to the end. `answer T901 --keys 1` (07:37:16)
+  printed `state	blocked	worker-t901	w1Z:p1`, exit 4, and the pane showed
+  `User answered Claude's questions: ... → hi`. `blocked` lingers: the `agent get` in `answer`
+  step 3 still saw `blocked`, and an `agent get` 2 s later gave `working`. The same happened on
+  every answer (T901 push, T902 push): each printed `state blocked`, exit 4, then the next `wait`
+  went on. So exit 4 from `answer` right after a dialog key does not mean the answer failed. One key
+  picks an option and submits the dialog, no `enter`. The worker sets the option order: the push
+  dialog was `☐ Push` / `Push branch worker-t901 to origin?` / `❯ 1. no` / `2. yes` /
+  `3. Type something.` / `4. Chat about this`, so `1` was no, not the `2` quickstart section 3
+  expects. The orchestrator must read the key from the pane text every time. `wait T901`
+  (07:37:22) gave the push question, exit 4. `answer T901 --keys 1` gave `→ no`. `wait T901`
+  (07:38:01 to 07:38:49) printed `state	finished	worker-t901	w1Z:p1`, exit 0. `result T901`
+  printed `Commit: f465a12efd2491b53e678c4210c31823fe569561`. The commit holds only
+  `demo/q.txt`. No permission dialog showed: the commit went through st-git with `commit: auto`
+  (D24), and the file write showed `Allowed by auto mode classifier`. `git merge --no-ff --no-edit
+  worker-t901` made `264e474`, and `test -s demo/q.txt; echo $?` gave `0` (`hi`). `close T901`
+  printed `closed	worker-t901` and `folder	/home/hyuse/Desktop/stratum-worker-t901	ready to remove`.
+  `git ls-remote --heads origin 'worker-t90*'` printed nothing: nothing was pushed.
+- Live T008, US2 scenario 3: `start T902` (07:39:04, `w10`, `w10:p1`) and `wait T902` gave the word
+  dialog, exit 4. `herdr agent send-keys worker-t902 1` (the user in the pane) answered `→ hi`.
+  `agent get` gave `working` 1 s later. `answer T902 --keys 1` printed `not blocked: working`,
+  exit 1, and sent nothing: the pane shows one answer. `wait T902` gave the push question
+  (`1. no`, `2. yes`). `answer T902 --keys 1` gave `→ no`. `wait T902` printed
+  `state	finished	worker-t902	w10:p1`, exit 0. T902 made no new commit, because its base already
+  held `f465a12`. `result` names `f465a12`. Not merged. `close T902` printed `closed	worker-t902`.
+- Live T008, end-of-run answer list:
+  - worker-t901, word (hi or hello), `hi`, the orchestrator (small decision, D26).
+  - worker-t901, push to origin, `no`, the user's standing rule "push only when I say push" (big).
+  - worker-t902, word, `hi`, the user, in the pane. `answer` sent nothing.
+  - worker-t902, push to origin, `no`, the user's standing rule (big).
 
 ## R8. Result and fetch (FR-005, FR-007, D13)
 
@@ -297,7 +342,7 @@ branch `18-codex-advisor`.
 ## R12. Headless worker (FR-011, D12, D19)
 
 - Decision:
-  `timeout 540 claude -p "<prompt>" --output-format json --max-turns 30 -n <name> --tools Read,Edit,Write,Glob,Grep,Bash --allowedTools Read Edit Write Glob Grep "Bash(<test command>)" --permission-mode dontAsk --permission-prompts none --strict-mcp-config`,
+  `timeout -k 10 540 claude -p "<prompt>" --output-format json --max-turns 30 -n <name> --tools Read,Edit,Write,Glob,Grep,Bash --allowedTools Read Edit Write Glob Grep "Bash(<test command>)" --permission-mode dontAsk --permission-prompts none --strict-mcp-config`,
   run in the project root. The prompt is
   ``/goal `<test command>` exits 0 and the change is left uncommitted; read <brief path> first and follow it``.
   The brief is a `mktemp` file outside the repo, removed on exit. The script prints
@@ -307,10 +352,21 @@ branch `18-codex-advisor`.
   `--strict-mcp-config`, and the JSON keys `type`, `subtype`, `is_error`, `result`,
   `session_id`, `num_turns`, `total_cost_usd`. `--tools` takes AskUserQuestion, SendMessage and
   Agent out of reach (no question tool, D14). `dontAsk` denies every call not allowed, and
-  `--permission-prompts none` denies anything that would still prompt (`claude --help`), so the
-  only shell command is the test command and no commit can run (L10: the tool list is the
-  guard). The `HEAD` check is the second guard and can fail.
-- The test command must be one line with no `(` or `)`, so it fits inside `Bash(...)`.
+  `--permission-prompts none` denies anything that would still prompt (`claude --help`).
+  Corrected after US5 review (D19 rationale): this does not make the test command the only shell
+  command. Edit and Write are allowed, so the worker can change a script the test runs, and
+  read-only commands such as `git status` ran under `dontAsk` in T015 (below). The real guard
+  against a commit is the `HEAD` compare before and after (L10: name the guard that stops the
+  write), and it can fail (test H2). `ponytail:` it compares `HEAD` only: a push, a stash or a
+  commit on another branch is not seen; widen to `git for-each-ref` if a live run shows a need.
+- Risk: `--allowedTools` adds to the allow rules of the user, project and local settings; it does
+  not replace them. A Bash allow rule there also runs under `dontAsk`. This machine has no Bash
+  allow rules today.
+- `timeout -k 10 540`: SIGKILL 10 s after the SIGTERM, so one call never passes the Bash tool's
+  600 s. The exit rules run commit check first, then timeout, then no JSON, then `is_error` or
+  `subtype` (contracts/script.md section 4).
+- The test command must be one line with no `(` or `)`, so it fits inside `Bash(...)`, and for
+  `headless` no `*`, which would make `Bash(<test>)` a wildcard rule.
 - `ponytail:` 540 s and 30 turns are constants.
 - `/goal` docs (https://code.claude.com/docs/en/goal.md): "A goal doesn't change your permission
   mode", and "`/goal` works in non-interactive mode ... Setting a goal with `-p` runs the loop to
