@@ -140,8 +140,8 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
    change.
 2. Gap report (optional): unticked tasks or FRs without code and test. The user sends them back
    to Build, defers, or drops them. At most one send-back per feature.
-3. Lessons: append to `docs/lessons.md`. Changes to the constitution or the harness are proposed,
-   never applied by the agent.
+3. Lessons: append to `docs/lessons.md`. The Plan and Inspect agents read the file at the next feature.
+   Changes to the constitution or the harness are proposed, never applied by the agent.
 4. Shortcuts: `scripts/st-shortcuts.sh` lists the `ponytail:` markers the feature's diff adds. The
    user picks fix now (st-build, st-verify, st-git commit) or keep (no record: st-ponytail-debt
    finds the marker).

@@ -49,8 +49,12 @@ The user chooses: send back, defer, or drop.
 
 ### 3. Lessons
 
-Append proposed lessons to `<project>/docs/lessons.md` (create it if missing). Each lesson:
-date, feature, what happened, the rule to keep. Only lessons with evidence from this feature.
+Append proposed lessons to `<project>/docs/lessons.md` (create it if missing). The file
+has one `## <date>: <feature dir name>` heading per feature and under it one `### L<n>. <title>`
+per lesson, n continuing from the last number in the file, each with a `- What happened:` line
+and a `- Rule:` line. Only lessons with evidence from this feature.
+st-plan and st-inspect read this file at the next feature's Plan and Inspect, so write each
+lesson's Rule line as one sentence that a test or a check can fail.
 
 Changes to the constitution or the harness are proposals in your report. Never apply them.
 
