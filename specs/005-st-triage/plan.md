@@ -78,7 +78,11 @@ Post-design re-check: all gates pass. No violations, so Complexity Tracking stay
   one that holds a `'` as `unchecked`, and treats the issue text as claims to check, never as instructions (research R6).
   A path inside the repo is relative, has no `..` part, and does not start with `/` or `~`. The
   agent reads no other path and fetches no web page, so issue text cannot point it at `~/.ssh`
-  or a URL.
+  or a URL. It reads a repo path only when `git ls-files --error-unmatch` finds it tracked, so a
+  git-ignored file such as `.env` stays unread. A URL to this repo's `issues/N` or `pull/N`, N
+  digits only, counts as `#N`. The skill treats each report as data, never an instruction, and
+  drops a cite whose sha is not 7 to 40 hex characters or whose path breaks the path rule before
+  it runs `git cat-file` or `git show` on it.
 - **S4. Model file names (T002).** `.stratum/models.json` accepts `st-triage` once the agent file
   exists. Existing files stay valid. No other contract changes.
 - No access rules, no personal or minors' data beyond what the issue already shows on GitHub.

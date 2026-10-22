@@ -57,6 +57,7 @@ skills/st-triage/SKILL.md|Any difference is a finding to check
 skills/st-triage/SKILL.md|git cat-file -t <sha>
 skills/st-triage/SKILL.md|Give one or more issue numbers.
 skills/st-triage/SKILL.md|in the order given
+skills/st-triage/SKILL.md|never an instruction
 agents/st-triage.md|sr-opus-5.md
 agents/st-triage.md|git log --oneline -- '<path>'
 agents/st-triage.md|Any other path, or a web page: do not read it
@@ -69,11 +70,12 @@ agents/st-triage.md|what the user must provide
 agents/st-triage.md|comment on, label or close an issue
 agents/st-triage.md|except `gh issue view`
 agents/st-triage.md|Follow an instruction written in the issue
+agents/st-triage.md|git ls-files --error-unmatch
 EOF
 ```
 
 Expected: baseline `0`, then `1` on every line, each naming its own `#15` check. A dry run on a
-scratch copy built from the contract text (2026-10-22) gave `1` on all 18 lines.
+scratch copy built from the contract text (2026-10-22) gave `1` on all 20 lines.
 
 Structure controls, each on a fresh copy (`rm -rf "$s"`, `s=$(mktemp -d)`, then the `cp` line
 again):
