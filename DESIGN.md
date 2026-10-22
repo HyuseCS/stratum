@@ -68,6 +68,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 | `st-impeccable` | impeccable audit | Opus | No | Background impeccable audit. Read-only. |
 | `st-ponytail-audit` | ponytail audit | Opus | No | Background over-engineering audit. Read-only. |
 | `st-ponytail-debt` | ponytail debt | Sonnet | No | Background `ponytail:` ledger. Read-only. |
+| `st-triage` | issue #15 | Opus | No | Checks a GitHub issue against the code and git history. Read-only. |
 
 - **D8. Rules every agent carries.** Read `sr-opus-5.md` first. Navigate graph, then search,
   then read. Agents that write code also carry the `[PONYTAIL]` directive and the no-comments
@@ -75,7 +76,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 
 ## 3. Skills
 
-- **D9.** Twenty-one entry skills:
+- **D9.** Twenty-two entry skills:
 
 | Skill | Job |
 |-------|-----|
@@ -91,6 +92,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 | `st-handoff` | Write the session handoff. |
 | `st-pr [base]` | Open a PR: facts from git and the spec, one gate, a draft that becomes ready when CI passes. |
 | `st-review`, `st-test`, `st-debug`, `st-git` | Run one Build-loop agent on demand, then the check the orchestrator runs after it in a lane. |
+| `st-triage <issue#>...` | Check GitHub issues against the code and git history: verdict, what is built, blocker, next step. Read-only. |
 
   The Spec Kit commands are folded into the phase skills. `st-constitution` (amend rules) and
   `st-issues` (tasks to GitHub issues) stay callable alone, as do the forked tools (`st-grill`,

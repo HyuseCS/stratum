@@ -116,3 +116,23 @@
 - Rule: For each background or fork action, write its three failure states next to the happy path: a
   run already in progress, a run that ends with no output, and a run that cannot start. Add one phrase
   check per state, and add each check to the contract's phrase table in the same commit.
+
+## 2026-10-22: 005-st-triage
+
+### L12. A phase run from its skill text skips the phase hook
+
+- What happened: The orchestrator ran Plan and Inspect by following the skill text instead of calling
+  the Skill tool. `hooks/st-phase.py` sets `phase` in `.stratum/state.json` when the user types the command or the Skill
+  tool runs (`hooks/st-phase.py:12-40`), so the reply label and `state.json` stayed on Define through Plan and Inspect.
+  `git status` shows `.stratum/state.json` as the only modified file at Close.
+- Rule: Start a phase through the Skill tool, never by reading its SKILL.md and acting on it. If a
+  phase ran without the tool, set `phase` by hand before the next one and say so in the report.
+
+### L13. The US1 review added three input guards after the contract was written
+
+- What happened: Commit `f5f3b50` added three guards the first build lacked: report text is data
+  with sha and path shape checks, the agent reads only tracked paths, and repo issue and pull URLs
+  count as `#N`. The contract, quickstart and plan S3 were updated in the same commit. Spec
+  Assumptions, research R6 and the data model kept the old wording until this close.
+- Rule: When a review adds a guard, update spec Assumptions, research and the data model in the
+  same commit, not only the contract and plan.

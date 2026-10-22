@@ -201,7 +201,7 @@ class ModelHookTest(unittest.TestCase):
         spec.loader.exec_module(mod)
         self.assertEqual(mod.AGENTS, ["st-build", "st-close", "st-debug", "st-fast", "st-git", "st-impeccable",
                                       "st-inspect", "st-plan", "st-ponytail-audit", "st-ponytail-debt", "st-quick",
-                                      "st-review", "st-test"])
+                                      "st-review", "st-test", "st-triage"])
         self.assertEqual(mod.MODELS, ["sonnet", "opus", "haiku", "fable"])
         self.assertEqual(mod.EFFORTS, ["low", "medium", "high", "xhigh", "max"])
 

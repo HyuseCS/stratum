@@ -1,0 +1,4 @@
+# Decisions: Triage a GitHub issue
+
+- D1 (settled by issue #15): `/stratum:st-triage <issue#>` reads the issue and the notes it links to, checks every claim against the current code and git history, and reports a verdict (still valid, partly built, obsolete), what is built (file:line, commits), the real blocker and what the user must provide, and the next step. Read-only: no code change, the issue is not edited, commented on, or closed.
+- D2 (Q1): O1. A read-only `st-triage` agent with the same name as the skill does the research, one agent per issue, side by side when several issue numbers are given. The orchestrator checks each cited file:line and commit against the source before it shows the report, as it does for st-review. Rejected: O2, the orchestrator reads and checks in the main session (blocks the session, no parallel issues, and the #15 note says the hand-run verdicts needed spot-checks by a second reader).
