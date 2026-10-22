@@ -9,22 +9,25 @@ issue #28, option O2 in a narrow form.
 Impact area: core runtime (agent and skill text, docs, one test file)
 
 ## Files
-- `agents/st-plan.md:15-17` ("Read first" list) - add a bullet after the constitution line:
+- `agents/st-plan.md:20` ("Read first" list) - add a bullet after the constitution line:
   `- \`<project>/docs/lessons.md\` (if present)`.
-- `agents/st-plan.md:45` ("Rules" list) - add this rule after "Respect the constitution...":
-  `- Read the lessons in \`docs/lessons.md\`. In the Constitution Check of plan.md, add one gate row for each lesson that applies, and name it by number in the row (for example "lessons L1"). In tasks.md, a task that a lesson governs ends with its number (for example "lessons L6"). A lesson that does not apply gets no row.`
-- `agents/st-inspect.md:19-21` ("Read" list) - add a bullet after the constitution line:
+- `agents/st-plan.md:47-50` ("Rules" list) - add this rule after "Respect the constitution...":
+  `- In the Constitution Check of plan.md, add one gate row for each lesson that applies, and name it by number in the row (for example "lessons L1"). In tasks.md, a task that a lesson governs names its number in the task line (for example "lessons L6"). A lesson that does not apply gets no row.`
+- `agents/st-inspect.md:21` ("Read" list) - add a bullet after the constitution line:
   `- \`<project>/docs/lessons.md\` (if present)`.
-- `agents/st-inspect.md:41` (end of the "Look for at least" list in Analysis) - add this item:
+- `agents/st-inspect.md:43` (end of the "Look for at least" list in Analysis) - add this item:
   `- Lessons: a lesson in \`docs/lessons.md\` that applies to this feature but that no plan.md gate or tasks.md task cites by number. Offer the fix (a gate row or a task note) and send it to st-plan.`
-- `agents/st-close.md:50-53` (step 3) - keep the append. Add after "...from this feature.":
+- `agents/st-close.md:50-57` (step 3) - replace "Each lesson: date, feature, what happened, the rule to keep." with the
+  lesson format: one `## <date>: <feature dir name>` heading per feature, under it one `### L<n>. <title>` per lesson
+  (n continues from the last number in the file), each with a `- What happened:` line and a `- Rule:` line. Keep
+  "Only lessons with evidence from this feature." Then add:
   `st-plan and st-inspect read this file at the next feature's Plan and Inspect, so write each lesson's Rule line as one sentence that a test or a check can fail.`
 - `skills/st-close/SKILL.md:33` (step 5) - after "...to \`docs/lessons.md\`." add:
   `st-plan and st-inspect read that file at the next feature's Plan and Inspect, so each lesson's Rule line is one testable sentence.`
-- `DESIGN.md:143` (Close step 3) - after "append to `docs/lessons.md`." add: `The Plan and Inspect agents read the file at the next feature.`
+- `DESIGN.md:143-144` (Close step 3) - after "append to `docs/lessons.md`." add: `The Plan and Inspect agents read the file at the next feature.`
 - `README.md:75` (Plan row) - add to the description: `It reads \`docs/lessons.md\` and cites the lessons that apply.`
-- `README.md:78` (Close row) - add to the description: `Plan and Inspect read the lessons.` Both rows are text only, so the README two-way checks in `tests/test_inspect.sh` do not change.
-- `tests/test_inspect.sh:146` - 7 new checks before `exit $fail` (see Tests).
+  The README Close row (line 78) is not changed. The README rows are text only, so the README two-way checks in `tests/test_inspect.sh` do not change.
+- `tests/test_inspect.sh:147-155` - 7 new checks before `exit $fail` (see Tests).
 
 ## Tests (written first, must fail before the build)
 All in `tests/test_inspect.sh` (it already checks `agents/st-inspect.md`, README, and other
@@ -32,7 +35,7 @@ files by path through `phrases()`). Add one `phrases` block with rows `name<TAB>
 (target is `agent` for st-inspect, a repo path for the rest). Each phrase is text the edit builds.
 `grep -qF`, per lessons L1. None of them is in the path `docs/lessons.md`.
 - T1 `lessons st-plan read`: `agents/st-plan.md` has `one gate row for each lesson that applies`.
-- T2 `lessons st-plan cite`: `agents/st-plan.md` has `ends with its number`. The Read bullet has no own check, because the path alone would match.
+- T2 `lessons st-plan cite`: `agents/st-plan.md` has `names its number in the task line`. The Read bullet has no own check, because the path alone would match.
 - T3 `lessons st-inspect read`: `agent` has `that no plan.md gate or tasks.md task cites by number`.
 - T4 `lessons st-close agent`: `agents/st-close.md` has `read this file at the next feature's Plan and Inspect`.
 - T5 `lessons st-close skill`: `skills/st-close/SKILL.md` has `each lesson's Rule line is one testable sentence`.
@@ -45,6 +48,9 @@ Command: `PYTHONDONTWRITEBYTECODE=1 bash tests/test_inspect.sh`. Today: 7 FAIL l
   phrase the code builds"). Run `/stratum:st-plan` on `001-x`. Pass: `plan.md` Constitution Check has a
   row that names `L1`. Then run `/stratum:st-inspect`. Pass: no finding says the lesson is uncited. Control:
   delete the L1 row from plan.md and re-run st-inspect: it reports the lesson as uncited.
+  Ran on 2026-10-23: Plan text on a scratch project with L1 and L2 cited L1 in a gate row and on T001 and T002, and
+  ruled out L2 in one line. With the L1 row and tags removed, the Inspect text reported L1 as uncited (finding F1,
+  medium) and named the fix.
 
 ## Chosen trade-off
 Only Plan and Inspect read the file. The Build agent, the test agent, the session-start hook and the
