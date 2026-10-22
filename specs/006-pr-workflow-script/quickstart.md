@@ -21,7 +21,7 @@ Expected red states between tasks:
 | After | Red | Green |
 |-------|-----|-------|
 | T001 | `node tests/test_pr_workflow.mjs` (`FAIL load`, the script does not exist), every row of `bash tests/test_pr_skill.sh` | `bash tests/test_inspect.sh` (README lines name files that exist) |
-| T002 | every row of `bash tests/test_pr_skill.sh` | `node tests/test_pr_workflow.mjs`, all 16 cases |
+| T002 | every row of `bash tests/test_pr_skill.sh` | `node tests/test_pr_workflow.mjs`, all 20 cases |
 | T003 | nothing | all of the above. The `--numstat` line prints `0` (no line of the old skill changed or deleted, FR-003, FR-010; control C13). `git status --porcelain` lists only the planned files |
 
 ## 2. Negative controls (lessons L2)
