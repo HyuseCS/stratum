@@ -37,10 +37,11 @@ branch `18-codex-advisor`.
     right after.
   - Error JSON is on stderr with exit 1; syntax errors exit 2 (`herdr --skill`). Codes seen in the
     binary and the skill: `agent_not_ready`, `agent_prompt_stalled`, `agent_blocked`, `timeout`,
-    `agent_name_taken`.
-- Not verified: the answer of `workspace close` (schema `workspace_closed` with `workspace_id`) and
-  that `workspace close` on a workspace made by `worktree create` does not ask for `--group`. The
-  live local run (quickstart section 2) checks both.
+    `agent_name_taken`. Seen live in T005: `linked_worktree_source` (R3), `agent_pane_busy`.
+- Verified live (T005, second attempt, after the stop below): `close T900` printed
+  `closed<TAB>worker-t900` and `folder<TAB>/home/hyuse/Desktop/stratum-worker-t900<TAB>ready to remove`,
+  exit 0. `workspace close` on the workspace that `worktree create` made (`w1X`) did not ask for
+  `--group`, and `w1X` is gone from `workspace list`.
 - Live T005 (2026-10-23, quickstart section 2, from `/home/hyuse/Desktop/stratum-003-demo`, a
   linked worktree of `/home/hyuse/Desktop/stratum`): step 1 `worktree create --cwd
   /home/hyuse/Desktop/stratum-003-demo ...` failed at once (0.016 s) with
@@ -49,6 +50,23 @@ branch `18-codex-advisor`.
   was made: no workspace, agent, branch or folder `worker-t900`. So `<repo>` = `git rev-parse
   --show-toplevel` breaks `start` in every linked worktree (each Stratum feature runs in one).
   The `workspace close` answer and `--group` stay not verified: the run stopped before them.
+- Live T005, second attempt (2026-10-23 07:05:03, same folder, script with the R3 fix):
+  `worktree create` from the main checkout worked (WS `w1X`, pane `w1X:p1`, branch `worker-t900`,
+  `.result.worktree.path` `/home/hyuse/Desktop/stratum-worker-t900`). Then `agent start` failed:
+  `{"error":{"code":"agent_pane_busy","message":"agent target pane w1X:p1 is not an available shell"},"id":"cli:agent:start"}`.
+  `start` printed `stopped: <that line>` and
+  `worker	worker-t900	local	w1X	w1X:p1	worker-t900	/home/hyuse/Desktop/stratum-worker-t900`,
+  exit 1, 0.133 s in total. So `agent start` ran about 0.1 s after `worktree create`, before the
+  new pane's zsh was at its prompt (`herdr --skill`: "An available shell pane must be at its
+  interactive prompt"). Seconds later `pane process-info --pane w1X:p1` showed only `zsh`
+  (pid 2784020, cwd the worker folder) in the foreground, so the pane does become available.
+  New error code: `agent_pane_busy`. The script has no wait between the two calls; this breaks
+  `start` on every run (finding to the orchestrator). The `workspace close` answer and `--group`
+  stay not verified: the run stopped before them.
+- Decision (orchestrator, small, after the second attempt): `start` step 3 retries `agent start`
+  while herdr answers `agent_pane_busy`, `sleep 1` between tries, up to 10 tries. Any other error,
+  or still busy after the 10th try, is the normal stop. `ponytail:` fixed 10 s bound, the shape of
+  D20 in specs/007-herdr-workspace. Test cases S11 and S11b (contracts/script.md section 6).
 
 ## R2. Worker names, labels and branch (FR-001, FR-016)
 
@@ -83,6 +101,9 @@ branch `18-codex-advisor`.
   `source: {repo_root: "/home/hyuse/Desktop/stratum", source_workspace_id: "w1G"}`. Rule: herdr
   makes worktrees only from the main checkout, so `--cwd` is the main checkout, and the worker
   folder sits next to it (`/home/hyuse/Desktop/stratum-worker-t900`). Test case S10.
+- Live T005, second attempt: the R3 rule holds. `worktree create --cwd /home/hyuse/Desktop/stratum`
+  made `/home/hyuse/Desktop/stratum-worker-t900` on branch `worker-t900` at `17bc17f` (the demo
+  worktree's HEAD), with `brief.md` and `.stratum/git-guard.json` = `{"commit":"auto"}` written.
 - `--trust-repository` is never passed (`herdr --skill`: only after the user has verified the
   repository). An untrusted-repository error is a stop line.
 
@@ -98,6 +119,9 @@ branch `18-codex-advisor`.
 - Not verified live. Quickstart section 2 records whether a dialog showed.
 - Live T005: `start` exit 1 at `worktree create` (`linked_worktree_source`, R1). `claude` never
   started, so the trust dialog is still not verified.
+- Live T005, second attempt: `start` exit 1 at `agent start` (`agent_pane_busy`, R1). `claude`
+  never started (`agent get worker-t900`: `agent_not_found`), so the trust dialog is still not
+  verified.
 
 ## R5. The one prompt and `/goal` (FR-003, D21)
 
@@ -117,6 +141,8 @@ branch `18-codex-advisor`.
 - Not verified live: that a pasted `/goal ...` runs as the slash command through
   `agent prompt` (bracketed paste). Quickstart section 2.
 - Live T005: not reached; `start` stopped at `worktree create` (R1). `◎ /goal active` not seen.
+- Live T005, second attempt: not reached; `start` stopped at `agent start` (`agent_pane_busy`,
+  R1). `◎ /goal active` not seen.
 
 ## R6. Waiting (FR-004, D13, D14)
 
@@ -134,6 +160,10 @@ branch `18-codex-advisor`.
 - Alternatives: `agent prompt --wait` as the wait. Rejected: D13 names the prompt wait, but a
   second prompt is a re-prompt (FR-004), and the one prompt already returns at `working`.
 - Live T005: not reached; `start` stopped at `worktree create` (R1). No `state` line, no idle gap measured. D24 commit and guard file not checked: no worker worktree was made.
+- Live T005, second attempt: not reached; `start` stopped at `agent start` (`agent_pane_busy`,
+  R1). No `state` line, no idle gap measured. D24: the guard file was written
+  (`cat /home/hyuse/Desktop/stratum-worker-t900/.stratum/git-guard.json` gives `{"commit":"auto"}`),
+  but no worker ran, so the commit with no dialog is not verified.
 
 ## R7. Questions and answers (FR-006, D14, US2)
 
@@ -206,6 +236,10 @@ branch `18-codex-advisor`.
   is the script's own `worker-` name. `ponytail:` no process check in the script; quickstart
   section 2 checks `pgrep` live.
 - Live T005: `close` not run; `start` stopped at `worktree create` (R1). After the stop, `agent list` and `workspace list` held no `worker-t900` (grep exit 1 each); `agent read worker-t900` answered `agent_not_found`.
+- Live T005, second attempt: `close` not run (the run stops at a `start` exit 1). Left open:
+  workspace `w1X` `worker-t900` (in `workspace list`), its pane `w1X:p1` with a bare `zsh`, folder
+  `/home/hyuse/Desktop/stratum-worker-t900`, branch `worker-t900`. `agent list` has no
+  `worker-t900`; `pgrep -af -- '-n worker-t90[0]'` exit 1 (no `claude`).
 
 ## R12. Headless worker (FR-011, D12, D19)
 

@@ -17,6 +17,10 @@ X=$(cat "$T/x")
 if [ $# -eq 0 ]; then echo BARE >> "$T/calls"; exit 99; fi
 ( IFS=$'\t'; printf '%s\n' "$*" >> "$T/calls" )
 M=; if [ "$1" = --machine ]; then M=$2; shift 2; fi
+if [ "$1 $2" = "agent start" ] && [ -n "${STUB_BUSY:-}" ]; then
+  b=$(cat "$T/n_busy" 2>/dev/null || echo 0); b=$((b+1)); echo $b > "$T/n_busy"
+  if [ $b -le "$STUB_BUSY" ]; then printf '{"error":{"code":"agent_pane_busy","message":"stub busy"}}\n' >&2; exit 1; fi
+fi
 if [ "${STUB_FAIL:-}" = "$1 $2" ] || { [ "${STUB_FAIL_UNTIL:-}" = "$1 $2" ] && [[ " $* " == *" --until "* ]]; }; then
   printf '{"error":{"code":"%s","message":"stub refused"}}\n' "${STUB_FAIL_CODE:-stub}" >&2
   exit 1
@@ -90,13 +94,17 @@ cat > "$tmp/bin/git" <<'EOF'
 if [ "$1" = fetch ]; then ( IFS=$'\t'; printf 'ENV=%s\t%s\n' "${GIT_SSH_COMMAND:-}" "$*" >> "$STUB_T/gitlog" ); exit 0; fi
 exec "$STUB_REAL_GIT" "$@"
 EOF
-chmod +x "$tmp/bin/herdr" "$tmp/bin/ssh" "$tmp/bin/git"
+cat > "$tmp/bin/sleep" <<'EOF'
+#!/usr/bin/env bash
+( IFS=$'\t'; printf 'sleep\t%s\n' "$*" >> "$STUB_T/calls" )
+EOF
+chmod +x "$tmp/bin/herdr" "$tmp/bin/ssh" "$tmp/bin/git" "$tmp/bin/sleep"
 export STUB_T="$tmp" STUB_REAL_GIT="$(command -v git)"
 
 found=$(PATH="$tmp/bin:$PATH" command -v herdr)
 if [ "$found" != "$tmp/bin/herdr" ]; then echo "FAIL stub herdr is first on PATH: found $found"; exit 1; fi
 
-for b in ssh git; do
+for b in ssh git sleep; do
   found=$(PATH="$tmp/bin:$PATH" command -v $b)
   if [ "$found" != "$tmp/bin/$b" ]; then echo "FAIL stub $b is first on PATH: found $found"; exit 1; fi
 done
@@ -266,6 +274,23 @@ check "S10 guard file read from the linked worktree" '[ ! -e "$repo/.stratum/git
 check "S10 never-list, one prompt" 'never 0 1'
 git -C "$repo" worktree remove --force "$tmp/repo-feat"
 git -C "$repo" branch -q -D feat
+
+startcall() { printf 'agent\tstart\tworker-t004\t--kind\tclaude\t--pane\t%s\t--timeout\t120000\t--\t--permission-mode\tauto\t-n\tworker-t004' "$(pane)"; }
+busylog() { local i; for ((i = 1; i <= $1; i++)); do printf '%s\nsleep\t1\n' "$(startcall)"; done; startcall; }
+fresh
+STUB_BUSY=3 run bash "$script" start "${sargs[@]}"
+check "S11 exit 0" '[ $rc = 0 ]'
+check "S11 four agent start calls with the same argv, a sleep 1 after each busy one" '[ "$(grep -P "^(agent\tstart|sleep)\t" "$tmp/calls")" = "$(busylog 3)" ]'
+check "S11 then one agent prompt" '[ "$(grep -P "^(agent\tstart|sleep|agent\tprompt)\t" "$tmp/calls" | tail -1 | cut -f1,2)" = "$(printf "agent\tprompt")" ] && never 0 1'
+check "S11 worker and state lines" 'hasline "worker\tworker-t004\tlocal\t%s\t%s\tworker-t004\t%s" "$(wsid)" "$(pane)" "$(wt)" && hasline "state\tworking\tworker-t004\t%s" "$(pane)"'
+
+fresh
+STUB_FAIL="agent start" STUB_FAIL_CODE=agent_pane_busy run bash "$script" start "${sargs[@]}"
+check "S11b exit 1" '[ $rc = 1 ]'
+check "S11b exactly 10 agent start calls, 9 sleep 1" '[ "$(cnt "^agent\tstart\t")" = 10 ] && [ "$(cnt "^sleep\t1\$")" = 9 ] && [ "$(grep -P "^(agent\tstart|sleep)\t" "$tmp/calls")" = "$(busylog 9)" ]'
+check "S11b stopped line with the stub agent_pane_busy line" 'grep -qxF "stopped: {\"error\":{\"code\":\"agent_pane_busy\",\"message\":\"stub refused\"}}" <<<"$out"'
+check "S11b worker line with ids" 'hasline "worker\tworker-t004\tlocal\t%s\t%s\tworker-t004\t%s" "$(wsid)" "$(pane)" "$(wt)"'
+check "S11b no agent prompt, nothing closed" 'never 0 0'
 
 fresh; run bash "$script" start 'bad id' --task "$task" --test "$testcmd" --lane "$lane" --roster "$roster"
 prej P1 "Task id must be letters, digits or dash, start with a letter or digit, and be at most 25 characters."
@@ -466,15 +491,15 @@ rrej() {
 }
 
 r1() {
-  rfresh; rrun bash "$1" start "${rsargs[@]}"
+  rfresh; STUB_WT_PATH=/home/u/proj-worker-t004 rrun bash "$1" start "${rsargs[@]}"
   local in="$tmp/ssh_in.1" g; g=$(printf '%q' '{"commit":"auto"}')
   check "R1 exit 0" '[ $rc = 0 ]'
   check "R1 machine list, every other call starts --machine laptop, never-list, one prompt" 'rnever 0 1'
   check "R1 workspace list on the machine" 'rcall "workspace\tlist"'
   check "R1 worktree create has --path ~/proj-worker-t004" 'rcall "worktree\tcreate\t--cwd\t%s\t--branch\tworker-t004\t--base\t%s\t--path\t%s\t--label\tworker-t004\t--no-focus" "~/proj" "$sha" "~/proj-worker-t004"'
   check "R1 one ssh call to the saved target with BatchMode" '[ "$(grep -c . "$tmp/ssh")" = 1 ] && grep -qP "^-o\tBatchMode=yes\t--\tu@stubhost\t" "$tmp/ssh"'
-  check "R1 ssh writes brief.md and git-guard.json under ~/proj-worker-t004/ with no backslash tilde" 'c=$(sshs); grep -qF -- "cat > ~/proj-worker-t004/brief.md" <<<"$c" && grep -qF -- "mkdir -p ~/proj-worker-t004/.stratum" <<<"$c" && grep -qF -- "> ~/proj-worker-t004/.stratum/git-guard.json" <<<"$c" && grep -qF -- "$g" <<<"$c" && ! grep -qF -- "\\~" "$tmp/ssh"'
-  check "R1 brief on ssh stdin: heading, task, machine, result path" 'grep -qxF "# Brief: worker-t004" "$in" && grep -qxF "TASK BODY $(rnd)" "$in" && grep -qxF -- "- Your machine: laptop. \`local\` is the orchestrator'"'"'s machine." "$in" && grep -qxF -- "- Result file: ~/proj-worker-t004/result.md" "$in"'
+  check "R1 ssh writes brief.md and git-guard.json under the path herdr answered" 'c=$(sshs); [ "$(wt)" = /home/u/proj-worker-t004 ] && grep -qF -- "cat > /home/u/proj-worker-t004/brief.md" <<<"$c" && grep -qF -- "mkdir -p /home/u/proj-worker-t004/.stratum" <<<"$c" && grep -qF -- "> /home/u/proj-worker-t004/.stratum/git-guard.json" <<<"$c" && grep -qF -- "$g" <<<"$c" && ! grep -qF -- "~/proj-worker-t004" "$tmp/ssh"'
+  check "R1 brief on ssh stdin: heading, task, machine, result path" 'grep -qxF "# Brief: worker-t004" "$in" && grep -qxF "TASK BODY $(rnd)" "$in" && grep -qxF -- "- Your machine: laptop. \`local\` is the orchestrator'"'"'s machine." "$in" && grep -qxF -- "- Result file: /home/u/proj-worker-t004/result.md" "$in"'
   check "R1 brief on ssh stdin: roster rows and the four rules" 'grep -qxF "| worker-t004 | laptop | worker-t004 | T004 |" "$in" && grep -qxF "| worker-t005 | local | worker-t005 | T005 |" "$in" && [ "$(grep -cxFf "$rules" "$in")" = 4 ]'
   check "R1 nothing written on this machine" '[ ! -e "$tmp/repo-worker-t004" ] && [ ! -e "$repo/~" ]'
   check "R1 agent start argv" 'rcall "agent\tstart\tworker-t004\t--kind\tclaude\t--pane\t%s\t--timeout\t120000\t--\t--permission-mode\tauto\t-n\tworker-t004" "$(pane)"'

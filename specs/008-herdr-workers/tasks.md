@@ -94,7 +94,7 @@ quickstart section 2 run live.
 
 ### Implementation for User Story 3
 
-- [ ] T010 [US3] Add `--machine` to `scripts/st-worker.sh`: checks rows 8 to 11 of contracts/script.md section 2 (rows 9 to 11 copied with their words from `scripts/st-herdr-workspace.sh`), `H+=(--machine "<m>")` on one unique line (NC1), the target only from `machine list --json`, the ssh calls of sections 3 and 4 with `printf %q` paths and the leading `\~` turned back into `~` (as `scripts/st-herdr-workspace.sh` does), and `GIT_SSH_COMMAND='ssh -o BatchMode=yes' git fetch <target>:<WT> <N>:<N>` then `git rev-parse --verify <N>` in `result`. Done when `bash tests/test_st_worker.sh` is green.
+- [X] T010 [US3] Add `--machine` to `scripts/st-worker.sh`: checks rows 8 to 11 of contracts/script.md section 2 (rows 9 to 11 copied with their words from `scripts/st-herdr-workspace.sh`), `H+=(--machine "<m>")` on one unique line (NC1), the target only from `machine list --json`, the ssh calls of sections 3 and 4 with `printf %q` paths and the leading `\~` turned back into `~` (as `scripts/st-herdr-workspace.sh` does), and `GIT_SSH_COMMAND='ssh -o BatchMode=yes' git fetch <target>:<WT> <N>:<N>` then `git rev-parse --verify <N>` in `result`. Done when `bash tests/test_st_worker.sh` is green.
 
 - [ ] T011 [US3] Live remote run: quickstart section 6. Runnable only when `herdr --machine laptop workspace list` exits 0; the laptop times out on port 22 today (plan B1). If it still does not answer, tick it with `Not run, <first herdr error line>.` (lessons L17) and leave plan B1 as it is. If it runs, record the results and the laptop's herdr and Claude Code versions in `specs/008-herdr-workers/research.md` and close plan B1 in `specs/008-herdr-workers/plan.md`.
 

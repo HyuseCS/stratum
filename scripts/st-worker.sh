@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-usage() { echo "usage: st-worker.sh start <id> --task <file> --test <cmd> --lane <text> --roster <file> | goal <id> --test <cmd> | wait <id> | answer <id> --keys <key>... | --text <text> | result <id> | close <id> | list" >&2; exit 2; }
+usage() { echo "usage: st-worker.sh start <id> --task <file> --test <cmd> --lane <text> --roster <file> [--machine <m> --repo <path>] | goal <id> --test <cmd> [--machine <m>] | wait <id> [--machine <m>] | answer <id> [--machine <m>] --keys <key>... | --text <text> | result <id> [--machine <m>] | close <id> [--machine <m>] | list [--machine <m>]" >&2; exit 2; }
 fail() { echo "$1" >&2; exit 1; }
 [ $# -gt 0 ] || usage
 cmd=$1; shift
@@ -9,6 +9,7 @@ case $cmd in
   list) ;;
   *) usage ;;
 esac
+m= repo=
 while [ $# -gt 0 ]; do
   [ $# -ge 2 ] || usage
   case "$cmd $1" in
@@ -16,6 +17,8 @@ while [ $# -gt 0 ]; do
     "start --test" | "goal --test") test=$2 ;;
     "start --lane") lane=$2 ;;
     "start --roster") roster=$2 ;;
+    "start --repo") repo=$2 ;;
+    *" --machine") m=$2 ;;
     "answer --text") text=$2 ;;
     "answer --keys")
       keys=("${@:2}")
@@ -26,7 +29,7 @@ while [ $# -gt 0 ]; do
   shift 2
 done
 case $cmd in
-  start) [ -n "${task+x}" ] && [ -n "${test+x}" ] && [ -n "${lane+x}" ] && [ -n "${roster+x}" ] || usage ;;
+  start) [ -n "${task+x}" ] && [ -n "${test+x}" ] && [ -n "${lane+x}" ] && [ -n "${roster+x}" ] && { [ -z "$repo" ] || [ -n "$m" ]; } || usage ;;
   goal) [ -n "${test+x}" ] || usage ;;
   answer) [ "${text+x}${keys+x}" = x ] || usage ;;
 esac
@@ -61,20 +64,37 @@ if [ "$cmd" = start ] || [ "$cmd" = goal ]; then
   P="/goal \`$test\` exits 0, the change is committed on branch $N, and result.md is written; read brief.md in this folder first and follow it"
   [ ${#P} -le 4000 ] || fail "The /goal prompt is over 4000 characters."
 fi
-[ "${HERDR_ENV:-}" = 1 ] || fail "Not inside a herdr pane. Run it from a herdr pane, or name a --machine."
+[ -n "$m" ] || [ "${HERDR_ENV:-}" = 1 ] || fail "Not inside a herdr pane. Run it from a herdr pane, or name a --machine."
+[ "$cmd" != start ] || [ -z "$m" ] || [[ $repo == [/~]* ]] || fail "A saved machine needs --repo <path> starting with / or ~."
 
 H=(herdr)
-WS= PANE= BR= WT= S=
+WS= PANE= BR= WT= S= Q=
 e=$(mktemp)
 trap 'rm -f "$e"' EXIT
+if [ -n "$m" ]; then
+  ms=$(herdr machine list --json 2>"$e") || { msg=$(head -1 "$e"); fail "${msg:-herdr machine list failed.}"; }
+  target=$(jq -r --arg m "$m" 'first(.[] | select(.label == $m or .id == $m) | .target) // empty' <<<"$ms" 2>/dev/null) || fail "herdr machine list gave no machine list."
+  [ -n "$target" ] || fail "Unknown machine: $m. Saved: $(jq -r 'map(.label) | join(", ")' <<<"$ms")."
+  H+=(--machine "$m")
+  "${H[@]}" workspace list >/dev/null 2>"$e" || fail "Machine $m does not answer: $(head -1 "$e")"
+fi
 
-worker() { printf 'worker\t%s\tlocal\t%s\t%s\t%s\t%s\n' "$N" "${WS:--}" "${PANE:--}" "${BR:--}" "${WT:--}"; }
+worker() { printf 'worker\t%s\t%s\t%s\t%s\t%s\t%s\n' "$N" "${m:-local}" "${WS:--}" "${PANE:--}" "${BR:--}" "${WT:--}"; }
 stop() {
   echo "stopped: $1"
   [ "$cmd" != start ] || worker
   exit 1
 }
 h() { r=$("${H[@]}" "$@" 2>"$e") || stop "$(head -1 "$e")"; }
+rsh() {
+  ssh -o BatchMode=yes -- "$target" "$*" 2>"$e" && return
+  [ $? != 255 ] || stop "ssh to $target failed: $(head -1 "$e")"
+  return 1
+}
+quote() {
+  Q=$(printf %q "$WT")
+  Q=${Q/#\\~/\~}
+}
 get() { local v; v=$(jq -er "$2" <<<"$r") || stop "no $2 in the herdr answer"; printf -v "$1" %s "$v"; }
 code() { jq -r '.error.code // empty' "$e" 2>/dev/null || true; }
 look() {
@@ -90,15 +110,21 @@ st() {
   printf 'state\t%s\t%s\t%s\n' "$1" "$N" "$PANE"
   case $1 in blocked | stopped) panetext ;; esac
 }
+noresult() {
+  echo "no result file: $WT/result.md"
+  panetext
+  exit 1
+}
 find_worker() {
   h workspace list
   local c
   c=$(jq -er --arg n "$N" '[.result.workspaces[] | select(.label == $n)] | length' <<<"$r") || stop "no .result.workspaces in the herdr answer"
-  [ "$c" != 0 ] || fail "No worker $N on local."
+  [ "$c" != 0 ] || fail "No worker $N on ${m:-local}."
   [ "$c" = 1 ] || fail "More than one workspace is labelled $N."
-  WS=$(jq -er --arg n "$N" 'first(.result.workspaces[] | select(.label == $n) | .workspace_id)' <<<"$r") || fail "No worker $N on local."
+  WS=$(jq -er --arg n "$N" 'first(.result.workspaces[] | select(.label == $n) | .workspace_id)' <<<"$r") || fail "No worker $N on ${m:-local}."
   h worktree list --workspace "$WS"
-  WT=$(jq -er --arg w "$WS" 'first(.result.worktrees[] | select(.open_workspace_id == $w) | .path)' <<<"$r") || fail "No worker $N on local."
+  WT=$(jq -er --arg w "$WS" 'first(.result.worktrees[] | select(.open_workspace_id == $w) | .path)' <<<"$r") || fail "No worker $N on ${m:-local}."
+  quote
 }
 prompt() {
   "${H[@]}" agent prompt "$N" "$P" --wait --until working --until blocked --timeout 30000 >/dev/null 2>"$e" && return
@@ -111,7 +137,7 @@ brief() {
   printf '%s\n\n' "# Brief: $N" "You are worker $N, started by the Stratum orchestrator. Read this file first and follow it." "## Task $id"
   cat -- "$task"
   printf '\n%s\n\n' '## Facts'
-  printf '%s\n' "- Test command: \`$test\`" "- Lane: $lane. Start it with the Skill tool. Run only task $id; skip every other task, ticked or not." "- Branch: $N" "- Your machine: local. \`local\` is the orchestrator's machine." "- Result file: $WT/result.md"
+  printf '%s\n' "- Test command: \`$test\`" "- Lane: $lane. Start it with the Skill tool. Run only task $id; skip every other task, ticked or not." "- Branch: $N" "- Your machine: ${m:-local}. \`local\` is the orchestrator's machine." "- Result file: $WT/result.md"
   printf '\n%s\n\n%s\n%s\n' '## Roster' '| Name | Machine | Branch | Task |' '|------|---------|--------|------|'
   printf '| %s | %s | %s | %s |\n' "${R[@]}"
   printf '\n%s\n\n' '## Team rules'
@@ -128,7 +154,8 @@ brief() {
 
 case $cmd in
 start)
-  top=$(git rev-parse --show-toplevel 2>/dev/null) && sha=$(git rev-parse HEAD 2>/dev/null) && repo=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)") || fail "Run start inside a git repo with a commit."
+  top=$(git rev-parse --show-toplevel 2>/dev/null) && sha=$(git rev-parse HEAD 2>/dev/null) || fail "Run start inside a git repo with a commit."
+  [ -n "$m" ] || repo=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
   h workspace list
   c=$(jq -er --arg n "$N" '[.result.workspaces[] | select(.label == $n)] | length' <<<"$r") || stop "no .result.workspaces in the herdr answer"
   [ "$c" = 0 ] || fail "A worker $N already exists."
@@ -138,16 +165,29 @@ start)
   get PANE .result.root_pane.pane_id
   get BR .result.worktree.branch
   get WT .result.worktree.path
-  [ "$WT" = "$path" ] || stop "herdr made the worktree in $WT, not $path"
-  brief >"$WT/brief.md" || stop "cannot write $WT/brief.md"
-  mkdir -p "$WT/.stratum" || stop "cannot make $WT/.stratum"
-  jq -c '.commit="auto"' <(cat "$top/.stratum/git-guard.json" 2>/dev/null || echo '{}') >"$WT/.stratum/git-guard.json" || stop "cannot write the commit guard file in $WT/.stratum"
-  if ! "${H[@]}" agent start "$N" --kind claude --pane "$PANE" --timeout 120000 -- --permission-mode auto -n "$N" >/dev/null 2>"$e"; then
-    [ "$(code)" = agent_not_ready ] || stop "$(head -1 "$e")"
+  [ -n "$m" ] || [ "$WT" = "$path" ] || stop "herdr made the worktree in $WT, not $path"
+  G=$(jq -c '.commit="auto"' <(cat "$top/.stratum/git-guard.json" 2>/dev/null || echo '{}')) || stop "cannot read $top/.stratum/git-guard.json"
+  if [ -z "$m" ]; then
+    brief >"$WT/brief.md" || stop "cannot write $WT/brief.md"
+    mkdir -p "$WT/.stratum" || stop "cannot make $WT/.stratum"
+    printf '%s\n' "$G" >"$WT/.stratum/git-guard.json" || stop "cannot write the commit guard file in $WT/.stratum"
+  else
+    quote
+    brief | rsh "cat > $Q/brief.md && mkdir -p $Q/.stratum && printf '%s\n' $(printf %q "$G") > $Q/.stratum/git-guard.json" || stop "cannot write brief.md and .stratum/git-guard.json in $WT on $m: $(head -1 "$e")"
+  fi
+  busy=10 # ponytail: fixed 10 s agent_pane_busy retry bound, same shape as D20 in specs/007-herdr-workspace, raise it if a live run measures a slower pane shell
+  for ((i = 1; ; i++)); do
+    "${H[@]}" agent start "$N" --kind claude --pane "$PANE" --timeout 120000 -- --permission-mode auto -n "$N" >/dev/null 2>"$e" && break
+    c=$(code)
+    if [ "$c" = agent_pane_busy ] && [ "$i" -lt "$busy" ]; then
+      sleep 1
+      continue
+    fi
+    [ "$c" = agent_not_ready ] || stop "$(head -1 "$e")"
     worker
     st blocked
     exit 4
-  fi
+  done
   prompt
   look
   worker
@@ -187,7 +227,7 @@ wait)
         exit 4
         ;;
       idle | done)
-        if [ -f "$WT/result.md" ]; then
+        if { [ -z "$m" ] && [ -f "$WT/result.md" ]; } || { [ -n "$m" ] && rsh test -f "$Q/result.md"; }; then
           st finished
           exit 0
         fi
@@ -215,13 +255,17 @@ answer)
   ;;
 result)
   find_worker
-  [ -f "$WT/result.md" ] || {
-    echo "no result file: $WT/result.md"
-    panetext
-    exit 1
-  }
-  printf 'result\t%s\t%s/result.md\n' "$N" "$WT"
-  cat -- "$WT/result.md"
+  if [ -z "$m" ]; then
+    [ -f "$WT/result.md" ] || noresult
+    printf 'result\t%s\t%s/result.md\n' "$N" "$WT"
+    cat -- "$WT/result.md"
+    exit 0
+  fi
+  txt=$(rsh cat -- "$Q/result.md") || noresult
+  printf 'result\t%s\t%s/result.md\n%s\n' "$N" "$WT" "$txt"
+  GIT_SSH_COMMAND='ssh -o BatchMode=yes' git fetch "$target:$WT" "$N:$N" >/dev/null 2>"$e" || stop "$(head -1 "$e")"
+  f=$(git rev-parse --verify "$N" 2>"$e") || stop "$(head -1 "$e")"
+  printf 'fetched\t%s\t%s\n' "$N" "$f"
   ;;
 close)
   find_worker
@@ -247,9 +291,9 @@ list)
     h worktree list --workspace "$w"
     p=$(jq -r --arg w "$w" 'first(.result.worktrees[] | select(.open_workspace_id == $w) | .path) // "-"' <<<"$r")
     a=$(jq -r --arg n "$l" 'first(.result.agents[] | select(.name == $n) | "\(.pane_id // "-")\t\(.agent_status)") // "-\tgone"' <<<"$ag")
-    printf 'found\t%s\tlocal\t%s\t%s\t%s\n' "$l" "$w" "$a" "$p"
+    printf 'found\t%s\t%s\t%s\t%s\t%s\n' "$l" "${m:-local}" "$w" "$a" "$p"
     n=$((n + 1))
   done 3<<<"$x"
-  [ "$n" != 0 ] || echo "no workers on local"
+  [ "$n" != 0 ] || echo "no workers on ${m:-local}"
   ;;
 esac

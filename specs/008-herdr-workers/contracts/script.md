@@ -1,6 +1,6 @@
 # Contract: `scripts/st-worker.sh`
 
-Bash and jq only. Calls `herdr`, `ssh`, `git`, `jq`, `claude`, `timeout`, `mktemp` and `date` by
+Bash and jq only. Calls `herdr`, `ssh`, `git`, `jq`, `claude`, `timeout`, `mktemp`, `date` and `sleep` by
 bare name, so a test can put stubs first on `PATH`. Reads no `HERDR_*_ID` variable and never
 passes `--current`. No comments in the file except `ponytail:` markers.
 
@@ -166,12 +166,16 @@ No match: `No worker <N> on <m or local>.`, exit 1. More than one: `More than on
   (`linked_worktree_source`, research R3). On a saved machine, `--repo`. `<repo parent>` and
   `<repo name>` in `--path` come from that same `<repo>`. `<sha>`: `git rev-parse HEAD` of the
   calling folder.
+- Step 3 answers `agent_pane_busy` (the new pane's shell is not at its prompt yet, research R1):
+  `sleep 1` and run step 3 again, up to 10 tries in total. `ponytail:` fixed 10 s bound, the same
+  shape as D20 in specs/007-herdr-workspace. Any other error, or still busy after the 10th try, is
+  the normal stop below.
 - Step 3 answers `agent_not_ready`, or step 4 answers `agent_blocked` (a dialog is up; herdr sends
   no input): print the `worker` line, `state blocked`, then `pane text:` and the last 40 lines of
   `H agent read N --source recent-unwrapped --lines 40` (`.result.read.text`), exit 4. After step 3
   there is no step 4. `goal` is the next step once the dialog is answered.
 - Any other failure at or after step 1: print `stopped: <first stderr line>`, then the `worker`
-  line with `-` for every id not made yet, exit 1. Nothing is closed, nothing is retried.
+  line with `-` for every id not made yet, exit 1. Nothing is closed, nothing else is retried.
 
 `goal` (after a `start` that ended `blocked`): steps 4 and 5.
 
@@ -317,6 +321,8 @@ stub log, never from built ids.
 | S6 | `start` when `workspace list` already has the label `worker-t004`: one line `A worker worker-t004 already exists.`, no `worktree create`, no other mutating call, exit 1 (plan G10, lessons L11) |
 | S7 | `agent prompt` fails with `agent_blocked`: `worker` line, `state blocked`, `pane text:`, the stub pane text, no second prompt, nothing closed, exit 4; then `goal` sends exactly one `agent prompt` |
 | S10 | `start` run from a linked worktree of the temp repo: `worktree create` has `--cwd <main checkout>` and `--path <main checkout parent>/<main checkout name>-worker-t004`, `--base` is HEAD of the linked worktree, and the guard file is read from the linked worktree's `.stratum/git-guard.json` |
+| S11 | the stub's `agent start` answers `agent_pane_busy` on the first N calls (N below 10), then succeeds; a stub `sleep` exits 0 at once: the log shows N+1 `agent start` calls with the same argv and N `sleep 1`, then one `agent prompt`, exit 0 |
+| S11b | `agent start` answers `agent_pane_busy` on every call: exactly 10 `agent start` calls, then `stopped: ` with the stub's `agent_pane_busy` line, the `worker` line, no `agent prompt`, nothing closed, exit 1 |
 | P1-P7 | each check of section 2 rows 1 to 7: one line with the phrase, no herdr call, exit 1 |
 | P2b | `start` with a task file that exists but is empty: section 2 row 2 line, no herdr call, exit 1 |
 | P5b | roster with an empty TAB field on one line: section 2 row 5 line `Roster line <n> must be ...`, exit 1; a roster that ends with a blank line passes the check |
