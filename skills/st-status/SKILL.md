@@ -19,7 +19,7 @@ block. Change nothing.
    else `ask`. Show each mode and where it comes from (repo file, global option, default).
    Change the repo file by hand, the global ones in `/config` or `/plugin config`.
 4. **Tools:** check each and name any missing or too old: `git`, `python3`, `node`, `bunx`
-   (statusline), `graphify --version` (needs 0.9.74 or later for Dart), and whether the graphify
+   (statusline), `herdr` and `jq` (optional, for `st-herdr-workspace`), `graphify --version` (needs 0.9.74 or later for Dart), and whether the graphify
    post-commit hook is installed (`graphify hook status`). For graphify too old or missing, give
    `uv tool install --force graphifyy`; for no hook, give `graphify hook install`.
 5. **Duplicates:** list Stratum skills that also exist outside the plugin and could run twice or
