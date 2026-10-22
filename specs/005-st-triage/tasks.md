@@ -48,7 +48,7 @@ section 3 rows L1, L2, L3, L5, L6.
 
 ### Tests for User Story 1
 
-- [ ] T001 [US1] Add the US1 checks to `tests/test_on_demand.sh` and move the pinned agent lists to 14 in `tests/test_inspect.sh` and `tests/test_model_hook.py` (FR-001 to FR-004, FR-006 to FR-008, SC-004).
+- [X] T001 [US1] Add the US1 checks to `tests/test_on_demand.sh` and move the pinned agent lists to 14 in `tests/test_inspect.sh` and `tests/test_model_hook.py` (FR-001 to FR-004, FR-006 to FR-008, SC-004).
   - `tests/test_on_demand.sh:25`: `for s in st-review st-test st-debug st-git; do` to `for s in st-review st-test st-debug st-git st-triage; do` (skill exists, `name: st-triage`, a line starts `# /stratum:st-triage`, exactly one line holds `` (`stratum:st-triage`) ``).
   - `tests/test_on_demand.sh:56`: add `st-triage` to the end of the `for a in` list. After line 60 (`[ "$a" = st-impeccable ] && t=...`) add `  [ "$a" = st-triage ] && t="Read, Grep, Glob, Bash"`. The no-Bash line (line 65 before the insert): `[ "$a" = st-impeccable ] || check "FR-007 $a no Bash" ...` to `grep -qw Bash <<<"$t" || check "FR-007 $a no Bash" ...` (rest of the line unchanged), so the no-Bash check runs only for agents whose expected tools lack Bash. `m` stays `opus` for `st-triage`.
   - `tests/test_on_demand.sh`: before `exit $fail` add one `phrases <<'EOF'` heredoc with the rows of `specs/005-st-triage/contracts/triage.md` section 3, in table order, each `name<TAB>target<TAB>phrase`, except the two `#15 FR-005 skill` rows (T003 adds them). The phrase is the cell text inside its outer backticks, with no space at either end.
@@ -58,7 +58,7 @@ section 3 rows L1, L2, L3, L5, L6.
 
 ### Implementation for User Story 1
 
-- [ ] T002 [US1] Create the skill, the agent and every doc that lists agents, in one task (the agent-list checks in `tests/test_inspect.sh`, `tests/test_model_files.sh`, `tests/test_model_hook.py` and `tests/test_on_demand.sh` read all of them at once, lessons L6). Security: plan.md S1 (Bash and the before and after checks), S2 (gh, an external service), S3 (untrusted issue text), S4 (model file names).
+- [X] T002 [US1] Create the skill, the agent and every doc that lists agents, in one task (the agent-list checks in `tests/test_inspect.sh`, `tests/test_model_files.sh`, `tests/test_model_hook.py` and `tests/test_on_demand.sh` read all of them at once, lessons L6). Security: plan.md S1 (Bash and the before and after checks), S2 (gh, an external service), S3 (untrusted issue text), S4 (model file names).
   - Create `skills/st-triage/SKILL.md` with the text of contracts/triage.md section 1, without the two `[US2: ...]` parts: step 4 reads `` 4. Start one `st-triage` subagent (`stratum:st-triage`) per issue. Pass each the plugin root, the project root and its issue number. `` and step 7 reads `` 7. Show one report per issue, headed by `#<n>`. Then the dropped and corrected cites, with why. `` (FR-001, FR-004, FR-006, FR-007).
   - Create `agents/st-triage.md` with the text of contracts/triage.md section 2: `tools: Read, Grep, Glob, Bash`, `model: opus`, and `` Start your report with `[st-triage]` on its own line. `` (`tests/test_session_hooks.sh:42`) (FR-001 to FR-004, FR-008).
   - `skills/st-model/SKILL.md:11`: `` `st-review`, `st-test`. `` to `` `st-review`, `st-test`, `st-triage`. ``
