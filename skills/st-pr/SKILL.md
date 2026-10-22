@@ -19,6 +19,30 @@ Nothing is posted to GitHub before the gate in step 5. `gh pr create` cannot be 
    ask the user:
    - open PR: update it in place (recommended) or close it and open a new one;
    - closed PR: reopen it and rewrite its body (keeps review threads) or open a new one.
+5. Path. Count commits with `git rev-list --count origin/<base>..HEAD` and files with
+   `git diff --name-only origin/<base>...HEAD | wc -l`. Ultracode is on when the latest system-reminder about Ultracode says so.
+   Take the workflow path only when Ultracode is on and the branch has more than 30 commits or more than 40 changed files.
+   Else take the current path: steps 2 to 4.
+   Say the path in one line, with both counts and the Ultracode state, for example
+   `Path: workflow. Ultracode on, 45 commits (more than 30), 12 files (not more than 40).` or
+   `Path: current. Ultracode off, 100 commits, 3 files.`
+
+## Workflow path
+
+Only when step 1 chose it. It replaces steps 2 to 4. Steps 5 and 6 run as written.
+
+1. Note the output of `git rev-parse HEAD` and `git status --porcelain --untracked-files=all`.
+2. Call `Workflow({scriptPath: "<plugin root>/workflows/pr.js", args})`. Pass `args` as a JSON object, not a string:
+   `projectRoot`, `pluginRoot` and `scratchpad` (absolute paths), `base`, `branch`, `featureDir`
+   (the project root joined with the `feature_directory` from `.stratum/state.json`, or `""`), and `commits` (the lines
+   of `git log origin/<base>..HEAD --format='%h %s'`, as an array of strings).
+   If the tool refuses the `scriptPath` ("a file you can already read"), read `<plugin root>/workflows/pr.js` and call `Workflow` again: pass the file's text through the tool's `script` input, with the same `args`.
+3. The workflow runs in the background: wait for its task notification. If the tool result already holds the result object, use it. Never start a second run while one runs.
+4. Run the two commands from 1 again. If an output differs, show the difference and stop before the gate.
+5. `blocked` is true: show the warnings and stop before the gate. Nothing is pushed.
+6. A refused `scriptPath` goes to the `script` call of 2 first. If the call cannot start, the run fails, or it returns no `bodyPath`: say so in one line, then run steps 2 to 4 on the current path.
+7. Else read the body at `bodyPath` and go to step 5 with the returned `title` and `warnings`.
+   Revise at the gate edits the body in this session and never runs the workflow again.
 
 ## 2. Facts
 
