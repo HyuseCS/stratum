@@ -129,7 +129,7 @@ checks over ssh and `--machine` on every herdr call.
 
 - [X] T010 If `main` moved, merge it first. Then diff the README `## Tests` list and the DESIGN.md skill count line against `main` (another plan, branch `22-workflow-scripts`, `specs/006-pr-workflow-script`, edits the same lines): keep main's lines plus ours. Run `bash tests/test_herdr_workspace.sh`, `bash tests/test_on_demand.sh`, `bash tests/test_inspect.sh`, `bash tests/test_verify.sh`, then `bash scripts/st-verify.sh 'bash tests/test_herdr_workspace.sh' scripts/st-herdr-workspace.sh tests/test_herdr_workspace.sh tests/test_on_demand.sh`. After the per-task commits this call only re-runs the tests; its comment scan has no diff to read, so the comment check is the per-task st-verify step during the build. Then `git status --porcelain --untracked-files=all`: only the feature's files may show (lessons L8).
 
-- [ ] T011 Live local run per quickstart sections 2 and 4 from a herdr pane (SC-001, SC-003, SC-004 local). Record the `time` of the `full` run in `specs/007-herdr-workspace/research.md` R5, and raise the 10 s bound in `scripts/st-herdr-workspace.sh` only if `claude` was not seen within it. Tell the user which test workspaces to close; the script and the agent close nothing.
+- [X] T011 Live local run per quickstart sections 2 and 4 from a herdr pane (SC-001, SC-003, SC-004 local). Record the `time` of the `full` run in `specs/007-herdr-workspace/research.md` R5, and raise the 10 s bound in `scripts/st-herdr-workspace.sh` only if `claude` was not seen within it. Tell the user which test workspaces to close; the script and the agent close nothing.
 
 ---
 

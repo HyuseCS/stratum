@@ -83,6 +83,9 @@ OpenSSH 10.6p1, git 2.56.0, Claude Code 2.1.302, lazygit 0.66.2. This session ru
   last round is `not seen`; a failed `process-info` call counts as not seen and does not stop the
   run (D7). `ponytail:` fixed 10 s bound, measured in quickstart section 2 before the build is
   closed.
+- Measured (T011, 2026-10-23, quickstart section 2 on this machine): the `full` run took 1.19 s in
+  total (`time`), with `claude` and `lazygit` both `running` in the first round. The 10 s bound
+  stays.
 - Rationale: verified live on both programs, and the process name does not appear because the
   shell echoed the typed command (lessons L1).
 - Alternatives: `pane wait-output` with `Status` (lazygit) and `Claude Code` (claude). Rejected:
