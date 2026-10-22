@@ -1,0 +1,209 @@
+# Tasks: Orchestrator Starts Worker Sessions
+
+**Input**: Design documents from `/specs/008-herdr-workers/`
+
+**Prerequisites**: plan.md, spec.md, research.md, data-model.md, contracts/script.md, contracts/skill.md, quickstart.md
+
+**Tests**: Required. Each FR gets a test task that fails before its build task (user rule: test first).
+
+**Rules for every task**: bash and jq only, no new dependency. Add NO explanatory comments to any
+code or test file; the only allowed comment is a `ponytail:` marker. Match the style of
+`scripts/st-herdr-workspace.sh` and `tests/test_herdr_workspace.sh` (`check`, `mktemp -d`, `trap`,
+stub bin dir first on `PATH`, `nc()` with a green baseline). Keep every contract phrase whole on
+one line. Never run bare `herdr`, `machine reconnect`, `server stop`, `worktree remove`, a push,
+or any `close` on a workspace the task did not make. Do not edit `spec.md`, `decisions.md`, the
+checklists, `scripts/st-herdr-workspace.sh` or `skills/st-build/SKILL.md`.
+
+**Settled**: D24 (`start` writes `{"commit":"auto"}` to the worker worktree's
+`.stratum/git-guard.json` only) and D25 (tasks that build on each other share a machine; no commit
+crosses machines). Both are in contracts/script.md section 3.
+
+## Format: `[ID] [P?] [Story] Description`
+
+- **[P]**: Can run in parallel (different files, no dependency on an open task)
+- **[Story]**: US1 to US5 from spec.md
+
+## Phase 1: Setup
+
+None. `scripts/`, `skills/`, `tests/` exist. herdr 0.9.4, Claude Code 2.1.302, jq 1.8.2, bash
+5.3.20, OpenSSH 10.6p1 and git 2.56.0 are installed (research header).
+
+## Phase 2: Foundational
+
+None. T001 builds the stubs that every later test task extends.
+
+---
+
+## Phase 3: User Story 1 - One worker in a herdr pane on this machine (Priority: P1) MVP
+
+**Goal**: start, goal, wait, result, close and list for a worker on this machine, plus the skill.
+
+**Independent Test**: `bash tests/test_st_worker.sh` and `bash tests/test_on_demand.sh` green;
+quickstart section 2 run live.
+
+### Tests for User Story 1
+
+- [ ] T001 [US1] Write `tests/test_st_worker.sh` and add the line `bash tests/test_st_worker.sh` to the Tests block of `README.md` (after `bash tests/test_shortcuts.sh`, keep the block sorted as it is). Stubs in `mktemp -d`, first on `PATH`, checked with `command -v` like `tests/test_herdr_workspace.sh`: `herdr` (logs each argv as one TAB-joined line; zero arguments logs `BARE` and exits 99; ids with a random part per run; `worktree create` makes the `--path` folder with a `.stratum/` inside and answers the JSON paths of research R1; `workspace list`, `worktree list --workspace`, `agent get`, `agent list`, `agent wait`, `agent read`, `agent prompt`, `agent start`, `workspace close` answer from files in the temp dir; `agent get` takes its state from a list the case sets, one per call; `agent read` text is `STUB PANE <random>`; `STUB_FAIL="<group> <sub>"` fails that call with JSON on stderr, exit 1, and `STUB_FAIL_CODE` sets the error code such as `agent_not_ready`, `agent_prompt_stalled`, `timeout`). The test makes a temp git repo with one commit and a tracked `.stratum/state.json`, and runs the script from it with `HERDR_ENV=1` and `HERDR_PANE_ID`, `HERDR_TAB_ID`, `HERDR_WORKSPACE_ID` set to `w1P` values that must never appear in a call. Cases from contracts/script.md section 6: S1 (with a two-line roster; asserts every item of S1 including `{"commit":"auto"}` in `<WT>/.stratum/git-guard.json` and the repo's own `.stratum/git-guard.json` absent), S2, S3, S4, S5, P1 to P7 (section 2 rows 1 to 7, each line asserted as built by the script, lessons L1), W1, W2, W3, W4, W5, G1, G2, C1, C2, C3, C4, L1, and NC2, NC3, NC4, NC7 through an `nc()` that checks the `sed` copy differs and runs the real script green on the same input and state right before the copy (lessons L18). Every case also asserts the never-list and "no `--machine`" from contracts/script.md section 4, ids taken from the stub log (lessons L19), `-` ids on a stop (lessons L20), and that a result file holding `RESULT FILE <random>` is printed while `STUB PANE` is not. Run it before T003 and show it fails because `scripts/st-worker.sh` does not exist. Lessons L1, L7, L8, L18, L19, L20.
+
+- [ ] T002 [P] [US1] Add to `tests/test_on_demand.sh` a `phrases` block with every row of contracts/skill.md section 2 (target `skills/st-worker/SKILL.md`), the three `check` lines of that section (frontmatter and heading; order `/stratum:st-review` before `git merge --no-ff` before `st-worker.sh close`; `skills/st-build/SKILL.md` holds no `st-worker`, FR-014), and change the `#32 st-status tools` row to the phrase `` `herdr` and `jq` (optional, for `st-herdr-workspace` and `st-worker`) ``. Run it and show it fails because the skill file is missing and `skills/st-status/SKILL.md` has the old line. Only this file changes, so it runs beside T001 and T003. Lessons L1, L6.
+
+### Implementation for User Story 1
+
+- [ ] T003 [US1] Write `scripts/st-worker.sh` (mode 755) per contracts/script.md: usage and exit codes (section 1), checks rows 1 to 7 (section 2), the brief text and the `{"commit":"auto"}` write to `<WT>/.stratum/git-guard.json` (section 3, D24), and the subcommands `start`, `goal`, `wait`, `result`, `close`, `list` for this machine (section 4), with the output lines of section 5. In this task `--machine`, `answer` and `headless` print the usage line and exit 2. Ids only from the JSON of the call that made them (`jq -er`). Constants with `ponytail:` markers: `wait` bound 540 s, resume check 10 s. Each line that an NC breaks (the roster rows, team rule 1, the result file read, the `git-guard.json` write) must be one unique line. Done when `bash tests/test_st_worker.sh` is green. Lessons L5, L20, L21.
+
+- [ ] T004 [US1] After T002, write `skills/st-worker/SKILL.md` per contracts/skill.md section 1 (all steps, including the question relay, team, merge, close, list and headless parts, so the skill is written once), and in the same task: add the `st-worker` row to the skill table in `README.md` and in `DESIGN.md`, change `DESIGN.md` "Twenty-three entry skills" to "Twenty-four entry skills", change the `README.md` tool row to `` | `herdr` 0.9.4, `jq` | optional, for `st-herdr-workspace` and `st-worker` | ``, and change the tool line in step 4 of `skills/st-status/SKILL.md` to name `st-herdr-workspace` and `st-worker`. Done when `bash tests/test_on_demand.sh` and `bash tests/test_inspect.sh` are green. Runs beside T003 (different files). Lessons L7, L12.
+
+- [ ] T005 [US1] Live local run: quickstart section 2 from a herdr pane, after T003 and T004. Record in `specs/008-herdr-workers/research.md` under each research item: `start` exit code and whether a trust dialog showed (R4), `◎ /goal active` seen (R5), the worker committed with no dialog (D24), every `state` line of `wait` and the longest `idle` between goal turns (R6), the `workspace close` answer and whether herdr asked for `--group` (R1), and the empty `agent list`, `workspace list` and `pgrep -af -- '-n worker-t900'` after `close` (R11, SC-005). A measured value that breaks a constant or a JSON path goes to the orchestrator as a finding before the story closes. Lessons L5.
+
+**Checkpoint**: US1 works alone; the user can run "run T004 in a worker" on this machine.
+
+---
+
+## Phase 4: User Story 2 - The worker asks, the user answers (Priority: P2)
+
+**Goal**: `answer` sends the user's answer into a blocked worker, and sends nothing when the user already answered in the pane.
+
+**Independent Test**: cases A1 to A3 and NC5 green; quickstart section 3 run live.
+
+### Tests for User Story 2
+
+- [ ] T006 [US2] Add to `tests/test_st_worker.sh` the cases A1, A2, A3 and NC5 of contracts/script.md section 6, with the stub logging `agent send-keys` and `pane send-text` argv. A2 asserts `not blocked: working`, no `send-keys`, no `send-text`, exit 1 (US2 scenario 3). Run it and show A1 to A3 fail (`answer` exits 2 after T003). Lessons L1, L18.
+
+### Implementation for User Story 2
+
+- [ ] T007 [US2] Add `answer` to `scripts/st-worker.sh` per contracts/script.md section 4 (`agent get` first; `--keys` through `agent send-keys`; `--text` through `pane send-text` then `agent send-keys <N> enter`; `agent get` after; exit 4 if still blocked). The `blocked` check is one unique line (NC5). Done when `bash tests/test_st_worker.sh` is green.
+
+- [ ] T008 [US2] Live question run: quickstart section 3, after T007. Record in `specs/008-herdr-workers/research.md` R7: whether herdr shows the AskUserQuestion dialog as `blocked`, which key picks an option, what reaches the free-text field, and the `not blocked: working` line when the user answered in the pane first (SC-003).
+
+**Checkpoint**: US1 and US2 work on this machine.
+
+---
+
+## Phase 5: User Story 3 - A worker on the laptop (Priority: P3)
+
+**Goal**: every subcommand except `headless` works with `--machine <m>`; brief, guard file and result cross by ssh; the branch is fetched here.
+
+**Independent Test**: cases R1 to R8 and NC1 green; quickstart section 6 when the laptop answers.
+
+### Tests for User Story 3
+
+- [ ] T009 [US3] Add to `tests/test_st_worker.sh` a stub `ssh` (logs argv as one TAB-joined line and its stdin to a file per call; answers `cat` of a result path with `RESULT FILE <random>`, `test -f` from a flag the case sets; `STUB_SSH_RC` fails it) and a `git` wrapper (logs `fetch` argv and exits 0, passes every other call to the real git found before `PATH` changes), the stub `machine list --json` entry `{"id":"stubid0001","label":"laptop","target":"u@stubhost",...}` as in `tests/test_herdr_workspace.sh`, and the cases R1 to R8 and NC1 of contracts/script.md section 6. R1 asserts every herdr call but `machine list --json` starts `--machine laptop`, the one ssh call `-o BatchMode=yes -- u@stubhost` with `cat > `, the quoted path and the `git-guard.json` write, and the brief on its stdin with the roster and the four rules. R2 makes branch `worker-t004` in the temp repo first. Run it and show R1 to R8 fail (`--machine` exits 2 after T003). Lessons L1, L18, L19.
+
+### Implementation for User Story 3
+
+- [ ] T010 [US3] Add `--machine` to `scripts/st-worker.sh`: checks rows 8 to 11 of contracts/script.md section 2 (rows 9 to 11 copied with their words from `scripts/st-herdr-workspace.sh`), `H+=(--machine "<m>")` on one unique line (NC1), the target only from `machine list --json`, the ssh calls of sections 3 and 4 with `printf %q` paths, and `git fetch <target>:<WT> <N>:<N>` then `git rev-parse --verify <N>` in `result`. Done when `bash tests/test_st_worker.sh` is green.
+
+- [ ] T011 [US3] Live remote run: quickstart section 6. Runnable only when `herdr --machine laptop workspace list` exits 0; the laptop times out on port 22 today (plan B1). If it still does not answer, tick it with `Not run, <first herdr error line>.` (lessons L17) and leave plan B1 as it is. If it runs, record the results and the laptop's herdr and Claude Code versions in `specs/008-herdr-workers/research.md` and close plan B1 in `specs/008-herdr-workers/plan.md`.
+
+**Checkpoint**: US1 to US3 work; the remote live check waits on the laptop.
+
+---
+
+## Phase 6: User Story 4 - A team of workers on one project (Priority: P4)
+
+**Goal**: two or more workers with one roster, the team rules, and merges in task order by the orchestrator only.
+
+**Independent Test**: quickstart section 4. No new code: the roster and rules (FR-002, FR-008) are
+built in T003 and tested by S1 with a two-line roster; the D25 machine rule and the review, merge
+and conflict steps (FR-009) are built in T004 and tested by T002.
+
+- [ ] T012 [US4] Live team run: quickstart section 4, after T007. Two workers on this machine, the second builds on the first. Record in `specs/008-herdr-workers/research.md` (new item R15): both briefs hold both roster rows, worker-t903's transcript shows a SendMessage to `worker-t902` and a `git merge worker-t902`, both finish, the skill merges both in task order with `/stratum:st-review` run on each branch first, and both are closed (SC-004). Cross-machine messages are not run here (D25; laptop down).
+
+**Checkpoint**: teams work on one machine.
+
+---
+
+## Phase 7: User Story 5 - A headless worker for a quick local task (Priority: P5)
+
+**Goal**: `headless` runs `claude -p "/goal ..."` with the explicit allow list, reads the JSON, and refuses a run that committed.
+
+**Independent Test**: cases H1 to H5 and NC6 green; quickstart section 5 run live.
+
+### Tests for User Story 5
+
+- [ ] T013 [US5] Add to `tests/test_st_worker.sh` a stub `claude` (logs argv one per line; reads the brief path from the prompt and copies the brief to the temp dir; prints the JSON of spike test 3 with `subtype` `success`, `num_turns`, `total_cost_usd` and a `result` holding `HEADLESS <random>`; `STUB_CLAUDE=commit` makes a commit in the repo first, `=junk` prints junk, `=slow` exits 124) and the cases H1 to H5 and NC6 of contracts/script.md section 6. H1 asserts the exact flags of section 4 `headless` step 3, the prompt `HP`, the brief outside the repo, and no herdr call. Run it and show H1 to H5 fail (`headless` exits 2 after T003). Lessons L1, L10, L18.
+
+### Implementation for User Story 5
+
+- [ ] T014 [US5] Add `headless` to `scripts/st-worker.sh` per contracts/script.md section 4: `HEAD` before and after, the headless brief in a `mktemp` file removed by `trap`, `timeout 540 claude -p ...` with the exact flags, `--allowedTools ...` on one unique line (NC6), the `headless` and `result:` output lines, and the exit rules. `ponytail:` markers on 540 s and 30 turns. Done when `bash tests/test_st_worker.sh` is green. Lessons L10.
+
+- [ ] T015 [US5] Live headless run: quickstart section 5. Record in `specs/008-herdr-workers/research.md` R12: the `headless` line, `num_turns`, how `--max-turns` counted the goal turns, the same `HEAD` before and after, the untracked file, no process left (SC-006), and whether `dontAsk` denied a Bash call that was not the test command.
+
+**Checkpoint**: all five stories work on this machine.
+
+---
+
+## Phase 8: Polish & Cross-Cutting Concerns
+
+- [ ] T016 Final check from the project root, no file edits unless a check fails: run quickstart section 1 (`bash tests/test_st_worker.sh`, `bash tests/test_on_demand.sh`, `bash tests/test_inspect.sh`), then `bash scripts/st-verify.sh 'bash tests/test_st_worker.sh' scripts/st-worker.sh tests/test_st_worker.sh` and `bash scripts/st-verify.sh 'bash tests/test_on_demand.sh' skills/st-worker/SKILL.md tests/test_on_demand.sh README.md DESIGN.md skills/st-status/SKILL.md` (no added comments), `git diff --quiet 5d8a8e7 -- skills/st-build/SKILL.md agents/st-build.md` (FR-014), and `git status --porcelain` shows no file left by a test run (lessons L8).
+
+---
+
+## FR to task map
+
+| FR | Test | Build |
+|----|------|-------|
+| FR-001 | T001 S1, T009 R1 | T003, T010 |
+| FR-002 | T001 S1, S2, T009 R1 | T003, T010 |
+| FR-003 | T001 S1, S3, S5, P6 | T003 |
+| FR-004 | T001 W1 to W5 | T003 |
+| FR-005 | T001 G1, G2, NC4, T009 R2 | T003, T010 |
+| FR-006 | T001 W5, T006 A1 to A3, NC5, T002 relay rows | T003, T007, T004 |
+| FR-007 | T009 R1 to R8, NC1 | T010 |
+| FR-008 | T001 S1, NC3, T002 D25 row | T003, T004 |
+| FR-009 | T002 review, merge, conflict rows and order check | T004 |
+| FR-010 | T001 C1, C2, C4, T002 close row | T003, T004 |
+| FR-011 | T013 H1 to H5, NC6 | T014 |
+| FR-012 | T001 C3; live T005 | T003 |
+| FR-013 | T001 S1 (agent start argv), NC7 (D24 file) | T003 |
+| FR-014 | T002 st-build check; T016 diff | T004 |
+| FR-015 | the test file and NC1 to NC7 | T001, T006, T009, T013 |
+| FR-016 | T001 L1 and every subcommand found by id | T003 |
+
+## Dependencies & Execution Order
+
+### Phase Dependencies
+
+- US1 (T001 to T005) first. T001 -> T003 -> T005. T002 -> T004 -> T005. T002 and T004 run beside T001 and T003.
+- US2, US3 and US5 each need T003. They share `tests/test_st_worker.sh` and `scripts/st-worker.sh`, so their test and build tasks run one after another, never in parallel (lessons L6): T006 -> T007 -> T009 -> T010 -> T013 -> T014.
+- Live tasks T008, T012, T015 run after their build task; T011 only when the laptop answers.
+- T016 last.
+
+### User Story Dependencies
+
+- US2, US3, US5: after US1 (they extend its script and test).
+- US4: after US2 (a team member may ask a question).
+
+### Within Each User Story
+
+- The test task runs red before its build task. The build task is done when that test is green.
+
+### Parallel Opportunities
+
+- T002 and T004 (skill lane: `tests/test_on_demand.sh`, `skills/st-worker/SKILL.md`, `README.md` skill and tool rows, `DESIGN.md`, `skills/st-status/SKILL.md`) beside T003 (`scripts/st-worker.sh`). T001 writes the `README.md` test line, so it ends before T004 starts.
+- No other pair: every other code task touches `tests/test_st_worker.sh` or `scripts/st-worker.sh`.
+
+## Parallel Example: User Story 1
+
+```text
+Lane A: T001 (tests/test_st_worker.sh, README.md test line) -> T003 (scripts/st-worker.sh)
+Lane B: T002 (tests/test_on_demand.sh) -> T004 after T001 (skills/st-worker/SKILL.md, README.md rows, DESIGN.md, skills/st-status/SKILL.md)
+Then:   T005 (live run)
+```
+
+## Implementation Strategy
+
+### MVP First (User Story 1 Only)
+
+T001 to T005: one worker on this machine, start to close, with the skill. Stop and check
+quickstart section 2 before going on.
+
+### Incremental Delivery
+
+US2 (questions), then US3 (laptop, stub-proven; live when it answers), then US4 (team, live only),
+then US5 (headless). Each phase ends green on `bash tests/test_st_worker.sh`.
+
+## Notes
+
+- `docs/lessons.md` is written at Close by `st-close`, not by a Build task.
+- 16 tasks: Setup 0, Foundational 0, US1 5, US2 3, US3 3, US4 1, US5 3, Polish 1.
