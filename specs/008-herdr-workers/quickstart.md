@@ -37,7 +37,7 @@ Record in research.md:
 
 1. `start` exit code, and whether a trust dialog showed (R4). Expected: exit 0, `state working`.
 2. The worker pane shows `◎ /goal active` (R5: the pasted `/goal` ran as the command).
-3. The commit: the worker commits with no dialog (D24), and `cat ../stratum-003-demo-worker-t900/.stratum/git-guard.json` shows `{"commit":"auto"}`.
+3. The commit: the worker commits with no dialog (D24), and `cat ../stratum-worker-t900/.stratum/git-guard.json` shows `{"commit":"auto"}`.
 4. `bash $S wait T900` until `state finished`. Note every `state` line and how long the worker sat
    `idle` between goal turns, if at all (R6).
 5. `bash $S result T900`: the four result lines; the pane text is not printed.
@@ -49,8 +49,8 @@ Record in research.md:
    `pgrep -af -- '-n worker-t90[0]'` (SC-005; the bracket keeps pgrep from matching the shell
    that runs it, lessons L14). The answer of `workspace close` (R1).
 
-The user removes `../stratum-003-demo`, `../stratum-003-demo-worker-t900` and the two branches when
-they want.
+The user removes `../stratum-003-demo`, `../stratum-worker-t900` (next to the main checkout
+`/home/hyuse/Desktop/stratum`, research R3) and the two branches when they want.
 
 ## 3. Question path live (US2, SC-003; measures R7)
 

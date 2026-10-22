@@ -10,7 +10,7 @@ every fact again from the worker id (research R10).
 | id | the request (`T004`) | `^[A-Za-z0-9][A-Za-z0-9-]{0,24}$` |
 | name | `worker-` + id in lower case | agent name, workspace label, branch, `-n` session name, folder suffix (R2) |
 | machine | `--machine` or none | a `label` or `id` in `herdr machine list --json`; none means this machine (`local`) |
-| repo | `git rev-parse --show-toplevel` here; `--repo` on a saved machine | `--repo` starts with `/` or `~` |
+| repo | the main checkout here, `dirname "$(git rev-parse --path-format=absolute --git-common-dir)"` (herdr refuses a linked worktree, research R3); `--repo` on a saved machine | `--repo` starts with `/` or `~` |
 | base | `git rev-parse HEAD` here | full sha |
 | workspace, tab, pane | `worktree create` answer (`.result.workspace.workspace_id`, `.result.tab.tab_id`, `.result.root_pane.pane_id`) | never built, only read (L19) |
 | path | `.result.worktree.path`; later `worktree list --workspace <ws>` where `open_workspace_id == ws` | absolute |

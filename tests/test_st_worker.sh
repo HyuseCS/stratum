@@ -224,6 +224,19 @@ check "S9 stopped line names both paths" 'hasline "stopped: herdr made the workt
 check "S9 worker line with the ids made so far" 'hasline "worker\tworker-t004\tlocal\t%s\t%s\tworker-t004\t%s" "$(wsid)" "$(pane)" "$tmp/elsewhere"'
 check "S9 no agent start, no prompt" '[ "$(cnt "^agent\tstart\t")" = 0 ] && never 0 0'
 
+fresh
+git -C "$repo" worktree add -q "$tmp/repo-feat" -b feat
+git -C "$tmp/repo-feat" -c user.name=t -c user.email=t@t commit -q --allow-empty -m feat
+featsha=$(git -C "$tmp/repo-feat" rev-parse HEAD)
+printf '{"force_push":"deny"}\n' > "$tmp/repo-feat/.stratum/git-guard.json"
+repo="$tmp/repo-feat" run bash "$script" start "${sargs[@]}"
+check "S10 exit 0" '[ $rc = 0 ]'
+check "S10 worktree create from the main checkout, base is the linked worktree HEAD" '[ "$featsha" != "$sha" ] && [ "$(cnt "^worktree\tcreate\t")" = 1 ] && hascall "worktree\tcreate\t--cwd\t%s\t--branch\tworker-t004\t--base\t%s\t--path\t%s\t--label\tworker-t004\t--no-focus" "$repo" "$featsha" "$tmp/repo-worker-t004"'
+check "S10 guard file read from the linked worktree" '[ ! -e "$repo/.stratum/git-guard.json" ] && [ "$(jq -S -c . "$(wt)/.stratum/git-guard.json")" = "$(jq -S -c -n "{force_push:\"deny\",commit:\"auto\"}")" ]'
+check "S10 never-list, one prompt" 'never 0 1'
+git -C "$repo" worktree remove --force "$tmp/repo-feat"
+git -C "$repo" branch -q -D feat
+
 fresh; run bash "$script" start 'bad id' --task "$task" --test "$testcmd" --lane "$lane" --roster "$roster"
 prej P1 "Task id must be letters, digits or dash, start with a letter or digit, and be at most 25 characters."
 fresh; run bash "$script" start T004 --task "$tmp/nofile" --test "$testcmd" --lane "$lane" --roster "$roster"

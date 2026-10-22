@@ -72,7 +72,7 @@ with the brief on stdin, `<Q>` = `printf %q` of `<WT>` with one leading `\~` tur
 
 With the brief, `start` writes `<WT>/.stratum/git-guard.json` (D24), after
 `mkdir -p <WT>/.stratum`. The content `G` is the repo's own guard file merged with the commit key:
-read `<repo>/.stratum/git-guard.json` of this machine's repo (`git rev-parse --show-toplevel`) if
+read `.stratum/git-guard.json` of the calling folder (`git rev-parse --show-toplevel`, not `<repo>`) if
 it exists, else `{}`; set `.commit = "auto"`; write it as one line (`jq -c`). So per-repo keys such
 as `"force_push": "deny"` carry over to the worker. On a saved machine both files go in the same
 ssh call, with `G` quoted by `printf %q`:
@@ -161,8 +161,11 @@ No match: `No worker <N> on <m or local>.`, exit 1. More than one: `More than on
 5 H agent get N                          -> state
 ```
 
-- `<repo>`: `git rev-parse --show-toplevel` here, `--repo` on a saved machine. `<sha>`:
-  `git rev-parse HEAD` here.
+- `<repo>`: here, the main checkout, `dirname "$(git rev-parse --path-format=absolute --git-common-dir)"`,
+  also when the script runs in a linked worktree: herdr refuses a linked worktree as the source
+  (`linked_worktree_source`, research R3). On a saved machine, `--repo`. `<repo parent>` and
+  `<repo name>` in `--path` come from that same `<repo>`. `<sha>`: `git rev-parse HEAD` of the
+  calling folder.
 - Step 3 answers `agent_not_ready`, or step 4 answers `agent_blocked` (a dialog is up; herdr sends
   no input): print the `worker` line, `state blocked`, then `pane text:` and the last 40 lines of
   `H agent read N --source recent-unwrapped --lines 40` (`.result.read.text`), exit 4. After step 3
@@ -195,6 +198,11 @@ The result file check is `test -f <WT>/result.md` here and
   --text: H pane send-text <pane> <text>; H agent send-keys N enter
 3 H agent get N                          -> state; exit 4 if still blocked, else 0
 ```
+
+Step 1 is one line of the script: the `blocked` check and the `not blocked: <state>` print
+together (NC5 deletes exactly that line). Step 3 prints the `state` line of section 5,
+`state<TAB><state><TAB><N><TAB><pane>`, with every state but `blocked` printed as `working`,
+as `start` and `goal` do. `answer` never prints the pane text.
 
 `result`:
 
@@ -276,7 +284,7 @@ makes their facts succeeded (lessons L20).
 
 ```text
 worker	<N>	<m|local>	<WS|->	<pane|->	<branch|->	<WT|->      (start)
-state	<working|blocked|finished|stopped>	<N>	<pane>          (start, goal, wait, answer; start and goal print working for every state but blocked)
+state	<working|blocked|finished|stopped>	<N>	<pane>          (start, goal, wait, answer; start, goal and answer print working for every state but blocked; answer prints no pane text)
 pane text:                                                        (then the pane lines as they are)
 result	<N>	<WT>/result.md                                       (then the file as it is)
 fetched	<N>	<sha>                                                (result, saved machine)
@@ -308,6 +316,7 @@ stub log, never from built ids.
 | S5 | `agent prompt` fails with `agent_prompt_stalled`: `stopped:` line, no second prompt, nothing closed, exit 1 |
 | S6 | `start` when `workspace list` already has the label `worker-t004`: one line `A worker worker-t004 already exists.`, no `worktree create`, no other mutating call, exit 1 (plan G10, lessons L11) |
 | S7 | `agent prompt` fails with `agent_blocked`: `worker` line, `state blocked`, `pane text:`, the stub pane text, no second prompt, nothing closed, exit 4; then `goal` sends exactly one `agent prompt` |
+| S10 | `start` run from a linked worktree of the temp repo: `worktree create` has `--cwd <main checkout>` and `--path <main checkout parent>/<main checkout name>-worker-t004`, `--base` is HEAD of the linked worktree, and the guard file is read from the linked worktree's `.stratum/git-guard.json` |
 | P1-P7 | each check of section 2 rows 1 to 7: one line with the phrase, no herdr call, exit 1 |
 | P2b | `start` with a task file that exists but is empty: section 2 row 2 line, no herdr call, exit 1 |
 | P5b | roster with an empty TAB field on one line: section 2 row 5 line `Roster line <n> must be ...`, exit 1; a roster that ends with a blank line passes the check |
@@ -316,9 +325,9 @@ stub log, never from built ids.
 | W3 | `wait`, settles `idle`, no result.md, resume check matches, then `done` with result.md: `state finished`, two `agent wait` without `--until`, exit 0 |
 | W4 | `wait`, settles `idle`, no result.md, resume check times out: `state stopped`, pane text, exit 5 |
 | W5 | `wait`, `blocked`: `state blocked`, the worker name, pane text, exit 4 |
-| A1 | `answer --keys 1`, state `blocked`: one `agent send-keys worker-t004 1`, exit 0 |
+| A1 | `answer --keys 1`, states `blocked` before and `working` after: one `agent send-keys worker-t004 1`, the line `state<TAB>working<TAB>worker-t004<TAB><pane>`, exit 0 |
 | A2 | `answer --text yes`, state `working`: `not blocked: working`, no `send-keys`, no `send-text`, exit 1 (US2 scenario 3) |
-| A3 | `answer --text "use main"`, state `blocked`: `pane send-text <pane> use main`, then `agent send-keys worker-t004 enter` |
+| A3 | `answer --text "use main"`, states `blocked` before and after: `pane send-text <pane> use main`, then `agent send-keys worker-t004 enter`, the line `state<TAB>blocked<TAB>worker-t004<TAB><pane>`, exit 4 |
 | G1 | `result` here with result.md: prints `RESULT FILE <random>`, not `STUB PANE`, exit 0 |
 | G2 | `result` here, no result.md: `no result file: `, `pane text:`, the stub pane text, exit 1 |
 | C1 | `close`, state `done`: one `workspace close` on the stub's WS, `closed`, `folder <WT> ready to remove`, exit 0 |

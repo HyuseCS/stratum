@@ -41,6 +41,14 @@ branch `18-codex-advisor`.
 - Not verified: the answer of `workspace close` (schema `workspace_closed` with `workspace_id`) and
   that `workspace close` on a workspace made by `worktree create` does not ask for `--group`. The
   live local run (quickstart section 2) checks both.
+- Live T005 (2026-10-23, quickstart section 2, from `/home/hyuse/Desktop/stratum-003-demo`, a
+  linked worktree of `/home/hyuse/Desktop/stratum`): step 1 `worktree create --cwd
+  /home/hyuse/Desktop/stratum-003-demo ...` failed at once (0.016 s) with
+  `{"error":{"code":"linked_worktree_source","message":"New and open worktree actions start from the repo parent workspace."},"id":"cli:worktree:create"}`.
+  `start` printed `stopped: <that line>` and `worker worker-t900 local - - - -`, exit 1. Nothing
+  was made: no workspace, agent, branch or folder `worker-t900`. So `<repo>` = `git rev-parse
+  --show-toplevel` breaks `start` in every linked worktree (each Stratum feature runs in one).
+  The `workspace close` answer and `--group` stay not verified: the run stopped before them.
 
 ## R2. Worker names, labels and branch (FR-001, FR-016)
 
@@ -58,15 +66,23 @@ branch `18-codex-advisor`.
 ## R3. Worktree folder and base (FR-001, D15)
 
 - Decision: `H worktree create --cwd <repo> --branch <name> --base <sha> --path <path> --label <name> --no-focus`.
-  `<repo>` is `git rev-parse --show-toplevel` here, or `--repo` on a saved machine. `<path>` is
-  `<repo parent>/<repo name>-<name>`, the `st-worktree.sh` shape. `<sha>` is `git rev-parse HEAD`
-  here, for both machines. Every later step uses `.result.worktree.path` from the answer, never
+  `<repo>` here is the main checkout, `dirname "$(git rev-parse --path-format=absolute --git-common-dir)"`,
+  or `--repo` on a saved machine. `<path>` is `<repo parent>/<repo name>-<name>`, the
+  `st-worktree.sh` shape, from that `<repo>`. `<sha>` is `git rev-parse HEAD` of the calling
+  folder, for both machines. The guard file (D24) is read from the calling folder's
+  `git rev-parse --show-toplevel`. Every later step uses `.result.worktree.path` from the answer, never
   the computed path (L19).
 - Rationale: `~/.config/herdr/config.toml` sets no worktree folder and herdr's default is not
   documented, so the path is given. The base is the orchestrator's commit so the worker starts
   from the committed spec and tasks. On the laptop, a base that is not in its repo makes herdr
   fail: the script stops with herdr's line. It never pushes to make the commit appear (spec
   Assumption: nothing is pushed).
+- Live (T005, 2026-10-23, see R1): `worktree create --cwd /home/hyuse/Desktop/stratum-003-demo`, a
+  linked worktree, failed with `{"error":{"code":"linked_worktree_source","message":"New and open worktree actions start from the repo parent workspace."}}`
+  in 0.016 s, nothing made. `herdr worktree list` from that pane gives
+  `source: {repo_root: "/home/hyuse/Desktop/stratum", source_workspace_id: "w1G"}`. Rule: herdr
+  makes worktrees only from the main checkout, so `--cwd` is the main checkout, and the worker
+  folder sits next to it (`/home/hyuse/Desktop/stratum-worker-t900`). Test case S10.
 - `--trust-repository` is never passed (`herdr --skill`: only after the user has verified the
   repository). An untrusted-repository error is a stop line.
 
@@ -80,6 +96,8 @@ branch `18-codex-advisor`.
   the script reports the worker `blocked` with the pane text (FR-006 path). The skill handles it as a question (a trust dialog is an access decision, so it goes to the user, D26),
   then sends the prompt with the `goal` subcommand.
 - Not verified live. Quickstart section 2 records whether a dialog showed.
+- Live T005: `start` exit 1 at `worktree create` (`linked_worktree_source`, R1). `claude` never
+  started, so the trust dialog is still not verified.
 
 ## R5. The one prompt and `/goal` (FR-003, D21)
 
@@ -98,6 +116,7 @@ branch `18-codex-advisor`.
   PreToolUse hook's ask (auto-mode-config.md, "Add a human checkpoint").
 - Not verified live: that a pasted `/goal ...` runs as the slash command through
   `agent prompt` (bracketed paste). Quickstart section 2.
+- Live T005: not reached; `start` stopped at `worktree create` (R1). `◎ /goal active` not seen.
 
 ## R6. Waiting (FR-004, D13, D14)
 
@@ -114,6 +133,7 @@ branch `18-codex-advisor`.
   measures the gap between goal turns.
 - Alternatives: `agent prompt --wait` as the wait. Rejected: D13 names the prompt wait, but a
   second prompt is a re-prompt (FR-004), and the one prompt already returns at `working`.
+- Live T005: not reached; `start` stopped at `worktree create` (R1). No `state` line, no idle gap measured. D24 commit and guard file not checked: no worker worktree was made.
 
 ## R7. Questions and answers (FR-006, D14, US2)
 
@@ -185,6 +205,7 @@ branch `18-codex-advisor`.
   disk (spike test 3). herdr's rule "never close what you did not create" holds because the label
   is the script's own `worker-` name. `ponytail:` no process check in the script; quickstart
   section 2 checks `pgrep` live.
+- Live T005: `close` not run; `start` stopped at `worktree create` (R1). After the stop, `agent list` and `workspace list` held no `worker-t900` (grep exit 1 each); `agent read worker-t900` answered `agent_not_found`.
 
 ## R12. Headless worker (FR-011, D12, D19)
 

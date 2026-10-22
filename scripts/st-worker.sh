@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
-usage() { echo "usage: st-worker.sh start <id> --task <file> --test <cmd> --lane <text> --roster <file> | goal <id> --test <cmd> | wait <id> | result <id> | close <id> | list" >&2; exit 2; }
+usage() { echo "usage: st-worker.sh start <id> --task <file> --test <cmd> --lane <text> --roster <file> | goal <id> --test <cmd> | wait <id> | answer <id> --keys <key>... | --text <text> | result <id> | close <id> | list" >&2; exit 2; }
 fail() { echo "$1" >&2; exit 1; }
 [ $# -gt 0 ] || usage
 cmd=$1; shift
 case $cmd in
-  start | goal | wait | result | close) [ $# -gt 0 ] || usage; id=$1; shift ;;
+  start | goal | wait | answer | result | close) [ $# -gt 0 ] || usage; id=$1; shift ;;
   list) ;;
   *) usage ;;
 esac
@@ -16,6 +16,11 @@ while [ $# -gt 0 ]; do
     "start --test" | "goal --test") test=$2 ;;
     "start --lane") lane=$2 ;;
     "start --roster") roster=$2 ;;
+    "answer --text") text=$2 ;;
+    "answer --keys")
+      keys=("${@:2}")
+      break
+      ;;
     *) usage ;;
   esac
   shift 2
@@ -23,6 +28,7 @@ done
 case $cmd in
   start) [ -n "${task+x}" ] && [ -n "${test+x}" ] && [ -n "${lane+x}" ] && [ -n "${roster+x}" ] || usage ;;
   goal) [ -n "${test+x}" ] || usage ;;
+  answer) [ "${text+x}${keys+x}" = x ] || usage ;;
 esac
 
 N=
@@ -122,7 +128,7 @@ brief() {
 
 case $cmd in
 start)
-  repo=$(git rev-parse --show-toplevel 2>/dev/null) && sha=$(git rev-parse HEAD 2>/dev/null) || fail "Run start inside a git repo with a commit."
+  top=$(git rev-parse --show-toplevel 2>/dev/null) && sha=$(git rev-parse HEAD 2>/dev/null) && repo=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)") || fail "Run start inside a git repo with a commit."
   h workspace list
   c=$(jq -er --arg n "$N" '[.result.workspaces[] | select(.label == $n)] | length' <<<"$r") || stop "no .result.workspaces in the herdr answer"
   [ "$c" = 0 ] || fail "A worker $N already exists."
@@ -135,7 +141,7 @@ start)
   [ "$WT" = "$path" ] || stop "herdr made the worktree in $WT, not $path"
   brief >"$WT/brief.md" || stop "cannot write $WT/brief.md"
   mkdir -p "$WT/.stratum" || stop "cannot make $WT/.stratum"
-  jq -c '.commit="auto"' <(cat "$repo/.stratum/git-guard.json" 2>/dev/null || echo '{}') >"$WT/.stratum/git-guard.json" || stop "cannot write the commit guard file in $WT/.stratum"
+  jq -c '.commit="auto"' <(cat "$top/.stratum/git-guard.json" 2>/dev/null || echo '{}') >"$WT/.stratum/git-guard.json" || stop "cannot write the commit guard file in $WT/.stratum"
   if ! "${H[@]}" agent start "$N" --kind claude --pane "$PANE" --timeout 120000 -- --permission-mode auto -n "$N" >/dev/null 2>"$e"; then
     [ "$(code)" = agent_not_ready ] || stop "$(head -1 "$e")"
     worker
@@ -192,6 +198,20 @@ wait)
         ;;
     esac
   done
+  ;;
+answer)
+  look
+  [ "$S" = blocked ] || fail "not blocked: $S"
+  if [ -n "${keys+x}" ]; then
+    h agent send-keys "$N" "${keys[@]}"
+  else
+    h pane send-text "$PANE" "$text"
+    h agent send-keys "$N" enter
+  fi
+  look
+  [ "$S" = blocked ] || S=working
+  printf 'state\t%s\t%s\t%s\n' "$S" "$N" "$PANE"
+  [ "$S" != blocked ] || exit 4
   ;;
 result)
   find_worker
