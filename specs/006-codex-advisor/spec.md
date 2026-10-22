@@ -117,14 +117,14 @@ Codex never changes a file, never builds, never fixes. It runs in the read-only 
 - **FR-004**: An empty, failed, malformed or late answer MUST count as `BLOCKED` with a one-line reason, never as approval. `BLOCKED` exits with a non-zero status; `no advisor` lines exit with success.
 - **FR-005**: The orchestrator MUST treat `REVISE` findings like review findings: check each against the source, fix the real small ones, bring big ones to the user, drop the false ones, then run the advisor once more on the changed input. Two rounds at most per point per gate pass, then the user decides. A later gate pass on the same point starts a new count.
 - **FR-006**: On `BLOCKED` the orchestrator MUST stop at that point and show the user the reason. If the user says to continue, the point is recorded as `BLOCKED, user continued` and skipped; the advisor is not retried at that point in this gate pass.
-- **FR-007**: Every call MUST append a record to `specs/<feature>/advisor.md` with: the point, the date and time, the SHA256 of the input (the bytes of `plan.md` alone at the plan point, the bytes of `git diff <base>` at the diff point, the bytes of both failure outputs joined at the test point), the verdict and the findings.
+- **FR-007**: Every call MUST append a record to `specs/<feature>/advisor.md` with: the point, the date and time, the SHA256 of the input (the bytes of `spec.md`, `plan.md` and `tasks.md` joined in that order at the plan point, the bytes of `git diff <base> -- . ':(exclude)specs/<feature>/advisor.md'` followed by `git diff --no-index /dev/null <path>` for each untracked file (same exclusion) at the diff point, the bytes of both failure outputs joined at the test point), the verdict and the findings.
 - **FR-008**: At a gate the orchestrator MUST compare the latest record's hash for that point with the current input. A mismatch is "advisor approval is stale" and counts as no approval.
 - **FR-009**: The prompt MUST name paths and a base commit, not paste file contents, except the test point, where the task text, test path and both failure outputs are pasted because they are in no file.
 - **FR-010**: The mode MUST come from `.stratum/advisor.json`: `codex` (default when the file is missing), `both`, or `off`. `both` runs Codex and tells the orchestrator to also consult `/advisor` if one is set. `off` prints `no advisor: mode off` and the flow runs as before this feature. A file that is not valid or has an unknown mode is `BLOCKED: bad advisor.json`.
 - **FR-011**: When `codex` is not on PATH the advisor MUST print `no advisor: codex not found`, exit with success, and the flow MUST run as before this feature, with `/advisor` if the user set one.
 - **FR-012**: Codex MUST run in the read-only sandbox at every point, with no flag that allows writes or bypasses the sandbox. Codex is used for review only, never to build or fix.
 - **FR-013**: The prompt MUST tell Codex to review only, to stay inside the named inputs, and never to open env or secret files.
-- **FR-014**: The Codex model and reasoning effort MUST come from the user's own Codex configuration. Stratum sets no override.
+- **FR-014**: The Codex model and reasoning effort MUST come from the optional `model` and `effort` keys in `.stratum/advisor.json` when present, else from the user's own Codex configuration. `st-init` writes only `mode`.
 - **FR-015**: `st-init` MUST ask one question about the advisor mode, with `codex` as the recommended answer, and write `.stratum/advisor.json`, unless the file exists.
 - **FR-016**: The README "Built in" advisor bullet, `skills/st-inspect/SKILL.md` step 4, `skills/st-build/SKILL.md` steps "Two tries" and the end-of-build advisor paragraph, and `skills/st-fast/SKILL.md` steps 3 and 4 MUST describe the Codex advisor, the wait, the verdict handling, the modes, the record, and the no-Codex path. The README MUST state what each call sends to OpenAI and that `mode: off` is the switch.
 - **FR-017**: A test MUST cover: the happy path with a fake `codex`, `codex` missing from PATH, `codex` exiting non-zero, an empty answer, a malformed answer, a stale hash, each mode, and a check that the command carries the read-only sandbox and no write-capable flag.
@@ -132,7 +132,7 @@ Codex never changes a file, never builds, never fixes. It runs in the read-only 
 ### Key Entities
 
 - **Advisor record**: one entry per call in `specs/<feature>/advisor.md`. Point, date and time, input hash, verdict, findings.
-- **Advisor mode**: one value in `.stratum/advisor.json`: `codex`, `both`, or `off`.
+- **Advisor settings**: `.stratum/advisor.json` with `mode` (`codex`, `both`, or `off`) and optional `model` and `effort`.
 - **Verdict**: `APPROVED`, `REVISE`, or `BLOCKED`.
 - **Finding**: claim, evidence, location (file and line when known), severity.
 
