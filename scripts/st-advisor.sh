@@ -41,6 +41,31 @@ if [ $cmd = check ]; then
   echo "${rest#* | } sha256 $hash"
   exit 0
 fi
+[ -e .stratum/advisor.json ] || { echo 'no advisor: mode not set. Write .stratum/advisor.json with "mode": "codex", "both" or "off".'; exit 0; }
+cfg=$(python3 -I - <<'PY'
+import json, re, sys
+try:
+    s = json.loads(open(".stratum/advisor.json", "rb").read())
+except (OSError, ValueError, RecursionError):
+    sys.exit(1)
+if not (isinstance(s, dict) and set(s) <= {"mode", "model", "effort"} and all(isinstance(v, str) for v in s.values())
+        and s.get("mode") in ("codex", "both", "off")
+        and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:/-]{0,63}", s.get("model", "x"))
+        and re.fullmatch(r"[a-z]{1,16}", s.get("effort", "x"))):
+    sys.exit(1)
+print(s["mode"], s.get("model", ""), s.get("effort", ""), sep="\n")
+PY
+) || {
+  printf '## %s | %s | sha256 %s | BLOCKED\nreason: bad advisor.json\n\n' "$point" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$hash" >> "$f/advisor.md"
+  printf 'BLOCKED: bad advisor.json\nrecord: %s/advisor.md\n' "$f"
+  exit 1
+}
+{ read -r mode; read -r model; read -r effort; } <<<"$cfg"
+[ $mode = off ] && { echo "no advisor: mode off"; exit 0; }
+[ $mode = both ] && echo "mode both: also consult /advisor if one is set"
+opts=()
+[ -n "$model" ] && opts+=(-m "$model")
+[ -n "$effort" ] && opts+=(-c "model_reasoning_effort=\"$effort\"")
 command -v codex >/dev/null || { echo "no advisor: codex not found"; exit 0; }
 
 printf '%s\n' '{"type":"object","additionalProperties":false,"required":["verdict","summary","findings"],"properties":{"verdict":{"type":"string","enum":["APPROVED","REVISE","BLOCKED"]},"summary":{"type":"string"},"findings":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["claim","evidence","location","severity"],"properties":{"claim":{"type":"string"},"evidence":{"type":"string"},"location":{"type":"string"},"severity":{"type":"string","enum":["CRITICAL","HIGH","MEDIUM","LOW"]}}}}}}' > "$tmp/schema.json"
@@ -81,7 +106,7 @@ printf '%s\n' '{"type":"object","additionalProperties":false,"required":["verdic
 } > "$tmp/prompt"
 
 rc=0
-timeout -k 10 540 codex exec -s read-only --ephemeral --output-schema "$tmp/schema.json" -o "$tmp/answer.json" - < "$tmp/prompt" > "$tmp/out" 2> "$tmp/err" || rc=$?
+timeout -k 10 540 codex exec -s read-only "${opts[@]}" --ephemeral --output-schema "$tmp/schema.json" -o "$tmp/answer.json" - < "$tmp/prompt" > "$tmp/out" 2> "$tmp/err" || rc=$?
 
 python3 -I - "$point" "$f" "$hash" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$tmp/answer.json" "$rc" "$tmp/err" <<'PY'
 import json, os, sys
