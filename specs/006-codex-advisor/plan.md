@@ -76,8 +76,8 @@ Post-design re-check: all gates pass. No violations, so Complexity Tracking stay
   so and names `"mode": "off"` as the switch. No file means off (D11), so nothing leaves the
   machine until the owner writes the file. Personal or minors' data: whatever the project's
   files, diffs and test outputs hold goes with them. The project owner decides with the mode. At
-  the diff point, untracked paths whose basename matches `.env*`, `*.pem`, `*.key`, `*.p12` or
-  `*.pfx` are not named to Codex, and the prompt says `Never quote a secret value in a finding.`
+  the diff point, untracked paths whose basename matches the FR-013 name list (case-insensitive)
+  are not named to Codex, and the prompt says `Never quote a secret value in a finding.`
   (D12). Codex can still find and read them: the list and the line lower the chance, they do not
   block it (research R6).
 - **S2. Review-only, read-only sandbox (T001, T002).** The only Codex call carries

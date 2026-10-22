@@ -235,7 +235,7 @@ phrases <<'EOF'
 #18 FR-016 readme	README.md	With no `codex` on PATH you get one line, `no advisor: codex not found`
 #18 FR-016 readme	README.md	A failed, empty, malformed or late answer (540 seconds) is `BLOCKED`, never approval.
 #18 FR-016 readme	README.md	An approval of a plan or diff that changed since then is stale.
-#18 FR-013 readme	README.md	untracked `.env*`, `*.pem`, `*.key`, `*.p12` and `*.pfx` files are left out of the list Codex is given
+#18 FR-013 readme	README.md	untracked `.env*`, `*.env`, `*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.jks`, `*.keystore`, `id_rsa*`, `id_ed25519*`, `id_ecdsa*`, `.npmrc`, `.netrc`, `.pypirc` and `credentials*` files (any case) are left out of the list Codex is given
 #18 D13 readme	README.md	Whether Codex's own shell sees your environment variables is not checked.
 #18 inspect keep	skills/st-inspect/SKILL.md	; big ones go to the user before the gate.
 #18 FR-014 readme	README.md	Optional `model` and `effort` keys in the same file pick the Codex model and reasoning effort

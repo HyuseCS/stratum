@@ -117,6 +117,12 @@ run diff specs/001-demo "$short"
 lst=$(awk '/^Untracked files:/{f=1;next} f' "$tmp/prompt" 2>/dev/null)
 check "diff point names full base and untracked files" 'grep -qF "$first" "$tmp/prompt" && grep -qxF "new file.txt" <<<"$lst" && ! grep -qxE "\.env|sub/k\.pem|c\.key|c\.p12|c\.pfx" <<<"$lst" && last_header diff | grep -q "^## diff | "'
 rm -rf "$proj/new file.txt" "$proj/.env" "$proj/sub" "$proj/c.key" "$proj/c.p12" "$proj/c.pfx"
+sec=(.ENV Server.PEM prod.env id_rsa id_ed25519.pub .npmrc .netrc credentials.json app.jks release.keystore)
+for p in "${sec[@]}" notes.md config.json; do echo k > "$proj/$p"; done
+run diff specs/001-demo "$first"
+lst=$(awk '/^Untracked files:/{f=1;next} f' "$tmp/prompt" 2>/dev/null)
+check "FR-013 untracked filter: any case, keys, rc files, credentials" 'grep -qxF notes.md <<<"$lst" && grep -qxF config.json <<<"$lst" && ! grep -qxiE "\.env|server\.pem|prod\.env|id_rsa|id_ed25519\.pub|\.npmrc|\.netrc|credentials\.json|app\.jks|release\.keystore" <<<"$lst"'
+for p in "${sec[@]}" notes.md config.json; do rm -f "$proj/$p"; done
 
 mkdir -p "$tmp/sys"
 IFS=: read -ra pdirs <<<"$PATH"
@@ -270,6 +276,13 @@ run check diff specs/001-demo "$first"
 rm -f "$proj/.env"
 check "untracked .env makes diff stale" 'stale'
 
+echo S=1 > "$proj/.ENV"
+run diff specs/001-demo "$first"
+echo S=2 > "$proj/.ENV"
+run check diff specs/001-demo "$first"
+rm -f "$proj/.ENV"
+check "untracked .ENV edit makes diff stale" 'stale'
+
 run diff specs/001-demo "$first"
 echo 'x = 3' >> "$proj/a.py"
 run check diff specs/001-demo "$first"
@@ -295,16 +308,21 @@ check "untracked nested repo: diff run exit 0, not listed, no access error" '[ $
 printf 'TOKEN=oldsecret\n' > "$proj/.env"
 mkdir -p "$proj/sub"
 printf 'keyval1\n' > "$proj/sub/k.key"
-gitc add .env sub/k.key
-gitc commit -q -m secrets -- .env sub/k.key
+printf 'pemval1\n' > "$proj/Server.PEM"
+printf '{"k":"credval1"}\n' > "$proj/sub/credentials.json"
+gitc add .env sub/k.key Server.PEM sub/credentials.json
+gitc commit -q -m secrets -- .env sub/k.key Server.PEM sub/credentials.json
 sbase=$(git -C "$proj" rev-parse HEAD)
 printf 'TOKEN=newsecret\n' > "$proj/.env"
+printf 'pemval2\n' > "$proj/Server.PEM"
+printf '{"k":"credval2"}\n' > "$proj/sub/credentials.json"
 rm "$proj/sub/k.key"
 printf 'normchange9\n' >> "$proj/a.py"
 run diff specs/001-demo "$sbase"
 dcmd=$(sed -n 's/^Inputs: run \(.*\) and read each untracked file.*/\1/p' "$tmp/prompt")
 dout=$(cd "$proj" && eval "$dcmd")
 check "diff point command leaves out tracked secret files" '[ -n "$dcmd" ] && ! grep -qE "oldsecret|newsecret|keyval1" <<<"$dout" && grep -qF normchange9 <<<"$dout"'
+check "diff point command leaves out tracked secret files in any case and directory" '[ -n "$dcmd" ] && ! grep -qE "pemval|credval" <<<"$dout" && grep -qF normchange9 <<<"$dout"'
 printf 'TOKEN=newer\n' > "$proj/.env"
 run check diff specs/001-demo "$sbase"
 check "tracked .env edit makes diff stale" 'stale'

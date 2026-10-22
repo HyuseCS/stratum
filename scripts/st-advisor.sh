@@ -106,13 +106,15 @@ printf '%s\n' '{"type":"object","additionalProperties":false,"required":["verdic
     diff)
       printf '%s\n' \
         'Point: diff. Review the full diff before the build is called done: hidden regressions, broken project rules, missed requirements.' \
-        "Inputs: run git diff $sha -- . ':(exclude)$f/advisor.md' ':(exclude).env*' ':(exclude)*/.env*' ':(exclude)*.pem' ':(exclude)*.key' ':(exclude)*.p12' ':(exclude)*.pfx' and read each untracked file listed below. Env and secret files are left out of that diff. The feature dir is $f." \
+        "Inputs: run git diff $sha -- . ':(exclude)$f/advisor.md' ':(exclude,icase).env*' ':(exclude,icase)*/.env*' ':(exclude,icase)*.env' ':(exclude,icase)*.pem' ':(exclude,icase)*.key' ':(exclude,icase)*.p12' ':(exclude,icase)*.pfx' ':(exclude,icase)*.jks' ':(exclude,icase)*.keystore' ':(exclude,icase)id_rsa*' ':(exclude,icase)*/id_rsa*' ':(exclude,icase)id_ed25519*' ':(exclude,icase)*/id_ed25519*' ':(exclude,icase)id_ecdsa*' ':(exclude,icase)*/id_ecdsa*' ':(exclude,icase).npmrc' ':(exclude,icase)*/.npmrc' ':(exclude,icase).netrc' ':(exclude,icase)*/.netrc' ':(exclude,icase).pypirc' ':(exclude,icase)*/.pypirc' ':(exclude,icase)credentials*' ':(exclude,icase)*/credentials*' and read each untracked file listed below. Env and secret files are left out of that diff. The feature dir is $f." \
         'Untracked files:'
       list=
+      shopt -s nocasematch
       while IFS= read -r -d '' p; do
         [[ $p == */ ]] && continue
-        case ${p##*/} in .env*|*.pem|*.key|*.p12|*.pfx) ;; *) list+="$p"$'\n' ;; esac
+        case ${p##*/} in .env*|*.env|*.pem|*.key|*.p12|*.pfx|*.jks|*.keystore|id_rsa*|id_ed25519*|id_ecdsa*|.npmrc|.netrc|.pypirc|credentials*) ;; *) list+="$p"$'\n' ;; esac
       done < "$tmp/untracked"
+      shopt -u nocasematch
       [ -n "$list" ] || list=$'none\n'
       printf '%s' "$list" ;;
   esac

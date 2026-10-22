@@ -117,8 +117,8 @@ D3). A foreground Bash call is capped at 600000 ms.
 - Test point: SHA256 of the bytes of the first failure output followed by the bytes of the
   second, no separator.
 - Diff point, secret-looking untracked files (D12, FR-013): the `Untracked files:` list in the
-  prompt leaves out each path whose basename matches `.env*`, `*.pem`, `*.key`, `*.p12` or
-  `*.pfx`. They stay in the hash, so adding one still makes an approval stale. The prompt also
+  prompt leaves out each path whose basename matches the FR-013 name list, case-insensitive.
+  They stay in the hash, so adding one still makes an approval stale. The prompt also
   says `Never quote a secret value in a finding.` Codex can still run `git status` and read such a
   file (the sandbox blocks writes, not reads, R5); the list and the prompt line lower the chance,
   they do not block it.

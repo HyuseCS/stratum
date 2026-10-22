@@ -91,7 +91,7 @@ No database. Two files and the answer Codex writes. Exact formats are in
     (`git ls-files -z --others --exclude-standard -- . ':(exclude)<feature>/advisor.md'`, in that
     order) `git diff --no-index -- /dev/null <path>`. `<base>` is the full SHA. Every untracked
     path is hashed, including the secret-looking ones that the prompt's `Untracked files:` list
-    leaves out (basename `.env*`, `*.pem`, `*.key`, `*.p12`, `*.pfx`, D12). So a new `.env`
+    leaves out (basename in the FR-013 name list, case-insensitive, D12). So a new `.env`
     makes a diff approval stale without being named to Codex. Both diffs run with
     `--no-ext-diff --no-color --no-renames --default-prefix`, so the user's git config cannot
     change the digest. An untracked entry ending in `/` (a nested repository or worktree) is

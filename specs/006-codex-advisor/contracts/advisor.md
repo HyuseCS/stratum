@@ -131,14 +131,17 @@ Diff point:
 
 ```text
 Point: diff. Review the full diff before the build is called done: hidden regressions, broken project rules, missed requirements.
-Inputs: run git diff <sha> -- . ':(exclude)<f>/advisor.md' ':(exclude).env*' ':(exclude)*/.env*' ':(exclude)*.pem' ':(exclude)*.key' ':(exclude)*.p12' ':(exclude)*.pfx' and read each untracked file listed below. Env and secret files are left out of that diff. The feature dir is <f>.
+Inputs: run git diff <sha> -- . ':(exclude)<f>/advisor.md' ':(exclude,icase).env*' ':(exclude,icase)*/.env*' ':(exclude,icase)*.env' ':(exclude,icase)*.pem' ':(exclude,icase)*.key' ':(exclude,icase)*.p12' ':(exclude,icase)*.pfx' ':(exclude,icase)*.jks' ':(exclude,icase)*.keystore' ':(exclude,icase)id_rsa*' ':(exclude,icase)*/id_rsa*' ':(exclude,icase)id_ed25519*' ':(exclude,icase)*/id_ed25519*' ':(exclude,icase)id_ecdsa*' ':(exclude,icase)*/id_ecdsa*' ':(exclude,icase).npmrc' ':(exclude,icase)*/.npmrc' ':(exclude,icase).netrc' ':(exclude,icase)*/.netrc' ':(exclude,icase).pypirc' ':(exclude,icase)*/.pypirc' ':(exclude,icase)credentials*' ':(exclude,icase)*/credentials*' and read each untracked file listed below. Env and secret files are left out of that diff. The feature dir is <f>.
 Untracked files:
 <one path per line, or the line: none>
 ```
 
-The `Untracked files:` list leaves out each path whose basename matches `.env*`, `*.pem`,
-`*.key`, `*.p12` or `*.pfx` (shell `case` on `${path##*/}`, any directory). Those paths stay in
-the hash (section 2, D12). If every untracked path is left out, the list is `none`.
+The `Untracked files:` list leaves out each path whose basename matches, case-insensitive,
+`.env*`, `*.env`, `*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.jks`, `*.keystore`, `id_rsa*`,
+`id_ed25519*`, `id_ecdsa*`, `.npmrc`, `.netrc`, `.pypirc` or `credentials*` (shell `case` on
+`${path##*/}` under `nocasematch`, any directory). The `git diff` command in the prompt excludes
+the same names with `icase` pathspecs. Those paths stay in the hash (section 2, D12). If every
+untracked path is left out, the list is `none`.
 
 ## 5. Output and exit status
 
@@ -327,7 +330,7 @@ The Built in **Advisor.** bullet (lines 159-162) becomes:
   Each run appends the point, a SHA256 of the input, the verdict and the findings to `specs/<feature>/advisor.md`. An approval of a plan or diff that changed since then is stale.
   What leaves the machine: each call sends the prompt and the files Codex reads to OpenAI, on your Codex login and quota (about 37,000 tokens per plan or diff review). The prompt names paths and a base commit; at the test point it holds the task text, the test path and both failure outputs.
   The prompt tells Codex to stay inside the named inputs, never open env or secret files, and never quote a secret value. The sandbox does not block reads.
-  At the diff point, untracked `.env*`, `*.pem`, `*.key`, `*.p12` and `*.pfx` files are left out of the list Codex is given. Whether Codex's own shell sees your environment variables is not checked.
+  At the diff point, untracked `.env*`, `*.env`, `*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.jks`, `*.keystore`, `id_rsa*`, `id_ed25519*`, `id_ecdsa*`, `.npmrc`, `.netrc`, `.pypirc` and `credentials*` files (any case) are left out of the list Codex is given. Whether Codex's own shell sees your environment variables is not checked.
   `.stratum/advisor.json` sets the mode: `{"mode": "codex"}`, `{"mode": "both"}` (Codex, then `/advisor` if you set one), or `{"mode": "off"}`. `"mode": "off"` is the off switch: nothing goes to OpenAI.
   With no file the advisor is off and prints `no advisor: mode not set. Write .stratum/advisor.json with "mode": "codex", "both" or "off".` `st-init` writes the file for new projects. A project set up before this feature has no file, so the advisor stays off until you write it.
   With no `codex` on PATH you get one line, `no advisor: codex not found`, and the flow runs as before, with `/advisor` if you set one.
@@ -411,7 +414,7 @@ Tests list (T001 adds it, so `tests/test_inspect.sh` "README tests" stays green)
 | #18 FR-016 readme | README.md | `With no `codex` on PATH you get one line, `no advisor: codex not found`` |
 | #18 FR-016 readme | README.md | `A failed, empty, malformed or late answer (540 seconds) is `BLOCKED`, never approval.` |
 | #18 FR-016 readme | README.md | `An approval of a plan or diff that changed since then is stale.` |
-| #18 FR-013 readme | README.md | `untracked `.env*`, `*.pem`, `*.key`, `*.p12` and `*.pfx` files are left out of the list Codex is given` |
+| #18 FR-013 readme | README.md | `untracked `.env*`, `*.env`, `*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.jks`, `*.keystore`, `id_rsa*`, `id_ed25519*`, `id_ecdsa*`, `.npmrc`, `.netrc`, `.pypirc` and `credentials*` files (any case) are left out of the list Codex is given` |
 | #18 D13 readme | README.md | `Whether Codex's own shell sees your environment variables is not checked.` |
 | #18 inspect keep | skills/st-inspect/SKILL.md | `; big ones go to the user before the gate.` |
 | #18 FR-014 readme | README.md | `Optional `model` and `effort` keys in the same file pick the Codex model and reasoning effort` |
