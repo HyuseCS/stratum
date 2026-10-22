@@ -115,7 +115,7 @@ answer is a one-line `BLOCKED: <reason>` with exit 1 and a record, never approva
 
 ### Implementation for User Story 2
 
-- [ ] T004 [US2] In `scripts/st-advisor.sh`, add the no-codex line and the answer mapping of data-model.md "Advisor answer" rows 1 to 7, in that order, with the reasons of contracts/advisor.md section 5 (FR-004, FR-011). A `BLOCKED` the script sets writes a record with a `reason:` line. The Codex error reason is the last stderr line that starts `ERROR:`, else the last non-empty stderr line, else `codex exited <rc>` (research R2). Run `bash tests/test_advisor.sh`: all `ok`.
+- [X] T004 [US2] In `scripts/st-advisor.sh`, add the no-codex line and the answer mapping of data-model.md "Advisor answer" rows 1 to 7, in that order, with the reasons of contracts/advisor.md section 5 (FR-004, FR-011). A `BLOCKED` the script sets writes a record with a `reason:` line. The Codex error reason is the last stderr line that starts `ERROR:`, else the last non-empty stderr line, else `codex exited <rc>` (research R2). Run `bash tests/test_advisor.sh`: all `ok`.
 
 **Checkpoint**: US1 and US2 work. No path gives a silent approval.
 

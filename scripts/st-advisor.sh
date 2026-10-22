@@ -9,6 +9,7 @@ case $point in
   test) [ -f "$3" ] && [ -f "$5" ] && [ -f "$6" ] || usage ;;
   diff) sha=$(git rev-parse --verify --quiet "$3^{commit}") && [ -n "$sha" ] || usage ;;
 esac
+command -v codex >/dev/null || { echo "no advisor: codex not found"; exit 0; }
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
@@ -59,19 +60,52 @@ printf '%s\n' '{"type":"object","additionalProperties":false,"required":["verdic
   esac
 } > "$tmp/prompt"
 
-timeout -k 10 540 codex exec -s read-only --ephemeral --output-schema "$tmp/schema.json" -o "$tmp/answer.json" - < "$tmp/prompt" > "$tmp/out" 2> "$tmp/err"
+rc=0
+timeout -k 10 540 codex exec -s read-only --ephemeral --output-schema "$tmp/schema.json" -o "$tmp/answer.json" - < "$tmp/prompt" > "$tmp/out" 2> "$tmp/err" || rc=$?
 
-python3 -I - "$point" "$f" "$hash" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$tmp/answer.json" <<'PY'
-import json, sys
-point, f, h, ts, ans = sys.argv[1:]
-a = json.loads(open(ans, "rb").read())
+python3 -I - "$point" "$f" "$hash" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$tmp/answer.json" "$rc" "$tmp/err" <<'PY'
+import json, os, sys
+point, f, h, ts, ans, rc, err = sys.argv[1:]
 def clean(s):
     return s.replace("\r", " ").replace("\n", " ")
+def record(v, lines):
+    with open(f"{f}/advisor.md", "a", encoding="utf-8") as r:
+        r.write("".join(l + "\n" for l in [f"## {point} | {ts} | sha256 {h} | {v}", *lines, ""]))
+def blocked(reason):
+    reason = clean(reason)
+    record("BLOCKED", [f"reason: {reason}"])
+    print(f"BLOCKED: {reason}\nrecord: {f}/advisor.md")
+    sys.exit(1)
+def answer():
+    if rc in ("124", "137"):
+        blocked("timed out")
+    if rc != "0":
+        lines = [l for l in open(err, "rb").read().decode("utf-8", "replace").split("\n") if l.strip()]
+        errs = [l for l in lines if l.startswith("ERROR:")]
+        blocked((errs or lines or [f"codex exited {rc}"])[-1])
+    raw = open(ans, "rb").read() if os.path.isfile(ans) else b""
+    if not raw.strip():
+        blocked("empty answer")
+    try:
+        a = json.loads(raw)
+    except (ValueError, RecursionError):
+        blocked("malformed answer")
+    if not isinstance(a, dict):
+        blocked("malformed answer")
+    if a.get("verdict") not in ("APPROVED", "REVISE", "BLOCKED"):
+        blocked("no verdict")
+    keys = ("claim", "evidence", "location", "severity")
+    fs = a.get("findings")
+    if not isinstance(a.get("summary"), str) or not isinstance(fs, list) or not all(isinstance(x, dict) and all(isinstance(x.get(k), str) for k in keys) for x in fs):
+        blocked("malformed answer")
+    if a["verdict"] == "REVISE" and not fs:
+        blocked("REVISE with no findings")
+    return a
+a = answer()
 v = a["verdict"]
 summary = clean(a["summary"])
 found = [f"- [{clean(x['severity'])}] {clean(x['location'])}: {clean(x['claim'])} Evidence: {clean(x['evidence'])}" for x in a["findings"]]
-with open(f"{f}/advisor.md", "a", encoding="utf-8") as r:
-    r.write("".join(l + "\n" for l in [f"## {point} | {ts} | sha256 {h} | {v}", f"summary: {summary}", *found, ""]))
+record(v, [f"summary: {summary}", *found])
 head = [f"BLOCKED: {summary}"] if v == "BLOCKED" else [f"{v} sha256 {h}", f"summary: {summary}"]
 print("\n".join(head + found + [f"record: {f}/advisor.md"]))
 sys.exit(1 if v == "BLOCKED" else 0)
