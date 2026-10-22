@@ -12,6 +12,7 @@ mkdir -p "$tmp/bin"
 cat > "$tmp/bin/herdr" <<'EOF'
 #!/usr/bin/env bash
 T=$STUB_T
+X=$(cat "$T/x")
 if [ $# -eq 0 ]; then echo BARE >> "$T/calls"; exit 99; fi
 ( IFS=$'\t'; printf '%s\n' "$*" >> "$T/calls" )
 [ "$1" = --machine ] && shift 2
@@ -24,14 +25,14 @@ emit() { printf '%s\n' "$1" | tee -a "$T/resp"; }
 case "$1 $2" in
 "workspace create")
   next t > /dev/null; next p > /dev/null
-  echo "stubW:p1 stubW:t1" > "$T/panes"
-  emit '{"result":{"workspace":{"workspace_id":"stubW"},"tab":{"tab_id":"stubW:t1"},"root_pane":{"pane_id":"stubW:p1"}}}' ;;
+  echo "stubW:p1$X stubW:t1$X" > "$T/panes"
+  emit "{\"result\":{\"workspace\":{\"workspace_id\":\"stubW\"},\"tab\":{\"tab_id\":\"stubW:t1$X\"},\"root_pane\":{\"pane_id\":\"stubW:p1$X\"}}}" ;;
 "tab create")
-  t=stubW:t$(next t); p=stubW:p$(next p)
+  t=stubW:t$(next t)$X; p=stubW:p$(next p)$X
   echo "$p $t" >> "$T/panes"
   emit "{\"result\":{\"tab\":{\"tab_id\":\"$t\"},\"root_pane\":{\"pane_id\":\"$p\"}}}" ;;
 "pane split")
-  p=stubW:p$(next p); t=$(awk -v id="$3" '$1==id{print $2}' "$T/panes")
+  p=stubW:p$(next p)$X; t=$(awk -v id="$3" '$1==id{print $2}' "$T/panes")
   echo "$p $t" >> "$T/panes"
   emit "{\"result\":{\"pane\":{\"pane_id\":\"$p\"}}}" ;;
 "pane list")
@@ -40,7 +41,7 @@ case "$1 $2" in
   prog=$(awk -F'\t' -v id="$4" '{o=($1=="--machine")?2:0; if($(o+1)=="pane"&&$(o+2)=="run"&&$(o+3)==id)p=$(o+4)} END{print p}' "$T/calls")
   case "$prog" in claude|claude2) n=claude ;; lazygit) n=lazygit ;; *) n=zsh ;; esac
   [ -n "${STUB_NOTSEEN:-}" ] && n=zsh
-  emit "{\"result\":{\"process_info\":{\"pane_id\":\"$4\",\"foreground_processes\":[{\"name\":\"$n\"}]}}}" ;;
+  echo "{\"result\":{\"process_info\":{\"pane_id\":\"$4\",\"foreground_processes\":[{\"name\":\"$n\"}]}}}" ;;
 *) emit '{"result":{}}' ;;
 esac
 EOF
@@ -55,6 +56,7 @@ if [ "$found" != "$tmp/bin/sleep" ]; then echo "FAIL stub sleep is first on PATH
 
 run() {
   : > "$tmp/calls"; : > "$tmp/resp"; rm -f "$tmp"/n_* "$tmp/panes"
+  printf 'x%04x\n' $RANDOM > "$tmp/x"
   out=$(PATH="$tmp/bin:$PATH" HERDR_PANE_ID=w1P:p1 HERDR_TAB_ID=w1P:t1 HERDR_WORKSPACE_ID=w1P "$@" 2>&1); rc=$?
 }
 norm() { sed -E 's/^--machine\t[^\t]*\t//' "$tmp/calls"; }
@@ -64,12 +66,14 @@ ids() { norm | awk -F'\t' '{for(i=1;i<NF;i++)if($i~/^(rename|split|run|focus|--w
 idsresp() { local id; for id in $(ids); do grep -qF "\"$id\"" "$tmp/resp" || return 1; done; }
 forbid() { norm | awk -F'\t' '$2=="close"||($1=="machine"&&$2~/^(reconnect|add|remove|enable|disable)$/)||$1=="server"{bad=1}END{exit bad}'; }
 focusok() { norm | awk -F'\t' '$1=="workspace"&&$2=="focus"{f++;next} f&&(($1=="workspace"&&$2=="create")||($1=="tab"&&($2=="create"||$2=="rename"))||($1=="pane"&&($2=="split"||$2=="run"))){bad=1} END{exit !(f==1)||bad}'; }
-piok() { norm | awk -F'\t' '$1=="workspace"&&$2=="focus"{f=NR} $1=="pane"&&$2=="process-info"{c[$4]++; if(!f)bad=1; if($3!="--pane"||($4!="stubW:p1"&&$4!="stubW:p2"))bad=1} END{for(k in c)if(c[k]>10)bad=1; exit (c["stubW:p1"]<1||c["stubW:p2"]<1||bad)}'; }
+pid() { awk -v n="$1" 'NR==n{print $1}' "$tmp/panes"; }
+tid() { awk -v n="$1" 'NR==n{print $2}' "$tmp/panes"; }
+piok() { norm | awk -F'\t' -v a="$(pid 1)" -v b="$(pid 2)" '$1=="workspace"&&$2=="focus"{f=NR} $1=="pane"&&$2=="process-info"{c[$4]++; if(!f)bad=1; if($3!="--pane"||($4!=a&&$4!=b))bad=1} END{for(k in c)if(c[k]>10)bad=1; exit (c[a]<1||c[b]<1||bad)}'; }
 machok() { awk -F'\t' -v m="$1" '$0=="machine\tlist\t--json"{next} !($1=="--machine"&&$2==m){bad=1} END{exit bad}' "$tmp/calls"; }
 panes_exp() {
-  printf 'pane\tstubW:p1\tstubW:t1\t%s\t%s\t%s\n' "$1" "$2" "$4"
-  printf 'pane\tstubW:p2\tstubW:t1\tlazygit\t%s\t%s\n' "$3" "$4"
-  printf 'pane\tstubW:p%s\tstubW:t%s\tshell\t-\t%s\n' 3 2 "$4" 4 2 "$4" 5 3 "$4" 6 3 "$4"
+  printf 'pane\t%s\t%s\t%s\t%s\t%s\n' "$(pid 1)" "$(tid 1)" "$1" "$2" "$4"
+  printf 'pane\t%s\t%s\tlazygit\t%s\t%s\n' "$(pid 2)" "$(tid 2)" "$3" "$4"
+  local i; for i in 3 4 5 6; do printf 'pane\t%s\t%s\tshell\t-\t%s\n' "$(pid $i)" "$(tid $i)" "$4"; done
 }
 
 calls_ok() {
@@ -78,6 +82,8 @@ calls_ok() {
   check "$1 workspace create has --cwd folder" '! { norm | grep -P "^workspace\tcreate\t" | cwdbad "$f"; }'
   check "$1 every tab create has --cwd folder" '! { norm | grep -P "^tab\tcreate\t" | cwdbad "$f"; }'
   check "$1 every pane split has --cwd folder" '! { norm | grep -P "^pane\tsplit\t" | cwdbad "$f"; }'
+  check "$1 every pane split has --direction right" '! norm | grep -P "^pane\tsplit\t" | grep -qvP "\t--direction\tright(\t|$)"'
+  check "$1 one tab rename, T1 to Main" '[ "$(cnt "^tab\trename\t")" = 1 ] && norm | grep -qxF "$(printf "tab\trename\t%s\tMain" "$(tid 1)")"'
   if [ -z "$m" ]; then
     check "$1 no --machine" '! grep -qF -- --machine "$tmp/calls"'
   else
@@ -114,18 +120,18 @@ l1() {
   calls_ok L1 "$proj" ""
   check "L1 two tab create, Dev Servers and VM" '[ "$(cnt "^tab\tcreate\t")" = 2 ] && norm | grep -P "^tab\tcreate\t" | grep -qP "\t--label\tDev Servers\t" && norm | grep -P "^tab\tcreate\t" | grep -qP "\t--label\tVM\t"'
   check "L1 three pane split" '[ "$(cnt "^pane\tsplit\t")" = 3 ]'
-  check "L1 two pane run, claude on root pane, lazygit on first split" '[ "$(cnt "^pane\trun\t")" = 2 ] && norm | grep -qxF "$(printf "pane\trun\tstubW:p1\tclaude")" && norm | grep -qxF "$(printf "pane\trun\tstubW:p2\tlazygit")"'
+  check "L1 two pane run, claude on root pane, lazygit on first split" '[ "$(cnt "^pane\trun\t")" = 2 ] && norm | grep -qxF "$(printf "pane\trun\t%s\tclaude" "$(pid 1)")" && norm | grep -qxF "$(printf "pane\trun\t%s\tlazygit" "$(pid 2)")"'
   check "L1 workspace line" 'grep -qxF "$(printf "workspace\tstubW\t32-herdr-workspace\tlocal")" <<<"$out"'
   check "L1 folder line" 'grep -P "^folder\t" <<<"$out" | grep -qP "^folder\t\Q$proj\E\t.*1 changed.*no upstream"'
-  check "L1 tab lines" '[ "$(grep -cP "^tab\t" <<<"$out")" = 3 ] && grep -qxF "$(printf "tab\tstubW:t1\tMain")" <<<"$out" && grep -qxF "$(printf "tab\tstubW:t2\tDev Servers")" <<<"$out" && grep -qxF "$(printf "tab\tstubW:t3\tVM")" <<<"$out"'
+  check "L1 tab lines" '[ "$(grep -cP "^tab\t" <<<"$out")" = 3 ] && grep -qxF "$(printf "tab\t%s\tMain" "$(tid 1)")" <<<"$out" && grep -qxF "$(printf "tab\t%s\tDev Servers" "$(tid 3)")" <<<"$out" && grep -qxF "$(printf "tab\t%s\tVM" "$(tid 5)")" <<<"$out"'
   check "L1 six pane lines" '[ "$(grep -P "^pane\t" <<<"$out")" = "$(panes_exp claude running running "$proj")" ]'
 }
 l1 "$script"
 
 STUB_CWD="$proj" run bash "$script" "$proj" --label 32-herdr-workspace --agent claude2
 check "L2 exit 0" '[ $rc = 0 ]'
-check "L2 agent pane run ends claude2" 'norm | grep -qxF "$(printf "pane\trun\tstubW:p1\tclaude2")"'
-check "L2 report says claude2" 'grep -qP "^pane\tstubW:p1\tstubW:t1\tclaude2\trunning\t" <<<"$out"'
+check "L2 agent pane run ends claude2" 'norm | grep -qxF "$(printf "pane\trun\t%s\tclaude2" "$(pid 1)")"'
+check "L2 report says claude2" 'grep -qP "^pane\t\Q$(pid 1)\E\t\Q$(tid 1)\E\tclaude2\trunning\t" <<<"$out"'
 
 STUB_NOTSEEN=1 STUB_CWD="$proj" run bash "$script" "$proj" --label 32-herdr-workspace
 check "L3 exit 0" '[ $rc = 0 ]'
@@ -146,6 +152,24 @@ STUB_CWD="$plain" run bash "$script" "$plain" --label 32-herdr-workspace
 check "L5 exit 0" '[ $rc = 0 ]'
 check "L5 not a git repo" 'grep -P "^folder\t" <<<"$out" | grep -qF "not a git repo"'
 
+clean="$tmp/clean"
+mkdir "$clean"
+git -C "$clean" init -q
+git -C "$clean" -c user.name=t -c user.email=t@t commit -q --allow-empty -m first
+br=$(git -C "$clean" branch --show-current)
+STUB_CWD="$clean" run bash "$script" "$clean" --label 32-herdr-workspace
+check "L17 exit 0" '[ $rc = 0 ]'
+check "L17 folder line says branch, clean, no upstream" 'grep -qxF "$(printf "folder\t%s\t%s, clean, no upstream" "$clean" "$br")" <<<"$out"'
+
+STUB_CWD="$proj" run bash "$script" "$proj/../proj dir" --label 32-herdr-workspace
+check "L18 exit 0" '[ $rc = 0 ]'
+calls_ok L18 "$proj" ""
+check "L18 folder line shows the normalized folder" 'grep -qP "^folder\t\Q$proj\E\t" <<<"$out"'
+
+HOME="$tmp" STUB_CWD="$proj" run bash "$script" "~/proj dir" --label 32-herdr-workspace
+check "L19 exit 0" '[ $rc = 0 ]'
+calls_ok L19 "$proj" ""
+
 rejects L6 "Folder not found on local:" bash "$script" /no/such/dir --label x
 rejects L7 "Agent must be claude or claude2." bash "$script" "$proj" --label x --agent codex
 rejects L8 "Template must be full or basic." bash "$script" "$proj" --label x --template big
@@ -158,8 +182,13 @@ export HERDR_ENV=1
 STUB_FAIL="tab create" STUB_CWD="$proj" run bash "$script" "$proj" --label 32-herdr-workspace
 check "L12 exit 1" '[ $rc = 1 ]'
 check "L12 first line is stopped with the stub message" 'head -1 <<<"$out" | grep -q "^stopped: .*stub refused"'
-check "L12 report so far" 'grep -qP "^workspace\t" <<<"$out" && grep -qxF "$(printf "tab\tstubW:t1\tMain")" <<<"$out" && [ "$(grep -cP "^pane\t.*\t\Q$proj\E$" <<<"$out")" = 2 ] && [ "$(grep -cP "^pane\t" <<<"$out")" = 2 ]'
+check "L12 report so far" 'grep -qP "^workspace\t" <<<"$out" && grep -qxF "$(printf "tab\t%s\tMain" "$(tid 1)")" <<<"$out" && [ "$(grep -cP "^pane\t.*\t\Q$proj\E$" <<<"$out")" = 2 ] && [ "$(grep -cP "^pane\t" <<<"$out")" = 2 ]'
 check "L12 one tab create, no focus, no close" '[ "$(cnt "^tab\tcreate\t")" = 1 ] && [ "$(cnt "^workspace\tfocus\t")" = 0 ] && forbid'
+
+STUB_FAIL="pane run" STUB_CWD="$proj" run bash "$script" "$proj" --label 32-herdr-workspace
+check "L20 exit 1" '[ $rc = 1 ]'
+check "L20 report has tab Main and P1, P2 as shell -" 'grep -qxF "$(printf "tab\t%s\tMain" "$(tid 1)")" <<<"$out" && [ "$(grep -P "^pane\t" <<<"$out")" = "$(printf "pane\t%s\t%s\tshell\t-\t%s\n" "$(pid 1)" "$(tid 1)" "$proj" "$(pid 2)" "$(tid 2)" "$proj")" ]'
+check "L20 stops at the first pane run" '[ "$(cnt "^pane\trun\t")" = 1 ] && ! norm | grep -qP "^pane\trun\t.*\tlazygit$"'
 
 run bash "$script" "$proj" --label x --bogus
 check "L13 --bogus exits 2" '[ $rc = 2 ]'

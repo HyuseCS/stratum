@@ -24,6 +24,7 @@ case $agent in claude | claude2) ;; *) fail "Agent must be claude or claude2." ;
 [ -n "$machine" ] || [ "${HERDR_ENV:-}" = 1 ] || fail "Not inside a herdr pane. Run it from a herdr pane, or name a --machine."
 
 Q=$(printf %q "$folder")
+Q=${Q/#\\~/\~}
 probe=$(bash -c "cd -- $Q && pwd && { git --no-optional-locks status --porcelain=v2 --branch 2>/dev/null || true; }" 2>/dev/null) || fail "Folder not found on ${machine:-local}: $folder"
 D=${probe%%$'\n'*}
 git=$(tail -n +2 <<<"$probe" | awk '/^# branch\.head /{h=$3} /^# branch\.ab /{ab="ahead " substr($3,2) ", behind " substr($4,2) " (as of last fetch)"} /^# branch\./{g=1} /^[^#]/{n++} END{if(!g)print "not a git repo"; else print h ", " (n ? n " changed" : "clean") ", " (ab ? ab : "no upstream")}')
@@ -33,7 +34,7 @@ H=(herdr)
 e=$(mktemp)
 trap 'rm -f "$e"' EXIT
 WS= rep=()
-declare -A st
+declare -A st prog
 
 report() {
   local l k id _ p c
@@ -43,7 +44,7 @@ report() {
   printf 'folder\t%s\t%s\n' "$D" "$git"
   for l in "${rep[@]}"; do
     IFS=$'\t' read -r k id _ <<<"$l"
-    if [ "$k" = tab ]; then echo "$l"; else printf '%s\t%s\t%s\n' "$l" "${st[$id]:--}" "${cwd[$id]:-?}"; fi
+    if [ "$k" = tab ]; then echo "$l"; else printf '%s\t%s\t%s\t%s\n' "$l" "${prog[$id]:-shell}" "${st[$id]:--}" "${cwd[$id]:-?}"; fi
   done
 }
 stop() {
@@ -59,25 +60,25 @@ h workspace create --cwd "$D" --label "$label" --no-focus
 get WS .result.workspace.workspace_id
 get T1 .result.tab.tab_id
 get P1 .result.root_pane.pane_id
-row tab "$T1" Main
-row pane "$P1" "$T1" "$agent"
-st[$P1]="not seen"
+row pane "$P1" "$T1"
 h tab rename "$T1" Main
+rep=($'tab\t'"$T1"$'\tMain' "${rep[@]}")
 h pane split "$P1" --direction right --cwd "$D" --no-focus
 get P2 .result.pane.pane_id
-row pane "$P2" "$T1" lazygit
-st[$P2]="not seen"
+row pane "$P2" "$T1"
 h pane run "$P1" "$agent"
+prog[$P1]=$agent st[$P1]="not seen"
 h pane run "$P2" lazygit
+prog[$P2]=lazygit st[$P2]="not seen"
 for name in "Dev Servers" VM; do
   h tab create --workspace "$WS" --cwd "$D" --label "$name" --no-focus
   get t .result.tab.tab_id
   get p .result.root_pane.pane_id
   row tab "$t" "$name"
-  row pane "$p" "$t" shell
+  row pane "$p" "$t"
   h pane split "$p" --direction right --cwd "$D" --no-focus
   get p .result.pane.pane_id
-  row pane "$p" "$t" shell
+  row pane "$p" "$t"
 done
 h workspace focus "$WS"
 
