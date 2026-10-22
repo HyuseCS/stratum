@@ -103,6 +103,8 @@ FR-008 rule	hook	except st-handoff
 FR-008 rule	hook	it runs only in the main session
 FR-008 rule	hook	For st-review, pass the feature dir and the range
 FR-008 rule	hook	check each finding against the source before you show it
+#29 handoff rule	hook	run /stratum:st-handoff in the main session before the last reply
+#29 handoff rule	hook	Do not use auto-memory in place of it
 EOF
 check "FR-008 plugin root" 'grep -qF "plugin root ($root)" "$tmp/hook.out"'
 check "FR-008 no rule outside Stratum" '! grep -qF "start the agent of the same name" "$tmp/nohook.out"'
