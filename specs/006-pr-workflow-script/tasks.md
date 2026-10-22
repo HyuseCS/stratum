@@ -93,7 +93,7 @@ a threshold or the script path turns a test red. Built by T001.
 
 **Independent Test**: quickstart section 2, C1 to C13.
 
-- [ ] T006 [US3] Run the negative controls C1 to C13 of quickstart section 2 against scratch copies of `workflows/pr.js` and `skills/st-pr/SKILL.md` through `ST_PR_SCRIPT` and `ST_PR_SKILL`, and C13 in a scratch git repo (lessons L2). Each gives exactly the FAIL lines of its row. Edit no repo file. If a control gives other FAIL lines, report it; do not edit the test to match (FR-012, FR-013, SC-004).
+- [x] T006 [US3] Run the negative controls C1 to C13 of quickstart section 2 against scratch copies of `workflows/pr.js` and `skills/st-pr/SKILL.md` through `ST_PR_SCRIPT` and `ST_PR_SKILL`, and C13 in a scratch git repo (lessons L2). Each gives exactly the FAIL lines of its row. Edit no repo file. If a control gives other FAIL lines, report it; do not edit the test to match (FR-012, FR-013, SC-004).
 
 **Checkpoint**: every guarded fact has a control that went red.
 
@@ -101,7 +101,7 @@ a threshold or the script path turns a test red. Built by T001.
 
 ## Phase 6: Polish
 
-- [ ] T007 Run every command of quickstart section 1 and each line of the README `## Tests` block in `README.md`: all pass. Run `bash scripts/st-verify.sh 'node tests/test_pr_workflow.mjs && bash tests/test_pr_skill.sh' workflows/pr.js tests/test_pr_workflow.mjs tests/test_pr_skill.sh`: `ok`. `git status --porcelain` lists only `workflows/pr.js`, `tests/test_pr_workflow.mjs`, `tests/test_pr_skill.sh`, `skills/st-pr/SKILL.md`, `README.md`, `.stratum/state.json` (`hooks/st-phase.py` writes it) and the feature dir files (lessons L8).
+- [x] T007 Run every command of quickstart section 1 and each line of the README `## Tests` block in `README.md`: all pass. Run `bash scripts/st-verify.sh 'node tests/test_pr_workflow.mjs && bash tests/test_pr_skill.sh' workflows/pr.js tests/test_pr_workflow.mjs tests/test_pr_skill.sh`: `ok`. `git status --porcelain` lists only `workflows/pr.js`, `tests/test_pr_workflow.mjs`, `tests/test_pr_skill.sh`, `skills/st-pr/SKILL.md`, `README.md`, `.stratum/state.json` (`hooks/st-phase.py` writes it) and the feature dir files (lessons L8).
 
 ---
 
