@@ -113,8 +113,9 @@ from the script, run again, and watch the test go red.
 - **FR-001**: The plugin MUST ship a fixed workflow script at `<plugin root>/workflows/pr.js`
   that does steps 2 to 4 of st-pr: facts, draft, verify, fix.
 - **FR-002**: st-pr MUST run the script only when both hold: Ultracode is on (a system-reminder
-  in the session says so) and the branch is over the size rule: more than 30 commits or more
-  than 40 changed files in `origin/<base>..HEAD`. Both numbers and the script path MUST be
+  in the session says so) and the branch is over the size rule: more than 30 commits in
+  `origin/<base>..HEAD` or more than 40 changed files in `origin/<base>...HEAD` (three dots,
+  from the merge base, as step 2 counts files). Both numbers and the script path MUST be
   written in the skill text.
 - **FR-003**: When either condition fails, st-pr MUST run the current one-agent path for steps 2
   to 4, unchanged.
@@ -136,9 +137,8 @@ from the script, run again, and watch the test go red.
 - **FR-010**: The script MUST return the title, the body file path, the warnings (flagged commit
   subjects, unverified claims, dropped problems), and whether it was blocked. The gate (step 5)
   and push and create (step 6) MUST stay in the main session and MUST NOT change.
-- **FR-011**: The script MUST use about 15 agents at most on a big branch: 6 facts agents plus
-  one per extra 25-commit chunk, 1 draft, 3 refuters, up to 3 fixers. No model or effort
-  overrides.
+- **FR-011**: The script MUST use 5 facts agents plus one per 25-commit chunk, 1 draft, 3
+  refuters, and up to 3 fixers: 15 agents at 60 commits. No model or effort overrides.
 - **FR-012**: A project test MUST run the script with fake agents and fail when the chunk size,
   the blocking stop, the three refuters, or the sequential fixes change.
 - **FR-013**: A project test MUST fail when the st-pr skill text no longer names "30" commits,
@@ -170,7 +170,7 @@ from the script, run again, and watch the test go red.
 ## Assumptions
 
 - A skill whose text tells the agent to call the workflow tool counts as the user's opt-in, as
-  the tool's own rule says. The skill text also sets the scale: about 15 agents overrides the
+  the tool's own rule says. The skill text also sets the scale: FR-011 (15 agents at 60 commits) overrides the
   session's "under 10" guideline (D2).
 - The script has no file access of its own. Every fact and every edit is done by its agents. The
   session passes the scratchpad path, project root, plugin root, base, branch and feature

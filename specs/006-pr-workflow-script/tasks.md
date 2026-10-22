@@ -44,15 +44,15 @@ None.
 does steps 2 to 4.
 
 **Independent Test**: `node tests/test_pr_workflow.mjs` and `bash tests/test_pr_skill.sh` all
-`ok`; quickstart section 3 rows M3 and M4.
+`ok`; quickstart section 3 rows M3, M4 and M5.
 
 ### Tests for User Story 1
 
 - [ ] T001 [US1] Create `tests/test_pr_workflow.mjs` and `tests/test_pr_skill.sh`, and add both to the README `## Tests` block, in one task (`tests/test_inspect.sh` "README tests" reads the folder and the README together, lessons L6). The checks assert phrases and values the code builds (lessons L1). The node test writes no file (lessons L8). FR-001 to FR-013, SC-004.
-  - `tests/test_pr_workflow.mjs`: the harness and the 15 cases of contracts section 6, names verbatim. Frame of `tests/test_token_weather.mjs`: `import assert from "node:assert/strict"`, `check(name, fn)` that prints `ok   <name>` or `FAIL <name>: <message>`, `process.exit(fails)` at the end. Cases are async, so `check` awaits `fn`. Cases run one at a time (`await check(...)` at top level, never `Promise.all`), because each sets its own fakes on `globalThis`. Script path: `process.env.ST_PR_SCRIPT ?? fileURLToPath(new URL("../workflows/pr.js", import.meta.url))`. A missing or unreadable script prints `FAIL load: <message>` and exits 1. Each case sets fresh fakes and fresh `globalThis.args`: `{projectRoot: "/p", pluginRoot: "/g", scratchpad: "/s", base: "main", branch: "b", featureDir: "", commits}`. The `blocking stop` case message names "blocking stop".
-  - `tests/test_pr_skill.sh`: `#!/usr/bin/env bash`, `set -u`, `root="$(cd "$(dirname "$0")/.." && pwd)"`, `skill="${ST_PR_SKILL:-$root/skills/st-pr/SKILL.md}"`, `fail=0`. Read the 13 rows of contracts section 5 from a `<<'EOF'` heredoc as `name<TAB>phrase` (phrase = the cell text inside its outer backticks, no space at either end), `grep -qF -- "$phrase" "$skill"`, print `ok   <name>` or `FAIL <name>: <phrase>`, then `exit $fail`. Mode 644 like the other `tests/*.sh` files (they run as `bash tests/<file>`).
+  - `tests/test_pr_workflow.mjs`: the harness and the 16 cases of contracts section 6, names verbatim. Frame of `tests/test_token_weather.mjs`: `import assert from "node:assert/strict"`, `check(name, fn)` that prints `ok   <name>` or `FAIL <name>: <message>`, `process.exit(fails)` at the end. Cases are async, so `check` awaits `fn`. Cases run one at a time (`await check(...)` at top level, never `Promise.all`), because each sets its own fakes on `globalThis`. Script path: `process.env.ST_PR_SCRIPT ?? fileURLToPath(new URL("../workflows/pr.js", import.meta.url))`. A missing or unreadable script prints `FAIL load: <message>` and exits 1. Each case sets fresh fakes and fresh `globalThis.args`: `{projectRoot: "/p", pluginRoot: "/g", scratchpad: "/s", base: "main", branch: "b", featureDir: "", commits}`. The `blocking stop` case message names "blocking stop".
+  - `tests/test_pr_skill.sh`: `#!/usr/bin/env bash`, `set -u`, `root="$(cd "$(dirname "$0")/.." && pwd)"`, `skill="${ST_PR_SKILL:-$root/skills/st-pr/SKILL.md}"`, `fail=0`. Read the 14 rows of contracts section 5 from a `<<'EOF'` heredoc as `name<TAB>phrase` (phrase = the cell text inside its outer backticks, no space at either end), `grep -qF -- "$phrase" "$skill"`, print `ok   <name>` or `FAIL <name>: <phrase>`, then `exit $fail`. Mode 644 like the other `tests/*.sh` files (they run as `bash tests/<file>`).
   - `README.md` `## Tests` block: after the line `bash tests/test_on_demand.sh` add `bash tests/test_pr_skill.sh`; after `node tests/test_token_weather.mjs` add `node tests/test_pr_workflow.mjs`.
-  - Run `node tests/test_pr_workflow.mjs` (red: `FAIL load`), `bash tests/test_pr_skill.sh` (red: all 13 rows), `bash tests/test_inspect.sh` (green). This is the T001 row of quickstart section 1.
+  - Run `node tests/test_pr_workflow.mjs` (red: `FAIL load`), `bash tests/test_pr_skill.sh` (red: all 14 rows), `bash tests/test_inspect.sh` (green). This is the T001 row of quickstart section 1.
 
 ### Implementation for User Story 1
 
@@ -60,14 +60,14 @@ does steps 2 to 4.
   - First statement: the meta literal of contracts 2.1, verbatim. The body never reads `meta`.
   - The three pinned lines of contracts 2.2: `const CHUNK = 25`, `const LENSES = ['paths', 'frs', 'commands']`, and the blocking return on one line, the only line with `blocked: true`.
   - Labels, schemas, phases and control flow of contracts 2.2 and 2.3. Facts and chunks in one `parallel`. Refuters in one `parallel`. Fixers in a plain `for` loop with `await`, one per lens with problems. `opts.phase` on every `agent()` call. No `model` or `effort` option.
-  - Prompts per contracts 2.4. The `facts:tests` prompt says `PYTHONDONTWRITEBYTECODE=1` (lessons L8).
+  - Prompts per contracts 2.4. The read-only sentence is verbatim and on one line (contracts 2.2 pinned lines). The `facts:tests` prompt says `PYTHONDONTWRITEBYTECODE=1` (lessons L8).
   - Return values per contracts section 3. Warning strings use the prefixes of contracts section 3 exactly.
-  - Run `node tests/test_pr_workflow.mjs`: all 15 cases `ok`.
+  - Run `node tests/test_pr_workflow.mjs`: all 16 cases `ok`.
 
-- [ ] T003 [P] [US1] Edit `skills/st-pr/SKILL.md`: add step 1 item 5 (contracts 4.1) after item 4, and the `## Workflow path` section (contracts 4.2) between `## 1. Scope` and `## 2. Facts`, text verbatim (FR-002, FR-003, FR-004, FR-006, FR-010, FR-013). Two inserts only. The before and after compare is detection, not a stop, and does not see git-ignored paths, writes outside the repo, a push or a gh call (lessons L10). The three failure states of the background run (in progress, no result, cannot start) are in the text (lessons L11). Security: plan.md S2, S4.
-  - Run `bash tests/test_pr_skill.sh`: all 13 rows `ok`. `bash tests/test_inspect.sh`: all `ok`. `git diff -U0 main -- skills/st-pr/SKILL.md | grep -c '^-[^-]'` prints `0`.
+- [ ] T003 [P] [US1] Edit `skills/st-pr/SKILL.md`: add step 1 item 5 (contracts 4.1) after item 4, and the `## Workflow path` section (contracts 4.2, including the step 2 sentence for a refused `scriptPath`: read the file and pass its text through the `script` input, same `args`, decision D6) between `## 1. Scope` and `## 2. Facts`, text verbatim (FR-002, FR-003, FR-004, FR-006, FR-010, FR-013). Two inserts only: no existing line changes. The before and after compare is detection, not a stop, and does not see git-ignored paths, writes outside the repo, a push or a gh call (lessons L10). The three failure states of the background run (in progress, no result, cannot start) are in the text (lessons L11). Security: plan.md S2, S4.
+  - Run `bash tests/test_pr_skill.sh`: all 14 rows `ok`. `bash tests/test_inspect.sh`: all `ok`. `git diff --numstat main -- skills/st-pr/SKILL.md | awk '{d+=$2} END {print d+0}'` prints `0`.
 
-- [ ] T004 [US1] Manual: quickstart section 3 rows M3 (big branch, workflow path, body passes the step 4 check with zero edits) and M4 (blocking find stops before the gate, value not shown). The user runs these with Ultracode on and answers Abort at the gate. Reads `skills/st-pr/SKILL.md` and `workflows/pr.js`, edits nothing (SC-001, SC-003, SC-005).
+- [ ] T004 [US1] Manual: quickstart section 3 rows M3 (big branch, workflow path, body passes the step 4 check with zero edits), M4 (blocking find stops before the gate, value not shown) and M5 (working directory outside the plugin dir: record whether the `scriptPath` call or the `script` fallback started the run). The user runs these with Ultracode on and answers Abort at the gate. Reads `skills/st-pr/SKILL.md` and `workflows/pr.js`, edits nothing (SC-001, SC-003, SC-005).
 
 **Checkpoint**: US1 works. Both new tests are all `ok`.
 
@@ -91,9 +91,9 @@ to 4 as today. Built by T003 (step 1 item 5). No file of its own.
 **Goal**: a change to the chunk size, the blocking stop, the refuter count, the sequential fixes,
 a threshold or the script path turns a test red. Built by T001.
 
-**Independent Test**: quickstart section 2, C1 to C10.
+**Independent Test**: quickstart section 2, C1 to C13.
 
-- [ ] T006 [US3] Run the negative controls C1 to C10 of quickstart section 2 against scratch copies of `workflows/pr.js` and `skills/st-pr/SKILL.md` through `ST_PR_SCRIPT` and `ST_PR_SKILL` (lessons L2). Each gives exactly the FAIL lines of its row. Edit no repo file. If a control gives other FAIL lines, report it; do not edit the test to match (FR-012, FR-013, SC-004).
+- [ ] T006 [US3] Run the negative controls C1 to C13 of quickstart section 2 against scratch copies of `workflows/pr.js` and `skills/st-pr/SKILL.md` through `ST_PR_SCRIPT` and `ST_PR_SKILL`, and C13 in a scratch git repo (lessons L2). Each gives exactly the FAIL lines of its row. Edit no repo file. If a control gives other FAIL lines, report it; do not edit the test to match (FR-012, FR-013, SC-004).
 
 **Checkpoint**: every guarded fact has a control that went red.
 
@@ -101,7 +101,7 @@ a threshold or the script path turns a test red. Built by T001.
 
 ## Phase 6: Polish
 
-- [ ] T007 Run every command of quickstart section 1 and each line of the README `## Tests` block in `README.md`: all pass. Run `bash scripts/st-verify.sh 'node tests/test_pr_workflow.mjs && bash tests/test_pr_skill.sh' workflows/pr.js tests/test_pr_workflow.mjs tests/test_pr_skill.sh`: `ok`. `git status --porcelain` lists only `workflows/pr.js`, `tests/test_pr_workflow.mjs`, `tests/test_pr_skill.sh`, `skills/st-pr/SKILL.md`, `README.md` and the feature dir files (lessons L8).
+- [ ] T007 Run every command of quickstart section 1 and each line of the README `## Tests` block in `README.md`: all pass. Run `bash scripts/st-verify.sh 'node tests/test_pr_workflow.mjs && bash tests/test_pr_skill.sh' workflows/pr.js tests/test_pr_workflow.mjs tests/test_pr_skill.sh`: `ok`. `git status --porcelain` lists only `workflows/pr.js`, `tests/test_pr_workflow.mjs`, `tests/test_pr_skill.sh`, `skills/st-pr/SKILL.md`, `README.md`, `.stratum/state.json` (`hooks/st-phase.py` writes it) and the feature dir files (lessons L8).
 
 ---
 
@@ -120,5 +120,7 @@ After T001: T002 (workflows/pr.js) and T003 (skills/st-pr/SKILL.md) at once.
 ## Implementation Strategy
 
 MVP is US1: T001 to T003 give a working workflow path and the current path. T004 to T006 prove
-it. Coverage: FR-001 to FR-013 each have a test row in T001. SC-001, SC-002, SC-003 and SC-005
-also have a manual row (T004, T005).
+it. Coverage: FR-001 to FR-004, FR-006, FR-010 to FR-013 have test rows in T001 that check behavior.
+FR-005, FR-007, FR-008 and FR-009 are prompt-only: what the agents do is not testable with fakes.
+Their checks are the `prompt rules` case (the prompt holds the rule) and the manual row M3.
+SC-001, SC-002, SC-003 and SC-005 also have manual rows (T004, T005).

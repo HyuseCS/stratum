@@ -132,7 +132,7 @@ GNU bash 5.3.20, git 2.56.0, gh 2.102.0. No package is added.
 ## R12. Cost
 
 - Decision: no `model` or `effort` option on any agent. Agents per run:
-  `5 + ceil(commits / 25) + 1 + 3 + (0 to 3)`. 45 commits: 14 at most. 60 commits: 15 at most.
+  `5 + ceil(commits / 25) + 1 + 3 + (0 to 3)`. 45 commits: 14 at most. 60 commits: 15 (spec FR-011).
 - Rationale: FR-011, D2. The runtime caps concurrent agents at `min(16, CPUs - 2)` and queues the
   rest (10 on this 12-CPU machine). The cap on items per `parallel` call is a value not seen in
   the binary text, so a branch with a very large commit count is unchecked.
@@ -142,3 +142,27 @@ GNU bash 5.3.20, git 2.56.0, gh 2.102.0. No package is added.
 - Decision: README gets two lines in `## Tests`. The `st-pr` row in `### Skills` stays.
 - Rationale: R7 forces the test lines. The row "Open a draft PR from git facts and the spec;
   ready when CI passes." stays true on both paths, and the spec asks for no README change.
+
+## R14. Which range counts files
+
+- Decision: commits are counted in `origin/<base>..HEAD` and files in `origin/<base>...HEAD`
+  (three dots, from the merge base). Spec FR-002 says so since the inspect pass (orchestrator
+  decision, inspect F8).
+- Rationale: st-pr step 2 already lists files with `git diff origin/<base>...HEAD
+  --name-status`, so the size rule and the body count the same files. Two dots would also count
+  changes made on the base after the branch left it.
+
+## R15. The `scriptPath` read rule, and the `script` fallback
+
+- Decision (D6): st-pr calls `Workflow({scriptPath: "<plugin root>/workflows/pr.js", args})`
+  first. If the tool refuses the `scriptPath`, st-pr reads the file and calls `Workflow` again
+  with the same text in the `script` input and the same `args`. The file never changes (SC-005).
+- Rationale: the 2.1.302 binary holds the error text verbatim:
+  "scriptPath must be a script path this tool returned, or a file you can already read (the
+  working directory or a directory you have added): <path>". Next to it: "A session that cannot
+  call <tool> cannot load any scriptPath. Pass the whole script inline through <tool>'s `script`
+  input instead." An installed plugin lives under `~/.claude/plugins/cache/...`, outside the
+  user's project, so a real run can hit this rule (inspect F2). Whether a read of that folder
+  is allowed without a prompt was not settled from the minified permission code. Quickstart M5
+  runs from a folder outside the plugin and records which call worked.
+- Alternatives considered: `scriptPath` only, with a later decision (rejected, D6 O8).

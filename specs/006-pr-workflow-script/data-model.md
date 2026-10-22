@@ -8,7 +8,7 @@ Exact shapes: [contracts/pr-workflow.md](contracts/pr-workflow.md).
 | Field | Source | Rule |
 |-------|--------|------|
 | commits | `git rev-list --count origin/<base>..HEAD` | workflow when more than 30 |
-| files | `git diff --name-only origin/<base>...HEAD \| wc -l` | workflow when more than 40 |
+| files | `git diff --name-only origin/<base>...HEAD \| wc -l` (three dots, from the merge base) | workflow when more than 40 |
 | ultracode | latest system-reminder about Ultracode | must be on |
 
 Workflow path = ultracode on AND (commits > 30 OR files > 40). Exactly 30 and 40 take the
@@ -32,6 +32,9 @@ never empty (step 1 stops on an empty range). A JSON object, never a string.
 | `chunk:<n>` | `{flagged: [{commit, why}]}` | `unverified: chunk:<n>` |
 
 Chunk n = `commits.slice(25 * (n - 1), 25 * n)`, n from 1 to `ceil(commits.length / 25)`.
+
+Agent count (FR-011): 5 facts agents plus one per 25-commit chunk, 1 draft, 3 refuters, up to 3
+fixers: `5 + ceil(commits / 25) + 1 + 3 + (0 to 3)`. 15 at 60 commits.
 A find never holds the secret or personal value.
 
 ## Draft
