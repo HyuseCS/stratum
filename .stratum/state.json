@@ -1,5 +1,5 @@
 {
-  "feature_directory": "specs/005-st-triage",
-  "phase": "done",
+  "feature_directory": "specs/006-pr-workflow-script",
+  "phase": "define",
   "lane": "full"
 }
