@@ -70,7 +70,7 @@ quickstart section 2 run live.
 
 ### Tests for User Story 2
 
-- [ ] T006 [US2] Add to `tests/test_st_worker.sh` the cases A1, A2, A3 and NC5 of contracts/script.md section 6, with the stub logging `agent send-keys` and `pane send-text` argv. A2 asserts `not blocked: working`, no `send-keys`, no `send-text`, exit 1 (US2 scenario 3). Run it and show A1 to A3 fail (`answer` exits 2 after T003). Lessons L1, L18.
+- [X] T006 [US2] Add to `tests/test_st_worker.sh` the cases A1, A2, A3 and NC5 of contracts/script.md section 6, with the stub logging `agent send-keys` and `pane send-text` argv. A2 asserts `not blocked: working`, no `send-keys`, no `send-text`, exit 1 (US2 scenario 3). Run it and show A1 to A3 fail (`answer` exits 2 after T003). Lessons L1, L18.
 
 ### Implementation for User Story 2
 

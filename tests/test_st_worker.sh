@@ -342,6 +342,34 @@ check "L1 two found lines, states from the stub" '[ "$(grep -cP "^found\t" <<<"$
 check "L1 the other workspace is absent" '! grep -q notaworker <<<"$out" && ! grep -q "stubC" <<<"$out"'
 check "L1 never-list, no prompt, no close" 'never 0 0'
 
+sendlog() { grep -P '^(agent\t(get|send-keys)|pane\tsend-text)\t' "$tmp/calls"; }
+a1() {
+  mk; states blocked working
+  run bash "$1" answer T004 --keys 1
+  check "A1 exit 0" '[ $rc = 0 ]'
+  check "A1 agent get, one send-keys, agent get, in order" '[ "$(sendlog)" = "$(printf "agent\tget\tworker-t004\nagent\tsend-keys\tworker-t004\t1\nagent\tget\tworker-t004")" ]'
+  check "A1 state line after the answer" 'hasline "state\tworking\tworker-t004\t%s" "$(pane)"'
+  check "A1 never-list, no prompt" 'never 0 0'
+}
+a2() {
+  mk; states working
+  run bash "$1" answer T004 --text yes
+  check "A2 exit 1" '[ $rc = 1 ]'
+  check "A2 the not blocked line" '[ "$out" = "not blocked: working" ]'
+  check "A2 one agent get, no send-keys, no send-text" '[ "$(cnt "^agent\tget\t")" = 1 ] && [ "$(cnt "^agent\tsend-keys\t")" = 0 ] && [ "$(cnt "^pane\tsend-text\t")" = 0 ] && never 0 0'
+}
+a3() {
+  mk; states blocked blocked
+  run bash "$1" answer T004 --text "use main"
+  check "A3 exit 4" '[ $rc = 4 ]'
+  check "A3 agent get, send-text, send-keys enter, agent get, in order" '[ "$(sendlog)" = "$(printf "agent\tget\tworker-t004\npane\tsend-text\t%s\tuse main\nagent\tsend-keys\tworker-t004\tenter\nagent\tget\tworker-t004" "$(pane)")" ]'
+  check "A3 state blocked line" 'hasline "state\tblocked\tworker-t004\t%s" "$(pane)"'
+  check "A3 never-list, no prompt" 'never 0 0'
+}
+a1 "$script"
+a2 "$script"
+a3 "$script"
+
 nc() {
   local nm=$1 fn=$2
   check "$1 sed changed the script" '[ -f "$script" ] && ! cmp -s "$script" "$tmp/$nm.sh"'
@@ -363,5 +391,8 @@ nc NC4 g1
 sed -E '/>"\$WT\/\.stratum\/git-guard\.json"/d' "$script" > "$tmp/NC7.sh" 2>/dev/null
 check "NC7 sed deletes exactly one line" '[ "$(diff "$script" "$tmp/NC7.sh" | grep -c "^<")" = 1 ]'
 nc NC7 s1
+sed -E '/not blocked: /d' "$script" > "$tmp/NC5.sh" 2>/dev/null
+check "NC5 sed deletes exactly one line" '[ "$(diff "$script" "$tmp/NC5.sh" | grep -c "^<")" = 1 ]'
+nc NC5 a2
 
 exit $fail
