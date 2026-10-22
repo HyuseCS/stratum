@@ -88,8 +88,8 @@ four parts, and the checks of one do not wait for the other.
 - **FR-006**: Before a report is shown, each cited `file:line` and commit MUST be checked against
   the source; a false cite is dropped or corrected and the drop is named.
 - **FR-007**: When the issue cannot be read, the command MUST say why in one line and stop.
-- **FR-008**: The research step MUST run as a read-only agent named `st-triage`, with no tool
-  that writes files, so that the project's agent tests cover it like the other read-only agents.
+- **FR-008**: The research step MUST run as a read-only agent named `st-triage`, with no Edit
+  or Write tool, so that the project's agent tests cover it like the other read-only agents.
 
 ### Key Entities
 
@@ -108,7 +108,7 @@ four parts, and the checks of one do not wait for the other.
   the rest are marked unchecked. Zero cites that do not match the source after the check.
 - **SC-003**: After every run, the working tree and the issue on GitHub are as they were.
 - **SC-004**: The project's tests fail when the `st-triage` agent has no command of the same name
-  or has a tool that writes files.
+  or has an Edit or Write tool.
 
 ## Assumptions
 

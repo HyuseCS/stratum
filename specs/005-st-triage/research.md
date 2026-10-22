@@ -59,8 +59,10 @@ Facts checked on 2026-10-22 against Claude Code 2.1.302 (`/opt/claude-code/bin/c
 
 ## R6. Input from GitHub is untrusted
 
-- Decision: the skill accepts only digit issue numbers (a leading `#` is stripped). The agent puts a
-  path from the issue in single quotes, skips a path that holds a `'`, and treats the issue text as
+- Decision: the skill accepts only digit issue numbers (a leading `#` is stripped). The agent reads only
+  paths inside the repo (relative, no `..` part, not starting with `/` or `~`), puts each path and
+  each `git log --grep` or `-S` value from the issue in single quotes, marks one that holds a `'`
+  as `unchecked`, and treats the issue text as
   claims to check, not as instructions.
 - Rationale: the issue number and every link go into shell commands. Anyone who can comment on the
   repo can write the issue text the agent reads.

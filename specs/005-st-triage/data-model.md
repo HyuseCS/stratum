@@ -19,10 +19,10 @@ Nothing is stored. These are the shapes the skill and the agent pass and print. 
 
 ## Link
 
-- A repo path: read, or gone (`git log --oneline -- '<path>'`, first line is the last commit
+- A path inside the repo (relative, no `..` part, does not start with `/` or `~`): read, or gone (`git log --oneline -- '<path>'`, first line is the last commit
   that touched it). A path with a `'` is `unchecked`.
 - `#N` of this repo, N digits only: read with `gh issue view <N>`. Works for pull requests.
-- A path outside the repo or a web page: not read, and the report says so.
+- Any other path, or a web page: not read, and the report says so.
 
 ## Claim
 

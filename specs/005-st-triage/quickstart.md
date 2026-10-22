@@ -59,8 +59,10 @@ skills/st-triage/SKILL.md|Give one or more issue numbers.
 skills/st-triage/SKILL.md|in the order given
 agents/st-triage.md|sr-opus-5.md
 agents/st-triage.md|git log --oneline -- '<path>'
-agents/st-triage.md|A path outside the repo or a web page: do not read it
+agents/st-triage.md|Any other path, or a web page: do not read it
+agents/st-triage.md|comments,url
 agents/st-triage.md|`unchecked`, with why
+agents/st-triage.md|A value with a
 agents/st-triage.md|`partly built`
 agents/st-triage.md|split the issue
 agents/st-triage.md|what the user must provide
@@ -71,7 +73,7 @@ EOF
 ```
 
 Expected: baseline `0`, then `1` on every line, each naming its own `#15` check. A dry run on a
-scratch copy built from the contract text (2026-10-22) gave `1` on all 16 lines.
+scratch copy built from the contract text (2026-10-22) gave `1` on all 18 lines.
 
 Structure controls, each on a fresh copy (`rm -rf "$s"`, `s=$(mktemp -d)`, then the `cp` line
 again):
@@ -109,8 +111,9 @@ Then start `claude --plugin-dir /home/hyuse/Desktop/stratum-15` and type:
 
 | # | Type | Expected |
 |---|------|----------|
-| L1 | `/stratum:st-triage 10` | line 1 says `(closed)`. Verdict `obsolete`, next step close it. Links name `agents/st-check.md` as gone, with commit `19dcb89`. Every cite shown was checked; dropped cites are named (US1-2, US1-3, US1-4) |
-| L2 | `/stratum:st-triage 15` | verdict `partly built` or `obsolete`. Built cites lines of `skills/st-triage/SKILL.md` and `agents/st-triage.md`, or their commits (US1-1) |
+| L1 | `/stratum:st-triage 10` | line 1 says `(closed)`. Verdict `obsolete`, next step close it. Links name `agents/st-check.md` as gone, with commit `19dcb89`. Every cite shown was checked; dropped cites are named. By hand, for each cite in the report: run `sed -n '<line>p' '<file>'` for a `file:line` and `git cat-file -t <sha>` for a commit (prints `commit`). The line or commit says what the report claims (US1-2, US1-3, US1-4, FR-006, SC-002) |
+| L2 | `/stratum:st-triage 15` | verdict `obsolete`, next step close it. Built cites lines of `skills/st-triage/SKILL.md` and `agents/st-triage.md`, or their commits |
+| L2b | (none) | No open issue of this repo is partly built (checked 2026-10-22: #9, #11, #16, #17, #18, #22, #27, #28, #29, #32 have nothing built on this branch). US1 scenario 1 (`partly built`) has no live row |
 | L3 | `/stratum:st-triage 32` | a new-skill issue whose claims are about files outside the repo (`~/.config/herdr/`): `still valid`, "nothing built", next step the Full lane. The outside paths are listed as not read |
 | L4 | `/stratum:st-triage 16 10` | two `st-triage` agent rows start at once. Two reports, `#16` first, then `#10` (US2-1) |
 | L5 | `/stratum:st-triage abc` | one line: `Give one or more issue numbers.` No agent starts |

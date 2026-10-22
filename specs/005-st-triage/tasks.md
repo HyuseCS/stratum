@@ -127,7 +127,7 @@ None (see above). The build is short: 6 tasks, all Markdown or one-line test edi
 ### MVP First (User Story 1 Only)
 
 1. T001, T002.
-2. Stop and run quickstart section 3 rows L1, L2, L5, L6.
+2. Stop and run quickstart section 3 rows L1, L2, L3, L5, L6.
 3. Commit per task with `st-git`.
 
 ### Incremental Delivery

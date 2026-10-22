@@ -70,11 +70,12 @@ The orchestrator passes absolute paths: plugin root, project root, and the issue
 
 1. Read the issue: `gh issue view <n> --json number,title,body,state,comments,url`.
 2. Follow its links, in the body and the comments:
-   - A path inside the repo: read it. Gone: run `git log --oneline -- '<path>'`; its first line is the commit that last changed it, a delete or a move. A path with a `'` in it is `unchecked`.
+   - A path inside the repo (relative, no `..` part, does not start with `/` or `~`): read it. Gone: run `git log --oneline -- '<path>'`; its first line is the commit that last changed it, a delete or a move. A path with a `'` in it is `unchecked`.
    - A `#N` of this repo, N digits only: `gh issue view <N> --json number,title,body,state`. It reads pull requests too.
-   - A path outside the repo or a web page: do not read it, and say so.
+   - Any other path, or a web page: do not read it, and say so.
 3. List each claim the issue makes about the code ("X is not done", "the plan is in file Y").
-4. Check each claim against the current code (Grep, Read) and git history (`git log --oneline --grep=<word>`, `git log --oneline -S<text>`). Cite a `file:line` or a commit for each claim you confirm or reject. A claim you cannot check is `unchecked`, with why.
+4. Check each claim against the current code (Grep, Read) and git history. Cite a `file:line` or a commit for each claim you confirm or reject. A claim you cannot check is `unchecked`, with why.
+   History: `git log --oneline --grep='<word>'` and `git log --oneline -S'<text>'`, each value from the issue in single quotes. A value with a `'` in it is `unchecked`.
 5. Verdict: `still valid` (nothing it asks for is built), `partly built`, or `obsolete` (the code covers all of it, or it no longer applies). An issue with no claim about the code is `still valid`, its built part is "nothing built", and its next step is the Full lane.
 6. Next step, one of: run `/stratum:st` in the Full lane, split the issue, or close it. An `obsolete` issue gets close it.
 
@@ -114,13 +115,17 @@ One heredoc of `name<TAB>target<TAB>phrase` rows, in table order. The phrase is 
 | `#15 FR-006 skill` | `skills/st-triage/SKILL.md` | `` `git cat-file -t <sha>` prints `commit` `` |
 | `#15 FR-006 skill` | `skills/st-triage/SKILL.md` | `Correct or drop each false cite and name the drop.` |
 | `#15 input` | `skills/st-triage/SKILL.md` | `Give one or more issue numbers.` |
-| `#15 FR-008 agent` | `agents/st-triage.md` | ``Read `<plugin root>/sr-opus-5.md` first`` |
+| `#15 rule agent` | `agents/st-triage.md` | ``Read `<plugin root>/sr-opus-5.md` first`` |
 | `#15 FR-001 agent` | `agents/st-triage.md` | `` gh issue view <n> --json number,title,body,state,comments,url `` |
 | `#15 FR-001 links` | `agents/st-triage.md` | `` git log --oneline -- '<path>' `` |
 | `#15 FR-001 links` | `agents/st-triage.md` | `` gh issue view <N> --json number,title,body,state `` |
-| `#15 FR-001 links` | `agents/st-triage.md` | `A path outside the repo or a web page: do not read it, and say so.` |
+| `#15 FR-001 links` | `agents/st-triage.md` | ``relative, no `..` part, does not start with `/` or `~` `` |
+| `#15 FR-001 links` | `agents/st-triage.md` | `Any other path, or a web page: do not read it, and say so.` |
 | `#15 FR-002 agent` | `agents/st-triage.md` | ``Cite a `file:line` or a commit for each claim you confirm or reject.`` |
 | `#15 FR-002 agent` | `agents/st-triage.md` | ``A claim you cannot check is `unchecked`, with why.`` |
+| `#15 quoted values` | `agents/st-triage.md` | `` `git log --oneline --grep='<word>'` `` |
+| `#15 quoted values` | `agents/st-triage.md` | `` `git log --oneline -S'<text>'` `` |
+| `#15 quoted values` | `agents/st-triage.md` | ``A value with a `'` in it is `unchecked`.`` |
 | `#15 FR-003 verdict` | `agents/st-triage.md` | ``Verdict: `still valid` (nothing it asks for is built), `partly built`, or `obsolete` `` |
 | `#15 FR-003 next step` | `agents/st-triage.md` | ``Next step, one of: run `/stratum:st` in the Full lane, split the issue, or close it.`` |
 | `#15 FR-003 report` | `agents/st-triage.md` | `` - Line 1: `#<n> <title>: <verdict>`, with `(closed)` after the title when the issue is closed. `` |

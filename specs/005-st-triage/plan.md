@@ -49,7 +49,7 @@ orchestrator passed and `docs/lessons.md`, as in feature 004.
 | G1. Test first: each FR has a check that fails before its build task | Pass: T001 before T002 (FR-001 to FR-004, FR-006 to FR-008), T003 before T004 (FR-005). Red states in quickstart section 1 |
 | G2. Minimal diff, no new script, hook or dependency, no comments | Pass: two Markdown files, one-line doc and test edits |
 | G3. One source of truth for the agent list | Pass: `hooks/st-models.py:8` reads `agents/`. The pinned lists follow (research R8) |
-| G4. A text check asserts a phrase the file builds (L1) | Pass: the phrases in contracts/triage.md section 3 match the contract text, one line each (checked on a scratch copy, 31 of 31) |
+| G4. A text check asserts a phrase the file builds (L1) | Pass: the phrases in contracts/triage.md section 3 match the contract text, one line each (checked on a scratch copy, 35 of 35) |
 | G5. Tasks that share one test or one repo-wide check are one task (L6) | Pass: T002 builds every file the agent-list checks read. No task is `[P]` |
 | G6. A check between two lists reads both sides (L7) | Pass: README checks are two-way already. "every agent has a command" is one-way by 004's spec |
 | G7. Test runs leave no files (L8) | Pass: `PYTHONDONTWRITEBYTECODE=1` in every run, `git status --porcelain` in T006 |
@@ -73,9 +73,12 @@ Post-design re-check: all gates pass. No violations, so Complexity Tracking stay
   shows gh's own error line (FR-007).
 - **S3. Untrusted input (T002).** Anyone who can comment on the repo writes the text the agent
   reads. The skill accepts digits only as issue numbers before any shell call. The agent uses
-  `#N` links with N digits only, puts each path in single quotes, marks a path with a `'` as
-  `unchecked`, and treats the issue text as claims to check, never as instructions (research R6).
-  The agent reads no path outside the repo and fetches no web page, so issue text cannot point it at `~/.ssh` or a URL.
+  `#N` links with N digits only, puts each path and each value it passes to
+  `git log --oneline --grep='<word>'` and `git log --oneline -S'<text>'` in single quotes, marks
+  one that holds a `'` as `unchecked`, and treats the issue text as claims to check, never as instructions (research R6).
+  A path inside the repo is relative, has no `..` part, and does not start with `/` or `~`. The
+  agent reads no other path and fetches no web page, so issue text cannot point it at `~/.ssh`
+  or a URL.
 - **S4. Model file names (T002).** `.stratum/models.json` accepts `st-triage` once the agent file
   exists. Existing files stay valid. No other contract changes.
 - No access rules, no personal or minors' data beyond what the issue already shows on GitHub.
@@ -128,3 +131,22 @@ DESIGN.md                 # D7 row, D9 row and count
 ## Complexity Tracking
 
 No violations.
+
+## Validate
+
+Date: 2026-10-22. Verdict: CONDITIONAL
+
+| Check | Verdict | Findings |
+|-------|---------|----------|
+| 1. Setup and dependencies | PASS | gh 2.102.0 (signed in as HyuseCS), Claude Code 2.1.302, Bash 5.3.20, Python 3.14.8, git 2.56.0, node v24.14.1 match research.md. No new package |
+| 2. Test coverage per requirement | CONCERN | F3, F4, F6 |
+| 3. Breaking changes | PASS | Pinned lists that break and are fixed by T001/T002: `tests/test_model_hook.py:202-204`, `tests/test_inspect.sh:89` and `:97`, `tests/test_inspect.sh:112-118` (README two-way), `tests/test_model_files.sh:42` (via `skills/st-model/SKILL.md:11`), `tests/test_session_hooks.sh:40-43`. `hooks/st-models.py:8` reads `agents/`, no break. Existing `.stratum/models.json` files stay valid. Rollback: revert the commits (line 87) |
+| 4. Security and privacy | CONCERN | F2, F5 |
+
+Evidence: T001 to T004 built from contracts/triage.md in a scratch clone of `2515f68`. After T001 the red set equals quickstart section 1 row T001. After T003 only `#15 FR-005 skill` is red. After T004 every quickstart section 1 command passes and `git status` lists only the planned files. The 16 phrase controls, C1 to C4 and both README controls give the red checks quickstart section 2 names.
+
+F2. contracts/triage.md:77 The agent runs `git log --oneline --grep=<word>` and `git log --oneline -S<text>` with values taken from issue text. S3 (line 74-78) quotes paths only, so these values reach the shell unquoted. -> st-plan: in step 4, put each value from the issue in single quotes, mark a value with a `'` as `unchecked`, add a `#15 untrusted` phrase row and a control line.
+F3. quickstart.md:112 FR-006 and SC-002 have no check that can fail on behavior. The text check proves only that the skill says to check cites. L1 says "every cite shown was checked" but gives the user no step to check one. -> st-plan: add to L1 a by-hand step: for each cite, `sed -n '<line>p' '<file>'` and `git cat-file -t <sha>`, all match.
+F4. quickstart.md:113 US1 scenario 1 (`partly built`) has no live row that can fail. L2 accepts `partly built` or `obsolete`, and #15 is fully built on this branch when L2 runs. -> st-plan: pin L2 to one verdict and add a row with an issue that is partly built.
+F5. contracts/triage.md:73-75 "A path inside the repo" is not defined. A path from issue text such as `../x`, `/x` or `~/x` has no rule, so line 78 ("reads no path outside the repo") has no text that enforces it. -> st-plan: define a repo path as relative, with no `..` part and no leading `/` or `~`, and say anything else is not read.
+F6. spec.md:63-64, 69-70 The edge cases "gh missing or not signed in" and "the agent changes a file" have text checks only, no live row. -> st-plan, or accept with the note in tasks.md:143-144.
