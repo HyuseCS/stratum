@@ -50,7 +50,7 @@ Command: `PYTHONDONTWRITEBYTECODE=1 bash tests/test_inspect.sh`. Today: 7 FAIL l
   delete the L1 row from plan.md and re-run st-inspect: it reports the lesson as uncited.
   Ran on 2026-10-23: Plan text on a scratch project with L1 and L2 cited L1 in a gate row and on T001 and T002, and
   ruled out L2 in one line. With the L1 row and tags removed, the Inspect text reported L1 as uncited (finding F1,
-  medium) and named the fix.
+  medium) and named the fix. The positive Inspect run (L1 row present, no finding) was not done.
 
 ## Chosen trade-off
 Only Plan and Inspect read the file. The Build agent, the test agent, the session-start hook and the
