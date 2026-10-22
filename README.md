@@ -283,6 +283,7 @@ python3 tests/test_git_guard.py
 python3 tests/test_model_hook.py
 python3 tests/test_phase_hook.py
 bash tests/test_model_files.sh
+bash tests/test_herdr_workspace.sh
 bash tests/test_inspect.sh
 bash tests/test_on_demand.sh
 bash tests/test_session_hooks.sh

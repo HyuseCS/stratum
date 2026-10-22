@@ -1,0 +1,192 @@
+#!/usr/bin/env bash
+set -u
+root="$(cd "$(dirname "$0")/.." && pwd)"
+script="$root/scripts/st-herdr-workspace.sh"
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+fail=0
+q=
+check() { if eval "$2"; then [ -n "$q" ] || echo "ok   $1"; else [ -n "$q" ] || echo "FAIL $1"; fail=1; fi; }
+
+mkdir -p "$tmp/bin"
+cat > "$tmp/bin/herdr" <<'EOF'
+#!/usr/bin/env bash
+T=$STUB_T
+if [ $# -eq 0 ]; then echo BARE >> "$T/calls"; exit 99; fi
+( IFS=$'\t'; printf '%s\n' "$*" >> "$T/calls" )
+[ "$1" = --machine ] && shift 2
+if [ "${STUB_FAIL:-}" = "$1 $2" ]; then
+  echo '{"error":{"code":"stub","message":"stub refused"}}' >&2
+  exit 1
+fi
+next() { local n; n=$(cat "$T/n_$1" 2>/dev/null || echo 0); n=$((n+1)); echo $n > "$T/n_$1"; echo $n; }
+emit() { printf '%s\n' "$1" | tee -a "$T/resp"; }
+case "$1 $2" in
+"workspace create")
+  next t > /dev/null; next p > /dev/null
+  echo "stubW:p1 stubW:t1" > "$T/panes"
+  emit '{"result":{"workspace":{"workspace_id":"stubW"},"tab":{"tab_id":"stubW:t1"},"root_pane":{"pane_id":"stubW:p1"}}}' ;;
+"tab create")
+  t=stubW:t$(next t); p=stubW:p$(next p)
+  echo "$p $t" >> "$T/panes"
+  emit "{\"result\":{\"tab\":{\"tab_id\":\"$t\"},\"root_pane\":{\"pane_id\":\"$p\"}}}" ;;
+"pane split")
+  p=stubW:p$(next p); t=$(awk -v id="$3" '$1==id{print $2}' "$T/panes")
+  echo "$p $t" >> "$T/panes"
+  emit "{\"result\":{\"pane\":{\"pane_id\":\"$p\"}}}" ;;
+"pane list")
+  emit "$(jq -Rnc --arg c "${STUB_CWD:-}" '{result:{panes:[inputs|split(" ")|{pane_id:.[0],tab_id:.[1],cwd:$c}]}}' "$T/panes")" ;;
+"pane process-info")
+  prog=$(awk -F'\t' -v id="$4" '{o=($1=="--machine")?2:0; if($(o+1)=="pane"&&$(o+2)=="run"&&$(o+3)==id)p=$(o+4)} END{print p}' "$T/calls")
+  case "$prog" in claude|claude2) n=claude ;; lazygit) n=lazygit ;; *) n=zsh ;; esac
+  [ -n "${STUB_NOTSEEN:-}" ] && n=zsh
+  emit "{\"result\":{\"process_info\":{\"pane_id\":\"$4\",\"foreground_processes\":[{\"name\":\"$n\"}]}}}" ;;
+*) emit '{"result":{}}' ;;
+esac
+EOF
+printf '#!/bin/sh\nexit 0\n' > "$tmp/bin/sleep"
+chmod +x "$tmp/bin/herdr" "$tmp/bin/sleep"
+export STUB_T="$tmp"
+
+found=$(PATH="$tmp/bin:$PATH" command -v herdr)
+if [ "$found" != "$tmp/bin/herdr" ]; then echo "FAIL stub herdr is first on PATH: found $found"; exit 1; fi
+found=$(PATH="$tmp/bin:$PATH" command -v sleep)
+if [ "$found" != "$tmp/bin/sleep" ]; then echo "FAIL stub sleep is first on PATH: found $found"; exit 1; fi
+
+run() {
+  : > "$tmp/calls"; : > "$tmp/resp"; rm -f "$tmp"/n_* "$tmp/panes"
+  out=$(PATH="$tmp/bin:$PATH" HERDR_PANE_ID=w1P:p1 HERDR_TAB_ID=w1P:t1 HERDR_WORKSPACE_ID=w1P "$@" 2>&1); rc=$?
+}
+norm() { sed -E 's/^--machine\t[^\t]*\t//' "$tmp/calls"; }
+cnt() { norm | grep -cP "$1"; }
+cwdbad() { awk -F'\t' -v d="$1" '{ok=0;for(i=1;i<NF;i++)if($i=="--cwd"&&$(i+1)==d)ok=1;if(!ok)bad=1}END{exit !bad}'; }
+ids() { norm | awk -F'\t' '{for(i=1;i<NF;i++)if($i~/^(rename|split|run|focus|--workspace|--pane)$/)print $(i+1)}'; }
+idsresp() { local id; for id in $(ids); do grep -qF "\"$id\"" "$tmp/resp" || return 1; done; }
+forbid() { norm | awk -F'\t' '$2=="close"||($1=="machine"&&$2~/^(reconnect|add|remove|enable|disable)$/)||$1=="server"{bad=1}END{exit bad}'; }
+focusok() { norm | awk -F'\t' '$1=="workspace"&&$2=="focus"{f++;next} f&&(($1=="workspace"&&$2=="create")||($1=="tab"&&($2=="create"||$2=="rename"))||($1=="pane"&&($2=="split"||$2=="run"))){bad=1} END{exit !(f==1)||bad}'; }
+piok() { norm | awk -F'\t' '$1=="workspace"&&$2=="focus"{f=NR} $1=="pane"&&$2=="process-info"{c[$4]++; if(!f)bad=1; if($3!="--pane"||($4!="stubW:p1"&&$4!="stubW:p2"))bad=1} END{for(k in c)if(c[k]>10)bad=1; exit (c["stubW:p1"]<1||c["stubW:p2"]<1||bad)}'; }
+machok() { awk -F'\t' -v m="$1" '$0=="machine\tlist\t--json"{next} !($1=="--machine"&&$2==m){bad=1} END{exit bad}' "$tmp/calls"; }
+panes_exp() {
+  printf 'pane\tstubW:p1\tstubW:t1\t%s\t%s\t%s\n' "$1" "$2" "$4"
+  printf 'pane\tstubW:p2\tstubW:t1\tlazygit\t%s\t%s\n' "$3" "$4"
+  printf 'pane\tstubW:p%s\tstubW:t%s\tshell\t-\t%s\n' 3 2 "$4" 4 2 "$4" 5 3 "$4" 6 3 "$4"
+}
+
+calls_ok() {
+  local f=$2 m=$3
+  check "$1 one workspace create" '[ "$(cnt "^workspace\tcreate\t")" = 1 ]'
+  check "$1 workspace create has --cwd folder" '! { norm | grep -P "^workspace\tcreate\t" | cwdbad "$f"; }'
+  check "$1 every tab create has --cwd folder" '! { norm | grep -P "^tab\tcreate\t" | cwdbad "$f"; }'
+  check "$1 every pane split has --cwd folder" '! { norm | grep -P "^pane\tsplit\t" | cwdbad "$f"; }'
+  if [ -z "$m" ]; then
+    check "$1 no --machine" '! grep -qF -- --machine "$tmp/calls"'
+  else
+    check "$1 --machine $m on every call but machine list" 'machok "$m"'
+  fi
+  check "$1 ids are stub ids" '[ -n "$(ids)" ] && ! ids | grep -qv "^stub"'
+  check "$1 ids come from a herdr answer" 'idsresp'
+  check "$1 no live id, --current, --session, --remote" '! grep -qE -- "w1P|--current|--session|--remote" "$tmp/calls"'
+  check "$1 no close, reconnect, machine edit, server" 'forbid'
+  check "$1 no bare herdr" '! grep -qx BARE "$tmp/calls"'
+  check "$1 focus once, last mutating call" 'focusok'
+}
+
+rejects() {
+  local name=$1 phrase=$2; shift 2
+  run "$@"
+  check "$name exit 1" '[ $rc = 1 ]'
+  check "$name one line with the phrase" '[ "$(printf "%s\n" "$out" | grep -c .)" = 1 ] && grep -qF -- "$phrase" <<<"$out"'
+  check "$name no herdr call" '[ ! -s "$tmp/calls" ]'
+}
+
+proj="$tmp/proj dir"
+mkdir "$proj"
+git -C "$proj" init -q
+printf 'x\n' > "$proj/a.txt"
+git -C "$proj" add a.txt
+git -C "$proj" -c user.name=t -c user.email=t@t commit -q -m first
+printf 'y\n' > "$proj/new.txt"
+export HERDR_ENV=1
+
+l1() {
+  STUB_CWD="$proj" run bash "$1" "$proj" --label 32-herdr-workspace
+  check "L1 exit 0" '[ $rc = 0 ]'
+  calls_ok L1 "$proj" ""
+  check "L1 two tab create, Dev Servers and VM" '[ "$(cnt "^tab\tcreate\t")" = 2 ] && norm | grep -P "^tab\tcreate\t" | grep -qP "\t--label\tDev Servers\t" && norm | grep -P "^tab\tcreate\t" | grep -qP "\t--label\tVM\t"'
+  check "L1 three pane split" '[ "$(cnt "^pane\tsplit\t")" = 3 ]'
+  check "L1 two pane run, claude on root pane, lazygit on first split" '[ "$(cnt "^pane\trun\t")" = 2 ] && norm | grep -qxF "$(printf "pane\trun\tstubW:p1\tclaude")" && norm | grep -qxF "$(printf "pane\trun\tstubW:p2\tlazygit")"'
+  check "L1 workspace line" 'grep -qxF "$(printf "workspace\tstubW\t32-herdr-workspace\tlocal")" <<<"$out"'
+  check "L1 folder line" 'grep -P "^folder\t" <<<"$out" | grep -qP "^folder\t\Q$proj\E\t.*1 changed.*no upstream"'
+  check "L1 tab lines" '[ "$(grep -cP "^tab\t" <<<"$out")" = 3 ] && grep -qxF "$(printf "tab\tstubW:t1\tMain")" <<<"$out" && grep -qxF "$(printf "tab\tstubW:t2\tDev Servers")" <<<"$out" && grep -qxF "$(printf "tab\tstubW:t3\tVM")" <<<"$out"'
+  check "L1 six pane lines" '[ "$(grep -P "^pane\t" <<<"$out")" = "$(panes_exp claude running running "$proj")" ]'
+}
+l1 "$script"
+
+STUB_CWD="$proj" run bash "$script" "$proj" --label 32-herdr-workspace --agent claude2
+check "L2 exit 0" '[ $rc = 0 ]'
+check "L2 agent pane run ends claude2" 'norm | grep -qxF "$(printf "pane\trun\tstubW:p1\tclaude2")"'
+check "L2 report says claude2" 'grep -qP "^pane\tstubW:p1\tstubW:t1\tclaude2\trunning\t" <<<"$out"'
+
+STUB_NOTSEEN=1 STUB_CWD="$proj" run bash "$script" "$proj" --label 32-herdr-workspace
+check "L3 exit 0" '[ $rc = 0 ]'
+calls_ok L3 "$proj" ""
+check "L3 both programs not seen" '[ "$(grep -P "^pane\t" <<<"$out" | head -2)" = "$(panes_exp claude "not seen" "not seen" "$proj" | head -2)" ]'
+check "L3 process-info only on the Main panes, 1 to 10 each, after focus" 'piok'
+
+git -C "$proj" -c user.name=t -c user.email=t@t commit -q --allow-empty -m second
+git -C "$proj" branch up
+git -C "$proj" reset -q --hard HEAD~1
+git -C "$proj" branch -q --set-upstream-to=up
+STUB_CWD="$proj" run bash "$script" "$proj" --label 32-herdr-workspace
+check "L4 exit 0" '[ $rc = 0 ]'
+check "L4 behind 1 as of last fetch" 'grep -P "^folder\t" <<<"$out" | grep -qF "behind 1" && grep -P "^folder\t" <<<"$out" | grep -qF "(as of last fetch)"'
+
+plain=$(mktemp -d -p "$tmp")
+STUB_CWD="$plain" run bash "$script" "$plain" --label 32-herdr-workspace
+check "L5 exit 0" '[ $rc = 0 ]'
+check "L5 not a git repo" 'grep -P "^folder\t" <<<"$out" | grep -qF "not a git repo"'
+
+rejects L6 "Folder not found on local:" bash "$script" /no/such/dir --label x
+rejects L7 "Agent must be claude or claude2." bash "$script" "$proj" --label x --agent codex
+rejects L8 "Template must be full or basic." bash "$script" "$proj" --label x --template big
+rejects L9 "Label is required: --label <issue-or-name>." bash "$script" "$proj"
+rejects L10 "Label must be letters, digits, dot, dash or underscore" bash "$script" "$proj" --label -x
+unset HERDR_ENV
+rejects L11 "Not inside a herdr pane." bash "$script" "$proj" --label x
+export HERDR_ENV=1
+
+STUB_FAIL="tab create" STUB_CWD="$proj" run bash "$script" "$proj" --label 32-herdr-workspace
+check "L12 exit 1" '[ $rc = 1 ]'
+check "L12 first line is stopped with the stub message" 'head -1 <<<"$out" | grep -q "^stopped: .*stub refused"'
+check "L12 report so far" 'grep -qP "^workspace\t" <<<"$out" && grep -qxF "$(printf "tab\tstubW:t1\tMain")" <<<"$out" && [ "$(grep -cP "^pane\t.*\t\Q$proj\E$" <<<"$out")" = 2 ] && [ "$(grep -cP "^pane\t" <<<"$out")" = 2 ]'
+check "L12 one tab create, no focus, no close" '[ "$(cnt "^tab\tcreate\t")" = 1 ] && [ "$(cnt "^workspace\tfocus\t")" = 0 ] && forbid'
+
+run bash "$script" "$proj" --label x --bogus
+check "L13 --bogus exits 2" '[ $rc = 2 ]'
+
+STUB_CWD=/stub/elsewhere run bash "$script" "$proj" --label 32-herdr-workspace
+check "L14 exit 0" '[ $rc = 0 ]'
+check "L14 cwd column comes from the read back" '[ "$(grep -P "^pane\t" <<<"$out")" = "$(panes_exp claude running running /stub/elsewhere)" ]'
+
+STUB_FAIL="pane list" STUB_CWD="$proj" run bash "$script" "$proj" --label 32-herdr-workspace
+check "L15 exit 0" '[ $rc = 0 ]'
+check "L15 cwd is ? in every pane line" '[ "$(grep -P "^pane\t" <<<"$out")" = "$(panes_exp claude running running "?")" ]'
+
+STUB_FAIL="pane process-info" STUB_CWD="$proj" run bash "$script" "$proj" --label 32-herdr-workspace
+check "L16 exit 0" '[ $rc = 0 ]'
+check "L16 not seen for P1 and P2" '[ "$(grep -P "^pane\t" <<<"$out")" = "$(panes_exp claude "not seen" "not seen" "$proj")" ]'
+check "L16 workspace focus present" '[ "$(cnt "^workspace\tfocus\t")" = 1 ]'
+
+nc() {
+  check "$1 sed changed the script" '[ -f "$script" ] && ! cmp -s "$script" "$tmp/$1.sh"'
+  local f=$fail; fail=0; q=1
+  l1 "$tmp/$1.sh"
+  q=; local red=$fail; fail=$f
+  check "$1 goes red" '[ $red = 1 ]'
+}
+sed -E '/pane split/{s/ --cwd ("[^"]*"|[^ ]+)//;:a;n;ba}' "$script" > "$tmp/NC1.sh" 2>/dev/null
+nc NC1
+sed -E '/pane split/{s/pane split +("[^"]*"|[^ ]+)/pane split "$HERDR_PANE_ID"/;:a;n;ba}' "$script" > "$tmp/NC3.sh" 2>/dev/null
+nc NC3
+
+exit $fail
