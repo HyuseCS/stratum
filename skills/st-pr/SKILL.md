@@ -31,17 +31,19 @@ Nothing is posted to GitHub before the gate in step 5. `gh pr create` cannot be 
 
 Only when step 1 chose it. It replaces steps 2 to 4. Steps 5 and 6 run as written.
 
-1. Note the output of `git rev-parse HEAD` and `git status --porcelain --untracked-files=all`.
+1. Delete `<scratchpad>/pr-body.md` if it exists. Note the output of `git rev-parse HEAD`,
+   `git status --porcelain --untracked-files=all`, `git diff HEAD | sha256sum`, and
+   `sha256sum` of each `??` path in that status.
 2. Call `Workflow({scriptPath: "<plugin root>/workflows/pr.js", args})`. Pass `args` as a JSON object, not a string:
    `projectRoot`, `pluginRoot` and `scratchpad` (absolute paths), `base`, `branch`, `featureDir`
    (the project root joined with the `feature_directory` from `.stratum/state.json`, or `""`), and `commits` (the lines
    of `git log origin/<base>..HEAD --format='%h %s'`, as an array of strings).
    If the tool refuses the `scriptPath` ("a file you can already read"), read `<plugin root>/workflows/pr.js` and call `Workflow` again: pass the file's text through the tool's `script` input, with the same `args`.
 3. The workflow runs in the background: wait for its task notification. If the tool result already holds the result object, use it. Never start a second run while one runs.
-4. Run the two commands from 1 again. If an output differs, show the difference and stop before the gate.
+4. Run the commands from 1 again, except the delete. If an output differs, show the difference and stop before the gate.
 5. `blocked` is true: show the warnings and stop before the gate. Nothing is pushed.
 6. A refused `scriptPath` goes to the `script` call of 2 first. If the call cannot start, the run fails, or it returns no `bodyPath`, or the file at `bodyPath` is missing: say so in one line, then run steps 2 to 4 on the current path.
-7. Else read the body at `bodyPath` and go to step 5 with the returned `title` and `warnings`.
+7. Else read the body at `bodyPath` and go to `## 5. Gate` with the returned `title` and `warnings`.
    Revise at the gate edits the body in this session and never runs the workflow again.
 
 ## 2. Facts

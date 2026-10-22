@@ -26,6 +26,11 @@ L11 background	The workflow runs in the background: wait for its task notificati
 L11 in progress	Never start a second run while one runs.
 L11 no result	If the call cannot start, the run fails, or it returns no `bodyPath`
 L11 fallback	then run steps 2 to 4 on the current path.
+review F5 stop	If an output differs, show the difference and stop before the gate.
+review F6 stale body	Delete `<scratchpad>/pr-body.md` if it exists.
+review C3 diff hash	git diff HEAD | sha256sum
+review C3 untracked hash	`sha256sum` of each `??` path in that status
+review F8 gate	go to `## 5. Gate`
 EOF
 
 exit $fail
