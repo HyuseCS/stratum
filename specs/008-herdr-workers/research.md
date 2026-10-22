@@ -67,6 +67,24 @@ branch `18-codex-advisor`.
   while herdr answers `agent_pane_busy`, `sleep 1` between tries, up to 10 tries. Any other error,
   or still busy after the 10th try, is the normal stop. `ponytail:` fixed 10 s bound, the shape of
   D20 in specs/007-herdr-workspace. Test cases S11 and S11b (contracts/script.md section 6).
+- Live T005, third attempt (2026-10-23 07:15:47, from `/home/hyuse/Desktop/stratum-003-demo`,
+  script with the `agent_pane_busy` retry, id T910): `start` exit 0 in 4.590 s total (`time`). It
+  printed `worker	worker-t910	local	w1Y	w1Y:p1	worker-t910	/home/hyuse/Desktop/stratum-worker-t910`
+  and `state	working	worker-t910	w1Y:p1`. The count of `agent start` tries is not visible from
+  outside. The 4.59 s covers any busy retries (1 s each), the `claude` start and the `/goal`
+  prompt wait. `close T910` (0.495 s) printed `closed	worker-t910` and
+  `folder	/home/hyuse/Desktop/stratum-worker-t910	ready to remove`, exit 0. The script keeps the
+  `workspace close` answer in `r` and prints none of it. herdr did not ask for `--group`: exit 0,
+  and `w1Y` is gone from `workspace list`.
+- Live T005, third attempt: `herdr agent read worker-t910 --source recent-unwrapped --lines 40`
+  prints the pane as plain text, not JSON. `| jq -r .result.read.text` fails with
+  `jq: parse error: Invalid numeric literal at line 3, column 4`. So the `.result.read.text` path
+  above is wrong for this call, and the script's `panetext` (`... | jq -r .result.read.text
+  2>/dev/null || true`) prints `pane text:` with nothing under it on `blocked`, `stopped` and no
+  result file. R1's earlier evidence was `agent read w1P:p1` with no `--source` or `--lines`.
+  Whether the flags or the name target change the output format, or whether a JSON flag exists
+  for this call, is not tested. `tests/test_st_worker.sh` mocks herdr with the JSON shape, so the
+  suite stays green with this break. Finding to the orchestrator. The script is not changed.
 
 ## R2. Worker names, labels and branch (FR-001, FR-016)
 
@@ -122,6 +140,10 @@ branch `18-codex-advisor`.
 - Live T005, second attempt: `start` exit 1 at `agent start` (`agent_pane_busy`, R1). `claude`
   never started (`agent get worker-t900`: `agent_not_found`), so the trust dialog is still not
   verified.
+- Live T005, third attempt: `start` exit 0, `state working`. No trust dialog showed. The pane
+  read at 07:15:56 (5 s after `start`) shows the `/goal` line taken and `Goal set: ...` with no
+  trust prompt, and `agent get worker-t910` gave `working`. A new worker worktree of the trusted
+  repo starts with no dialog.
 
 ## R5. The one prompt and `/goal` (FR-003, D21)
 
@@ -143,6 +165,10 @@ branch `18-codex-advisor`.
 - Live T005: not reached; `start` stopped at `worktree create` (R1). `◎ /goal active` not seen.
 - Live T005, second attempt: not reached; `start` stopped at `agent start` (`agent_pane_busy`,
   R1). `◎ /goal active` not seen.
+- Live T005, third attempt: the pasted `/goal` ran as the slash command. `agent read` at
+  07:15:56 shows ``❯ /goal `grep -qx hi demo/hello.txt` exits 0, ...``,
+  `⎿  Goal set: grep -qx hi demo/hello.txt exits 0, ...` and the status line
+  `◎ /goal active (5s)`. At the end the pane shows `✔ Goal achieved (2m · 1 turn · 7.6k tokens)`.
 
 ## R6. Waiting (FR-004, D13, D14)
 
@@ -164,6 +190,19 @@ branch `18-codex-advisor`.
   R1). No `state` line, no idle gap measured. D24: the guard file was written
   (`cat /home/hyuse/Desktop/stratum-worker-t900/.stratum/git-guard.json` gives `{"commit":"auto"}`),
   but no worker ran, so the commit with no dialog is not verified.
+- Live T005, third attempt: `wait T910` started at 07:16:02 and printed one line,
+  `07:18:15 state	finished	worker-t910	w1Y:p1` (133 s, under the 540 s bound). Its exit code was
+  lost (zsh has no `PIPESTATUS`). A second `wait T910` at 07:18:20 printed the same line at once,
+  exit 0. The goal took 1 turn (`✔ Goal achieved (2m · 1 turn ...)`), so there was no idle gap
+  between goal turns to measure. The 10 s resume constant is not tested by this run. D24: the
+  worker committed `e0356fc T910: add demo/hello.txt with the line hi` (only `demo/hello.txt`)
+  with no dialog: `wait` never saw `blocked`, and the pane says the st-git agent made the commit.
+  `cat /home/hyuse/Desktop/stratum-worker-t910/.stratum/git-guard.json` gives
+  `{"commit":"auto"}`. `result T910` printed the `result` line and the four result lines, no pane
+  text, exit 0. `brief.md` and `result.md` stay untracked. Step 6: `git log --oneline
+  worker-demo-base..worker-t910` gave `e0356fc`. `git merge --no-ff --no-edit worker-t910` in the
+  demo worktree made `e92e4a8 Merge branch 'worker-t910' into worker-demo-base`, and
+  `grep -qx hi demo/hello.txt; echo $?` gave `0`.
 
 ## R7. Questions and answers (FR-006, D14, US2)
 
@@ -240,6 +279,14 @@ branch `18-codex-advisor`.
   workspace `w1X` `worker-t900` (in `workspace list`), its pane `w1X:p1` with a bare `zsh`, folder
   `/home/hyuse/Desktop/stratum-worker-t900`, branch `worker-t900`. `agent list` has no
   `worker-t900`; `pgrep -af -- '-n worker-t90[0]'` exit 1 (no `claude`).
+- Live T005, third attempt: `close T910` exit 0 at 07:18:35 (R1). Before it,
+  `pgrep -af -- '-n worker-t91[0]'` gave
+  `2887094 /opt/claude-code/bin/claude --permission-mode auto -n worker-t910`. After it, all three
+  checks are empty: `herdr agent list | jq -r '.result.agents[].name' | grep -x worker-t910` exit 1,
+  `herdr workspace list | jq -r '.result.workspaces[].label' | grep -x worker-t910` exit 1, and
+  `pgrep -af -- '-n worker-t91[0]'` exit 1 (run 2 s after `close`). SC-005 holds: closing the
+  workspace ended the `claude`. Left for the user: folder `/home/hyuse/Desktop/stratum-worker-t910`
+  and branch `worker-t910`.
 
 ## R12. Headless worker (FR-011, D12, D19)
 
