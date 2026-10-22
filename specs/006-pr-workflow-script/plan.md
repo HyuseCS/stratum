@@ -70,11 +70,11 @@ Post-design re-check: all gates pass. No violations, so Complexity Tracking stay
   nothing is pushed (FR-006, SC-003). A find names commit, path, line and kind, never the value,
   because the result lands in the session transcript. Limits: the scan is one model's judgment,
   not a pattern tool. A dead scan agent gives `unverified: facts:scan` at the gate and no block,
-  as the spec's edge case says. The fallback current path has no scan, as today. Volume ceiling:
-  one scan agent reads every patch in the range, and with `--diff-merges=first-parent` each merge
-  of main shows main's whole delta again. If the agent runs out of context it may return
-  `{finds: []}`, which looks like a clean scan. Known limit, by spec (edge case: a dead or empty
-  scan gives no block).
+  as the spec's edge case says. The fallback current path has no scan, as today. Volume: one scan
+  agent reads every patch in the range. `--cc` shows only each merge's own conflict hunks, not
+  main's whole delta again. The scan returns `read`, the number of commits it read in full, and a
+  `read` below the commit count adds `unverified: facts:scan` at the gate, so a scan that ran out
+  of context does not look clean (lessons L15).
 - **S2. Agents run with the session's CLAUDE.md and tool access (T002, T003).** Workflow agents
   get the same CLAUDE.md files and the full tool set, including Bash, `git push` and `gh`. No
   tool list makes the facts phase read-only. The guards: each facts, chunk and refuter prompt

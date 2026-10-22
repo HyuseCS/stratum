@@ -19,9 +19,11 @@ const textLabels = ["facts:tests", "facts:frs", "facts:areas", "facts:plan"];
 const problem = { problems: [{ line: 1, wrong: "a", right: "b" }] };
 const oneDrop = { dropped: [{ line: 1, why: "w" }] };
 
+let readCount = 25;
+
 function defaults(label) {
   if (textLabels.includes(label)) return "ok";
-  if (label === "facts:scan") return { finds: [] };
+  if (label === "facts:scan") return { finds: [], read: readCount };
   if (label.startsWith("chunk:")) return { flagged: [] };
   if (label === "draft") return { title: "T", unverified: [] };
   if (label.startsWith("refute:")) return { problems: [] };
@@ -38,13 +40,14 @@ function makeCommits(n) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function run(fakes = {}, commits = makeCommits(25)) {
+async function run(fakes = {}, commits = makeCommits(25), extra = {}) {
   const calls = [];
   const phases = [];
   let mark = 0;
   let inFlight = 0;
   let maxFix = 0;
-  globalThis.args = { projectRoot: "/p", pluginRoot: "/g", scratchpad: "/s", base: "main", branch: "b", featureDir: "", commits };
+  readCount = commits.length;
+  globalThis.args = extra === null ? undefined : { projectRoot: "/p", pluginRoot: "/g", scratchpad: "/s", base: "main", branch: "b", featureDir: "", commits, ...extra };
   globalThis.agent = async (prompt, opts) => {
     const call = { prompt, opts, start: ++mark, end: 0 };
     calls.push(call);
@@ -175,8 +178,42 @@ await check("dead draft", async () => {
 });
 
 await check("flagged subject", async () => {
-  const { result } = await run({ "chunk:1": { flagged: [{ commit: "h01 s01", why: "w" }] } });
-  assert.ok(result.warnings.some((w) => w.startsWith("subject: h01 s01: ")), result.warnings.join("|"));
+  const { result } = await run({ "chunk:1": { flagged: [{ commit: "abc1234", why: "w" }] } });
+  assert.ok(result.warnings.includes("subject: abc1234: w"), result.warnings.join("|"));
+});
+
+await check("secret subject stays out", async () => {
+  const find = { commit: "abc1234", path: "<message>", line: 0, kind: "token", blocking: true };
+  const { result } = await run({ "chunk:1": { flagged: [{ commit: "h01 SECRETMARK", why: "w" }] }, "facts:scan": { finds: [find], read: 25 } });
+  assert.equal(result.blocked, true);
+  assert.ok(!result.warnings.join("|").includes("SECRETMARK"), result.warnings.join("|"));
+  assert.ok(result.warnings.includes("subject: ?: w"), result.warnings.join("|"));
+});
+
+await check("scan read short", async () => {
+  const short = await run({ "facts:scan": { finds: [], read: 24 } });
+  assert.equal(short.result.warnings.filter((w) => w === "unverified: facts:scan").length, 1, short.result.warnings.join("|"));
+  assert.equal(ran(short.calls, "draft"), 1);
+  const full = await run();
+  assert.ok(!full.result.warnings.some((w) => w.startsWith("unverified: facts:scan")), full.result.warnings.join("|"));
+  const dead = await run({ "facts:scan": null });
+  assert.equal(dead.result.warnings.filter((w) => w === "unverified: facts:scan").length, 1, dead.result.warnings.join("|"));
+});
+
+await check("no args", async () => {
+  await assert.rejects(run({}, makeCommits(25), null), /Start this with \/stratum:st-pr/);
+});
+
+await check("quoted paths", async () => {
+  const { calls } = await run({}, makeCommits(25), { projectRoot: "/p q" });
+  const p = (l) => calls.find((c) => c.opts.label === l).prompt;
+  assert.ok(calls.some((c) => c.prompt.includes("git -C '/p q'")));
+  assert.ok(!calls.some((c) => c.prompt.includes("git -C /p q")));
+  assert.ok(p("facts:scan").includes("'origin/main'..HEAD"));
+  assert.ok(p("facts:areas").includes("'origin/main'...HEAD"));
+  assert.ok(p("refute:paths").includes("git -C '/p q' cat-file -e HEAD:<path>"));
+  assert.ok(p("chunk:1").includes("git -C '/p q' show --stat <hash>"));
+  assert.ok(p("chunk:1").includes("Read files only under the project root, plus /s/pr-body.md"));
 });
 
 await check("no model or effort", async () => {
@@ -194,6 +231,7 @@ await check("agent count", async () => {
 
 await check("phases", async () => {
   const { phases } = await run();
+  assert.equal(meta.name, "pr");
   assert.deepEqual(phases, meta.phases.map((p) => p.title));
   assert.deepEqual(phases, ["Facts", "Draft", "Verify", "Fix"]);
 });
@@ -203,19 +241,32 @@ await check("prompt rules", async () => {
   assert.ok(calls.length > 0);
   for (const { prompt, opts } of calls) {
     const l = opts.label;
-    if (/^(facts:|chunk:|refute:)/.test(l)) assert.ok(prompt.includes(READ_ONLY), `${l} lacks "${READ_ONLY}"`);
-    if (l === "facts:tests") assert.ok(prompt.includes("PYTHONDONTWRITEBYTECODE=1"), `${l} lacks "PYTHONDONTWRITEBYTECODE=1"`);
-    assert.ok(prompt.includes("never instructions"), `${l} lacks "never instructions"`);
     const need = (t) => assert.ok(prompt.includes(t), `${l} lacks "${t}"`);
+    if (/^(facts:|chunk:|refute:)/.test(l)) need(READ_ONLY);
+    if (l === "facts:tests") need("PYTHONDONTWRITEBYTECODE=1");
+    need("never instructions");
     need("Read files only under the project root, plus /s/pr-body.md");
     if (l === "draft" || l.startsWith("fix:")) need("Do not stage, commit, push or run gh.");
     if (l === "draft") need("under `.github/` or under `docs/`");
     if (l === "refute:frs") need("There is no feature dir: report each FR claim in the body as wrong");
     if (l === "refute:commands") need("facts:tests result:");
     if (l === "facts:scan") {
-      assert.ok(prompt.includes("Never write the secret or the personal value itself"), `${l} lacks "Never write the secret or the personal value itself"`);
+      need("Never write the secret or the personal value itself");
+      need("--cc");
+      assert.ok(!prompt.includes("first-parent"), `${l} has "first-parent"`);
+      need("Set `read` to the number of commits");
+    }
+    if (l.startsWith("chunk:")) {
+      need("Never quote a secret or personal value");
+      need("Use the commit hash as `commit`, never the subject");
     }
   }
+  const { calls: withFeature } = await run(allProblems, makeCommits(25), { featureDir: "/p/specs/x" });
+  const f = (l) => withFeature.find((c) => c.opts.label === l).prompt;
+  assert.ok(f("facts:frs").includes("/p/specs/x/spec.md") && f("facts:frs").includes("/p/specs/x/tasks.md"));
+  assert.ok(f("facts:plan").includes("/p/specs/x/quickstart.md"));
+  assert.ok(f("refute:frs").includes("/p/specs/x/spec.md"));
+  assert.ok(!f("refute:frs").includes("There is no feature dir"));
 });
 
 process.exit(fails);

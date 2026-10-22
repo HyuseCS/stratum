@@ -27,7 +27,7 @@ never empty (step 1 stops on an empty range). A JSON object, never a string.
 | `facts:tests` | text | `unverified: facts:tests` |
 | `facts:frs` | text, `N/A` with no feature dir | `unverified: facts:frs` |
 | `facts:areas` | text | `unverified: facts:areas` |
-| `facts:scan` | `{finds: [{commit, path, line, kind, blocking}]}` | `unverified: facts:scan`, no block |
+| `facts:scan` | `{finds: [{commit, path, line, kind, blocking}], read}` | null or `read < commits.length`: `unverified: facts:scan`, no block |
 | `facts:plan` | text, `N/A` with no feature dir | `unverified: facts:plan` |
 | `chunk:<n>` | `{flagged: [{commit, why}]}` | `unverified: chunk:<n>` |
 
