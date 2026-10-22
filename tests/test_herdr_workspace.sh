@@ -140,6 +140,21 @@ l1() {
   check "L1 six pane lines" '[ "$(grep -P "^pane\t" <<<"$out")" = "$(panes_exp claude running running "$proj")" ]'
 }
 l1 "$script"
+nc() {
+  local fn=$2
+  check "$1 sed changed the script" '[ -f "$script" ] && ! cmp -s "$script" "$tmp/$1.sh"'
+  local f=$fail; fail=0; q=1
+  local base=0
+  "$fn" "$script"; base=$fail; fail=0
+  "$fn" "$tmp/$1.sh"
+  q=; local red=$fail; fail=$f
+  check "$1 real script is green" '[ $base = 0 ]'
+  check "$1 goes red" '[ $red = 1 ]'
+}
+sed -E '/pane split/{s/ --cwd ("[^"]*"|[^ ]+)//;:a;n;ba}' "$script" > "$tmp/NC1.sh" 2>/dev/null
+nc NC1 l1
+sed -E '/pane split/{s/pane split +("[^"]*"|[^ ]+)/pane split "$HERDR_PANE_ID"/;:a;n;ba}' "$script" > "$tmp/NC3.sh" 2>/dev/null
+nc NC3 l1
 
 STUB_CWD="$proj" run bash "$script" "$proj" --label 32-herdr-workspace --agent claude2
 check "L2 exit 0" '[ $rc = 0 ]'
@@ -252,21 +267,6 @@ STUB_SSH_RC=1 rrej R5 "Folder not found on laptop: ~/proj x" 1 '~/proj x' --mach
 STUB_SSH_RC=255 rrej R6 "ssh to u@stubhost failed: ssh: stub failure" 1 '~/proj x' --machine laptop
 rrej R7 "A remote folder must start with / or ~." 0 proj --machine laptop
 
-nc() {
-  local fn=${2:-l1}
-  check "$1 sed changed the script" '[ -f "$script" ] && ! cmp -s "$script" "$tmp/$1.sh"'
-  local f=$fail; fail=0; q=1
-  local base=0
-  if [ -n "${2:-}" ]; then "$fn" "$script"; base=$fail; fail=0; fi
-  "$fn" "$tmp/$1.sh"
-  q=; local red=$fail; fail=$f
-  check "$1 real script is green" '[ $base = 0 ]'
-  check "$1 goes red" '[ $red = 1 ]'
-}
-sed -E '/pane split/{s/ --cwd ("[^"]*"|[^ ]+)//;:a;n;ba}' "$script" > "$tmp/NC1.sh" 2>/dev/null
-nc NC1
-sed -E '/pane split/{s/pane split +("[^"]*"|[^ ]+)/pane split "$HERDR_PANE_ID"/;:a;n;ba}' "$script" > "$tmp/NC3.sh" 2>/dev/null
-nc NC3
 sed -E '/H\+=\(--machine/d' "$script" > "$tmp/NC2.sh" 2>/dev/null
 nc NC2 r1
 sed -E '/^Q=\$\{Q\/#/d' "$script" > "$tmp/NC4.sh" 2>/dev/null

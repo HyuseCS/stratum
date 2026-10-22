@@ -25,14 +25,27 @@ case $agent in claude | claude2) ;; *) fail "Agent must be claude or claude2." ;
 
 Q=$(printf %q "$folder")
 Q=${Q/#\\~/\~}
-probe=$(bash -c "cd -- $Q && pwd && { git --no-optional-locks status --porcelain=v2 --branch 2>/dev/null || true; }" 2>/dev/null) || fail "Folder not found on ${machine:-local}: $folder"
+P="cd -- $Q && pwd && { git --no-optional-locks status --porcelain=v2 --branch 2>/dev/null || true; }"
+H=(herdr)
+e=$(mktemp)
+trap 'rm -f "$e"' EXIT
+if [ -z "$machine" ]; then
+  probe=$(bash -c "$P" 2>/dev/null) || fail "Folder not found on local: $folder"
+else
+  [[ $folder == [/~]* ]] || fail "A remote folder must start with / or ~."
+  ms=$(herdr machine list --json 2>"$e") || fail "$(head -1 "$e")"
+  target=$(jq -r --arg m "$machine" 'first(.[] | select(.label == $m or .id == $m) | .target) // empty' <<<"$ms")
+  [ -n "$target" ] || fail "Unknown machine: $machine. Saved: $(jq -r 'map(.label) | join(", ")' <<<"$ms")."
+  H+=(--machine "$machine")
+  "${H[@]}" workspace list >/dev/null 2>"$e" || fail "Machine $machine does not answer: $(head -1 "$e")"
+  rc=0
+  probe=$(ssh -o BatchMode=yes -- "$target" "$P" 2>"$e") || rc=$?
+  [ $rc != 255 ] || fail "ssh to $target failed: $(head -1 "$e")"
+  [ $rc = 0 ] || fail "Folder not found on $machine: $folder"
+fi
 D=${probe%%$'\n'*}
 git=$(tail -n +2 <<<"$probe" | awk '/^# branch\.head /{h=$3} /^# branch\.ab /{ab="ahead " substr($3,2) ", behind " substr($4,2) " (as of last fetch)"} /^# branch\./{g=1} /^[^#]/{n++} END{if(!g)print "not a git repo"; else print h ", " (n ? n " changed" : "clean") ", " (ab ? ab : "no upstream")}')
 
-H=(herdr)
-[ -z "$machine" ] || H+=(--machine "$machine")
-e=$(mktemp)
-trap 'rm -f "$e"' EXIT
 WS= rep=()
 declare -A st prog
 

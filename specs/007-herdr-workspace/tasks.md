@@ -99,7 +99,7 @@ checks over ssh and `--machine` on every herdr call.
 
 ### Implementation for User Story 2
 
-- [ ] T006 [US2] Add the remote path to `scripts/st-herdr-workspace.sh`: pre-checks 4b, 4c, 4d, the probe over `ssh -o BatchMode=yes -- "$target"` with the target only from `machine list --json`, the `printf %q` quote with the leading `\~` turned back into `~`, and the `--machine <m>` prefix in the call wrapper (contracts/script.md sections 2 to 4). `HERDR_ENV` is not checked when `--machine` is given (D8). Security: plan S2, S4, S5. Done when every T001 and T005 case and control is green.
+- [X] T006 [US2] Add the remote path to `scripts/st-herdr-workspace.sh`: pre-checks 4b, 4c, 4d, the probe over `ssh -o BatchMode=yes -- "$target"` with the target only from `machine list --json`, the `printf %q` quote with the leading `\~` turned back into `~`, and the `--machine <m>` prefix in the call wrapper (contracts/script.md sections 2 to 4). `HERDR_ENV` is not checked when `--machine` is given (D8). Security: plan S2, S4, S5. Done when every T001 and T005 case and control is green.
 
 - [ ] T007 [US2] Live remote run per quickstart section 3 (SC-002), only when `herdr --machine laptop workspace list` exits 0. Also run the remote command once from a terminal with `HERDR_ENV` unset (`env -u HERDR_ENV -u HERDR_PANE_ID -u HERDR_TAB_ID -u HERDR_WORKSPACE_ID bash scripts/st-herdr-workspace.sh ...`); it must work the same, as the live proof of D8. Record the report and the read back in `specs/007-herdr-workspace/research.md` under a new `R9. Live remote run`. If the laptop still does not answer, tick it with `Not run, <herdr's error line>.` in this task text (lessons L17) and leave plan B1 open.
 
