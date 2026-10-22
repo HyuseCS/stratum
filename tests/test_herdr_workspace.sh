@@ -54,6 +54,7 @@ cat > "$tmp/bin/ssh" <<'EOF'
 #!/usr/bin/env bash
 ( IFS=$'\t'; printf '%s\n' "$*" >> "$STUB_T/ssh" )
 if [ -n "${STUB_SSH_RC:-}" ]; then echo 'ssh: stub failure' >&2; exit "$STUB_SSH_RC"; fi
+[ -z "${STUB_SSH_OUT:-}" ] || echo 'hello from zshrc'
 printf '%s\n' '/home/u/proj x' '# branch.oid 0123' '# branch.head main' '# branch.upstream origin/main' '# branch.ab +3 -2'
 EOF
 printf '#!/bin/sh\nexit 0\n' > "$tmp/bin/sleep"
@@ -266,6 +267,14 @@ STUB_DOWN=1 rrej R4 "Machine laptop does not answer: Error: stub machine down" 0
 STUB_SSH_RC=1 rrej R5 "Folder not found on laptop: ~/proj x" 1 '~/proj x' --machine laptop
 STUB_SSH_RC=255 rrej R6 "ssh to u@stubhost failed: ssh: stub failure" 1 '~/proj x' --machine laptop
 rrej R7 "A remote folder must start with / or ~." 0 proj --machine laptop
+STUB_SSH_OUT=1 rrej R8 "Folder not found on laptop: ~/proj x" 1 '~/proj x' --machine laptop
+
+unset HERDR_ENV
+STUB_CWD='/home/u/proj x' run bash "$script" '/home/u/proj x' --label 32-herdr-workspace --machine laptop
+export HERDR_ENV=1
+check "R9 exit 0" '[ $rc = 0 ]'
+calls_ok R9 '/home/u/proj x' laptop
+check "R9 ssh command has the absolute folder quoted" 'awk -F"\t" "{print \$NF}" "$tmp/ssh" | grep -qF -- "cd -- /home/u/proj\\ x"'
 
 sed -E '/H\+=\(--machine/d' "$script" > "$tmp/NC2.sh" 2>/dev/null
 nc NC2 r1
@@ -276,7 +285,9 @@ bchk() {
   local n=$1 f=$2 m=$3
   check "$n exit 0" '[ $rc = 0 ]'
   calls_ok "$n" "$f" "$m"
-  check "$n one workspace create, one tab rename, one pane split" '[ "$(cnt "^workspace\tcreate\t")" = 1 ] && [ "$(cnt "^tab\trename\t")" = 1 ] && [ "$(cnt "^pane\tsplit\t")" = 1 ]'
+  check "$n one pane split" '[ "$(cnt "^pane\tsplit\t")" = 1 ]'
+  check "$n workspace line" 'grep -qxF "$(printf "workspace\tstubW\t32-herdr-workspace\t%s" "${m:-local}")" <<<"$out"'
+  check "$n folder line" 'grep -qP "^folder\t\Q$f\E\t" <<<"$out"'
   check "$n no tab create, pane run, pane process-info" '[ "$(cnt "^tab\tcreate\t")" = 0 ] && [ "$(cnt "^pane\trun\t")" = 0 ] && [ "$(cnt "^pane\tprocess-info\t")" = 0 ]'
   check "$n one tab line, T1 Main" '[ "$(grep -cP "^tab\t" <<<"$out")" = 1 ] && grep -qxF "$(printf "tab\t%s\tMain" "$(tid 1)")" <<<"$out"'
   check "$n two shell pane lines" '[ "$(grep -cP "^pane\t" <<<"$out")" = 2 ] && [ "$(grep -P "^pane\t" <<<"$out")" = "$(printf "pane\t%s\t%s\tshell\t-\t%s\npane\t%s\t%s\tshell\t-\t%s" "$(pid 1)" "$(tid 1)" "$f" "$(pid 2)" "$(tid 2)" "$f")" ]'

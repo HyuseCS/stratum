@@ -33,17 +33,15 @@ if [ -z "$machine" ]; then
   probe=$(bash -c "$P" 2>/dev/null) || fail "Folder not found on local: $folder"
 else
   [[ $folder == [/~]* ]] || fail "A remote folder must start with / or ~."
-  ms=$(herdr machine list --json 2>"$e") || fail "$(head -1 "$e")"
-  target=$(jq -r --arg m "$machine" 'first(.[] | select(.label == $m or .id == $m) | .target) // empty' <<<"$ms")
+  ms=$(herdr machine list --json 2>"$e") || { msg=$(head -1 "$e"); fail "${msg:-herdr machine list failed.}"; }
+  target=$(jq -r --arg m "$machine" 'first(.[] | select(.label == $m or .id == $m) | .target) // empty' <<<"$ms" 2>/dev/null) || fail "herdr machine list gave no machine list."
   [ -n "$target" ] || fail "Unknown machine: $machine. Saved: $(jq -r 'map(.label) | join(", ")' <<<"$ms")."
   H+=(--machine "$machine")
   "${H[@]}" workspace list >/dev/null 2>"$e" || fail "Machine $machine does not answer: $(head -1 "$e")"
-  rc=0
-  probe=$(ssh -o BatchMode=yes -- "$target" "$P" 2>"$e") || rc=$?
-  [ $rc != 255 ] || fail "ssh to $target failed: $(head -1 "$e")"
-  [ $rc = 0 ] || fail "Folder not found on $machine: $folder"
+  probe=$(ssh -o BatchMode=yes -- "$target" "$P" 2>"$e") || { [ $? != 255 ] || fail "ssh to $target failed: $(head -1 "$e")"; fail "Folder not found on $machine: $folder"; }
 fi
 D=${probe%%$'\n'*}
+[[ $D == /* ]] || fail "Folder not found on ${machine:-local}: $folder"
 git=$(tail -n +2 <<<"$probe" | awk '/^# branch\.head /{h=$3} /^# branch\.ab /{ab="ahead " substr($3,2) ", behind " substr($4,2) " (as of last fetch)"} /^# branch\./{g=1} /^[^#]/{n++} END{if(!g)print "not a git repo"; else print h ", " (n ? n " changed" : "clean") ", " (ab ? ab : "no upstream")}')
 
 WS= rep=()
