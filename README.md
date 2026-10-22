@@ -38,7 +38,7 @@ project, offers to upgrade graphify, installs its post-commit hook, and checks y
 
 | Tool | Used for |
 |------|----------|
-| `git`, `python3` | git guard, model overrides hook, statusline, handoff facts, scripts |
+| `git`, `python3` | git guard, model overrides hook, phase hook, statusline, handoff facts, scripts |
 | `node` | ponytail hooks |
 | `bunx` (Bun) | statusline bar (falls back to markers only) |
 | `graphify` 0.9.74 or later (`uv tool install graphifyy`) | code navigation graph, Dart support |
@@ -64,7 +64,7 @@ The lane follows the highest impact area the change touches.
 | Privacy and access | access rules, data model, contracts, sign-in, personal data | Full |
 | New user story or feature | anything not in a current spec | Full |
 | Core runtime | background services, offline queue, workers, notices | Fast |
-| Screens | layout, components, navigation | Fast (Quick for a one-file visual fix) |
+| Screens | layout, components, navigation | Fast (Quick for a small fix in a few files) |
 | Text and docs | labels, typos, wording | Quick |
 
 **Full lane:** five phases and three gates.
@@ -72,15 +72,15 @@ The lane follows the highest impact area the change touches.
 | # | Phase | What happens | Gate |
 |---|-------|--------------|------|
 | 1 | Define | Grilling, then the spec, then clarify (if needed) and checklist | You agree the spec |
-| 2 | Plan | `st-plan` writes the plan and tasks. Open decisions come to you one at a time. | Asked: make GitHub issues? |
+| 2 | Plan | `st-plan` writes the plan and tasks. Open decisions come to you one at a time. It reads `docs/lessons.md` and cites the lessons that apply. | Asked: make GitHub issues? |
 | 3 | Inspect | `st-inspect` checks the files agree and the plan can be built | You OK the build |
-| 4 | Build | Per task: failing test, build, check, commit. Per story: review, ponytail review, design review. | None unless blocked |
-| 5 | Close | Fix spec drift, optional gap report, proposed lessons | Push only when you say "push" |
+| 4 | Build | Per task: failing test, build, check, commit. Per story: one `st-review` pass, design review for screens. | None unless blocked |
+| 5 | Close | Fix spec drift, optional gap report, proposed lessons, shortcut list | Push only when you say "push" |
 
 **Fast lane:** a short change plan in `specs/<feature>/changes/`, your OK, test-first build,
-ponytail review, commit, drift fix.
+`st-review`, commit, drift fix and shortcut list, commit docs.
 
-**Quick lane:** one file, no gate, related tests, commit. It moves up a lane if it needs more.
+**Quick lane:** one file, no gate, related tests, commit. A small fix across a few files goes to `st-build` in brief mode. It moves up a lane if it needs a change plan.
 
 ### Skills
 
@@ -89,6 +89,8 @@ ponytail review, commit, drift fix.
 | `st <task>` | Main entry. Picks the lane and runs it. |
 | `st-full`, `st-fast`, `st-quick` | Force a lane. |
 | `st-define`, `st-plan`, `st-inspect`, `st-build`, `st-close` | Run or resume one Full-lane phase. |
+| `st-review`, `st-test`, `st-debug`, `st-git` | Run one Build-loop agent on demand. A missing feature comes from `.stratum/state.json`, a missing range is `main..HEAD`. |
+| `st-triage <issue#>...` | Check GitHub issues against the code and git history, read-only: verdict, what is built, blocker, next step. |
 | `st-status` | Feature, phase, lane, tasks done, git guard options, next gate, missing tools, duplicate installs, days since the last upstream sync, model overrides. |
 | `st-shape arrow\|rounded\|slanted\|blocks\|flat` | Set the statusline shape. |
 | `st-theme <name>` | Set the color theme of the statusline and Token Weather. |
@@ -113,14 +115,18 @@ All skills are called as `/stratum:<name>`.
 |-------|-------|-----|
 | `st-plan` | Opus | Plan, research, data model, contracts, quickstart, tasks |
 | `st-inspect` | Opus | Spec, plan, and tasks agree; setup, test coverage, breaking changes, security |
-| `st-build` | Opus | Builds tasks; loads design rules for screens |
+| `st-build` | Opus | Builds tasks or a brief; loads design rules for screens |
 | `st-test` | Sonnet | Writes each test and shows it fails first |
 | `st-review` | Opus | Reviews each finished story |
 | `st-debug` | Opus | Takes over after 2 failed tries |
 | `st-fast` | Sonnet | Fast-lane change plans |
-| `st-quick` | Sonnet | Quick-lane edits |
-| `st-close` | Sonnet | Drift fixes, gap report, lessons |
+| `st-quick` | Sonnet | Quick-lane edits (one file) |
+| `st-close` | Sonnet | Drift fixes, gap report, lessons, shortcut list |
 | `st-git` | Sonnet | Commits each finished task, exact paths only |
+| `st-impeccable` | Opus | Background impeccable audit, read-only |
+| `st-ponytail-audit` | Opus | Background ponytail audit, read-only |
+| `st-ponytail-debt` | Sonnet | Background ponytail debt ledger, read-only |
+| `st-triage` | Opus | Checks a GitHub issue against the code and git history, read-only |
 
 The Model column is the plugin default. `st-init`'s template runs `st-build`, `st-debug`,
 `st-quick`, `st-plan`, and `st-fast` on Opus with effort high, and `st-close`, `st-git`, and
@@ -164,13 +170,14 @@ copy for that project only.
   blocked: you delete remote branches yourself.
 - **Model overrides.** `.stratum/models.json` maps an agent name to an optional `model` and
   `effort`, for example `{ "st-close": { "model": "haiku", "effort": "xhigh" } }`. Agents:
-  `st-build`, `st-close`, `st-debug`, `st-fast`, `st-git`, `st-inspect`, `st-plan`, `st-quick`,
-  `st-review`, `st-test`. Models: `sonnet`, `opus`, `haiku`, `fable`. Efforts:
-  `low`, `medium`, `high`, `xhigh`, `max`. `st-init` writes it from `templates/models.json`:
+  `st-build`, `st-close`, `st-debug`, `st-fast`, `st-git`, `st-impeccable`, `st-inspect`,
+  `st-plan`, `st-ponytail-audit`, `st-ponytail-debt`, `st-quick`, `st-review`, `st-test`, `st-triage`. Models:
+  `sonnet`, `opus`, `haiku`, `fable`. Efforts: `low`, `medium`, `high`, `xhigh`, `max`. `st-init` writes it from `templates/models.json`:
   `st-build`, `st-debug`, `st-quick`, `st-plan`, `st-fast` on opus with effort high, and
   `st-close`, `st-git`, `st-test` on haiku with effort xhigh.
-  `st-inspect` and `st-review` have no entry and keep the plugin default. A hook applies the file
-  each time a Stratum agent starts, so the next start picks up an edit. A bad file blocks every
+  `st-inspect` and `st-review` have no entry and keep the plugin default.
+  `st-impeccable`, `st-ponytail-audit`, `st-ponytail-debt` and `st-triage` have no entry either. A hook applies
+  the file each time a Stratum agent starts, so the next start picks up an edit. A bad file blocks every
   Stratum agent start with a message that names the problem. Only Stratum agents are affected.
   `CLAUDE_CODE_EFFORT_LEVEL` beats the file's effort.
   The per-call `effort` needs Claude Code 2.1.292 or later. On an older client, remove the
@@ -179,9 +186,27 @@ copy for that project only.
   link it, so agents there use the plugin defaults, as with `git-guard.json`.
   To change an entry, run `/stratum:st-model st-close opus`, say it in plain words ("make
   st-close use opus"), or edit the file.
-- **Session handoff.** `st-handoff` writes the goal, decisions, open questions, and next step. A
-  hook adds a facts block (branch, phase, tasks done, last commits, uncommitted files) at session
-  end and before compaction. The next session starts by reading it.
+- **Session handoff.** `st-handoff` writes the goal, decisions, open questions, and next step.
+  Mid-session it runs in a background fork that has the whole conversation, so you keep talking.
+  When you say you are done, it runs in the main session. A hook adds a facts block (branch,
+  phase, tasks done, last commits, uncommitted files) at session end and before compaction. The
+  next session starts by reading it.
+- **Background audits.** Say "run st-ponytail-audit in the background" (or st-ponytail-debt, an
+  st-impeccable audit, or st-review). The agent of the same name runs it read-only while you keep talking,
+  and its report comes back. Any other skill runs only in the main session.
+- **Phase tracking.** A hook sets `phase` and `lane` in `.stratum/state.json` when a phase skill,
+  `st-fast`, `st-quick` or `st-full` starts, whether you type `/stratum:st-plan` or the
+  orchestrator starts it. A phase out of order gets one
+  warning, then runs.
+- **Who is speaking.** Each reply starts with a label: `[Full lane | Plan]`, `[Fast lane]` or
+  `[Quick lane]` while a lane runs, else `[Orchestrator]`. The phase hook adds the label from
+  `state.json`; the `st-close` agent (Full and Fast lanes) or the `st-quick` agent (Quick lane) sets `phase` to `done` at the end of its run. After you upgrade, a project whose
+  last feature is finished may still show its old phase: set `phase` to `done` once. Each Agent call is named with only its
+  task, like `US1 review`, and each agent's report starts with its tag, like
+  `[st-build]`.
+- **Verify in one call.** After a subagent builds, the orchestrator runs
+  `scripts/st-verify.sh '<test command>' <files>`. It re-runs the test and checks the listed files
+  (new ones too) for added comment lines, and prints one `ok` or `FAIL` line, so each check is one short call.
 - **Statusline.** A powerline in two lines. Line 1: `Stratum`, project path, and session length on
   the left, git branch on the right. Line 2: model with its thinking level, and ponytail on the left,
   the `commit` option on the right. Each line fits the terminal width: the path becomes the folder name, other segments
@@ -256,10 +281,14 @@ ports, and waits for review before updating `vendor.lock`.
 ```bash
 python3 tests/test_git_guard.py
 python3 tests/test_model_hook.py
+python3 tests/test_phase_hook.py
 bash tests/test_model_files.sh
 bash tests/test_inspect.sh
+bash tests/test_on_demand.sh
 bash tests/test_session_hooks.sh
+bash tests/test_shortcuts.sh
 bash tests/test_statusline.sh
+bash tests/test_verify.sh
 node tests/test_token_weather.mjs
 claude plugin validate .claude-plugin/plugin.json
 ```

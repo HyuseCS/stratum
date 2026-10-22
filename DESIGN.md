@@ -57,14 +57,18 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 |-------|------|-------|-------------|-----|
 | `st-plan` | Spec Kit plan + tasks | Opus | No | Plan, research, data model, contracts, quickstart, tasks. Returns open decisions as a list. |
 | `st-inspect` | Spec Kit analyze + vc validate | Opus | No | Spec, plan and tasks agree, and the plan is buildable: setup, test coverage, breaking changes, security. |
-| `st-build` | vc execute | Opus | Yes | Builds tasks. Loads the design skills for screen tasks. |
+| `st-build` | vc execute | Opus | Yes | Builds tasks, or a brief with no plan. Loads the design skills for screen tasks. |
 | `st-test` | vc tester | Sonnet | Yes | Writes each test and shows it fails before the build. |
 | `st-review` | vc code-reviewer | Opus | No | Reviews each finished story. |
 | `st-debug` | vc debugger | Opus | Yes | Takes over after 2 failed tries. |
 | `st-fast` | vc fast-mode | Sonnet | No | Fast-lane change plans. |
 | `st-quick` | vc quick-fix | Sonnet | Yes | Quick-lane edits. |
-| `st-close` | vc update-process + Spec Kit converge | Sonnet | Docs only | Drift fixes, gap report, lessons. |
+| `st-close` | vc update-process + Spec Kit converge | Sonnet | Docs only | Drift fixes, gap report, lessons, shortcut list. |
 | `st-git` | vc git-manager | Sonnet | Git only | Commits each finished task, exact paths. |
+| `st-impeccable` | impeccable audit | Opus | No | Background impeccable audit. Read-only. |
+| `st-ponytail-audit` | ponytail audit | Opus | No | Background over-engineering audit. Read-only. |
+| `st-ponytail-debt` | ponytail debt | Sonnet | No | Background `ponytail:` ledger. Read-only. |
+| `st-triage` | issue #15 | Opus | No | Checks a GitHub issue against the code and git history. Read-only. |
 
 - **D8. Rules every agent carries.** Read `sr-opus-5.md` first. Navigate graph, then search,
   then read. Agents that write code also carry the `[PONYTAIL]` directive and the no-comments
@@ -72,14 +76,14 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 
 ## 3. Skills
 
-- **D9.** Seventeen entry skills:
+- **D9.** Twenty-two entry skills:
 
 | Skill | Job |
 |-------|-----|
 | `st <task>` | Main entry. Picks the lane by impact area, states it in one line, runs it. |
 | `st-full`, `st-fast`, `st-quick` | Force a lane. |
 | `st-define`, `st-plan`, `st-inspect`, `st-build`, `st-close` | Run one Full-lane phase on the current feature, for resuming or redoing. |
-| `st-status` | Feature, phase, lane, tasks done, git guard options, next gate, missing tools, days since last sync. |
+| `st-status` | Feature, phase, lane, tasks done, git guard options, next gate, missing tools, duplicate installs, days since the last upstream sync, model overrides. |
 | `st-shape arrow\|rounded\|slanted\|blocks\|flat` | Set the statusline shape. |
 | `st-theme <name>` | Set the color theme of the statusline and Token Weather. |
 | `st-model <agent> <value>...` | Set an agent's model or effort in `.stratum/models.json`. |
@@ -87,6 +91,8 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 | `st-template <name>` | Copy a plugin template into `.stratum/templates/` to edit. |
 | `st-handoff` | Write the session handoff. |
 | `st-pr [base]` | Open a PR: facts from git and the spec, one gate, a draft that becomes ready when CI passes. |
+| `st-review`, `st-test`, `st-debug`, `st-git` | Run one Build-loop agent on demand, then the check the orchestrator runs after it in a lane. |
+| `st-triage <issue#>...` | Check GitHub issues against the code and git history: verdict, what is built, blocker, next step. Read-only. |
 
   The Spec Kit commands are folded into the phase skills. `st-constitution` (amend rules) and
   `st-issues` (tasks to GitHub issues) stay callable alone, as do the forked tools (`st-grill`,
@@ -94,7 +100,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
   `st-sync` exists only in this repo.
 
   A skill called outside a lane skips that lane's gates but never the commit guard or the push
-  rule. Calling a phase out of order gets one warning, then runs.
+  rule. Calling a phase out of order gets one warning from the phase hook (D20), then runs.
 
 ## 4. Lanes
 
@@ -106,7 +112,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 | Privacy and access | access rules, data model, contracts, sign-in, personal or minors' data | Full |
 | New user story or feature | anything not in a current spec | Full |
 | Core runtime | background services, offline queue, workers, notices | Fast |
-| Screens | layout, components, navigation | Fast (Quick for a one-file visual fix) |
+| Screens | layout, components, navigation | Fast (Quick for a small fix in a few files) |
 | Text and docs | labels, typos, wording | Quick |
 
 ### Full lane
@@ -117,14 +123,15 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 | 2 | Plan (`st-plan`) | plan → tasks. Open decisions return to the orchestrator and are grilled one at a time, then `st-plan` resumes. | Orchestrator asks: make GitHub issues? |
 | 3 | Inspect (`st-inspect`) | analyze and validate in one pass. Findings that need a decision go to the user. | User OKs the build |
 | 4 | Build | See the build loop | None unless blocked or a decision falls outside the plan |
-| 5 | Close (`st-close`) | Drift fixes, gap report, lessons, docs graph update | Push only on the user's "push" |
+| 5 | Close (`st-close`) | Drift fixes, gap report, lessons, shortcuts, docs graph update | Push only on the user's "push" |
 
 **Build loop**
 
 1. Per task: `st-test` writes the test and shows it fails → `st-build` builds until it passes →
    the orchestrator re-runs the test and checks the diff has no added comments → `st-git` commits.
 2. A test still red after 2 tries goes to `st-debug`.
-3. Per story: `st-review` and ponytail-review on the story's diff, impeccable for screens,
+3. Per story: `st-review` on the story's diff (correctness, security, plan fit,
+   over-engineering), impeccable for screens,
    findings checked against the source, `st-build` fixes the real ones, then the story's quickstart steps run.
 4. `[P]` tasks run in parallel, each subagent in its own built-in worktree. The orchestrator
    checks each branch and merges it into `main`.
@@ -135,18 +142,23 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
    change.
 2. Gap report (optional): unticked tasks or FRs without code and test. The user sends them back
    to Build, defers, or drops them. At most one send-back per feature.
-3. Lessons: append to `docs/lessons.md`. Changes to the constitution or the harness are proposed,
-   never applied by the agent.
+3. Lessons: append to `docs/lessons.md`. The Plan and Inspect agents read the file at the next feature.
+   Changes to the constitution or the harness are proposed, never applied by the agent.
+4. Shortcuts: `scripts/st-shortcuts.sh` lists the `ponytail:` markers the feature's diff adds. The
+   user picks fix now (st-build, st-verify, st-git commit) or keep (no record: st-ponytail-debt
+   finds the marker).
 
 ### Fast lane
 
 `st-fast` writes `specs/<feature>/changes/NNN-<name>.md` (what, which FRs, files, tests) → user OK →
-test first, build, ponytail-review → commit → drift fix.
+test first, build, `st-review` → commit → drift fix and shortcut list → commit docs.
 
 ### Quick lane
 
-`st-quick`: one file, no gate, run the tests that cover it, commit. Moves up to Fast if it needs a
-second file or touches any area above text and docs.
+`st-quick`: one file, no gate, run the tests that cover it, commit. A small bounded fix across a few
+files goes to `st-build` in brief mode, then verify and commit. Moves up to Fast when it needs a
+change plan or touches a schema, access rules, money, contracts, personal data, secrets or a new
+dependency.
 
 ## 5. Tools
 
@@ -201,6 +213,11 @@ second file or touches any area above text and docs.
     last 5 commits, uncommitted files.
   - The SessionStart hook prints the handoff into each new session, and the orchestrator starts
     from it.
+  - Mid-session st-handoff starts an Agent with subagent_type "fork" (it inherits the
+    conversation and runs in the background). When the user says they are done or is ending the
+    session, it runs in the main session so it finishes before exit. It starts no second fork
+    while one runs. If the fork cannot start, or reports no file written, it runs in the main
+    session.
 - **D19. Model overrides (`st-models`).** A PreToolUse hook on `Agent`, `hooks/st-models.py`:
   - On every `stratum:` agent start it reads the repo's `.stratum/models.json` (git-ignored,
     written by `st-init` from `templates/models.json`). Each key is an agent name with an
@@ -209,6 +226,38 @@ second file or touches any area above text and docs.
     No file or no entry keeps the plugin default.
   - A bad file (bad JSON, unknown agent, key, model, or effort) denies the start with a message.
   - `st-model` edits the file. `st-status` shows the overrides.
+- **D20. Phase (`st-phase`).** A UserPromptSubmit hook and a PreToolUse hook on `Skill`,
+  `hooks/st-phase.py`:
+  - When `st-define`, `st-plan`, `st-inspect`, `st-build`, `st-close`, `st-fast`, `st-quick` or
+    `st-full` starts (the user types `/stratum:st-<name>` or the model starts the skill), it
+    writes `.stratum/state.json` and keeps the other keys. The skills make no tool call for it.
+  - `st-fast` and `st-quick` set `lane` and `phase` to `fast` or `quick`. `st-full` sets `lane`
+    to `full`. If `phase` is `fast` or `quick`, it sets `phase` to null. `st-define` sets `phase`
+    and sets `lane` to `full`. `st-plan` to `st-close` set `phase`, and set `lane` to `full` only
+    when `lane` is unset, so a Fast run that opens `st-close` keeps `lane: fast`.
+  - If the last phase is not the one that comes before it (or the same phase), it adds one warning line to
+    the context. It never blocks. Define, Fast, Quick and Full are never out of order.
+  - No `state.json`: it does nothing. With no `feature_directory`, only `st-define`, `st-fast`,
+    `st-quick` and `st-full` write. The other phases do nothing.
+- **D21. Reply label.** On each prompt, `st-phase` reads `phase` and adds one line: start the
+  reply with `[Full lane | <Phase>]`, `[Fast lane]` or `[Quick lane]`. The hook sets `phase` to
+  `fast` or `quick` when st-fast or st-quick starts. The `st-close` agent (Full Close and the
+  Fast-lane drift step) and the `st-quick` agent set `phase` to `done` at the end of their run.
+  With no lane running the hook adds nothing, and the session-start line says to
+  start with `[Orchestrator]`.
+- **D22. Verify script (`scripts/st-verify.sh`).** The orchestrator's check after a build: run
+  the test command, then check the listed files (tracked diff, or the whole file if new) for
+  added comment lines. Prints the test's last
+  20 lines on a red test, the comment lines on a hit, else one `ok` line. Exit 0 ok, 1 fail, 2
+  no command or no files. St, st-build, st-fast and st-quick use it. The `[P]` branch check stays as it was.
+- **D23. Agent names.** The session-start rule says to set each Agent call's description to the
+  task only (`US1 review`, `T004 test`), since the panel shows the agent's name and the reply
+  label shows the lane, and to keep
+  a subagent's tag when relaying its report. Each agent file says to start its report with
+  `[<agent name>]`.
+- **D24. Background agents.** st-impeccable (audit only), st-review, st-ponytail-audit and st-ponytail-debt each have a read-only agent of the same name (no Edit or Write tool). The session-start rule starts it when the user asks for the skill in the background, compares git rev-parse HEAD and git status --porcelain --untracked-files=all before and after, and says any other skill runs only in the main session. The agents' tool lists are the real guard (the ponytail agents cannot write; st-impeccable and st-review only have Bash, since st-review runs tests), and the git check is their backup that cannot see edits to files that were already changed.
+
+- **D25. Shortcut list (`scripts/st-shortcuts.sh`).** Close lists the `ponytail:` markers that the feature's diff adds, as `file:line: text`. The base is `main` on a branch, the parent of the first commit that added spec.md on `main`, or the HEAD noted at Fast step 1. The user picks fix now or keep. Kept markers need no record, because `st-ponytail-debt` finds them. When HEAD has no commits after the base, the script prints `No commits after <base>.`
 
 ## 7. Project Pool move
 

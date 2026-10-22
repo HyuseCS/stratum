@@ -13,23 +13,22 @@ subagent absolute paths: plugin root, project root, feature dir, and its task ID
 
 1. Read `<project>/.stratum/state.json`. If there is no `feature_directory`, stop and tell the
    user to run `/stratum:st-define`.
-2. Order check: `phase` should be `inspect` or `build`. If not, warn once in one line, then run.
-3. Set `phase` to `build` in state.json (keep the other keys).
-4. Read `<feature>/tasks.md`. Work on unticked tasks in order, phase by phase.
+2. Read `<feature>/tasks.md`. Work on unticked tasks in order, phase by phase.
 
 ## Per task
 
-1. A test task goes to `st-test` (`stratum:st-test`). It writes the test and shows it fails.
+1. A test task goes to the `st-test` agent (`stratum:st-test`). It writes the test and shows it fails.
    Check the failing output yourself. A test that passes before the build is wrong.
-2. The build tasks that follow go to `st-build` (`stratum:st-build`). It builds until that test
+2. The build tasks that follow go to the `st-build` agent (`stratum:st-build`). It builds until that test
    passes and ticks the task `[X]` in tasks.md. Setup tasks with no test go straight to `st-build`.
-3. **Verify.** Re-run the test yourself. Grep the diff for added comment lines:
-   `git diff -U0 -- . ':!*.md' | grep -E '^\+\s*(//|#|/\*|\*)' | grep -v -e ponytail: -e '^+++' -e '#!'`
-   Send any hit back to `st-build`.
+3. **Verify.** From the project root, run
+   `bash <plugin root>/scripts/st-verify.sh '<test command>' <files the task touched>`.
+   It re-runs the test, greps the diff for added comment lines, and prints one line. Send any
+   `FAIL` back to `st-build`.
 4. **Two tries.** If the test is still red after 2 `st-build` tries, consult the advisor if one
-   is set (`/advisor`): root cause or rabbit hole? Then start `st-debug` (`stratum:st-debug`)
+   is set (`/advisor`): root cause or rabbit hole? Then start the `st-debug` agent (`stratum:st-debug`)
    with the task, the test, both failure outputs, and the advisor's answer.
-5. **Commit.** `st-git` (`stratum:st-git`) commits the exact paths of the task, with tasks.md.
+5. **Commit.** The `st-git` agent (`stratum:st-git`) commits the exact paths of the task, with tasks.md.
 
 ## Parallel tasks `[P]`
 
@@ -41,12 +40,11 @@ Never delete a remote branch: the user does that. If the project is another repo
 
 ## Per story (after its last task)
 
-1. `st-review` (`stratum:st-review`) on the story's diff.
-2. Run the `st-ponytail-review` skill on the same diff.
-3. For screen work, run the `st-impeccable` skill on the changed screens.
-4. Check each finding against the source first (see `/stratum:st`). Send the real, small ones to
+1. The `stratum:st-review` agent on the story's diff.
+2. For screen work, run the `st-impeccable` skill on the changed screens.
+3. Check each finding against the source first (see `/stratum:st`). Send the real, small ones to
    `st-build`; verify and commit them like a task. Big ones go to the user. Drop the false ones.
-5. Run the story's steps from `<feature>/quickstart.md`. Give the user exact steps for any
+4. Run the story's steps from `<feature>/quickstart.md`. Give the user exact steps for any
    step you cannot run.
 
 ## Stop only when

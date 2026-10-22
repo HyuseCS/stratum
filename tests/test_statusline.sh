@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -u
+[ "$(locale charmap 2>/dev/null)" = UTF-8 ] || export LC_ALL=C.UTF-8
 root="$(cd "$(dirname "$0")/.." && pwd)"
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT

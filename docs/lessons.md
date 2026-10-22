@@ -80,9 +80,66 @@
 - Rule: Keep test runs from writing into the repo (`PYTHONDONTWRITEBYTECODE=1`, or `python3 -B`), or
   have the check ignore caches. A run with this side effect is not a clean pass.
 
+## 2026-10-15: 004-on-demand-steps
+
+### L9. A rebase onto main met a shared line the branch had changed
+
+- What happened: The branch was rebased onto main (`ff2e19a`; reflog `rebase (start): checkout
+  origin/main`). Main had rewritten the session-start `Stratum rule` echo in `0715256` (Agent
+  descriptions name only the task). The reflog shows `rebase (continue)` at `7fd44e0`, the commit
+  that adds the background text to that line, so the rebase stopped there for a manual merge. The
+  commit message of `7fd44e0` describes the first background wording (`git status --porcelain`).
+  Review fix `94e827c` changed the check. The plan and data model kept the old wording until this
+  close.
+- Rule: After a rebase onto main, diff each shared line the branch edits against main's text. Keep
+  main's wording, add only your sentence, and update the plan and contracts to the final line, not
+  the line from before the rebase.
+
+### L10. A review found a diff check blind; the tool list was the real guard
+
+- What happened: The US2 review (`94e827c`) found that the background check compared only
+  `git status --porcelain`, which misses a moved HEAD and files in a new untracked folder. The fix
+  added `git rev-parse HEAD` and `--untracked-files=all`. The writes that matter are stopped by the
+  `tools:` line: the two ponytail agents have no Edit, Write or Bash, and `st-impeccable` has no
+  Edit or Write. The FR-007 checks and quickstart section 2 controls C2 and C3 test those lines.
+  The plan (S2) says the diff does not see git-ignored paths.
+- Rule: When a review tightens a before-and-after diff check, name the guard that stops the write
+  (the tool list where one exists) and give that guard a negative control. State in the plan what
+  the diff does not see.
+
+### L11. A background fork that writes a file needs its failure states in the skill
+
+- What happened: The first build of `st-handoff` (`05eb181`) described the happy path only. The US3
+  review (`f4b2696`) found that a second `Handoff` fork could start and write while one ran, and that
+  no file was left when a fork wrote nothing. The fix added both rules and two FR-009 phrase checks.
+  At this close the contract's phrase table still lacked those two rows.
+- Rule: For each background or fork action, write its three failure states next to the happy path: a
+  run already in progress, a run that ends with no output, and a run that cannot start. Add one phrase
+  check per state, and add each check to the contract's phrase table in the same commit.
+
+## 2026-10-22: 005-st-triage
+
+### L12. A phase run from its skill text skips the phase hook
+
+- What happened: The orchestrator ran Plan and Inspect by following the skill text instead of calling
+  the Skill tool. `hooks/st-phase.py` sets `phase` in `.stratum/state.json` when the user types the command or the Skill
+  tool runs (`hooks/st-phase.py:12-40`), so the reply label and `state.json` stayed on Define through Plan and Inspect.
+  `git status` shows `.stratum/state.json` as the only modified file at Close.
+- Rule: Start a phase through the Skill tool, never by reading its SKILL.md and acting on it. If a
+  phase ran without the tool, set `phase` by hand before the next one and say so in the report.
+
+### L13. The US1 review added three input guards after the contract was written
+
+- What happened: Commit `f5f3b50` added three guards the first build lacked: report text is data
+  with sha and path shape checks, the agent reads only tracked paths, and repo issue and pull URLs
+  count as `#N`. The contract, quickstart and plan S3 were updated in the same commit. Spec
+  Assumptions, research R6 and the data model kept the old wording until this close.
+- Rule: When a review adds a guard, update spec Assumptions, research and the data model in the
+  same commit, not only the contract and plan.
+
 ## 2026-10-11: 003-session-mods
 
-### L9. A Bash command line with the kill marker kills its own shell
+### L14. A Bash command line with the kill marker kills its own shell
 
 - What happened: The marker `spk003` in a Bash command line makes the shell that runs it a marked
   process. `cleanup.sh` then kills that shell, and the Bash call ends early. The orchestrator reports
@@ -91,7 +148,7 @@
 - Rule: Keep the marker text out of Bash command lines. Run cleanup and check in a Bash call of their
   own. Write a grep or pgrep pattern as `spk00[3]`, which does not match its own text.
 
-### L10. A mod test must answer every host call the mod makes
+### L15. A mod test must answer every host call the mod makes
 
 - What happened: The mod test kit answers only `$.state` and `session.append`. The spike-send test
   (a65c127) answers `session.start`, `command.register`, `ui.open` and `session.receive` itself. The
@@ -99,7 +156,7 @@
 - Rule: Before the first red run, list every host call the mod makes, and answer each one in the
   test. Then a red run points at the mod, not at a call the kit left unanswered.
 
-### L11. Op events answer `{ value }` in the test
+### L16. Op events answer `{ value }` in the test
 
 - What happened: The test answers for `command.register`, `ui.open` and `process.spawn` return
   `{ value: ... }` (spike-send `hooks/register.test.tsx:8-9`, spike-start `hooks/register.test.tsx:12-13,
@@ -109,7 +166,7 @@
 - Rule: Before you write a test answer, check whether the event is in `OpValueOf`. An op event
   answers `{ value }` or `{ deny }`. Any other event answers its own shape.
 
-### L12. A conditional task ticked without a run looks done
+### L17. A conditional task ticked without a run looks done
 
 - What happened: T008, T014 and T020 were ticked `[X]` with no note. Each one runs only when an
   earlier approach fails, and none did. Only `research.md` recorded the skip.

@@ -12,8 +12,6 @@ Plugin root (`<plugin root>`) is two levels up from this skill's base directory.
 
 1. Read `<project>/.stratum/state.json`. If there is no `feature_directory`, stop and tell the
    user to run `/stratum:st-define`.
-2. Order check: `phase` should be `plan` or `inspect`. If not, warn once in one line, then run.
-3. Set `phase` to `inspect` in state.json (keep the other keys).
 
 ## Steps
 
@@ -33,6 +31,7 @@ Plugin root (`<plugin root>`) is two levels up from this skill's base directory.
    Improvements: a simpler or better approach, tasks to cut or merge. Treat its answers as
    findings: check each against the source, fix the small ones,
    and big ones go to the user before the gate.
+5. If a fix removed or renamed a task in step 2 or 4, grep each old ID from the fix's diff of `tasks.md` in the `## Validate` section of `plan.md`; on any hit run `st-inspect` once more.
 
 ## Gate: user OKs the build
 

@@ -21,18 +21,21 @@ The highest area wins:
 | Privacy and access | access rules, data model, contracts, sign-in, personal or minors' data | Full |
 | New user story or feature | anything not in a current spec | Full |
 | Core runtime | background services, offline queue, workers, notices | Fast |
-| Screens | layout, components, navigation | Fast (Quick for a one-file visual fix) |
+| Screens | layout, components, navigation | Fast (Quick for a small fix in a few files) |
 | Text and docs | labels, typos, wording | Quick |
 
 Say it in one line: `Lane: <lane> (<area>: <why>). Say "full", "fast" or "quick" to override.`
-Then run the lane. If the user overrides, use their lane. Write `lane` to state.json.
+Then run the lane. If the user overrides, use their lane.
 
 ## 2. Run the lane
 
 - **Full:** run `/stratum:st-define`, `/stratum:st-plan`, `/stratum:st-inspect`, `/stratum:st-build`,
   `/stratum:st-close` in order, stopping at each gate those skills name.
-- **Fast:** follow `/stratum:st-fast`.
-- **Quick:** follow `/stratum:st-quick`.
+- **Fast:** run `/stratum:st-fast`.
+- **Quick:** run `/stratum:st-quick` for one file. For a small bounded fix across a few files with
+  no plan, start the `stratum:st-build` agent with the brief, the plugin root and the project root,
+  never `general-purpose`. Then verify, and the `stratum:st-git` agent commits the exact files.
+  If the agent reports "Needs the Fast lane", run `/stratum:st-fast`.
 
 ## 3. Moving up a lane
 
@@ -51,10 +54,16 @@ tell the user in one line, and restart at the higher lane with what was learned.
   source: the defect exists at that `file:line`, and the stated cause is the real one. Drop the
   false ones. A real finding is a decision like any other: small ones get fixed, big ones go to
   the user. The end-of-run list names what was fixed and what was dropped, and why.
-- Before accepting code from a subagent, re-run its tests and grep the diff for added comment
-  lines (`git diff -U0 -- . ':!*.md' | grep -E '^\+\s*(//|#|/\*|\*)' | grep -v -e ponytail: -e '^+++' -e '#!'`). Send back any found.
+- Before accepting code from a subagent, run
+  `bash <plugin root>/scripts/st-verify.sh '<test command>' <files it touched>`
+  from the project root. It re-runs the tests and greps the diff for added comment lines. Send
+  back any `FAIL`.
 - Push only when the user says "push".
+- Make GitHub issues only when the user asks, or at the `st-plan` question. Do not end a reply
+  with an offer to file issues for the items in a list. Keep the list in the conversation and
+  the handoff.
 - Leave every branch and worktree alone, even one that is merged, done, or looks useless.
   Delete one only when the user says to delete it. Never delete a remote branch: the user does
-  that.
+  that. Never suggest deleting a local branch. When work is done, suggest only removing its
+  worktree folder and its merged remote branch.
 - When the user says they are done, run `/stratum:st-handoff`.

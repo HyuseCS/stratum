@@ -35,10 +35,19 @@ cp "$root/sr-opus-5.md" "$tmp/home/.claude/sr-opus-5.md"
 marker=$(grep -m1 -v '^\s*$' "$root/sr-opus-5.md")
 out=$(HOME="$tmp/home" bash "$root/hooks/st-session-start.sh")
 check "handoff printed" 'grep -q "Session handoff" <<<"$out" && grep -q "Next step: write tests." <<<"$out"'
+check "orchestrator label rule" 'grep -qF "Stratum rule: begin every reply with the label [Orchestrator]." <<<"$out"'
+check "agent description is the task only" 'grep -qF "Set each Agent call'"'"'s description to only the task, like \"US1 review\" or \"T004 test\"." <<<"$out" && ! grep -qF "Full lane | Build ·" <<<"$out" && grep -qF "keep its [tag]" <<<"$out"'
+for a in "$root"/agents/*.md; do
+  n=$(basename "$a" .md)
+  check "agents/$n.md starts its report with [$n]" 'grep -qF "Start your report with \`[$n]\` on its own line." "$a"'
+done
 check "sr-opus-5 skipped when identical" '! grep -qF -- "$marker" <<<"$out"'
 
 echo "changed" >> "$tmp/home/.claude/sr-opus-5.md"
 out=$(HOME="$tmp/home" bash "$root/hooks/st-session-start.sh")
 check "sr-opus-5 printed when different" 'grep -qF -- "$marker" <<<"$out"'
+
+out=$(HOME="$tmp/home" CLAUDE_PROJECT_DIR="$noproj" bash "$root/hooks/st-session-start.sh")
+check "no .stratum, no label rule" '! grep -qF "[Orchestrator]" <<<"$out"'
 
 exit $fail

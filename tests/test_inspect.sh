@@ -64,8 +64,6 @@ FR-004	agent	the per-check verdict (PASS, CONCERN, FAIL) of each validate check
 EOF
 check "skill frontmatter" 'grep -qx "name: st-inspect" "$skill"'
 phrases <<'EOF'
-FR-005	skill	Set `phase` to `inspect`
-FR-005	skill	`phase` should be `plan` or `inspect`
 FR-005	skill	Start the `st-inspect` subagent (`stratum:st-inspect`)
 S1	skill	only `plan.md` may change
 S1	skill	touches only its `## Validate` section
@@ -79,6 +77,7 @@ S5	skill	a simpler or better approach
 S5	skill	tasks to cut or merge
 S5	skill	missed auth invariants
 S5	skill	big ones go to the user before the gate
+S7	skill	a fix removed or renamed a task
 S6	skill	OK to build?
 S6	skill	findings dropped
 EOF
@@ -88,16 +87,15 @@ check "one agent" '[ "$n" = 1 ]'
 (cd "$root" && git grep -qwE 'st-(check|validate)' -- . ':!specs'); old_rc=$?
 check "old names gone" '[ "$old_rc" = 1 ]'
 count=$(ls "$root/agents" | grep -c '\.md$')
-check "10 agents" '[ "$count" = 10 ]'
+check "14 agents" '[ "$count" = 14 ]'
 phrases <<'EOF'
 rename skills/st/SKILL.md:32	skills/st/SKILL.md	`/stratum:st-plan`, `/stratum:st-inspect`, `/stratum:st-build`
 rename skills/st-full/SKILL.md:12	skills/st-full/SKILL.md	3. `/stratum:st-inspect` (gate: user OKs the build)
 rename skills/st-plan/SKILL.md:35	skills/st-plan/SKILL.md	Next phase: `/stratum:st-inspect`.
-rename skills/st-build/SKILL.md:16	skills/st-build/SKILL.md	`phase` should be `inspect` or `build`
 rename skills/st-status/SKILL.md:13	skills/st-status/SKILL.md	Inspect → "you OK the
 rename skills/st-status/SKILL.md:37	skills/st-status/SKILL.md	stratum:st-inspect
 rename skills/st-model/SKILL.md:35	skills/st-model/SKILL.md	stratum:st-inspect
-rename skills/st-init/SKILL.md:26	skills/st-init/SKILL.md	Show a table of the 10 agents
+rename skills/st-init/SKILL.md:26	skills/st-init/SKILL.md	Show a table of the 14 agents
 rename tests/test_model_files.sh:31	tests/test_model_files.sh	stratum:st-inspect
 rename README.md:75	README.md	| 3 | Inspect | `st-inspect` checks the files agree and the plan can be built | You OK the build |
 rename README.md:90	README.md	`st-define`, `st-plan`, `st-inspect`, `st-build`, `st-close`
@@ -144,7 +142,17 @@ phrases <<'EOF'
 README st-status	readme	missing tools, duplicate installs, days since the last upstream sync, model overrides
 README st-init	readme	asks for the git guard modes and any model overrides
 README st-init	readme	writes the `AGENTS.md` and `CLAUDE.md` pointers
-README python3	readme	git guard, model overrides hook, statusline, handoff facts
+README python3	readme	git guard, model overrides hook, phase hook, statusline, handoff facts
+EOF
+check "statusline test passes under LC_ALL=C" 'out=$(LC_ALL=C bash "$root/tests/test_statusline.sh" 2>&1); [ $? = 0 ] && ! grep -qv "^ok" <<<"$out"'
+phrases <<'EOF'
+lessons st-plan read	agents/st-plan.md	one gate row for each lesson that applies
+lessons st-plan cite	agents/st-plan.md	names its number in the task line
+lessons st-inspect read	agent	that no plan.md gate or tasks.md task cites by number
+lessons st-close agent	agents/st-close.md	read this file at the next feature's Plan and Inspect
+lessons st-close skill	skills/st-close/SKILL.md	each lesson's Rule line is one testable sentence
+lessons design	DESIGN.md	The Plan and Inspect agents read the file at the next feature.
+lessons readme	readme	cites the lessons that apply
 EOF
 
 exit $fail

@@ -5,7 +5,7 @@ description: Run a task through Stratum's Full lane (Define, Plan, Inspect, Buil
 
 # /stratum:st-full <task>
 
-Set `lane` to `full` in `<project>/.stratum/state.json`, then run, in order, stopping at each gate:
+Run, in order, stopping at each gate:
 
 1. `/stratum:st-define` (gate: user agrees the spec)
 2. `/stratum:st-plan` (asks: make GitHub issues?)
