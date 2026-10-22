@@ -77,7 +77,7 @@ branch `18-codex-advisor`.
   `claude` runs every day with no dialog. So Claude Code keys a linked worktree to its main repo,
   and a new worker worktree of a trusted repo starts with no trust dialog.
 - Decision: no trust step. If a dialog still shows, `agent start` answers `agent_not_ready` and
-  the script reports the worker `blocked` with the pane text (FR-006 path). The skill relays it,
+  the script reports the worker `blocked` with the pane text (FR-006 path). The skill handles it as a question (a trust dialog is an access decision, so it goes to the user, D26),
   then sends the prompt with the `goal` subcommand.
 - Not verified live. Quickstart section 2 records whether a dialog showed.
 
@@ -117,7 +117,7 @@ branch `18-codex-advisor`.
 
 ## R7. Questions and answers (FR-006, D14, US2)
 
-- Decision: the brief tells the worker to ask the user only with the AskUserQuestion tool. On
+- Decision: the brief tells the worker to ask only with the AskUserQuestion tool. On
   `blocked`, `wait` prints the last 40 lines of `H agent read <name> --source recent-unwrapped`.
   `answer <id> --keys <key>...` sends `H agent send-keys <name> <key>...`; `answer <id> --text <text>`
   sends `H pane send-text <pane> <text>` then `H agent send-keys <name> enter`. Both first run
@@ -125,7 +125,7 @@ branch `18-codex-advisor`.
 - Rationale: `agent prompt` rejects a blocked agent with `agent_blocked` before sending input
   (`herdr --skill`), so an answer to a dialog must be keys or text. A question asked in plain text
   ends the turn as `idle`, not `blocked`, and the `/goal` loop starts the next turn on its own, so
-  the question would never reach the user. The state check is what keeps a second answer out when
+  the question would never reach the orchestrator. The state check is what keeps a second answer out when
   the user already answered in the pane (US2 scenario 3).
 - A permission prompt (Stratum's commit guard, `hooks/st-git-guard.py:144-150`: `ask` unless the
   worktree's `.stratum/git-guard.json` says `auto`) shows as `blocked` the same way (US2
@@ -133,6 +133,9 @@ branch `18-codex-advisor`.
   `.stratum/git-guard.json`, so a plain commit there does not ask; amend, push, `reset --hard` and
   branch delete still ask. The guard reads that file because it walks up from the cwd to the first
   folder with `.stratum/` or `.git` (`hooks/st-git-guard.py:105-114`), which is the worktree root.
+- D26: the skill, not the script, decides each question with the `/stratum:st` rule: a small one
+  it answers at once, a big one goes to the user first; it lists its own answers at the end of the
+  run. The script does not change: `answer` sends what it is given.
 - Not verified live: that herdr marks Claude Code's AskUserQuestion dialog `blocked`, and which
   keys pick an option or reach the free-text field. Quickstart section 3.
 

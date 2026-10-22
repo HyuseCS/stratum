@@ -51,7 +51,7 @@ quickstart section 2 run live.
 
 - [ ] T003 [US1] Write `scripts/st-worker.sh` (mode 755) per contracts/script.md: usage and exit codes (section 1), checks rows 1 to 7 (section 2), the brief text and the `{"commit":"auto"}` write to `<WT>/.stratum/git-guard.json` (section 3, D24), and the subcommands `start`, `goal`, `wait`, `result`, `close`, `list` for this machine (section 4), with the output lines of section 5. In this task `--machine`, `answer` and `headless` print the usage line and exit 2. Ids only from the JSON of the call that made them (`jq -er`). Constants with `ponytail:` markers: `wait` bound 540 s, resume check 10 s. Each line that an NC breaks (the roster rows, team rule 1, the result file read, the `git-guard.json` write) must be one unique line. Done when `bash tests/test_st_worker.sh` is green. Lessons L5, L20, L21.
 
-- [ ] T004 [US1] After T002, write `skills/st-worker/SKILL.md` per contracts/skill.md section 1 (all steps, including the question relay, team, merge, close, list and headless parts, so the skill is written once), and in the same task: add the `st-worker` row to the skill table in `README.md` and in `DESIGN.md`, change `DESIGN.md` "Twenty-three entry skills" to "Twenty-four entry skills", change the `README.md` tool row to `` | `herdr` 0.9.4, `jq` | optional, for `st-herdr-workspace` and `st-worker` | ``, and change the tool line in step 4 of `skills/st-status/SKILL.md` to name `st-herdr-workspace` and `st-worker`. Done when `bash tests/test_on_demand.sh` and `bash tests/test_inspect.sh` are green. Runs beside T003 (different files). Lessons L7, L12.
+- [ ] T004 [US1] After T002, write `skills/st-worker/SKILL.md` per contracts/skill.md section 1 (all steps, including the question handling (D26), team, merge, close, list and headless parts, so the skill is written once), and in the same task: add the `st-worker` row to the skill table in `README.md` and in `DESIGN.md`, change `DESIGN.md` "Twenty-three entry skills" to "Twenty-four entry skills", change the `README.md` tool row to `` | `herdr` 0.9.4, `jq` | optional, for `st-herdr-workspace` and `st-worker` | ``, and change the tool line in step 4 of `skills/st-status/SKILL.md` to name `st-herdr-workspace` and `st-worker`. Done when `bash tests/test_on_demand.sh` and `bash tests/test_inspect.sh` are green. Runs beside T003 (different files). Lessons L7, L12.
 
 - [ ] T005 [US1] Live local run: quickstart section 2 from a herdr pane, after T003 and T004. Record in `specs/008-herdr-workers/research.md` under each research item: `start` exit code and whether a trust dialog showed (R4), `◎ /goal active` seen (R5), the worker committed with no dialog (D24), every `state` line of `wait` and the longest `idle` between goal turns (R6), the `workspace close` answer and whether herdr asked for `--group` (R1), and the empty `agent list`, `workspace list` and `pgrep -af -- '-n worker-t900'` after `close` (R11, SC-005). A measured value that breaks a constant or a JSON path goes to the orchestrator as a finding before the story closes. Lessons L5.
 
@@ -59,9 +59,9 @@ quickstart section 2 run live.
 
 ---
 
-## Phase 4: User Story 2 - The worker asks, the user answers (Priority: P2)
+## Phase 4: User Story 2 - The worker asks, the orchestrator answers or asks the user (Priority: P2)
 
-**Goal**: `answer` sends the user's answer into a blocked worker, and sends nothing when the user already answered in the pane.
+**Goal**: `answer` sends an answer (the orchestrator's for a small question, the user's for a big one, D26) into a blocked worker, and sends nothing when the user already answered in the pane.
 
 **Independent Test**: cases A1 to A3 and NC5 green; quickstart section 3 run live.
 
@@ -73,7 +73,7 @@ quickstart section 2 run live.
 
 - [ ] T007 [US2] Add `answer` to `scripts/st-worker.sh` per contracts/script.md section 4 (`agent get` first; `--keys` through `agent send-keys`; `--text` through `pane send-text` then `agent send-keys <N> enter`; `agent get` after; exit 4 if still blocked). The `blocked` check is one unique line (NC5). Done when `bash tests/test_st_worker.sh` is green.
 
-- [ ] T008 [US2] Live question run: quickstart section 3, after T007. Record in `specs/008-herdr-workers/research.md` R7: whether herdr shows the AskUserQuestion dialog as `blocked`, which key picks an option, what reaches the free-text field, and the `not blocked: working` line when the user answered in the pane first (SC-003).
+- [ ] T008 [US2] Live question run: quickstart section 3, after T007. Record in `specs/008-herdr-workers/research.md` R7: whether herdr shows the AskUserQuestion dialog as `blocked`, which key picks an option, what reaches the free-text field, the `not blocked: working` line when the user answered in the pane first, and which questions the orchestrator answered itself and which went to the user, as the end-of-run list shows them (D26, SC-003).
 
 **Checkpoint**: US1 and US2 work on this machine.
 
@@ -148,7 +148,7 @@ and conflict steps (FR-009) are built in T004 and tested by T002.
 | FR-003 | T001 S1, S3, S5, P6 | T003 |
 | FR-004 | T001 W1 to W5 | T003 |
 | FR-005 | T001 G1, G2, NC4, T009 R2 | T003, T010 |
-| FR-006 | T001 W5, T006 A1 to A3, NC5, T002 relay rows | T003, T007, T004 |
+| FR-006 | T001 W5, T006 A1 to A3, NC5, T002 FR-006 rows | T003, T007, T004 |
 | FR-007 | T009 R1 to R8, NC1 | T010 |
 | FR-008 | T001 S1, NC3, T002 D25 row | T003, T004 |
 | FR-009 | T002 review, merge, conflict rows and order check | T004 |

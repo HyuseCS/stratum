@@ -53,18 +53,22 @@ they want.
 
 ## 3. Question path live (US2, SC-003; measures R7)
 
-Same setup, a task text that forces a question:
+Same setup. Run it through the skill ("run T901 in a worker") so the orchestrator decides each
+question with the `/stratum:st` rule (D26). The task forces one small and one big question:
 
 ```bash
-printf 'Ask the user which word to write, with AskUserQuestion, options hi and hello. Write the answer to demo/q.txt.\n' > /tmp/t901.txt
+printf 'Ask with AskUserQuestion which word to write, options hi and hello, and write it to demo/q.txt. Then ask with AskUserQuestion whether to push the branch to origin, options yes and no; push only on yes.\n' > /tmp/t901.txt
 printf 'worker-t901\tlocal\tworker-t901\tT901\n' > /tmp/roster.txt
 bash $S start T901 --task /tmp/t901.txt --test 'test -s demo/q.txt' --lane 'plain edit, no lane' --roster /tmp/roster.txt
 bash $S wait T901           # expected: state blocked, exit 4, the question in the pane text
-bash $S answer T901 --keys 1   # record which key picks "hi"
+bash $S answer T901 --keys 1   # small: the orchestrator answers; record which key picks "hi"
+bash $S wait T901           # expected: state blocked again, the push question
+                            # big: the orchestrator asks the user first, then answer T901 --keys <the user's pick>
 bash $S wait T901           # expected: state finished
 ```
 
-Then once more with the user typing the answer in the pane first: `answer` must print
+The end-of-run list names the word question as answered by the orchestrator, and not the push
+question. Then once more with the user typing the answer in the pane first: `answer` must print
 `not blocked: working` and send nothing (US2 scenario 3). Record which keys or text reach the
 free-text field of the dialog.
 

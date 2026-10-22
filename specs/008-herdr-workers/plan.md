@@ -15,7 +15,7 @@ sends the one `/goal` prompt), `goal`, `wait`, `answer`, `result`, `close`, `lis
 result cross by ssh to the `target` in herdr's profile. herdr is the only store: every subcommand
 finds its worker again from the task id (`worker-<id>`), so a new orchestrator session takes over
 (FR-016). One thin skill, `skills/st-worker/SKILL.md`, turns the request into script calls,
-relays questions, runs `st-review` per branch, merges in task order and closes. One stub test,
+answers small worker questions itself and brings big ones to the user (D26), runs `st-review` per branch, merges in task order and closes. One stub test,
 `tests/test_st_worker.sh`, proves every call, the brief, the prompt, the wait, the result read and
 the close on both machines, with negative controls (SC-007).
 
@@ -71,7 +71,7 @@ orchestrator passed, the settled decisions and `docs/lessons.md`.
 | G13. lessons L19: stub ids have a random part; expectations come from the stub log | Pass: contracts/script.md section 6 |
 | G14. lessons L20: a report line only after its call succeeded | Pass: contracts/script.md section 5, S4 asserts `-` ids on a stop |
 | G15. lessons L21: "started" comes from herdr, not from echoed text | Pass: started means `agent start` exited 0, which herdr gives only after it detected `claude` ready (`herdr --skill`) |
-| G16. Settled decisions kept | Pass: D12 two paths, D13 file result (the prompt is sent with `--wait`; the long wait is `agent wait`, D14, because one call must end under 600 s), D14 one question path, D15 `herdr worktree create`, D16 roster and rules, D17 one skill with st-build unchanged, D18 close keeps folder and branch, D19 headless allow list, D21 one `/goal` prompt pointing at `brief.md` |
+| G16. Settled decisions kept | Pass: D12 two paths, D13 file result (the prompt is sent with `--wait`; the long wait is `agent wait`, D14, because one call must end under 600 s), D14 one question path, D15 `herdr worktree create`, D16 roster and rules, D17 one skill with st-build unchanged, D18 close keeps folder and branch, D19 headless allow list, D21 one `/goal` prompt pointing at `brief.md`, D26 the orchestrator answers small questions itself and brings big ones to the user |
 | G17. Decisions D24 and D25 kept | Pass: S1 and R1 assert the worktree's `git-guard.json` and NC7 removes its write (D24); team rule 2 and the skill's machine rule keep commits on one machine (D25) |
 
 Post-design re-check: G1 to G17 pass. Complexity
@@ -113,7 +113,8 @@ None. Both are settled in decisions.md:
 - **S4. Worker permissions (start; access rule).** A pane worker is the user's own `claude` with
   the user's plugins and settings, started with `--permission-mode auto -n <name>` and nothing
   else (FR-013, test S1): no `--dangerously-skip-permissions`, no `--allowedTools`. Auto mode's
-  classifier and every ask and deny rule still apply. D24: `start` writes `{"commit":"auto"}` to
+  classifier and every ask and deny rule still apply. D26: the orchestrator may answer a
+  permission prompt for the task's own command; any other access question goes to the user. D24: `start` writes `{"commit":"auto"}` to
   `.stratum/git-guard.json` in that worktree only, so a plain `git commit` there passes the
   Stratum guard; amend, push, `reset --hard` and branch delete still ask. The file is git-ignored
   and never written in the orchestrator's own folder (test S1 checks both).

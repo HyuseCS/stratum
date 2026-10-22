@@ -44,24 +44,31 @@ process or session left afterwards, only the worktree and the branch.
 
 ---
 
-### User Story 2 - The worker asks, the user answers (Priority: P2)
+### User Story 2 - The worker asks, the orchestrator answers or asks the user (Priority: P2)
 
-The worker hits a decision that is the user's. It asks in its own pane. herdr marks it `blocked`.
-The orchestrator sees that, reads the question from the pane, asks the user, and sends the answer
-into the pane. The worker goes on. The user can also answer in the pane directly at any time.
+The worker hits a decision it cannot make. It asks in its own pane. herdr marks it `blocked`.
+The orchestrator sees that, reads the question from the pane, and decides it with the
+`/stratum:st` rule: a small decision it answers itself, a big one it asks the user first. It sends
+the answer into the pane and lists every answer it gave on its own at the end of the run (D26).
+The worker goes on. The user can also answer in the pane directly at any time.
 
-**Why this priority**: The user's rule: a worker asks the orchestrator, and the orchestrator asks
-the user. Without it an autonomous worker either guesses or stalls.
+**Why this priority**: The user's rule: a worker asks the orchestrator; the orchestrator decides
+small questions and asks the user on big ones (D26). Without it an autonomous worker either
+guesses or stalls.
 
-**Independent Test**: Give a worker a task whose brief forces one question. The question reaches
-the user through the orchestrator, the answer reaches the worker, and the worker finishes.
+**Independent Test**: Give a worker a task whose brief forces one small and one big question. The
+orchestrator answers the small one itself and lists it at the end, the big one reaches the user
+through the orchestrator, both answers reach the worker, and the worker finishes.
 
 **Acceptance Scenarios**:
 
-1. **Given** a running worker, **When** it asks a question in its pane, **Then** the orchestrator
-   reports the question to the user within its wait, with the worker's name.
-2. **Given** the user answers the orchestrator, **When** the answer is sent, **Then** it lands in
-   the worker's pane as a prompt, and the worker leaves `blocked`.
+1. **Given** a running worker, **When** it asks a small question (inside the brief, the plan and
+   the task's files), **Then** the orchestrator answers it within its wait, the worker leaves
+   `blocked`, and the answer is listed at the end of the run.
+2. **Given** a running worker, **When** it asks a big question (spec, scope, approach, privacy,
+   access, data model, contracts, dependencies, cannot be undone, audience, cost), **Then** the
+   orchestrator puts it to the user with the worker's name, sends the user's answer into the
+   pane, and the worker leaves `blocked`.
 3. **Given** the user types the answer in the pane directly, **When** the orchestrator next
    checks, **Then** it sees the worker working again and does not send a second answer.
 4. **Given** a permission prompt in the worker (for example Stratum's commit guard), **When** it
@@ -176,9 +183,12 @@ the change is in the working tree, nothing is committed by the worker, and no pr
   `idle`, `done`, `blocked`), with a wait bound, and MUST NOT poll by re-prompting (D13, D14).
 - **FR-005**: The result MUST be read from the result file: directly on this machine, over ssh
   on the other. The pane text is for a look or a fallback, never the result (D13).
-- **FR-006**: A `blocked` worker MUST be handled as a question: read the question from the pane,
-  put it to the user with the worker's name, and send the user's answer into the pane. If the user
-  answered in the pane already, the orchestrator MUST NOT send a second answer (D14).
+- **FR-006**: A `blocked` worker MUST be handled as a question: read the question from the pane
+  and decide it with the `/stratum:st` rule. A small decision the orchestrator answers itself; a
+  big decision it MUST put to the user with the worker's name first, then send the user's answer
+  into the pane. Every answer the orchestrator gave on its own MUST be listed at the end of the
+  run. If the user answered in the pane already, the orchestrator MUST NOT send a second answer
+  (D14, D26).
 - **FR-007**: For a remote worker every herdr call MUST name the machine, and the worktree, brief
   and result MUST live on that machine. The branch is fetched here before review (D11).
 - **FR-008**: The team rules in every brief MUST say: commit each finished unit, fetch before
@@ -224,8 +234,9 @@ the change is in the working tree, nothing is committed by the worker, and no pr
   human step. The user can see the worker in its pane while it runs.
 - **SC-002**: The same task runs in a pane worker on the laptop with the same result, checked by
   reading it back there.
-- **SC-003**: A worker's question reaches the user with the worker's name, and the user's answer
-  reaches the worker, through the orchestrator.
+- **SC-003**: A worker's big question reaches the user with the worker's name, a small one is
+  answered by the orchestrator and listed at the end of the run, and every answer reaches the
+  worker through the orchestrator.
 - **SC-004**: Two workers on one machine share work through git and reach each other by name. Each
   branch is reviewed and merged by the orchestrator.
 - **SC-005**: After a worker is closed, no pane, workspace, worker process or session of it is

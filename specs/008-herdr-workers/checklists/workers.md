@@ -13,7 +13,7 @@
 
 ## Questions
 
-- [ ] Does the spec say how a question is detected, relayed, and answered, and what happens if the user answered in the pane? [FR-006]
+- [ ] Does the spec say how a question is detected, decided (small by the orchestrator, big by the user), and answered, and what happens if the user answered in the pane? [FR-006]
 - [ ] Does the spec treat a permission prompt the same as a question? [US2 scenario 4, Edge Cases]
 - [ ] Does the spec say headless workers never ask and what their reply holds instead? [FR-011, US5 scenario 2]
 

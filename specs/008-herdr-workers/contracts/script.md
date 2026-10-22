@@ -106,7 +106,7 @@ You are worker <N>, started by the Stratum orchestrator. Read this file first an
 
 ## Questions
 
-Ask the user only with the AskUserQuestion tool, then wait for the answer. Do not ask in plain text and do not guess.
+Ask a question only with the AskUserQuestion tool, then wait for the answer. Do not ask in plain text and do not guess.
 Do not edit tasks.md or .stratum/state.json. The orchestrator ticks the task after the merge.
 
 ## When done
