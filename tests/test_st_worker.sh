@@ -430,7 +430,7 @@ a1() {
   mk; states blocked working
   run bash "$1" answer T004 --keys 1
   check "A1 exit 0" '[ $rc = 0 ]'
-  check "A1 agent get, one send-keys, agent get, in order" '[ "$(sendlog)" = "$(printf "agent\tget\tworker-t004\nagent\tsend-keys\tworker-t004\t--\t1\nagent\tget\tworker-t004")" ]'
+  check "A1 agent get, one send-keys, agent get, in order" '[ "$(sendlog)" = "$(printf "agent\tget\tworker-t004\nagent\tsend-keys\tworker-t004\t1\nagent\tget\tworker-t004")" ]'
   check "A1 state line after the answer" 'hasline "state\tworking\tworker-t004\t%s" "$(pane)"'
   check "A1 never-list, no prompt" 'never 0 0'
 }
@@ -445,13 +445,19 @@ a3() {
   mk; states blocked blocked
   run bash "$1" answer T004 --text "use main"
   check "A3 exit 4" '[ $rc = 4 ]'
-  check "A3 agent get, send-text, send-keys enter, agent get, in order" '[ "$(sendlog)" = "$(printf "agent\tget\tworker-t004\npane\tsend-text\t%s\t--\tuse main\nagent\tsend-keys\tworker-t004\tenter\nagent\tget\tworker-t004" "$(pane)")" ]'
+  check "A3 agent get, send-text, send-keys enter, agent get, in order" '[ "$(sendlog)" = "$(printf "agent\tget\tworker-t004\npane\tsend-text\t%s\tuse main\nagent\tsend-keys\tworker-t004\tenter\nagent\tget\tworker-t004" "$(pane)")" ]'
   check "A3 state blocked line" 'hasline "state\tblocked\tworker-t004\t%s" "$(pane)"'
   check "A3 never-list, no prompt" 'never 0 0'
 }
 a1 "$script"
 a2 "$script"
 a3 "$script"
+for a in --keys --text; do
+  fresh; reset
+  run bash "$script" answer T004 $a -x
+  check "A4 $a -x exit 2, the dash line" '[ $rc = 2 ] && [ "$out" = "Answer values must not start with -." ]'
+  check "A4 $a -x no herdr call" '[ ! -s "$tmp/calls" ]'
+done
 
 nc() {
   local nm=$1 fn=$2
@@ -577,7 +583,7 @@ check "R9 closed and folder lines" 'hasline "closed\tworker-t004" && hasline "fo
 rmk; states blocked working
 rrun bash "$script" answer T004 --machine laptop --keys 1
 check "R10 exit 0" '[ $rc = 0 ]'
-check "R10 one agent send-keys, --machine rule" '[ "$(rcnt "agent\tsend-keys\t")" = 1 ] && rcall "agent\tsend-keys\tworker-t004\t--\t1" && rnever 0 0'
+check "R10 one agent send-keys, --machine rule" '[ "$(rcnt "agent\tsend-keys\t")" = 1 ] && rcall "agent\tsend-keys\tworker-t004\t1" && rnever 0 0'
 
 rmk
 rrun bash "$script" goal T004 --machine laptop --test "$testcmd"

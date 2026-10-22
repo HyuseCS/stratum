@@ -35,6 +35,7 @@ case $cmd in
   headless) [ -n "${task+x}" ] && [ -n "${test+x}" ] || usage ;;
   answer) [ "${text+x}${keys+x}" = x ] || usage ;;
 esac
+for v in ${text+"$text"} ${keys+"${keys[@]}"}; do [[ $v != -* ]] || { echo 'Answer values must not start with -.' >&2; exit 2; }; done
 
 N=
 if [ "$cmd" != list ]; then
@@ -247,9 +248,9 @@ answer)
   look
   [ "$S" = blocked ] || fail "not blocked: $S"
   if [ -n "${keys+x}" ]; then
-    h agent send-keys "$N" -- "${keys[@]}"
+    h agent send-keys "$N" "${keys[@]}"
   else
-    h pane send-text "$PANE" -- "$text"
+    h pane send-text "$PANE" "$text"
     h agent send-keys "$N" enter
   fi
   look
