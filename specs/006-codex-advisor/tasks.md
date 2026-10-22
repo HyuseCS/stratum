@@ -96,7 +96,7 @@ answer is a one-line `BLOCKED: <reason>` with exit 1 and a record, never approva
 
 ### Tests for User Story 2
 
-- [ ] T003 [US2] Add the US2 checks to `tests/test_advisor.sh` (FR-004, FR-011, SC-003, spec Edge Cases; lessons L1, L11).
+- [X] T003 [US2] Add the US2 checks to `tests/test_advisor.sh` (FR-004, FR-011, SC-003, spec Edge Cases; lessons L1, L11).
   - `$tmp/sys`: a symlink to every command on the current PATH except `codex` (loop over the PATH dirs, first name wins). Runs that need no codex use `PATH="$tmp/sys"`.
   - Checks (each BLOCKED check also asserts exit 1, line 1 starts `BLOCKED: `, and no `APPROVED` anywhere in stdout):
     - `codex missing: no advisor, exit 0, no record`: stdout is exactly `no advisor: codex not found`, exit 0, the number of `## ` lines in `advisor.md` is unchanged.
@@ -115,7 +115,7 @@ answer is a one-line `BLOCKED: <reason>` with exit 1 and a record, never approva
 
 ### Implementation for User Story 2
 
-- [X] T004 [US2] In `scripts/st-advisor.sh`, add the no-codex line and the answer mapping of data-model.md "Advisor answer" rows 1 to 7, in that order, with the reasons of contracts/advisor.md section 5 (FR-004, FR-011). A `BLOCKED` the script sets writes a record with a `reason:` line. The Codex error reason is the last stderr line that starts `ERROR:`, else the last non-empty stderr line, else `codex exited <rc>` (research R2). Run `bash tests/test_advisor.sh`: all `ok`.
+- [X] T004 [US2] In `scripts/st-advisor.sh`, add the no-codex line and the answer mapping of data-model.md "Advisor answer" rows 1 to 7, in that order, with the reasons of contracts/advisor.md section 5 (FR-004, FR-011). A `BLOCKED` the script sets writes a record with a `reason:` line. The Codex error reason is the last stderr line that starts `ERROR:`, else `codex exited <rc>` (D16) (research R2). Run `bash tests/test_advisor.sh`: all `ok`.
 
 **Checkpoint**: US1 and US2 work. No path gives a silent approval.
 
@@ -130,7 +130,7 @@ answer is a one-line `BLOCKED: <reason>` with exit 1 and a record, never approva
 
 ### Tests for User Story 3
 
-- [ ] T005 [US3] Add the US3 checks to `tests/test_advisor.sh` (FR-006 record, FR-008, SC-004; lessons L4, L5).
+- [X] T005 [US3] Add the US3 checks to `tests/test_advisor.sh` (FR-006 record, FR-008, SC-004; lessons L4, L5).
   - `check plan fresh`: after a plan `APPROVED` run, `check plan specs/001-demo` prints `APPROVED sha256 <plan hash>` (`cat spec.md plan.md tasks.md | sha256sum`), exit 0.
   - `check plan stale after a one-line change`: append one line to `plan.md`. `advisor approval is stale`, exit 1.
   - `check plan stale after a tasks.md change`: run `plan` again (fresh), then append one line to `tasks.md` alone. `advisor approval is stale`, exit 1 (D10).

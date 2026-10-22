@@ -97,32 +97,28 @@ def blocked(reason):
     record("BLOCKED", [f"reason: {reason}"])
     print(f"BLOCKED: {reason}\nrecord: {f}/advisor.md")
     sys.exit(1)
-def answer():
-    if rc in ("124", "137"):
-        blocked("timed out")
-    if rc != "0":
-        lines = [l for l in open(err, "rb").read().decode("utf-8", "replace").split("\n") if l.strip()]
-        errs = [l for l in lines if l.startswith("ERROR:")]
-        blocked((errs or lines or [f"codex exited {rc}"])[-1])
-    raw = open(ans, "rb").read() if os.path.isfile(ans) else b""
-    if not raw.strip():
-        blocked("empty answer")
-    try:
-        a = json.loads(raw)
-    except (ValueError, RecursionError):
-        blocked("malformed answer")
-    if not isinstance(a, dict):
-        blocked("malformed answer")
-    if a.get("verdict") not in ("APPROVED", "REVISE", "BLOCKED"):
-        blocked("no verdict")
-    keys = ("claim", "evidence", "location", "severity")
-    fs = a.get("findings")
-    if not isinstance(a.get("summary"), str) or not isinstance(fs, list) or not all(isinstance(x, dict) and all(isinstance(x.get(k), str) for k in keys) for x in fs):
-        blocked("malformed answer")
-    if a["verdict"] == "REVISE" and not fs:
-        blocked("REVISE with no findings")
-    return a
-a = answer()
+if rc in ("124", "137"):
+    blocked("timed out")
+if rc != "0":
+    errs = [l for l in open(err, "rb").read().decode("utf-8", "replace").split("\n") if l.startswith("ERROR:")]
+    blocked((errs or [f"codex exited {rc}"])[-1])
+raw = open(ans, "rb").read() if os.path.isfile(ans) else b""
+if not raw.strip():
+    blocked("empty answer")
+try:
+    a = json.loads(raw)
+except (ValueError, RecursionError):
+    blocked("malformed answer")
+if not isinstance(a, dict):
+    blocked("malformed answer")
+if a.get("verdict") not in ("APPROVED", "REVISE", "BLOCKED"):
+    blocked("no verdict")
+keys = ("claim", "evidence", "location", "severity")
+fs = a.get("findings")
+if not isinstance(a.get("summary"), str) or not isinstance(fs, list) or not all(isinstance(x, dict) and all(isinstance(x.get(k), str) for k in keys) for x in fs):
+    blocked("malformed answer")
+if a["verdict"] == "REVISE" and not fs:
+    blocked("REVISE with no findings")
 v = a["verdict"]
 summary = clean(a["summary"])
 found = [f"- [{clean(x['severity'])}] {clean(x['location'])}: {clean(x['claim'])} Evidence: {clean(x['evidence'])}" for x in a["findings"]]

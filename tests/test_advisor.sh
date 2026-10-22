@@ -27,6 +27,7 @@ FAKE
 cat > "$tmp/bin/timeout" <<'FAKE'
 #!/usr/bin/env bash
 printf '%s\n' "$@" > "$FAKE_DIR/timeout_argv"
+[ "${FAKE_TIMEOUT:-}" = 137 ] && exit 137
 [ -n "${FAKE_TIMEOUT:-}" ] && exit 124
 shift 3
 exec "$@"
@@ -134,8 +135,15 @@ n0=$(nrec)
 out=$(cd "$proj" && PATH="$tmp/sys" bash "$root/scripts/st-advisor.sh" plan specs/001-demo); rc=$?
 check "codex missing: no advisor, exit 0, no record" '[ $rc = 0 ] && [ "$out" = "no advisor: codex not found" ] && [ "$(nrec)" = "$n0" ]'
 
-FAKE_RC=1 FAKE_ERR=$'warning: retry\nERROR: unexpected status 401 Unauthorized: test-401\n' run plan specs/001-demo
+FAKE_RC=1 FAKE_ERR=$'warning: retry\nERROR: unexpected status 401 Unauthorized: test-401\nretrying in 1s\n' run plan specs/001-demo
 check "codex error: BLOCKED with its ERROR line" 'blocked "ERROR: unexpected status 401 Unauthorized: test-401" && last_header plan | grep -q "| BLOCKED$" && grep -A1 -F "$(last_header plan)" "$proj/specs/001-demo/advisor.md" | tail -n1 | grep -q "^reason: "'
+check "record reason equals stdout reason" '[ "$(grep -A1 -F "$(last_header plan)" "$proj/specs/001-demo/advisor.md" | tail -n1)" = "reason: $(head -n1 <<<"$out" | sed "s/^BLOCKED: //")" ]'
+
+FAKE_RC=3 FAKE_ERR=$'SECRET=abc\n' run plan specs/001-demo
+check "codex error without ERROR line: codex exited <rc>" 'blocked "codex exited 3" && ! grep -qF SECRET=abc "$proj/specs/001-demo/advisor.md"'
+
+FAKE_RC=3 run plan specs/001-demo
+check "codex error with empty stderr" 'blocked "codex exited 3"'
 
 run plan specs/001-demo
 check "empty answer (no file)" 'blocked "empty answer"'
@@ -147,6 +155,14 @@ check "empty answer (empty file)" 'blocked "empty answer"'
 answer 'not json'
 run plan specs/001-demo
 check "malformed answer" 'blocked "malformed answer"'
+
+answer '[]'
+run plan specs/001-demo
+check "answer not an object" 'blocked "malformed answer"'
+
+answer '{"verdict":"APPROVED","summary":5,"findings":[]}'
+run plan specs/001-demo
+check "summary not a string" 'blocked "malformed answer"'
 
 answer '{"summary":"s","findings":[{"claim":"c","evidence":"e","location":"l","severity":"LOW"}]}'
 run plan specs/001-demo
@@ -172,6 +188,9 @@ check "lone surrogate in answer does not crash" '[ $rc = 0 ] && [[ "$(head -n1 <
 answer '{"verdict":"APPROVED","summary":"fine","findings":[]}'
 FAKE_TIMEOUT=1 run plan specs/001-demo
 check "timed out" 'blocked "timed out"'
+
+FAKE_TIMEOUT=137 run plan specs/001-demo
+check "killed after timeout (137)" 'blocked "timed out"'
 
 check "timeout argv" '[ "$(sed -n 1,4p "$tmp/timeout_argv" | paste -sd,)" = "-k,10,540,codex" ]'
 

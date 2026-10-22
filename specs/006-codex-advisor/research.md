@@ -37,7 +37,9 @@ D3). A foreground Bash call is capped at 600000 ms.
 ## R2. Failure: exit code, `-o` file, reason line
 
 - Decision: a non-zero exit is `BLOCKED: <reason>`. The reason is the last stderr line that
-  starts with `ERROR:`, else the last non-empty stderr line, else `codex exited <rc>`. A missing
+  starts with `ERROR:`, else `codex exited <rc>`. The last non-empty stderr line is not used:
+  Codex stderr carries the session text, so it could put file content into the committed record
+  (D16). A missing
   or empty `-o` file is `BLOCKED: empty answer`. The script writes `-o` to a fresh temp path, so
   an old file cannot pass as an answer.
 - Rationale: call 2 (no quota used):
