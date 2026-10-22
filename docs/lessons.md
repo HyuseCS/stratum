@@ -141,7 +141,7 @@
 
 ### L14. A hash step that ignored tool failures let a stale approval pass
 
-- What happened: Diff-point Codex rounds 2 and 3 found that a missing `sha256sum`, an unreadable file or a failing `git` command left an empty or partial digest, and `check` matched it against an older record (D20, D21). Round 2's fix covered `cat` and `sha256sum` only; round 3 found the `git` exit codes still ignored.
+- What happened: Diff-point Codex rounds 2 and 3 found that a missing `sha256sum`, an unreadable file or a failing `git` command left an empty or partial digest, and `check` matched it against an older record (D20, D21). Round 2's fix added the readable-file test and the 64-hex digest check only; round 3 found the `git` exit codes still ignored.
 - Rule: A script that hashes an input to gate an approval must have one test per producer (each tool in the pipeline, each unreadable input) where that producer fails, and the test must fail unless the script exits non-zero with no record written.
 
 ### L15. A fixed defect had a second entry point that the first fix left open
@@ -161,5 +161,5 @@
 
 ### L18. A guard test must have its own negative control before the fix is trusted
 
-- What happened: The D20 hash fix was proven red before and green after with a `sha256sum` stub that prints nothing, and the D21 fix with a `chmod 000` untracked file. The first Codex-reported cause (`cat` and `sha256sum`) was real but incomplete (L15).
+- What happened: The D20 hash fix was proven red before and green after with a `sha256sum` stub that prints nothing, and the D21 fix with a `chmod 000` untracked file. The first Codex-reported cause (an unreadable input and `sha256sum`) was real but incomplete (L15).
 - Rule: Each guard added after a review finding must have a test that is red on the previous commit of the script, and the fix commit message must name that test.
