@@ -137,7 +137,7 @@ s1() {
   check "S1 exit 0" '[ $rc = 0 ]'
   check "S1 one worktree create, argv as built" '[ "$(cnt "^worktree\tcreate\t")" = 1 ] && hascall "worktree\tcreate\t--cwd\t%s\t--branch\tworker-t004\t--base\t%s\t--path\t%s\t--label\tworker-t004\t--no-focus" "$repo" "$sha" "$tmp/repo-worker-t004"'
   check "S1 brief has the task text" 'grep -qxF "TASK BODY $(rnd)" "$b"'
-  check "S1 brief heading, test, lane, branch, machine, result path" 'grep -qxF "# Brief: worker-t004" "$b" && grep -qxF "- Test command: \`$testcmd\`" "$b" && grep -qxF "- Lane: $lane. Start it with the Skill tool. Run only task T004; skip every other task, ticked or not." "$b" && grep -qxF "- Branch: worker-t004" "$b" && grep -qxF "- Your machine: local. \`local\` is the orchestrator'"'"'s machine." "$b" && grep -qxF "- Result file: $(wt)/result.md" "$b"'
+  check "S1 brief heading, test, lane, branch, machine, result path" 'grep -qxF "# Brief: worker-t004" "$b" && grep -qxF -- "- Test command: \`$testcmd\`" "$b" && grep -qxF -- "- Lane: $lane. Start it with the Skill tool. Run only task T004; skip every other task, ticked or not." "$b" && grep -qxF -- "- Branch: worker-t004" "$b" && grep -qxF -- "- Your machine: local. \`local\` is the orchestrator'"'"'s machine." "$b" && grep -qxF -- "- Result file: $(wt)/result.md" "$b"'
   check "S1 brief has every roster row" 'grep -qxF "| worker-t004 | local | worker-t004 | T004 |" "$b" && grep -qxF "| worker-t005 | local | worker-t005 | T005 |" "$b"'
   check "S1 brief has the four team rules" '[ "$(grep -cxFf "$rules" "$b")" = 4 ]'
   check "S1 brief has no advisor block" '[ -f "$b" ] && ! grep -q "^## Advisor" "$b"'
@@ -312,9 +312,9 @@ check "L1 the other workspace is absent" '! grep -q notaworker <<<"$out" && ! gr
 check "L1 never-list, no prompt, no close" 'never 0 0'
 
 nc() {
-  local fn=$2
-  check "$1 sed changed the script" '[ -f "$script" ] && ! cmp -s "$script" "$tmp/$1.sh"'
-  check "$1 copy parses" 'bash -n "$tmp/$1.sh"'
+  local nm=$1 fn=$2
+  check "$1 sed changed the script" '[ -f "$script" ] && ! cmp -s "$script" "$tmp/$nm.sh"'
+  check "$1 copy parses" 'bash -n "$tmp/$nm.sh"'
   local f=$fail; fail=0; q=1
   local base=0
   "$fn" "$script"; base=$fail; fail=0
