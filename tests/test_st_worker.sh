@@ -109,6 +109,26 @@ for b in ssh git sleep; do
   if [ "$found" != "$tmp/bin/$b" ]; then echo "FAIL stub $b is first on PATH: found $found"; exit 1; fi
 done
 
+cat > "$tmp/bin/claude" <<'EOF'
+#!/usr/bin/env bash
+T=$STUB_T
+printf '%s\n' "$@" > "$T/claude_args"
+bp=$(sed -E 's/.*; read (.*) first and follow it$/\1/' <<<"$2")
+printf '%s\n' "$bp" > "$T/brief.path"
+cp "$bp" "$T/brief.copy" 2>/dev/null
+turns=$((RANDOM % 20 + 1)); cost="0.0$RANDOM"
+printf '%s\n%s\n' "$turns" "$cost" > "$T/claude_nums"
+case "${STUB_CLAUDE:-}" in
+slow) exit 124 ;;
+commit) git -c user.name=t -c user.email=t@t commit -q --allow-empty -m worker ;;
+junk) echo 'not json at all'; exit 0 ;;
+esac
+jq -nc --argjson n "$turns" --argjson c "$cost" --arg r "HEADLESS $(cat "$T/x")" '{type:"result",subtype:"success",is_error:false,num_turns:$n,total_cost_usd:$c,session_id:"stubsession",result:$r}'
+EOF
+chmod +x "$tmp/bin/claude"
+found=$(PATH="$tmp/bin:$PATH" command -v claude)
+if [ "$found" != "$tmp/bin/claude" ]; then echo "FAIL stub claude is first on PATH: found $found"; exit 1; fi
+
 repo="$tmp/repo"
 mkdir -p "$repo/.stratum"
 git -C "$repo" init -q
@@ -567,6 +587,43 @@ rrun bash "$script" list --machine laptop
 check "R12 exit 0" '[ $rc = 0 ]'
 check "R12 found lines name laptop, the other workspace is absent" '[ "$(grep -cP "^found\t" <<<"$out")" = 2 ] && hasline "found\tworker-t004\tlaptop\tstubA%s\tstubA%s:p1\tblocked\t/stub/a%s" "$x" "$x" "$x" && hasline "found\tworker-t005\tlaptop\tstubB%s\t-\tgone\t/stub/b%s" "$x" "$x" && ! grep -q notaworker <<<"$out"'
 check "R12 --machine rule, never-list" 'rnever 0 0'
+
+h1() {
+  fresh; rm -f "$tmp/claude_args" "$tmp/brief.path" "$tmp/brief.copy" "$tmp/claude_nums"
+  run bash "$1" headless T004 --task "$task" --test "$testcmd"
+  local bp turns cost hp
+  bp=$(cat "$tmp/brief.path" 2>/dev/null); turns=$(sed -n 1p "$tmp/claude_nums" 2>/dev/null); cost=$(sed -n 2p "$tmp/claude_nums" 2>/dev/null)
+  hp="/goal \`$testcmd\` exits 0 and the change is left uncommitted; read $bp first and follow it"
+  check "H1 exit 0" '[ $rc = 0 ]'
+  check "H1 claude argv is exactly the contract flags, in order" '[ "$(cat "$tmp/claude_args" 2>/dev/null)" = "$(printf "%s\n" -p "$hp" --output-format json --max-turns 30 -n worker-t004 --tools Read,Edit,Write,Glob,Grep,Bash --allowedTools Read Edit Write Glob Grep "Bash($testcmd)" --permission-mode dontAsk --permission-prompts none --strict-mcp-config)" ]'
+  check "H1 brief file is outside the repo" '[ -n "$bp" ] && [ "$(dirname "$bp")" != "$repo" ] && [[ "$bp" != "$repo"/* ]] && [[ "$bp" == /* ]]'
+  check "H1 brief heading and task text" 'grep -qxF "# Brief: worker-t004 (headless)" "$tmp/brief.copy" && grep -qxF "## Task T004" "$tmp/brief.copy" && grep -qxF "TASK BODY $(rnd)" "$tmp/brief.copy"'
+  check "H1 brief facts" 'grep -qxF -- "- Test command: \`$testcmd\`" "$tmp/brief.copy" && grep -qxF -- "- Work in this folder. Leave the change uncommitted: never commit, never push." "$tmp/brief.copy" && grep -qxF -- "- Run the test command exactly as written, as one Bash call." "$tmp/brief.copy" && grep -qxF -- "- You cannot ask questions. If you need a decision, stop and say in your last reply what is missing." "$tmp/brief.copy"'
+  check "H1 headless line" 'hasline "headless\tworker-t004\tsuccess\t%s\t%s" "$turns" "$cost"'
+  check "H1 result: line then the stub result text" '[ "$(grep -xF -A1 "result:" <<<"$out" | tail -n1)" = "HEADLESS $(rnd)" ]'
+  check "H1 no herdr call" '[ ! -s "$tmp/calls" ]'
+}
+h1 "$script"
+check "H5 brief file is gone after the run" 'bp=$(cat "$tmp/brief.path" 2>/dev/null); [ -n "$bp" ] && [ ! -e "$bp" ]'
+
+fresh
+old=$(git -C "$repo" rev-parse HEAD)
+STUB_CLAUDE=commit run bash "$script" headless T004 --task "$task" --test "$testcmd"
+new=$(git -C "$repo" rev-parse HEAD)
+check "H2 exit 1, worker committed line" '[ $rc = 1 ] && [ "$new" != "$old" ] && hasline "worker committed: %s -> %s" "$old" "$new"'
+git -C "$repo" reset -q --hard "$sha"
+
+fresh
+STUB_CLAUDE=slow run bash "$script" headless T004 --task "$task" --test "$testcmd"
+check "H3 exit 1, timed out line" '[ $rc = 1 ] && hasline "timed out after 540 s"'
+
+fresh
+STUB_CLAUDE=junk run bash "$script" headless T004 --task "$task" --test "$testcmd"
+check "H4 exit 1, no JSON line" '[ $rc = 1 ] && hasline "claude gave no JSON result."'
+
+sed -E '/--allowedTools/d' "$script" > "$tmp/NC6.sh" 2>/dev/null
+check "NC6 sed deletes exactly one line" '[ "$(diff "$script" "$tmp/NC6.sh" | grep -c "^<")" = 1 ]'
+nc NC6 h1
 
 sed -E '/H\+=\(--machine/d' "$script" > "$tmp/NC1.sh" 2>/dev/null
 check "NC1 sed deletes exactly one line" '[ "$(diff "$script" "$tmp/NC1.sh" | grep -c "^<")" = 1 ]'

@@ -124,7 +124,7 @@ and conflict steps (FR-009) are built in T004 and tested by T002.
 
 ### Tests for User Story 5
 
-- [ ] T013 [US5] Add to `tests/test_st_worker.sh` a stub `claude` (logs argv one per line; reads the brief path from the prompt and copies the brief to the temp dir; prints the JSON of spike test 3 with `subtype` `success`, `num_turns`, `total_cost_usd` and a `result` holding `HEADLESS <random>`; `STUB_CLAUDE=commit` makes a commit in the repo first, `=junk` prints junk, `=slow` exits 124) and the cases H1 to H5 and NC6 of contracts/script.md section 6. H1 asserts the exact flags of section 4 `headless` step 3, the prompt `HP`, the brief outside the repo, and no herdr call. Run it and show H1 to H5 fail (`headless` exits 2 after T003). Lessons L1, L10, L18.
+- [X] T013 [US5] Add to `tests/test_st_worker.sh` a stub `claude` (logs argv one per line; reads the brief path from the prompt and copies the brief to the temp dir; prints the JSON of spike test 3 with `subtype` `success`, `num_turns`, `total_cost_usd` and a `result` holding `HEADLESS <random>`; `STUB_CLAUDE=commit` makes a commit in the repo first, `=junk` prints junk, `=slow` exits 124) and the cases H1 to H5 and NC6 of contracts/script.md section 6. H1 asserts the exact flags of section 4 `headless` step 3, the prompt `HP`, the brief outside the repo, and no herdr call. Run it and show H1 to H5 fail (`headless` exits 2 after T003). Lessons L1, L10, L18.
 
 ### Implementation for User Story 5
 
