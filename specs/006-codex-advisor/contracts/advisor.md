@@ -116,6 +116,8 @@ Failure output 2:
 <bytes of failure 2 file>
 ```
 
+A pasted file that does not end in a newline gets one before the next label, so a label never sits on the same line as pasted text.
+
 Diff point:
 
 ```text

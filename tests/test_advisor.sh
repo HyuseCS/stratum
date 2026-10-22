@@ -5,6 +5,7 @@ tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 fail=0
 check() { if eval "$2"; then echo "ok   $1"; else echo "FAIL $1"; fail=1; fi; }
+export GIT_CONFIG_GLOBAL=/dev/null XDG_CONFIG_HOME="$tmp"
 repo_before=$(git -C "$root" status --porcelain)
 
 mkdir -p "$tmp/bin"
@@ -59,14 +60,17 @@ check "plan APPROVED: exit 0, verdict line with the plan hash" '[ $rc = 0 ] && [
 check "plan record header" 'last_header plan | grep -qE "^## plan \| [0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z \| sha256 $h \| APPROVED$"'
 check "FR-012 argv read-only" '[ "$(head -n1 "$tmp/argv" 2>/dev/null)" = exec ] && grep -x -A1 -- "-s" "$tmp/argv" | grep -qx read-only && grep -qx -- "--ephemeral" "$tmp/argv" && grep -qx -- "--output-schema" "$tmp/argv" && grep -qx -- "-o" "$tmp/argv" && [ "$(tail -n1 "$tmp/argv")" = "-" ]'
 check "FR-012 script has no write flag" '[ -f "$root/scripts/st-advisor.sh" ] && ! grep -qE -- "workspace-write|danger-full-access|dangerously-bypass|approve-for-me|add-dir|full-auto|exec review" "$root/scripts/st-advisor.sh"'
-check "FR-003 schema" 'python3 -c "
-import json,sys
-s=json.load(open(sys.argv[1]))
-f=s[\"properties\"][\"findings\"][\"items\"]
-assert sorted(s[\"required\"])==[\"findings\",\"summary\",\"verdict\"]
-assert sorted(s[\"properties\"][\"verdict\"][\"enum\"])==[\"APPROVED\",\"BLOCKED\",\"REVISE\"]
-assert sorted(f[\"required\"])==[\"claim\",\"evidence\",\"location\",\"severity\"]
-" "$tmp/schema.json"'
+cat > "$tmp/schema.expected" <<'EOF'
+{"type":"object","additionalProperties":false,"required":["verdict","summary","findings"],"properties":{"verdict":{"type":"string","enum":["APPROVED","REVISE","BLOCKED"]},"summary":{"type":"string"},"findings":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["claim","evidence","location","severity"],"properties":{"claim":{"type":"string"},"evidence":{"type":"string"},"location":{"type":"string"},"severity":{"type":"string","enum":["CRITICAL","HIGH","MEDIUM","LOW"]}}}}}}
+EOF
+check "FR-003 schema" 'cmp -s "$tmp/schema.json" "$tmp/schema.expected"'
+cat > "$tmp/head.expected" <<'EOF'
+You are a reviewer for Stratum. Review only: never create, change or delete a file, and never build or fix anything.
+Read only the inputs named below and the files they cite. Never open .env files, keys, credentials, tokens or other secret files.
+Never quote a secret value in a finding.
+Answer with verdict APPROVED (nothing to fix), REVISE (findings to fix) or BLOCKED (you cannot review, or the work must stop). Each finding has a claim, the evidence, a location (file:line when known) and a severity.
+EOF
+check "FR-013 prompt head is exact" 'head -n4 "$tmp/prompt" | cmp -s - "$tmp/head.expected"'
 check "FR-013 prompt rules" 'grep -qxF "You are a reviewer for Stratum. Review only: never create, change or delete a file, and never build or fix anything." "$tmp/prompt" && grep -qxF "Read only the inputs named below and the files they cite. Never open .env files, keys, credentials, tokens or other secret files." "$tmp/prompt"'
 check "FR-013 prompt: never quote a secret" 'grep -qxF "Never quote a secret value in a finding." "$tmp/prompt"'
 check "FR-009 plan prompt names paths, no plan text" 'grep -qxF "Inputs: specs/001-demo/spec.md, specs/001-demo/plan.md, specs/001-demo/tasks.md" "$tmp/prompt" && ! grep -qF PLANBODY7f3a "$tmp/prompt"'
@@ -91,6 +95,12 @@ run test specs/001-demo "$tmp/task.txt" tests/x_test.sh "$tmp/f1.txt" "$tmp/f2.t
 th=$(cat "$tmp/f1.txt" "$tmp/f2.txt" | sha256sum | cut -d' ' -f1)
 check "test point pastes task, test path and both outputs" 'grep -qF "Point: test." "$tmp/prompt" && grep -qxF "Test: tests/x_test.sh" "$tmp/prompt" && grep -qF TASKTEXT1 "$tmp/prompt" && grep -qF FAILONE1 "$tmp/prompt" && grep -qF FAILTWO2 "$tmp/prompt"'
 check "test point hash is both outputs" '[ "$(head -n1 <<<"$out")" = "APPROVED sha256 $th" ] && last_header test | grep -q "^## test | "'
+cp "$tmp/prompt" "$tmp/prompt_nl"
+printf 'TASKTEXT1' > "$tmp/task.txt"
+printf 'FAILONE1' > "$tmp/f1.txt"
+printf 'FAILTWO2' > "$tmp/f2.txt"
+run test specs/001-demo "$tmp/task.txt" tests/x_test.sh "$tmp/f1.txt" "$tmp/f2.txt"
+check "test point labels on their own line" '[ "$(grep -xn -e "Task:" -e "Failure output 1:" -e "Failure output 2:" "$tmp/prompt" | cut -d: -f2- | paste -sd,)" = "Task:,Failure output 1:,Failure output 2:" ] && cmp -s "$tmp/prompt" "$tmp/prompt_nl"'
 
 printf 'x = 2\n' > "$proj/a.py"
 git -C "$proj" -c user.name=t -c user.email=t@t commit -q -am second
@@ -153,6 +163,11 @@ check "bad finding" 'blocked "malformed answer"'
 answer '{"verdict":"REVISE","summary":"s","findings":[]}'
 run plan specs/001-demo
 check "REVISE with no findings" 'blocked "REVISE with no findings"'
+
+answer '{"verdict":"APPROVED","summary":"bad \ud800 x","findings":[]}'
+n0=$(nrec)
+out=$(adv plan specs/001-demo 2>&1); rc=$?
+check "lone surrogate in answer does not crash" '[ $rc = 0 ] && [[ "$(head -n1 <<<"$out")" == "APPROVED sha256 "* ]] && ! grep -q Traceback <<<"$out" && [ "$(nrec)" = $((n0 + 1)) ]'
 
 answer '{"verdict":"APPROVED","summary":"fine","findings":[]}'
 FAKE_TIMEOUT=1 run plan specs/001-demo

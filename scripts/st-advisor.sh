@@ -59,10 +59,13 @@ printf '%s\n' '{"type":"object","additionalProperties":false,"required":["verdic
     test)
       printf '%s\n' 'Point: test. This task'"'"'s test is still red after two build tries. Root cause or rabbit hole?' "Test: $4" 'Task:'
       cat "$3"
+      [ -z "$(tail -c1 "$3")" ] || echo
       echo 'Failure output 1:'
       cat "$5"
+      [ -z "$(tail -c1 "$5")" ] || echo
       echo 'Failure output 2:'
-      cat "$6" ;;
+      cat "$6"
+      [ -z "$(tail -c1 "$6")" ] || echo ;;
     diff)
       printf '%s\n' \
         'Point: diff. Review the full diff before the build is called done: hidden regressions, broken project rules, missed requirements.' \
@@ -82,11 +85,12 @@ timeout -k 10 540 codex exec -s read-only --ephemeral --output-schema "$tmp/sche
 
 python3 -I - "$point" "$f" "$hash" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$tmp/answer.json" "$rc" "$tmp/err" <<'PY'
 import json, os, sys
+sys.stdout.reconfigure(errors="replace")
 point, f, h, ts, ans, rc, err = sys.argv[1:]
 def clean(s):
     return s.replace("\r", " ").replace("\n", " ")
 def record(v, lines):
-    with open(f"{f}/advisor.md", "a", encoding="utf-8") as r:
+    with open(f"{f}/advisor.md", "a", encoding="utf-8", errors="replace") as r:
         r.write("".join(l + "\n" for l in [f"## {point} | {ts} | sha256 {h} | {v}", *lines, ""]))
 def blocked(reason):
     reason = clean(reason)
