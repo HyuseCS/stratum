@@ -28,7 +28,7 @@ st-advisor.sh continued <plan|test|diff> <feature dir>
 - Bad arguments (wrong count, unknown form, no `<feature dir>/spec.md`, for `plan` no
   `<feature dir>/plan.md` or `<feature dir>/tasks.md`, a base that is not a commit, a missing task
   or failure file; every input file must be a readable regular file, so a directory or an
-  unreadable file is bad too, D20): `usage: st-advisor.sh plan|test|diff|check|continued ...` on one line, exit 2,
+  unreadable file is bad too, D20; a `<feature dir>/advisor.md` that is a symlink): `usage: st-advisor.sh plan|test|diff|check|continued ...` on one line, exit 2,
   no record, no Codex call.
 - `check` reads the records first. No record for the point: `no record: <point>`, exit 1, even
   when `plan.md` or `tasks.md` does not exist yet. With a record, it hashes the current input; a
@@ -149,13 +149,14 @@ the hash (section 2, D12). If every untracked path is left out, the list is `non
 | no `codex` on PATH | `no advisor: codex not found` | 0 |
 | `APPROVED` or `REVISE` | `<VERDICT> sha256 <64 hex>`, `summary: <text>`, one line per finding, `record: <f>/advisor.md` | 0 |
 | `BLOCKED` from Codex | `BLOCKED: <summary>`, one line per finding, `record: <f>/advisor.md` | 1 |
+| Codex exited non-zero (not 124 or 137) | `BLOCKED: codex exited <rc>`, the last stderr line that starts `ERROR:` if there is one, `record: <f>/advisor.md` | 1 |
 | any other `BLOCKED` | `BLOCKED: <reason>`, `record: <f>/advisor.md` | 1 |
 | the input hash cannot be built (D20, D21) | `cannot hash inputs` | 2 |
 
 - Mode `both` adds `mode both: also consult /advisor if one is set` as the first line of every
   row except the no-file row and `off`.
-- Reasons, exactly: `timed out`, `<codex error line>` (the last stderr line that starts `ERROR:`,
-  else `codex exited <rc>`, D16, research R2), `empty answer`,
+- Reasons, exactly: `timed out`, `codex exited <rc>` (the last stderr line that starts `ERROR:`
+  goes to stdout only, never to the record, D16, research R2), `empty answer`,
   `malformed answer`, `no verdict`, `REVISE with no findings`, `APPROVED with findings`, `bad advisor.json`, `timeout not found`.
 - Finding line: `- [<severity>] <location>: <claim> Evidence: <evidence>`.
 - Every Codex text (summary, each finding field, the error line) has each `\r` and `\n` replaced

@@ -28,7 +28,7 @@ No database. Two files and the answer Codex writes. Exact formats are in
   decoded by `json.loads` (lessons L3).
 - Without `model` and `effort`, Codex takes both from the user's own config. Stratum checks
   their shape, not whether OpenAI accepts them: a wrong value comes back as a Codex error, which
-  is `BLOCKED: <codex error line>` (research R11).
+  is `BLOCKED: codex exited <rc>` (research R11).
 - Effect: `codex` runs Codex. `both` runs Codex and prints
   `mode both: also consult /advisor if one is set` as the first line. `off` prints
   `no advisor: mode off`, exits 0, runs nothing, writes no record.
@@ -58,8 +58,8 @@ No database. Two files and the answer Codex writes. Exact formats are in
   `--output-schema` (research R1).
 - Mapping to results, in this order (first match wins):
   1. Codex timed out (exit 124 or 137): `BLOCKED: timed out`.
-  2. Codex exited non-zero: `BLOCKED: <reason>`, the last stderr line that starts `ERROR:`, else
-     `codex exited <rc>` (D16, research R2).
+  2. Codex exited non-zero: `BLOCKED: codex exited <rc>`. The last stderr line that starts
+     `ERROR:` goes to stdout only, never to the record (D16, research R2).
   3. `-o` file missing or empty (only whitespace): `BLOCKED: empty answer`.
   4. Not JSON, or not an object: `BLOCKED: malformed answer`.
   5. `verdict` missing or not one of the three: `BLOCKED: no verdict`.

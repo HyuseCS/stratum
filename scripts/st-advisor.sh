@@ -7,6 +7,7 @@ point=${1:-}
 case "$cmd $point $#" in "run plan 2"|"run test 6"|"run diff 3"|"check plan 2"|"check diff 3"|"continued plan 2"|"continued test 2"|"continued diff 2") ;; *) usage ;; esac
 f=${2%/}
 [ -f "$f/spec.md" ] && [ -r "$f/spec.md" ] || usage
+[ -L "$f/advisor.md" ] && usage
 if [ $cmd != run ]; then
   rec=$(grep -a "^## $point | " "$f/advisor.md" 2>/dev/null | tail -n1)
   if [ -z "$rec" ]; then echo "no record: $point"; [ $cmd = check ] && exit 1; exit 2; fi
@@ -129,16 +130,16 @@ def clean(s):
 def record(v, lines):
     with open(f"{f}/advisor.md", "a", encoding="utf-8", errors="replace") as r:
         r.write("\n" * bool(r.tell()) + "".join(l + "\n" for l in [f"## {point} | {ts} | sha256 {h} | {v}", *lines]))
-def blocked(reason):
+def blocked(reason, extra=()):
     reason = clean(reason)
     record("BLOCKED", [f"reason: {reason}"])
-    print(f"BLOCKED: {reason}\nrecord: {f}/advisor.md")
+    print("\n".join([f"BLOCKED: {reason}", *extra, f"record: {f}/advisor.md"]))
     sys.exit(1)
 if rc in ("124", "137"):
     blocked("timed out")
 if rc != "0":
-    errs = [l for l in open(err, "rb").read().decode("utf-8", "replace").split("\n") if l.startswith("ERROR:")]
-    blocked((errs or [f"codex exited {rc}"])[-1])
+    errs = [clean(l) for l in open(err, "rb").read().decode("utf-8", "replace").split("\n") if l.startswith("ERROR:")]
+    blocked(f"codex exited {rc}", errs[-1:])
 raw = open(ans, "rb").read() if os.path.isfile(ans) else b""
 if not raw.strip():
     blocked("empty answer")

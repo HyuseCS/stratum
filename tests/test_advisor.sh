@@ -136,8 +136,11 @@ out=$(cd "$proj" && PATH="$tmp/sys" bash "$root/scripts/st-advisor.sh" plan spec
 check "codex missing: no advisor, exit 0, no record" '[ $rc = 0 ] && [ "$out" = "no advisor: codex not found" ] && [ "$(nrec)" = "$n0" ]'
 
 FAKE_RC=1 FAKE_ERR=$'warning: retry\nERROR: unexpected status 401 Unauthorized: test-401\nretrying in 1s\n' run plan specs/001-demo
-check "codex error: BLOCKED with its ERROR line" 'blocked "ERROR: unexpected status 401 Unauthorized: test-401" && last_header plan | grep -q "| BLOCKED$" && grep -A1 -F "$(last_header plan)" "$proj/specs/001-demo/advisor.md" | tail -n1 | grep -q "^reason: "'
+check "codex error: BLOCKED codex exited, ERROR line on stdout only" 'blocked "codex exited 1" && [ "$(sed -n 2p <<<"$out")" = "ERROR: unexpected status 401 Unauthorized: test-401" ] && [[ "$(sed -n 3p <<<"$out")" == record:* ]] && last_header plan | grep -q "| BLOCKED$" && [ "$(grep -A1 -F "$(last_header plan)" "$proj/specs/001-demo/advisor.md" | tail -n1)" = "reason: codex exited 1" ]'
 check "record reason equals stdout reason" '[ "$(grep -A1 -F "$(last_header plan)" "$proj/specs/001-demo/advisor.md" | tail -n1)" = "reason: $(head -n1 <<<"$out" | sed "s/^BLOCKED: //")" ]'
+
+FAKE_RC=1 FAKE_ERR=$'ERROR: conn postgres://u:p@h/db\n' run plan specs/001-demo
+check "pasted ERROR line never becomes the record reason" 'blocked "codex exited 1" && grep -qxF "ERROR: conn postgres://u:p@h/db" <<<"$out" && [ "$(grep -A1 -F "$(last_header plan)" "$proj/specs/001-demo/advisor.md" | tail -n1)" = "reason: codex exited 1" ] && [ "$(grep -c postgres "$proj/specs/001-demo/advisor.md")" = 0 ]'
 
 FAKE_RC=3 FAKE_ERR=$'SECRET=abc\n' run plan specs/001-demo
 check "codex error without ERROR line: codex exited <rc>" 'blocked "codex exited 3" && ! grep -qF SECRET=abc "$proj/specs/001-demo/advisor.md"'
@@ -464,6 +467,21 @@ else
   check "unreadable untracked file: check diff exit 2" '[ "$rc" = 2 ] && [ "$out" = "cannot hash inputs" ]'
   rm -f "$proj/u.txt"
 fi
+
+answer '{"verdict":"APPROVED","summary":"fine","findings":[]}'
+rm -f "$tmp/argv"
+mv "$proj/specs/001-demo/advisor.md" "$tmp/advisor.real"
+cp "$tmp/advisor.real" "$tmp/linktarget"
+ln -s "$tmp/linktarget" "$proj/specs/001-demo/advisor.md"
+lt0=$(sha256sum < "$tmp/linktarget")
+run plan specs/001-demo
+check "advisor.md symlink: plan usage, exit 2, no codex, target unchanged" '[ "$rc" = 2 ] && [[ "$(head -n1 <<<"$out")" == "usage: st-advisor.sh"* ]] && [ ! -e "$tmp/argv" ] && [ "$(sha256sum < "$tmp/linktarget")" = "$lt0" ]'
+run check plan specs/001-demo
+check "advisor.md symlink: check plan usage, exit 2" '[ "$rc" = 2 ] && [[ "$(head -n1 <<<"$out")" == "usage: st-advisor.sh"* ]]'
+run continued plan specs/001-demo
+check "advisor.md symlink: continued plan usage, exit 2, target unchanged" '[ "$rc" = 2 ] && [[ "$(head -n1 <<<"$out")" == "usage: st-advisor.sh"* ]] && [ "$(sha256sum < "$tmp/linktarget")" = "$lt0" ]'
+rm -f "$proj/specs/001-demo/advisor.md"
+mv "$tmp/advisor.real" "$proj/specs/001-demo/advisor.md"
 
 recf="$proj/specs/001-demo/advisor.md"
 check "record file has no blank line at EOF" '[ -z "$(tail -c1 "$recf")" ] && [ "$(tail -c2 "$recf" | wc -l)" != 2 ] && [ "$(grep -c "^$" "$recf")" = $(( $(nrec) - 1 )) ] && git -C "$proj" add specs/001-demo/advisor.md && git -C "$proj" diff --cached --check; r=$?; git -C "$proj" reset -q; [ $r = 0 ]'

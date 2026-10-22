@@ -36,10 +36,9 @@ D3). A foreground Bash call is capped at 600000 ms.
 
 ## R2. Failure: exit code, `-o` file, reason line
 
-- Decision: a non-zero exit is `BLOCKED: <reason>`. The reason is the last stderr line that
-  starts with `ERROR:`, else `codex exited <rc>`. The last non-empty stderr line is not used:
-  Codex stderr carries the session text, so it could put file content into the committed record
-  (D16). A missing
+- Decision: a non-zero exit is `BLOCKED: codex exited <rc>`. The last stderr line that starts
+  with `ERROR:` goes to stdout only, never to the record: Codex stderr carries the session text,
+  so even an `ERROR:` line can be pasted input and must not reach the committed record (D16). A missing
   or empty `-o` file is `BLOCKED: empty answer`. The script writes `-o` to a fresh temp path, so
   an old file cannot pass as an answer.
 - Rationale: call 2 (no quota used):
@@ -215,7 +214,7 @@ D3). A foreground Bash call is capped at 600000 ms.
   Exit 1 after 17,001 ms (401, as in R2). The stderr header shows `model: gpt-6-astra` and
   `reasoning effort: bogus`: both flags are applied, and Codex does not check the effort value on
   the machine. So a wrong `model` or `effort` reaches OpenAI and comes back as a Codex error, which
-  the script prints as `BLOCKED: <codex error line>`. Stratum checks the shape only: the set of
+  the script prints as `BLOCKED: codex exited <rc>`. Stratum checks the shape only: the set of
   efforts and models that 0.163.0 accepts is not listed in `codex exec --help`, and a fixed list
   would go stale.
 - Threat (lessons L5): the file is committed. A value that starts with `-` could be read as a
