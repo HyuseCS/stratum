@@ -348,5 +348,8 @@ run plan specs/001-demo
 rm -f "$proj/json.py"
 check "planted json.py is ignored" 'grep -x -A1 -- "-m" "$tmp/argv" | grep -qx gpt-test-1 && ! grep -qx -- "--evil" "$tmp/argv" && [[ "$(head -n1 <<<"$out")" == "APPROVED sha256 "* ]]'
 
+recf="$proj/specs/001-demo/advisor.md"
+check "record file has no blank line at EOF" '[ -z "$(tail -c1 "$recf")" ] && [ "$(tail -c2 "$recf" | wc -l)" != 2 ] && [ "$(grep -c "^$" "$recf")" = $(( $(nrec) - 1 )) ] && git -C "$proj" add specs/001-demo/advisor.md && git -C "$proj" diff --cached --check; r=$?; git -C "$proj" reset -q; [ $r = 0 ]'
+
 check "no repo writes" '[ "$(git -C "$root" status --porcelain)" = "$repo_before" ]'
 exit $fail

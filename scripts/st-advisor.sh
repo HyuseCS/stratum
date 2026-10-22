@@ -12,7 +12,7 @@ if [ $cmd != run ]; then
   rest=${rec#* | * | sha256 }
   rhash=${rest%% | *}
   if [ $cmd = continued ]; then
-    printf '## %s | %s | sha256 %s | BLOCKED, user continued\n\n' "$point" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$rhash" >> "$f/advisor.md" || exit 1
+    { [ -s "$f/advisor.md" ] && echo; printf '## %s | %s | sha256 %s | BLOCKED, user continued\n' "$point" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$rhash"; } >> "$f/advisor.md" || exit 1
     echo "BLOCKED, user continued sha256 $rhash"
     exit 0
   fi
@@ -56,7 +56,7 @@ if not (isinstance(s, dict) and set(s) <= {"mode", "model", "effort"} and all(is
 print(s["mode"], s.get("model", ""), s.get("effort", ""), sep="\n")
 PY
 ) || {
-  printf '## %s | %s | sha256 %s | BLOCKED\nreason: bad advisor.json\n\n' "$point" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$hash" >> "$f/advisor.md" || exit 1
+  { [ -s "$f/advisor.md" ] && echo; printf '## %s | %s | sha256 %s | BLOCKED\nreason: bad advisor.json\n' "$point" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$hash"; } >> "$f/advisor.md" || exit 1
   printf 'BLOCKED: bad advisor.json\nrecord: %s/advisor.md\n' "$f"
   exit 1
 }
@@ -116,7 +116,7 @@ def clean(s):
     return s.replace("\r", " ").replace("\n", " ")
 def record(v, lines):
     with open(f"{f}/advisor.md", "a", encoding="utf-8", errors="replace") as r:
-        r.write("".join(l + "\n" for l in [f"## {point} | {ts} | sha256 {h} | {v}", *lines, ""]))
+        r.write("\n" * bool(r.tell()) + "".join(l + "\n" for l in [f"## {point} | {ts} | sha256 {h} | {v}", *lines]))
 def blocked(reason):
     reason = clean(reason)
     record("BLOCKED", [f"reason: {reason}"])

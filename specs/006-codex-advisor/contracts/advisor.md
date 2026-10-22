@@ -170,9 +170,10 @@ Appended, never rewritten. Created by the first append.
 summary: <text>                (when Codex answered)
 reason: <reason>               (when the script set BLOCKED)
 - [<severity>] <location>: <claim> Evidence: <evidence>
-<empty line>
 ```
 
+- An empty line goes before a record when the file already has content, never after one, so the
+  file ends with the last line of the last record and one newline.
 - `<point>` is `plan`, `test` or `diff`. `<VERDICT>` is `APPROVED`, `REVISE`, `BLOCKED` or
   `BLOCKED, user continued`. Time from `date -u +%Y-%m-%dT%H:%M:%SZ`.
 - The header is the only line that starts with `## `. `check` reads the last line that starts
