@@ -143,5 +143,6 @@ README st-init	readme	asks for the git guard modes and any model overrides
 README st-init	readme	writes the `AGENTS.md` and `CLAUDE.md` pointers
 README python3	readme	git guard, model overrides hook, phase hook, statusline, handoff facts
 EOF
+check "statusline test passes under LC_ALL=C" 'out=$(LC_ALL=C bash "$root/tests/test_statusline.sh" 2>&1); [ $? = 0 ] && ! grep -qv "^ok" <<<"$out"'
 
 exit $fail
