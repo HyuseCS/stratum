@@ -59,7 +59,9 @@ overwrite an existing file; report it and move on.
    `graphify hook status`. If the user says no, list it under what they still need to do.
 10. **Tool check.** Run the checks from `/stratum:st-status` steps 4 and 5 and report missing tools
    and duplicate installs.
-11. **Report** in one block: files created, files skipped because they existed, what the user
+11. **Advisor.** If `.stratum/advisor.json` is missing, ask the user in one question: advisor mode `codex` (recommended: Codex reviews the plan, a test red after 2 tries, and the full diff; needs `codex` logged in), `both` (Codex, then `/advisor` if set), or `off` (no Codex, nothing sent to OpenAI)?
+   Write `.stratum/advisor.json` as `{"mode": "<answer>"}`. It is committed. New projects get the file here; without it the advisor is off. Say how to change it later: edit the file. Optional `model` and `effort` keys pick the Codex model and reasoning effort; without them Codex uses the user's own config.
+12. **Report** in one block: files created, files skipped because they existed, what the user
    still needs to do. Commit only the created or changed project files (`.stratum/state.json`,
-   `.stratum/constitution.md`, `.gitignore`, `AGENTS.md`, `CLAUDE.md`, `.claude/settings.json`),
+   `.stratum/constitution.md`, `.stratum/advisor.json`, `.gitignore`, `AGENTS.md`, `CLAUDE.md`, `.claude/settings.json`),
    through the commit guard.
