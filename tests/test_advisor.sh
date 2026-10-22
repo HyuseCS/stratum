@@ -369,6 +369,20 @@ else
   check "unreadable plan.md: usage, exit 2, no record" '[ "$rc" = 2 ] && [[ "$(head -n1 <<<"$out")" == "usage: st-advisor.sh"* ]] && [ ! -e "$tmp/argv" ] && [ "$(nrec)" = "$n0" ]'
 fi
 
+if [ "$(id -u)" = 0 ]; then
+  echo "skip unreadable untracked file: running as root"
+else
+  rm -f "$tmp/argv"
+  n0=$(nrec)
+  printf 'secret\n' > "$proj/u.txt"
+  chmod 000 "$proj/u.txt"
+  run diff specs/001-demo "$first"
+  check "unreadable untracked file: diff run exit 2, no record, no codex" '[ "$rc" = 2 ] && [ "$out" = "cannot hash inputs" ] && [ ! -e "$tmp/argv" ] && [ "$(nrec)" = "$n0" ]'
+  run check diff specs/001-demo "$first"
+  check "unreadable untracked file: check diff exit 2" '[ "$rc" = 2 ] && [ "$out" = "cannot hash inputs" ]'
+  rm -f "$proj/u.txt"
+fi
+
 recf="$proj/specs/001-demo/advisor.md"
 check "record file has no blank line at EOF" '[ -z "$(tail -c1 "$recf")" ] && [ "$(tail -c2 "$recf" | wc -l)" != 2 ] && [ "$(grep -c "^$" "$recf")" = $(( $(nrec) - 1 )) ] && git -C "$proj" add specs/001-demo/advisor.md && git -C "$proj" diff --cached --check; r=$?; git -C "$proj" reset -q; [ $r = 0 ]'
 

@@ -29,11 +29,12 @@ case $point in
   plan) hash=$(cat "$f/spec.md" "$f/plan.md" "$f/tasks.md" | sha256sum) ;;
   test) hash=$(cat "$5" "$6" | sha256sum) ;;
   diff)
-    git ls-files -z --others --exclude-standard -- . ":(exclude)$f/advisor.md" > "$tmp/untracked"
-    hash=$({
-      git diff "$sha" -- . ":(exclude)$f/advisor.md"
-      while IFS= read -r -d '' p; do git diff --no-index -- /dev/null "$p"; done < "$tmp/untracked"
-    } | sha256sum) ;;
+    git ls-files -z --others --exclude-standard -- . ":(exclude)$f/advisor.md" > "$tmp/untracked" &&
+    (
+      git diff "$sha" -- . ":(exclude)$f/advisor.md" || exit 1
+      while IFS= read -r -d '' p; do git diff --no-index -- /dev/null "$p" || [ $? -eq 1 ] || exit 1; done < "$tmp/untracked"
+    ) > "$tmp/diff" || { echo "cannot hash inputs"; exit 2; }
+    hash=$(sha256sum < "$tmp/diff") ;;
 esac
 hash=${hash%% *}
 [[ $hash =~ ^[0-9a-f]{64}$ ]] || { echo "cannot hash inputs"; exit 2; }
