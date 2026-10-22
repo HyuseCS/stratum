@@ -200,7 +200,7 @@ phrases <<'EOF'
 #18 FR-001 build diff point	skills/st-build/SKILL.md	bash <plugin root>/scripts/st-advisor.sh diff <feature dir> <base>
 #18 FR-001 build base	skills/st-build/SKILL.md	The base: on a branch, `git merge-base main HEAD`.
 #18 FR-001 build quick	skills/st-build/SKILL.md	The Quick lane has no advisor.
-#18 FR-001 build worktree	skills/st-build/SKILL.md	run it in the main session from that worktree's root after the subagent reports both failures
+#18 FR-001 build worktree	skills/st-build/SKILL.md	with the working directory at that worktree's root and `<feature dir>` as the main checkout's absolute path, so the record lands in the main checkout.
 #18 FR-001 inspect plan point	skills/st-inspect/SKILL.md	bash <plugin root>/scripts/st-advisor.sh plan <feature dir>
 #18 FR-001 fast test point	skills/st-fast/SKILL.md	bash <plugin root>/scripts/st-advisor.sh test <feature dir> <task file> <test path> <failure 1 file> <failure 2 file>
 #18 FR-001 fast diff point	skills/st-fast/SKILL.md	bash <plugin root>/scripts/st-advisor.sh diff <feature dir> <base from step 1>
@@ -242,6 +242,13 @@ phrases <<'EOF'
 #18 D15 readme	README.md	A committed .codex/config.toml in the project can change the Codex model, provider or host, like any committed code.
 #18 FR-014 init	skills/st-init/SKILL.md	Optional `model` and `effort` keys pick the Codex model and reasoning effort
 #18 FR-001 build worktree stop	skills/st-build/SKILL.md	a subagent whose test is still red after 2 tries stops and reports both failures
+#18 L16 commit build	skills/st-build/SKILL.md	with tasks.md, and `<feature dir>/advisor.md` if it changed.
+#18 L16 commit build	skills/st-build/SKILL.md	then have `st-git` commit `<feature dir>/advisor.md` if it changed.
+#18 L16 commit inspect	skills/st-inspect/SKILL.md	Have `st-git` commit `<feature dir>/advisor.md` if it changed.
+#18 L16 commit fast	skills/st-fast/SKILL.md	with `<feature dir>/advisor.md` if it changed.
+#18 L17 debug worktree	skills/st-build/SKILL.md	Start `st-debug` from the main session too, with the worktree path; it diagnoses, fixes and verifies in that worktree.
+#18 exit 2	skills/st-build/SKILL.md	Exit 2 with a `usage:` line or `cannot hash inputs`: the script could not read or hash its inputs.
+#18 exit 2	skills/st-build/SKILL.md	Nothing was recorded and nothing was sent. Fix the input or the tool and run the point again.
 EOF
 check "#18 FR-001 quick lane" '! grep -qF st-advisor "$root/skills/st-quick/SKILL.md"'
 check "#18 FR-016 old advisor text gone" '! grep -qF "consult the advisor if one is set" "$root/skills/st-build/SKILL.md" && ! grep -qF "first if one is set (\`/advisor\`)" "$root/skills/st-fast/SKILL.md" && ! grep -qF "advisor is set, consult it on the diff" "$root/skills/st-fast/SKILL.md" && ! grep -qF "If an advisor is set (\`/advisor\`)" "$root/skills/st-inspect/SKILL.md"'

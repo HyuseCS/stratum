@@ -199,7 +199,7 @@ Step 4 (lines 28-30) becomes:
 ```markdown
 4. **Two tries.** If the test is still red after 2 `st-build` tries, run the advisor (see Advisor): save the task text and both failure outputs to files in your scratchpad, then run
    `bash <plugin root>/scripts/st-advisor.sh test <feature dir> <task file> <test path> <failure 1 file> <failure 2 file>`: root cause or rabbit hole?
-   For a `[P]` task in a worktree, run it in the main session from that worktree's root after the subagent reports both failures, and start `st-debug` from the main session too, with the worktree path; it diagnoses, fixes and verifies in that worktree.
+   For a `[P]` task in a worktree, run it in the main session after the subagent reports both failures, with the working directory at that worktree's root and `<feature dir>` as the main checkout's absolute path, so the record lands in the main checkout. Start `st-debug` from the main session too, with the worktree path; it diagnoses, fixes and verifies in that worktree.
    Then start the `st-debug` agent (`stratum:st-debug`) with the task, the test, both failure outputs, and the advisor's answer.
 ```
 
@@ -243,6 +243,7 @@ The advisor is Codex (the `codex` CLI), a model from another vendor. It runs at 
 - `BLOCKED: <reason>`: stop and show the user the reason. Nothing passes the gate. If the user says to continue, run `bash <plugin root>/scripts/st-advisor.sh continued <point> <feature dir>` and skip the point. Do not retry it in this gate pass.
 - Each run appends a record to `<feature dir>/advisor.md`: the point, the time, the SHA256 of the input, the verdict and the findings. The mode comes from `.stratum/advisor.json` (`codex`, `both` or `off`). No file means off, with the `mode not set` line.
 - At a gate, `check` compares the latest record with the current input. `advisor approval is stale` or `no record` counts as no approval: run the point once more, as a round. Skip the check after a `no advisor` line.
+- Exit 2 with a `usage:` line or `cannot hash inputs`: the script could not read or hash its inputs. Nothing was recorded and nothing was sent. Fix the input or the tool and run the point again.
 ```
 
 ### 7.2 `skills/st-inspect/SKILL.md`
@@ -370,7 +371,7 @@ Tests list (T001 adds it, so `tests/test_inspect.sh` "README tests" stays green)
 | #18 FR-001 build diff point | skills/st-build/SKILL.md | `bash <plugin root>/scripts/st-advisor.sh diff <feature dir> <base>` |
 | #18 FR-001 build base | skills/st-build/SKILL.md | `The base: on a branch, `git merge-base main HEAD`.` |
 | #18 FR-001 build quick | skills/st-build/SKILL.md | `The Quick lane has no advisor.` |
-| #18 FR-001 build worktree | skills/st-build/SKILL.md | `run it in the main session from that worktree's root after the subagent reports both failures` |
+| #18 FR-001 build worktree | skills/st-build/SKILL.md | `with the working directory at that worktree's root and `<feature dir>` as the main checkout's absolute path, so the record lands in the main checkout.` |
 | #18 FR-001 build worktree stop | skills/st-build/SKILL.md | `a subagent whose test is still red after 2 tries stops and reports both failures` |
 | #18 FR-001 inspect plan point | skills/st-inspect/SKILL.md | `bash <plugin root>/scripts/st-advisor.sh plan <feature dir>` |
 | #18 FR-001 fast test point | skills/st-fast/SKILL.md | `bash <plugin root>/scripts/st-advisor.sh test <feature dir> <task file> <test path> <failure 1 file> <failure 2 file>` |
@@ -412,6 +413,13 @@ Tests list (T001 adds it, so `tests/test_inspect.sh` "README tests" stays green)
 | #18 FR-014 readme | README.md | `Optional `model` and `effort` keys in the same file pick the Codex model and reasoning effort` |
 | #18 FR-014 init | skills/st-init/SKILL.md | `Optional `model` and `effort` keys pick the Codex model and reasoning effort` |
 | #18 FR-001 build worktree stop | skills/st-build/SKILL.md | `a subagent whose test is still red after 2 tries stops and reports both failures` |
+| #18 L16 commit build | skills/st-build/SKILL.md | `with tasks.md, and `<feature dir>/advisor.md` if it changed.` |
+| #18 L16 commit build | skills/st-build/SKILL.md | `then have `st-git` commit `<feature dir>/advisor.md` if it changed.` |
+| #18 L16 commit inspect | skills/st-inspect/SKILL.md | `Have `st-git` commit `<feature dir>/advisor.md` if it changed.` |
+| #18 L16 commit fast | skills/st-fast/SKILL.md | `with `<feature dir>/advisor.md` if it changed.` |
+| #18 L17 debug worktree | skills/st-build/SKILL.md | `Start `st-debug` from the main session too, with the worktree path; it diagnoses, fixes and verifies in that worktree.` |
+| #18 exit 2 | skills/st-build/SKILL.md | `Exit 2 with a `usage:` line or `cannot hash inputs`: the script could not read or hash its inputs.` |
+| #18 exit 2 | skills/st-build/SKILL.md | `Nothing was recorded and nothing was sent. Fix the input or the tool and run the point again.` |
 
 Plus two checks that are not phrases:
 
