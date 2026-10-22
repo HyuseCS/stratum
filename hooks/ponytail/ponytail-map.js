@@ -37,26 +37,10 @@ const LANG = { py: 'py', js: 'js', jsx: 'js', mjs: 'js', cjs: 'js', ts: 'js', ts
 function listFiles(root) {
   try {
     // 64 MiB: in repos with many tracked files `git ls-files` overflows Node's 1 MiB
-    // default, and the catch below reads that as "not a git repo" and falls back to a
-    // walk that ignores .gitignore. The list is capped at MAX_FILES * 5 lines anyway.
-    const tracked = execFileSync('git', ['ls-files'], { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 3000, maxBuffer: 64 * 1024 * 1024 })
+    // default. The list is capped at MAX_FILES * 5 lines anyway.
+    return execFileSync('git', ['ls-files'], { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 3000, maxBuffer: 64 * 1024 * 1024 })
       .split('\n').filter(Boolean).slice(0, MAX_FILES * 5);
-    if (tracked.length) return tracked;
-  } catch (e) { /* not a git repo: walk below */ }
-  {
-    // No git, or an untracked folder inside a parent repo (git ls-files is then empty, not an error).
-    const out = [];
-    (function walk(dir, depth) {
-      if (depth > 6 || out.length > MAX_FILES * 5) return;
-      for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
-        if (ent.name.startsWith('.')) continue;
-        const rel = path.relative(root, path.join(dir, ent.name)).replace(/\\/g, '/');
-        if (ent.isDirectory()) { if (!SKIP_DIR.test(rel + '/')) walk(path.join(dir, ent.name), depth + 1); }
-        else out.push(rel);
-      }
-    })(root, 0);
-    return out;
-  }
+  } catch (e) { return []; }
 }
 
 function namesIn(file, text) {
@@ -83,7 +67,11 @@ function buildMap(root = process.cwd()) {
     let text;
     try {
       if (!fs.lstatSync(path.join(root, f)).isFile()) continue;
-      text = fs.readFileSync(path.join(root, f), 'utf8').slice(0, 65536);
+      const fd = fs.openSync(path.join(root, f), 'r');
+      try {
+        const buf = Buffer.alloc(65536);
+        text = buf.toString('utf8', 0, fs.readSync(fd, buf, 0, 65536, 0));
+      } finally { fs.closeSync(fd); }
     } catch (e) { continue; }
     const names = namesIn(f, text);
     if (!names.length) continue;

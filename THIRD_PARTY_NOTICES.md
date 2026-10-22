@@ -30,4 +30,6 @@ keeps its original license. Full license texts are in `licenses/`. Pinned upstre
   `process/` tree; renamed to `st-*`.
 - **ponytail:** renamed to `st-ponytail*` (`/st-ponytail...` triggers, hooks under `hooks/ponytail/`); the
   shortcut comment marker stays `ponytail:` (upstream uses `shortcut:` since #1068); the gain card
-  cites the upstream benchmark file by URL; the upstream band/board mod is not shipped.
+  cites the upstream benchmark file by URL; the upstream band/board mod is not shipped; the codebase
+  map lists tracked files only (no directory walk when `git ls-files` is empty or fails) and reads at
+  most 64 KiB of each file.
