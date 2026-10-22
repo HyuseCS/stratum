@@ -24,6 +24,7 @@ next() { local n; n=$(cat "$T/n_$1" 2>/dev/null || echo 0); n=$((n+1)); echo $n 
 emit() { printf '%s\n' "$1" | tee -a "$T/resp"; }
 case "$1 $2" in
 "machine list")
+  case "${STUB_ML:-}" in fail) exit 1 ;; junk) echo 'not json'; exit 0 ;; esac
   printf '%s\n' '[{"id":"stubid0001","label":"laptop","target":"u@stubhost","session":"default","enabled":true,"selected":false}]' ;;
 "workspace list")
   if [ -n "${STUB_DOWN:-}" ]; then echo 'Error: stub machine down' >&2; exit 1; fi
@@ -268,6 +269,8 @@ STUB_SSH_RC=1 rrej R5 "Folder not found on laptop: ~/proj x" 1 '~/proj x' --mach
 STUB_SSH_RC=255 rrej R6 "ssh to u@stubhost failed: ssh: stub failure" 1 '~/proj x' --machine laptop
 rrej R7 "A remote folder must start with / or ~." 0 proj --machine laptop
 STUB_SSH_OUT=1 rrej R8 "Folder not found on laptop: ~/proj x" 1 '~/proj x' --machine laptop
+STUB_ML=fail rrej R10 "herdr machine list failed." 0 '~/proj x' --machine laptop
+STUB_ML=junk rrej R11 "herdr machine list gave no machine list." 0 '~/proj x' --machine laptop
 
 unset HERDR_ENV
 STUB_CWD='/home/u/proj x' run bash "$script" '/home/u/proj x' --label 32-herdr-workspace --machine laptop
