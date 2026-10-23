@@ -289,8 +289,10 @@ result)
 close)
   find_worker
   if r=$("${H[@]}" agent get "$N" 2>"$e"); then
-    S=$(jq -r '.result.agent.agent_status // empty' <<<"$r" 2>/dev/null || true)
+    S=$(jq -er '.result.agent.agent_status' <<<"$r" 2>/dev/null) || fail "Worker $N: cannot read worker state. Close refused."
     case $S in working | blocked) fail "Worker $N is $S. Close refused." ;; esac
+  else
+    [ "$(code)" = agent_not_found ] || fail "Worker $N: cannot read worker state. Close refused."
   fi
   h workspace close "$WS"
   h agent list

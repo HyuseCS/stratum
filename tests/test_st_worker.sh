@@ -65,6 +65,7 @@ case "$1 $2" in
   jq -nc --arg n "$n" '{result:{type:"agent_started",agent:{name:$n},argv:[]}}' ;;
 "agent get")
   n=$(cat "$T/n_get" 2>/dev/null || echo 0); n=$((n+1)); echo $n > "$T/n_get"
+  [ -z "${STUB_NO_STATUS:-}" ] || { jq -nc --arg n "$3" '{result:{agent:{name:$n}}}'; exit 0; }
   s=$(sed -n "${n}p" "$T/states"); [ -n "$s" ] || s=$(tail -n1 "$T/states")
   jq -nc --arg s "$s" --arg n "$3" --slurpfile c "$T/wc.json" '{result:{agent:{agent_status:$s,name:$n,pane_id:$c[0].result.root_pane.pane_id,workspace_id:$c[0].result.workspace.workspace_id}}}' ;;
 "agent list")
@@ -443,10 +444,20 @@ check "C4 exit 1" '[ $rc = 1 ]'
 check "C4 no worker line, no workspace close" 'grep -qxF "No worker worker-t004 on local." <<<"$out" && never 0 0'
 
 mk; states done
-STUB_FAIL="agent get" run bash "$script" close T004
+STUB_FAIL="agent get" STUB_FAIL_CODE=agent_not_found run bash "$script" close T004
 check "C5 exit 0" '[ $rc = 0 ]'
 check "C5 one workspace close on the stub WS" 'hascall "workspace\tclose\t%s" "$(wsid)" && never 1 0'
 check "C5 closed and folder lines" 'hasline "closed\tworker-t004" && hasline "folder\t%s\tready to remove" "$(wt)"'
+
+mk; states done
+STUB_FAIL="agent get" STUB_FAIL_CODE=timeout run bash "$script" close T004
+check "C6 exit 1" '[ $rc = 1 ]'
+check "C6 the cannot-read refuse line, no closed line, no workspace close" '[ "$out" = "Worker worker-t004: cannot read worker state. Close refused." ] && ! grep -q "^closed" <<<"$out" && never 0 0'
+
+mk; states done
+STUB_NO_STATUS=1 run bash "$script" close T004
+check "C7 exit 1" '[ $rc = 1 ]'
+check "C7 the cannot-read refuse line, no closed line, no workspace close" '[ "$out" = "Worker worker-t004: cannot read worker state. Close refused." ] && ! grep -q "^closed" <<<"$out" && never 0 0'
 
 fresh
 x=$(rnd)
