@@ -81,7 +81,7 @@ with the brief on stdin, `<Q>` = `printf %q` of `<WT>` with one leading `\~` tur
 With the brief, `start` writes `<WT>/.stratum/git-guard.json` (D24), after
 `mkdir -p <WT>/.stratum`. The content `G` is the repo's own guard file merged with the commit key:
 read `.stratum/git-guard.json` of the calling folder (`git rev-parse --show-toplevel`, not `<repo>`) if
-it exists, else `{}`; set `.commit = "auto"`; write it as one line (`jq -c`). So per-repo keys such
+it exists, else `{}`; set `.commit = "auto"` and `.branch = "worker-<id>"`; write it as one line (`jq -c`). So per-repo keys such
 as `"force_push": "deny"` carry over to the worker. On a saved machine both files go in the same
 ssh call, with `G` quoted by `printf %q`:
 `ssh -o BatchMode=yes -- <target> "cat > <Q>/brief.md && mkdir -p <Q>/.stratum && printf '%s\n' <G quoted> > <Q>/.stratum/git-guard.json"`.
@@ -264,6 +264,7 @@ exit 255 is not a missing file: `stopped: ssh to <target> failed: <first stderr 
 ```text
 F1, F2
 1 H agent get N                          working|blocked -> "Worker <N> is <state>. Close refused.", exit 1; an error (agent gone) -> go on
+1b D30                                   open PR -> refused; .stratum a symlink -> "Worker <N>: .stratum is a symlink. Close refused.", exit 1; rm -f <WT>/.stratum/git-guard.json (ssh on a saved machine), fails -> "Worker <N>: cannot remove .stratum/git-guard.json. Close refused.", exit 1
 2 H workspace close WS
 3 H agent list, H workspace list         N still there -> "close left <agent|workspace> <N>", exit 1
 ```
@@ -362,8 +363,8 @@ stub log, never from built ids.
 
 | Case | What it asserts |
 |------|-----------------|
-| S1 | `start` here: one `worktree create` with `--cwd <repo> --branch worker-t004 --base <HEAD sha> --path <parent>/<repo>-worker-t004 --label worker-t004 --no-focus`; brief.md in the stub's path with the task text, test command, lane, the line `Run only task T004; skip every other task, ticked or not.`, result path, every roster row and the four team rules; the line `- Plugin root: <dir>` where `<dir>` is the parent of the folder that holds the script under test; with no guard file in the repo, `<WT>/.stratum/git-guard.json` is `{"commit":"auto"}` and the repo still has no guard file; no advisor block; one `agent start` with `-- --permission-mode auto -n worker-t004`; exactly one `agent prompt` with text `P` and `--wait --until working --until blocked`; `worker` line ids from the stub log; exit 0 |
-| S1b | `start` here with the repo file `.stratum/git-guard.json` = `{"force_push":"deny"}`: `<WT>/.stratum/git-guard.json` is the one line `{"force_push":"deny","commit":"auto"}`; the repo file is unchanged |
+| S1 | `start` here: one `worktree create` with `--cwd <repo> --branch worker-t004 --base <HEAD sha> --path <parent>/<repo>-worker-t004 --label worker-t004 --no-focus`; brief.md in the stub's path with the task text, test command, lane, the line `Run only task T004; skip every other task, ticked or not.`, result path, every roster row and the four team rules; the line `- Plugin root: <dir>` where `<dir>` is the parent of the folder that holds the script under test; with no guard file in the repo, `<WT>/.stratum/git-guard.json` is `{"commit":"auto","branch":"worker-t004"}` and the repo still has no guard file; no advisor block; one `agent start` with `-- --permission-mode auto -n worker-t004`; exactly one `agent prompt` with text `P` and `--wait --until working --until blocked`; `worker` line ids from the stub log; exit 0 |
+| S1b | `start` here with the repo file `.stratum/git-guard.json` = `{"force_push":"deny","branch":"main"}`: `<WT>/.stratum/git-guard.json` is the one line `{"force_push":"deny","commit":"auto","branch":"worker-t004"}`; the repo file is unchanged |
 | S2 | same with a dummy `st-advisor.sh` next to a copy of the script: the advisor block is in the brief |
 | S3 | `agent start` fails with `agent_not_ready`: `state blocked`, `pane text:`, the stub pane text, no `agent prompt`, exit 4; then `goal` sends exactly one `agent prompt`, exit 0 |
 | S4 | `worktree create` fails: `stopped: ` with the stub message, `worker` line with `-` in every id field and in the branch field, no `agent start`, exit 1 |

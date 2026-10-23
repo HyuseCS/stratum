@@ -87,10 +87,10 @@ None. Both are settled in decisions.md:
 
 - D24: `start` writes `{"commit":"auto"}` to `.stratum/git-guard.json` in the worker's worktree
   only (git-ignored, `.gitignore:8`). Plain commits pass with no human step; amend, push,
-  `reset --hard` and branch delete still ask (`hooks/st-git-guard.py:144-150`). A commit aimed at
+  `reset --hard` and branch delete still ask (`hooks/st-git-guard.py:155-160`). A commit aimed at
   another checkout (`-C`, `--git-dir`, `--work-tree`, a `GIT_DIR=`/`GIT_WORK_TREE=` prefix, a
   `cd` or `pushd` segment) asks, and so do merge, pull, cherry-pick, revert and am there. `close`
-  removes the guard file (D30). Open gap: `env GIT_DIR=X git ...` and `export GIT_DIR`. The orchestrator's
+  removes the guard file (D30). Only another git toplevel counts as elsewhere for `-C`, `cd`, `pushd`; the file also holds `"branch": "worker-<id>"` and a commit or in-folder merge off that branch asks (decisions.md D24 lists the rest). Open gap: `env GIT_DIR=X git ...` and `export GIT_DIR`. The orchestrator's
   review and merge stay the gate.
 - D25: tasks that build on each other run on one machine, where every teammate's branch is in the
   shared repo. Teammates on different machines only exchange messages; no commit crosses
@@ -125,7 +125,7 @@ None. Both are settled in decisions.md:
   classifier and every ask and deny rule still apply. D26: the orchestrator may answer a
   permission prompt for the task's own command; any other access question goes to the user. D24: `start` writes the repo's own guard file (or `{}`)
   with `"commit": "auto"` set to `.stratum/git-guard.json` in that worktree only, so per-repo
-  `deny` keys carry over and a plain `git commit` there passes the Stratum guard; amend, push, `reset --hard` and branch delete still ask. The worker's `commit: auto` applies only to a plain `git commit` run from the worker worktree: a `git -C`, `--git-dir`, `--work-tree`, a `GIT_DIR=`/`GIT_WORK_TREE=` prefix, or a `cd`/`pushd` to another checkout asks, and so do merge, pull, cherry-pick, revert and am aimed there (`env GIT_DIR=X` and `export GIT_DIR` stay an open gap). `close` removes the file (D30). The file is git-ignored
+  `deny` keys carry over and a plain `git commit` there passes the Stratum guard (the file also has `"branch": "worker-<id>"`; off that branch it asks); amend, push, `reset --hard` and branch delete still ask. The worker's `commit: auto` applies only to a plain `git commit` run from the worker worktree: a `git -C`, `--git-dir`, `--work-tree`, a `GIT_DIR=`/`GIT_WORK_TREE=` prefix, or a `cd`/`pushd` to another checkout asks, and so do merge, pull, cherry-pick, revert and am aimed there (`env GIT_DIR=X` and `export GIT_DIR` stay an open gap). `close` removes the file and refuses a symlinked `.stratum` (D30). A `cd`/`-C`/`pushd` into the same checkout passes. The file is git-ignored
   and never written in the orchestrator's own folder (tests S1 and S1b check both).
 - **S5. Headless allow list (headless; access rule).** `--tools Read,Edit,Write,Glob,Grep,Bash`
   (no AskUserQuestion, SendMessage, Agent or web tool), `--allowedTools` for those and only
