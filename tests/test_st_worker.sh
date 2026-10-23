@@ -871,24 +871,18 @@ check "M6 no file: exit 0" '[ $rc = 0 ]'
 check "M6 no file: no --model in claude argv" '[ -s "$tmp/claude_args" ] && ! grep -qxF -- --model "$tmp/claude_args"'
 check "M6 no file: headless brief has Model: default" 'grep -qxF -- "- Model: default" "$tmp/brief.copy"'
 
-fresh; rm -f "$tmp/claude_args"
-run bash "$script" start "${sargs[@]}" --model
-check "M7 start --model without a value: usage line, exit 2, no call" '[ $rc = 2 ] && [[ "$(head -n1 <<<"$out")" == usage:* ]] && [ ! -s "$tmp/calls" ]'
-fresh
-run bash "$script" start "${sargs[@]}" --model opus --model sonnet
-check "M7 start --model twice: usage line, exit 2, no call" '[ $rc = 2 ] && [[ "$(head -n1 <<<"$out")" == usage:* ]] && [ ! -s "$tmp/calls" ]'
-fresh; rm -f "$tmp/claude_args"
-run bash "$script" headless T004 --task "$task" --test "$testcmd" --model
-check "M7 headless --model without a value: usage line, exit 2, no call" '[ $rc = 2 ] && [[ "$(head -n1 <<<"$out")" == usage:* ]] && [ ! -s "$tmp/calls" ] && [ ! -e "$tmp/claude_args" ]'
-fresh; rm -f "$tmp/claude_args"
-run bash "$script" headless T004 --task "$task" --test "$testcmd" --model opus --model sonnet
-check "M7 headless --model twice: usage line, exit 2, no call" '[ $rc = 2 ] && [[ "$(head -n1 <<<"$out")" == usage:* ]] && [ ! -s "$tmp/calls" ] && [ ! -e "$tmp/claude_args" ]'
-fresh
-run bash "$script" start "${sargs[@]}" --model ''
-check "M7 start --model empty: usage line, exit 2, no call" '[ $rc = 2 ] && [[ "$(head -n1 <<<"$out")" == usage:* ]] && [ ! -s "$tmp/calls" ]'
-fresh; rm -f "$tmp/claude_args"
-run bash "$script" headless T004 --task "$task" --test "$testcmd" --model ''
-check "M7 headless --model empty: usage line, exit 2, no call" '[ $rc = 2 ] && [[ "$(head -n1 <<<"$out")" == usage:* ]] && [ ! -s "$tmp/calls" ] && [ ! -e "$tmp/claude_args" ]'
+m7() {
+  k=$1; fresh; rm -f "$tmp/claude_args"
+  [ $k = start ] && a=(start "${sargs[@]}") || a=(headless T004 --task "$task" --test "$testcmd")
+  run bash "$script" "${a[@]}" "${@:3}"
+  check "M7 $k --model $2: usage line, exit 2, no call" '[ $rc = 2 ] && [[ "$(head -n1 <<<"$out")" == usage:* ]] && [ ! -s "$tmp/calls" ] && { [ $k = start ] || [ ! -e "$tmp/claude_args" ]; }'
+}
+m7 start 'without a value' --model
+m7 start twice --model opus --model sonnet
+m7 headless 'without a value' --model
+m7 headless twice --model opus --model sonnet
+m7 start empty --model ''
+m7 headless empty --model ''
 
 sed -E '/--allowedTools/d' "$script" > "$tmp/NC6.sh" 2>/dev/null
 check "NC6 sed deletes exactly one line" '[ "$(diff "$script" "$tmp/NC6.sh" | grep -c "^<")" = 1 ]'
