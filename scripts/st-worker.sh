@@ -173,8 +173,8 @@ case $cmd in
 start)
   top=$(git rev-parse --show-toplevel 2>/dev/null) && sha=$(git rev-parse HEAD 2>/dev/null) || fail "Run start inside a git repo with a commit."
   [ -n "$m" ] || repo=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
-  G=$(jq -c '.commit="auto"' <(cat "$top/.stratum/git-guard.json" 2>/dev/null || echo '{}')) || stop "cannot read $top/.stratum/git-guard.json"
-  [ -n "$G" ] || G='{"commit":"auto"}'
+  G=$(jq -c --arg b "$N" '.commit="auto" | .branch=$b' <(cat "$top/.stratum/git-guard.json" 2>/dev/null || echo '{}')) || stop "cannot read $top/.stratum/git-guard.json"
+  [ -n "$G" ] || G=$(jq -nc --arg b "$N" '{commit:"auto",branch:$b}')
   h workspace list
   c=$(jq -er --arg n "$N" '[.result.workspaces[] | select(.label == $n)] | length' <<<"$r") || stop "no .result.workspaces in the herdr answer"
   [ "$c" = 0 ] || fail "A worker $N already exists."
@@ -302,6 +302,12 @@ close)
   if git remote -v 2>/dev/null | grep -q github; then
     p=$(gh pr list --head "$N" --state open --json number -q length 2>/dev/null) || fail "Worker $N: cannot read its PRs. Close refused."
     [ "$p" = 0 ] || fail "Worker $N has an open PR. Close refused."
+  fi
+  if [ -n "$m" ]; then
+    rsh "[ ! -L $Q/.stratum ] || exit 3; rm -f $Q/.stratum/git-guard.json" || { [ $? != 3 ] || fail "Worker $N: .stratum is a symlink. Close refused."; fail "Worker $N: cannot remove .stratum/git-guard.json. Close refused."; }
+  else
+    [ ! -L "$WT/.stratum" ] || fail "Worker $N: .stratum is a symlink. Close refused."
+    rm -f "$WT/.stratum/git-guard.json" || fail "Worker $N: cannot remove .stratum/git-guard.json. Close refused."
   fi
   h workspace close "$WS"
   for k in agent:name workspace:label; do

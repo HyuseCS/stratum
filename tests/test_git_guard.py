@@ -1,5 +1,6 @@
 import json
 import os
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -98,6 +99,38 @@ class GitGuardTest(unittest.TestCase):
                     "cd /other && git commit -m x", "git commit --amend"):
             self.assertEqual(self.run_guard(cmd)[0], "ask", cmd)
 
+    def test_commit_auto_elsewhere_forms(self):
+        self.write_guard_file('{"commit":"auto"}')
+        self.assertEqual(self.run_guard("git commit -m x"), (None, ""))
+        for cmd in ("git --git-dir /x commit -m x", "git --git-dir=/x commit -m x",
+                    "git --work-tree /x commit -m x", "git --work-tree=/x commit -m x",
+                    "GIT_DIR=/x git commit -m x", "GIT_WORK_TREE=/x git commit -m x",
+                    "pushd /x && git commit -m x"):
+            self.assertEqual(self.run_guard(cmd)[0], "ask", cmd)
+
+    def test_commit_auto_same_checkout_paths(self):
+        self.write_guard_file('{"commit":"auto"}')
+        os.makedirs(os.path.join(self.repo, "deep"))
+        with tempfile.TemporaryDirectory() as other:
+            subprocess.run(["git", "init", "-q", other], check=True)
+            r, o = shlex.quote(self.repo), shlex.quote(other)
+            for cmd in (f"cd {r} && git commit -m x", f"git -C {r} commit -m x",
+                        f"cd {r}/deep && git commit -m x", f"pushd {r} && git commit -m x"):
+                self.assertEqual(self.run_guard(cmd), (None, ""), cmd)
+            for cmd in (f"cd {o} && git commit -m x", f"git -C {o} commit -m x",
+                        "cd $X && git commit -m x", f"cd {r}/sub && git commit -m x",
+                        f"cd {r} && git -C {o} merge b"):
+                self.assertEqual(self.run_guard(cmd)[0], "ask", cmd)
+
+    def test_merge_elsewhere_asks(self):
+        self.write_guard_file('{"commit":"auto"}')
+        for cmd in ("git merge b", "git pull"):
+            self.assertEqual(self.run_guard(cmd), (None, ""), cmd)
+        for cmd in ("git -C /x merge b", "cd /x && git merge b", "GIT_DIR=/x git merge b",
+                    "git -C /x pull", "git -C /x cherry-pick c", "git -C /x revert c",
+                    "git -C /x am p"):
+            self.assertEqual(self.run_guard(cmd)[0], "ask", cmd)
+
     def test_push(self):
         d, reason = self.run_guard("git push origin main")
         self.assertEqual(d, "ask")
@@ -185,6 +218,87 @@ class GitGuardTest(unittest.TestCase):
     def test_quoted_message_not_split(self):
         self.set_mode("auto")
         self.assertEqual(self.run_guard('git commit -m "a && git push"'), (None, ""))
+
+    def test_hash_comment_does_not_hide_rest(self):
+        self.assertEqual(self.run_guard("# note\ngit push --force")[0], "ask")
+        self.set_mode("auto")
+        self.assertEqual(self.run_guard("# note\ngit commit --no-verify -m x")[0], "deny")
+
+    def test_cd_through_symlink_is_logical(self):
+        with tempfile.TemporaryDirectory() as top:
+            w, m = os.path.join(top, "w"), os.path.join(top, "main")
+            for d in (w, m):
+                subprocess.run(["git", "init", "-q", d], check=True)
+            os.makedirs(os.path.join(w, "deep", "deeper"))
+            os.makedirs(os.path.join(w, "main"))
+            os.symlink(os.path.join(w, "deep", "deeper"), os.path.join(w, "s"))
+            self.repo = w
+            self.write_guard_file('{"commit":"auto"}')
+            self.assertEqual(self.run_guard("cd s/../../main && git commit -m x")[0], "ask")
+
+    def test_parse_error_asks(self):
+        self.assertEqual(self.run_guard("echo $'\\'' ; git push --force")[0], "ask")
+
+    def test_dash_c_hookspath_and_alias(self):
+        cmd = "git -c core.hooksPath=/dev/null commit -m x"
+        self.assertEqual(self.run_guard(cmd)[0], "deny")
+        self.write_guard_file('{"commit":"auto"}')
+        self.assertEqual(self.run_guard(cmd)[0], "deny")
+        for cmd in ("git --config-env=core.hooksPath=HP commit -m x",
+                     "git --config-env core.hooksPath=HP commit -m x"):
+            self.assertEqual(self.run_guard(cmd)[0], "deny", cmd)
+        self.assertEqual(self.run_guard("git -c alias.ci='!git -C /x commit' ci -m x")[0], "ask")
+
+    def test_prefix_words_before_cd_and_git(self):
+        self.write_guard_file('{"commit":"auto"}')
+        with tempfile.TemporaryDirectory() as other:
+            subprocess.run(["git", "init", "-q", other], check=True)
+            o = shlex.quote(other)
+            for cmd in (f"builtin cd {o} && git commit -m x", f"command cd {o} && git commit -m x",
+                        f"FOO=1 cd {o} && git commit -m x", f"command git -C {o} commit -m x",
+                        f"exec git -C {o} commit -m x"):
+                self.assertEqual(self.run_guard(cmd)[0], "ask", cmd)
+
+    def test_summary_skips_fsmonitor(self):
+        marker = os.path.join(self.repo, "fsmonitor-ran")
+        subprocess.run(["git", "-C", os.path.join(self.repo, "sub"), "config",
+                        "core.fsmonitor", f"touch {marker}"], check=True)
+        self.run_guard("git -C sub commit -m x")
+        self.assertFalse(os.path.exists(marker))
+
+    def git_setup(self, *args):
+        subprocess.run(["git", "-C", self.repo, "-c", "user.name=t", "-c", "user.email=t@t", *args],
+                       check=True, capture_output=True)
+
+    def test_commit_auto_needs_worker_branch(self):
+        self.git_setup("commit", "--allow-empty", "-m", "init")
+        self.git_setup("checkout", "-q", "-B", "main")
+        self.git_setup("switch", "-q", "-c", "worker-t1")
+        self.write_guard_file('{"commit":"auto","branch":"worker-t1"}')
+        for cmd in ("git commit -m x", "git merge b"):
+            self.assertEqual(self.run_guard(cmd), (None, ""), cmd)
+        self.git_setup("switch", "-q", "-c", "other")
+        for cmd in ("git commit -m x", "git merge b"):
+            self.assertEqual(self.run_guard(cmd)[0], "ask", cmd)
+        self.git_setup("switch", "-q", "worker-t1")
+        self.assertEqual(self.run_guard("git switch main && git commit -m x")[0], "ask")
+        self.assertEqual(self.run_guard("git checkout other && git merge b")[0], "ask")
+        self.git_setup("switch", "-q", "other")
+        self.write_guard_file('{"commit":"auto"}')
+        self.assertEqual(self.run_guard("git commit -m x"), (None, ""))
+
+    def test_ref_moves_ask(self):
+        moves = ("git update-ref refs/heads/main HEAD", "git branch -f main HEAD",
+                 "git branch --force main HEAD", "git branch -M main", "git fetch . a:main",
+                 "git pull origin a:main")
+        for cmd in moves:
+            self.assertEqual(self.run_guard(cmd)[0], "ask", cmd)
+        self.write_guard_file('{"commit":"auto"}')
+        for cmd in moves:
+            self.assertEqual(self.run_guard(cmd)[0], "ask", cmd)
+        for cmd in ("git branch -a", "git fetch origin", "git fetch origin main",
+                    "git pull origin main", "git pull"):
+            self.assertEqual(self.run_guard(cmd), (None, ""), cmd)
 
 
 if __name__ == "__main__":
