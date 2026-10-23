@@ -36,6 +36,9 @@ case "$1 $2" in
     stratum) mkdir -p "$p" && ln -s "$T/outside-dir" "$p/.stratum" ;;
     brief) mkdir -p "$p/.stratum" && ln -s "$T/outside.txt" "$p/brief.md" ;;
     guard) mkdir -p "$p/.stratum" && ln -s "$T/outside.json" "$p/.stratum/git-guard.json" ;;
+    result) mkdir -p "$p/.stratum" && ln -s "$T/outside.txt" "$p/result.md" ;;
+    resultfile) mkdir -p "$p/.stratum" && printf 'TRACKED RESULT\n' > "$p/result.md" ;;
+    brieffile) mkdir -p "$p/.stratum" && printf 'TRACKED BRIEF\n' > "$p/brief.md" ;;
     *) mkdir -p "$p/.stratum" ;;
   esac
   p=${STUB_WT_PATH:-$p}
@@ -333,7 +336,7 @@ printf '{"outside":true}\n' > "$tmp/outside.json"
 printf 'KEEP\n' > "$tmp/outside-dir/keep"
 snap() { ls -A "$tmp/outside-dir"; cat "$tmp/outside.txt" "$tmp/outside.json" "$tmp/outside-dir/keep"; }
 before=$(snap)
-for k in brief:brief.md stratum:.stratum guard:.stratum/git-guard.json; do
+for k in brief:brief.md stratum:.stratum guard:.stratum/git-guard.json result:result.md; do
   fresh
   STUB_WT_LINK=${k%%:*} run bash "$script" start "${sargs[@]}"
   check "S12 ${k%%:*} exit 1" '[ $rc = 1 ]'
@@ -341,6 +344,16 @@ for k in brief:brief.md stratum:.stratum guard:.stratum/git-guard.json; do
   check "S12 ${k%%:*} worker line with ids" 'hasline "worker\tworker-t004\tlocal\t%s\t%s\tworker-t004\t%s" "$(wsid)" "$(pane)" "$(wt)"'
   check "S12 ${k%%:*} no agent start, no prompt" '[ "$(cnt "^agent\tstart\t")" = 0 ] && never 0 0'
   check "S12 ${k%%:*} outside targets unchanged" '[ "$(snap)" = "$before" ]'
+done
+
+for k in brieffile:brief.md:BRIEF resultfile:result.md:RESULT; do
+  fresh
+  STUB_WT_LINK=${k%%:*} run bash "$script" start "${sargs[@]}"
+  f=${k#*:}; f=${f%%:*}
+  check "S12b ${k%%:*} exit 1" '[ $rc = 1 ]'
+  check "S12b ${k%%:*} one stopped line: already exists" '[ "$(grep -c "^stopped:" <<<"$out")" = 1 ] && hasline "stopped: %s already exists" "$(wt)/$f"'
+  check "S12b ${k%%:*} no agent start, no prompt" '[ "$(cnt "^agent\tstart\t")" = 0 ] && never 0 0'
+  check "S12b ${k%%:*} tracked file unchanged" '[ "$(cat "$(wt)/$f")" = "TRACKED ${k##*:}" ]'
 done
 
 fresh; run bash "$script" start 'bad id' --task "$task" --test "$testcmd" --lane "$lane" --roster "$roster"
@@ -404,6 +417,11 @@ run bash "$script" wait T004
 check "W5 exit 4" '[ $rc = 4 ]'
 check "W5 state blocked with the worker name, pane text" 'hasline "state\tblocked\tworker-t004\t%s" "$(pane)" && paneshown'
 check "W5 never-list" 'never 0 0'
+
+fresh; states idle
+STUB_WT_LINK=resultfile run bash "$script" start "${sargs[@]}"
+check "W6 start with a pre-existing result.md stops: exit 1, already exists" '[ $rc = 1 ] && [ "$(grep -c "^stopped:" <<<"$out")" = 1 ] && hasline "stopped: %s/result.md already exists" "$(wt)"'
+check "W6 no agent start, no wait, no finished state, the file is not read" '[ "$(cnt "^agent\t(start|wait)\t")" = 0 ] && ! grep -q "^state" <<<"$out" && ! grep -q "TRACKED RESULT" <<<"$out" && never 0 0'
 
 g1() {
   mk
@@ -649,7 +667,7 @@ check "R12 --machine rule, never-list" 'rnever 0 0'
 rfresh; STUB_WT_PATH=/home/u/proj-worker-t004 rrun bash "$script" start "${rsargs[@]}"
 c=$(sshs); pre=${c%%cat > *}
 check "R13 exit 0, one ssh call" '[ $rc = 0 ] && [ "$(grep -c . "$tmp/ssh")" = 1 ]'
-check "R13 ssh guards the three paths with -L before the cat > write" '[ "$pre" != "$c" ] && grep -qF -- "for p in /home/u/proj-worker-t004/brief.md /home/u/proj-worker-t004/.stratum /home/u/proj-worker-t004/.stratum/git-guard.json; do [ ! -L \"\$p\" ] || { echo \"\$p is a symlink\" >&2; exit 3; }; done && " <<<"$pre"'
+check "R13 ssh refuses a .stratum symlink, then a link or any existing brief.md, result.md, git-guard.json, before the cat > write" '[ "$pre" != "$c" ] && [ "${pre#*u@stubhost }" = "[ ! -L /home/u/proj-worker-t004/.stratum ] || { echo \"/home/u/proj-worker-t004/.stratum is a symlink\" >&2; exit 3; }; for p in /home/u/proj-worker-t004/brief.md /home/u/proj-worker-t004/result.md /home/u/proj-worker-t004/.stratum/git-guard.json; do [ ! -L \"\$p\" ] || { echo \"\$p is a symlink\" >&2; exit 3; }; [ ! -e \"\$p\" ] || { echo \"\$p already exists\" >&2; exit 3; }; done && " ]'
 
 for k in "3::ssh: stub failure" "3:1:exit 3"; do
   rfresh; STUB_SSH_RC=${k%%:*} STUB_SSH_QUIET=$(cut -d: -f2 <<<"$k") rrun bash "$script" start "${rsargs[@]}"

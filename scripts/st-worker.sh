@@ -183,13 +183,14 @@ start)
   get WT .result.worktree.path
   [ -n "$m" ] || [ "$WT" = "$path" ] || stop "herdr made the worktree in $WT, not $path"
   if [ -z "$m" ]; then
-    for p in "$WT/brief.md" "$WT/.stratum" "$WT/.stratum/git-guard.json"; do [ ! -L "$p" ] || stop "$p is a symlink"; done
+    [ ! -L "$WT/.stratum" ] || stop "$WT/.stratum is a symlink"
+    for p in "$WT/brief.md" "$WT/result.md" "$WT/.stratum/git-guard.json"; do [ ! -L "$p" ] || stop "$p is a symlink"; [ ! -e "$p" ] || stop "$p already exists"; done
     brief >"$WT/brief.md" || stop "cannot write $WT/brief.md"
     mkdir -p "$WT/.stratum" || stop "cannot make $WT/.stratum"
     printf '%s\n' "$G" >"$WT/.stratum/git-guard.json" || stop "cannot write the commit guard file in $WT/.stratum"
   else
     quote
-    rsh "for p in $Q/brief.md $Q/.stratum $Q/.stratum/git-guard.json; do [ ! -L \"\$p\" ] || { echo \"\$p is a symlink\" >&2; exit 3; }; done && cat > $Q/brief.md && mkdir -p $Q/.stratum && printf '%s\n' $(printf %q "$G") > $Q/.stratum/git-guard.json" < <(brief) || { rc=$? msg=$(head -1 "$e"); stop "cannot write brief.md and .stratum/git-guard.json in $WT on $m: ${msg:-exit $rc}"; }
+    rsh "[ ! -L $Q/.stratum ] || { echo \"$Q/.stratum is a symlink\" >&2; exit 3; }; for p in $Q/brief.md $Q/result.md $Q/.stratum/git-guard.json; do [ ! -L \"\$p\" ] || { echo \"\$p is a symlink\" >&2; exit 3; }; [ ! -e \"\$p\" ] || { echo \"\$p already exists\" >&2; exit 3; }; done && cat > $Q/brief.md && mkdir -p $Q/.stratum && printf '%s\n' $(printf %q "$G") > $Q/.stratum/git-guard.json" < <(brief) || { rc=$? msg=$(head -1 "$e"); stop "cannot write brief.md and .stratum/git-guard.json in $WT on $m: ${msg:-exit $rc}"; }
   fi
   busy=10 # ponytail: fixed 10 s agent_pane_busy retry bound, same shape as D20 in specs/007-herdr-workspace, raise it if a live run measures a slower pane shell
   for ((i = 1; ; i++)); do
