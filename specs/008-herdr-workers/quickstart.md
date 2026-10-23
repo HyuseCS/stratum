@@ -47,7 +47,7 @@ Record in research.md:
    empty: `herdr agent list | jq -r '.result.agents[].name' | grep -x worker-t910`,
    `herdr workspace list | jq -r '.result.workspaces[].label' | grep -x worker-t910`,
    `pgrep -af -- '-n worker-t91[0]'` (SC-005; the bracket keeps pgrep from matching the shell
-   that runs it, lessons L14). The answer of `workspace close` (R1).
+   that runs it, lessons L21). The answer of `workspace close` (R1).
 
 The user removes `../stratum-003-demo`, `../stratum-worker-t910` (next to the main checkout
 `/home/hyuse/Desktop/stratum`, research R3) and the two branches when they want.

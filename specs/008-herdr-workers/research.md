@@ -113,7 +113,7 @@ branch `18-codex-advisor`.
   `st-worktree.sh` shape, from that `<repo>`. `<sha>` is `git rev-parse HEAD` of the calling
   folder, for both machines. The guard file (D24) is read from the calling folder's
   `git rev-parse --show-toplevel`. Every later step uses `.result.worktree.path` from the answer, never
-  the computed path (L19).
+  the computed path (L26).
 - Rationale: `~/.config/herdr/config.toml` sets no worktree folder and herdr's default is not
   documented, so the path is given. The base is the orchestrator's commit so the worker starts
   from the committed spec and tasks. On the laptop, a base that is not in its repo makes herdr

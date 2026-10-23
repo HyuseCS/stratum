@@ -25,16 +25,18 @@ subagent absolute paths: plugin root, project root, feature dir, and its task ID
    `bash <plugin root>/scripts/st-verify.sh '<test command>' <files the task touched>`.
    It re-runs the test, greps the diff for added comment lines, and prints one line. Send any
    `FAIL` back to `st-build`.
-4. **Two tries.** If the test is still red after 2 `st-build` tries, consult the advisor if one
-   is set (`/advisor`): root cause or rabbit hole? Then start the `st-debug` agent (`stratum:st-debug`)
-   with the task, the test, both failure outputs, and the advisor's answer.
-5. **Commit.** The `st-git` agent (`stratum:st-git`) commits the exact paths of the task, with tasks.md.
+4. **Two tries.** If the test is still red after 2 `st-build` tries, run the advisor (see Advisor): save the task text and both failure outputs to files in your scratchpad, then run
+   `bash <plugin root>/scripts/st-advisor.sh test <feature dir> <task file> <test path> <failure 1 file> <failure 2 file>`: root cause or rabbit hole?
+   For a `[P]` task in a worktree, run it in the main session after the subagent reports both failures, with the working directory at that worktree's root and `<feature dir>` as the main checkout's absolute path, so the record lands in the main checkout. Start `st-debug` from the main session too, with the worktree path; it diagnoses, fixes and verifies in that worktree.
+   Then start the `st-debug` agent (`stratum:st-debug`) with the task, the test, both failure outputs, and the advisor's answer.
+5. **Commit.** The `st-git` agent (`stratum:st-git`) commits the exact paths of the task, with tasks.md, and `<feature dir>/advisor.md` if it changed.
 
 ## Parallel tasks `[P]`
 
 When the project is this session's own repo, run each `[P]` task of a phase in its own subagent
-with `isolation: "worktree"`, all started in one message. Each runs the per-task steps in its
-worktree. Then check each branch (tests green, no added comments) and merge it into `main`
+with `isolation: "worktree"`, all started in one message.
+Each runs the per-task steps in its worktree, except step 4: a subagent whose test is still red after 2 tries stops and reports both failures.
+Then check each branch (tests green, no added comments) and merge it into `main`
 yourself. Keep each worktree and branch after the merge. Delete one only when the user says so.
 Never delete a remote branch: the user does that. If the project is another repo, run `[P]` tasks one after another.
 
@@ -53,10 +55,27 @@ Never delete a remote branch: the user does that. If the project is another repo
   to the user, one question at a time, with your recommendation. Decide small ones yourself.
 - Work touches a higher impact area than the lane allows: move up a lane.
 
-When all tasks are ticked, consult the advisor if one is set (`/advisor`) on the feature's full
-diff: hidden regressions, broken rules from the constitution. Handle its notes like review
-findings. Then say so, list the small decisions and findings (fixed and dropped), and name the
+When all tasks are ticked, run the advisor on the feature's full diff (see Advisor):
+`bash <plugin root>/scripts/st-advisor.sh diff <feature dir> <base>`: hidden regressions, broken rules from the constitution.
+The base: on a branch, `git merge-base main HEAD`. On `main`, `git rev-parse "$(git log --diff-filter=A --format=%H -- <feature dir>/spec.md | tail -1)^"`.
+Before you say the build is done, run `bash <plugin root>/scripts/st-advisor.sh check diff <feature dir> <base>`, then have `st-git` commit `<feature dir>/advisor.md` if it changed.
+Then say so, list the small decisions and findings (fixed and dropped), and name the
 next phase: `/stratum:st-close`.
+
+## Advisor
+
+The advisor is Codex (the `codex` CLI), a model from another vendor. It runs at three points: the plan before the build gate (`st-inspect` step 4), a test still red after 2 tries, and the full diff before the build is called done. The Quick lane has no advisor.
+
+- Run `bash <plugin root>/scripts/st-advisor.sh <point> ...` from the project root in the foreground, with a Bash timeout of 600000 ms, and wait for it. No background run, no polling.
+- Codex only reviews, in the read-only sandbox. Never run `codex` to build or fix.
+- `no advisor: codex not found`, `no advisor: mode not set` (show the user its line) or `no advisor: mode off`: go on as before; consult `/advisor` only if the user set one.
+- First line `mode both: also consult /advisor if one is set`: after Codex, consult `/advisor` on the same input if one is set.
+- `APPROVED`: go on.
+- `REVISE`: handle each finding like a review finding: check it against the source, fix the real small ones, bring big ones to the user, drop the false ones. Then run the same point once more on the changed input. Two rounds at most per point per gate pass, then the user decides. A later gate pass starts a new count.
+- `BLOCKED: <reason>`: stop and show the user the reason. Nothing passes the gate. If the user says to continue, run `bash <plugin root>/scripts/st-advisor.sh continued <point> <feature dir>` and skip the point. Do not retry it in this gate pass.
+- Each run appends a record to `<feature dir>/advisor.md`: the point, the time, the SHA256 of the input, the verdict and the findings. The mode comes from `.stratum/advisor.json` (`codex`, `both` or `off`). No file means off, with the `mode not set` line.
+- At a gate, `check` compares the latest record with the current input. `advisor approval is stale` or `no record` counts as no approval: run the point once more, as a round. Skip the check after a `no advisor` line.
+- Exit 2 with a `usage:` line or `cannot hash inputs`: the script could not read or hash its inputs. Nothing was recorded and nothing was sent. Fix the input or the tool and run the point again.
 
 ## Always
 

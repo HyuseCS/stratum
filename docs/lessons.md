@@ -137,9 +137,48 @@
 - Rule: When a review adds a guard, update spec Assumptions, research and the data model in the
   same commit, not only the contract and plan.
 
+## 2026-10-23: 006-pr-workflow-script
+
+### L14. Review fixes to prompt text left the contract's prompt table behind
+
+- What happened: Commit `cf7feae` added rules to the agent prompts in `workflows/pr.js` (scan command flag, "Do not stage, commit, push or run gh." on the draft and fixers, a template search order, a no-feature-dir refuter line, the `facts:tests` JSON handoff) and a `bodyPath` missing case to the skill. `contracts/pr-workflow.md` section 2.4 and 4.2 and the fake `pipeline` in section 6 kept the old text until this close. The node test only checks five prompt strings, so no check failed.
+- Rule: A review fix that changes a prompt string in `workflows/pr.js` must change the matching row of `contracts/pr-workflow.md` section 2.4 in the same commit, and any rule a prompt must hold goes into the `prompt rules` case of `tests/test_pr_workflow.mjs`.
+
+### L15. A prompt-only scan has a volume ceiling that reads as a clean result
+
+- What happened: `facts:scan` is one agent that reads every patch in the range, and `--diff-merges=first-parent` repeats main's delta for each merge of main. On a big branch it can run out of context and return `{finds: []}`, the same value as a clean scan. The schema cannot tell the two apart.
+- Rule: A scan that gates a push must return a count of commits it read, and the script must add `unverified: facts:scan` when that count is lower than `commits.length`.
+
+## 2026-10-23: 006-codex-advisor
+
+### L16. A hash step that ignored tool failures let a stale approval pass
+
+- What happened: Diff-point Codex rounds 2 and 3 found that a missing `sha256sum`, an unreadable file or a failing `git` command left an empty or partial digest, and `check` matched it against an older record (D20, D21). Round 2's fix added the readable-file test and the 64-hex digest check only; round 3 found the `git` exit codes still ignored.
+- Rule: A script that hashes an input to gate an approval must have one test per producer (each tool in the pipeline, each unreadable input) where that producer fails, and the test must fail unless the script exits non-zero with no record written.
+
+### L17. A fixed defect had a second entry point that the first fix left open
+
+- What happened: The hash failure above took three review rounds because each fix closed one producer (D20) and the next round found another (D21). Both rounds were used on one gate pass, and the user had to approve an extra round.
+- Rule: When a review finding is a failure mode of a shared step, list every command that feeds that step before the fix and give each one a failing test in the same commit.
+
+### L18. Commit lines in the skills assumed the advisor always wrote a record
+
+- What happened: The first skill text told `st-git` to commit `<feature dir>/advisor.md` at three gates. With mode off, no codex or no record, the file does not exist, and the commit would fail. The diff-point review found it (D19) and the lines now say "if it changed".
+- Rule: A skill line that commits a generated file must say "if it changed", and the phrase table must hold a row for that wording at every gate that names the file.
+
+### L19. A parallel worktree task ran the advisor from the wrong directory
+
+- What happened: The `[P]` escalation text sent the test-point advisor run and `st-debug` to the main session without a path. The record, the diff and the fix would land outside the worktree that held the failing test. The diff-point review found it (D19); the text now says to run from the worktree root and pass the worktree path to `st-debug`.
+- Rule: Any skill text that moves work from a worktree subagent to the main session must name the worktree path that the next command runs in, and the phrase table must hold that wording.
+
+### L20. A guard test must have its own negative control before the fix is trusted
+
+- What happened: The D20 hash fix was proven red before and green after with a `sha256sum` stub that prints nothing, and the D21 fix with a `chmod 000` untracked file. The first Codex-reported cause (an unreadable input and `sha256sum`) was real but incomplete (L17).
+- Rule: Each guard added after a review finding must have a test that is red on the previous commit of the script, and the fix commit message must name that test.
+
 ## 2026-10-11: 003-session-mods
 
-### L14. A Bash command line with the kill marker kills its own shell
+### L21. A Bash command line with the kill marker kills its own shell
 
 - What happened: The marker `spk003` in a Bash command line makes the shell that runs it a marked
   process. `cleanup.sh` then kills that shell, and the Bash call ends early. The orchestrator reports
@@ -148,7 +187,7 @@
 - Rule: Keep the marker text out of Bash command lines. Run cleanup and check in a Bash call of their
   own. Write a grep or pgrep pattern as `spk00[3]`, which does not match its own text.
 
-### L15. A mod test must answer every host call the mod makes
+### L22. A mod test must answer every host call the mod makes
 
 - What happened: The mod test kit answers only `$.state` and `session.append`. The spike-send test
   (a65c127) answers `session.start`, `command.register`, `ui.open` and `session.receive` itself. The
@@ -156,7 +195,7 @@
 - Rule: Before the first red run, list every host call the mod makes, and answer each one in the
   test. Then a red run points at the mod, not at a call the kit left unanswered.
 
-### L16. Op events answer `{ value }` in the test
+### L23. Op events answer `{ value }` in the test
 
 - What happened: The test answers for `command.register`, `ui.open` and `process.spawn` return
   `{ value: ... }` (spike-send `hooks/register.test.tsx:8-9`, spike-start `hooks/register.test.tsx:12-13,
@@ -166,7 +205,7 @@
 - Rule: Before you write a test answer, check whether the event is in `OpValueOf`. An op event
   answers `{ value }` or `{ deny }`. Any other event answers its own shape.
 
-### L17. A conditional task ticked without a run looks done
+### L24. A conditional task ticked without a run looks done
 
 - What happened: T008, T014 and T020 were ticked `[X]` with no note. Each one runs only when an
   earlier approach fails, and none did. Only `research.md` recorded the skip.
@@ -175,81 +214,69 @@
 
 ## 2026-10-23: 007-herdr-workspace
 
-### L18. A negative control run after earlier cases changed shared state cannot fail
+### L25. A negative control run after earlier cases changed shared state cannot fail
 
 - What happened: The NC1 and NC3 controls (broken copies of the script) ran after cases that had already changed the stub's shared state, so a red result could not be told from a changed baseline. Fixed in 7330d29.
 - Rule: Right before each broken copy runs, the test asserts the real script is green on the same input and state, and the control counts only when that baseline is green and the broken copy is red.
 
-### L19. Stub ids with a guessable pattern let a script build ids instead of reading them
+### L26. Stub ids with a guessable pattern let a script build ids instead of reading them
 
 - What happened: The stub `herdr` gave ids like `w1:p1`, so a script that built ids from a counter would pass. Fixed in 022defd: stub ids have a random part, and expectations come from the stub's log (the R2 case runs with `stubid0001`).
 - Rule: A stub gives every id a random part per run, and the test reads the expected ids from the stub's log, so a script that builds an id fails.
 
-### L20. A report row written before the call it describes lies on a stop
+### L27. A report row written before the call it describes lies on a stop
 
 - What happened: US1 review F10: the report listed a program on a pane before `pane run` had succeeded, so a stop at the first `pane run` still showed `claude`. Fixed in 022defd (`prog` set after `pane run`; case L20).
 - Rule: A report row shows a program or state only after the call that sets it succeeded, and a test that stops the run at that call asserts the row still says `shell` and `-`.
 
-### L21. `herdr pane wait-output` matches the shell's echo of the typed command
+### L28. `herdr pane wait-output` matches the shell's echo of the typed command
 
 - What happened: D7 used `pane wait-output` to see `claude` and `lazygit` start. The planner (F2) found it matches the echo of the typed command, so it cannot fail. D20 replaced it with `pane process-info` (71cc766, 0054744).
 - Rule: "Program started" is decided from `herdr pane process-info` foreground process names, and a test where `process-info` fails must report `not seen` (case L16).
 
-## 2026-10-23: 006-pr-workflow-script
-
-### L22. Review fixes to prompt text left the contract's prompt table behind
-
-- What happened: Commit `cf7feae` added rules to the agent prompts in `workflows/pr.js` (scan command flag, "Do not stage, commit, push or run gh." on the draft and fixers, a template search order, a no-feature-dir refuter line, the `facts:tests` JSON handoff) and a `bodyPath` missing case to the skill. `contracts/pr-workflow.md` section 2.4 and 4.2 and the fake `pipeline` in section 6 kept the old text until this close. The node test only checks five prompt strings, so no check failed.
-- Rule: A review fix that changes a prompt string in `workflows/pr.js` must change the matching row of `contracts/pr-workflow.md` section 2.4 in the same commit, and any rule a prompt must hold goes into the `prompt rules` case of `tests/test_pr_workflow.mjs`.
-
-### L23. A prompt-only scan has a volume ceiling that reads as a clean result
-
-- What happened: `facts:scan` is one agent that reads every patch in the range, and `--diff-merges=first-parent` repeats main's delta for each merge of main. On a big branch it can run out of context and return `{finds: []}`, the same value as a clean scan. The schema cannot tell the two apart.
-- Rule: A scan that gates a push must return a count of commits it read, and the script must add `unverified: facts:scan` when that count is lower than `commits.length`.
-
 ## 2026-10-23: 008-herdr-workers
 
-### L24. herdr makes a worktree only from the main checkout
+### L29. herdr makes a worktree only from the main checkout
 
 - What happened: The first live `start` ran from a linked worktree (`stratum-003-demo`) with `--cwd` set to the calling folder. herdr answered `linked_worktree_source` at once and nothing was made (research R1, R3). Every Stratum feature runs in a linked worktree, so `start` broke in the normal case. Fixed in 012a33f.
 - Rule: `st-worker.sh start` passes the main checkout (`dirname "$(git rev-parse --path-format=absolute --git-common-dir)"`) as `--cwd` and in `--path`, and test S10 runs it from a linked worktree of the temp repo.
 
-### L25. `agent start` right after `worktree create` answers `agent_pane_busy`
+### L30. `agent start` right after `worktree create` answers `agent_pane_busy`
 
 - What happened: The second live `start` failed 0.1 s after `worktree create`: the new pane's shell was not at its prompt. The stub answered `agent start` at once, so 308 stub checks hid it. Fixed in 77369ae with a 10-try retry, 1 s apart.
 - Rule: `start` retries `agent start` on `agent_pane_busy` and stops with herdr's line after the 10th try, and tests S11 (busy N times, then ok) and S11b (busy every time, exactly 10 calls) check both.
 
-### L26. The CLI printed text where the schema said JSON
+### L31. The CLI printed text where the schema said JSON
 
 - What happened: `herdr api schema --json` gave `pane_read` with `.result.read.text`, but `herdr agent read` prints plain text. The script piped it through `jq` and printed an empty `pane text:` on blocked, stopped and no-result stops, while the stub answered JSON and every test stayed green (research R1, third attempt; fixed in b39c626). This repeats the schema-versus-reality gap of L5.
 - Rule: A stub for a herdr call answers in the format the real CLI printed in a recorded live run (`agent read`: plain text), and the case for each stop that shows pane text asserts the stub's `STUB PANE` marker appears.
 
-### L27. A stub that answers at once hides timing bugs, so each state path needs a live run
+### L32. A stub that answers at once hides timing bugs, so each state path needs a live run
 
-- What happened: `agent_pane_busy` (L25), `blocked` lingering about 2 s after a dialog key, and an `agent read` format mismatch (L26) all passed 300 stub checks and showed only in T005 and T008. The live task order (T005, T008, T012, T015) found all three before the feature closed.
+- What happened: `agent_pane_busy` (L30), `blocked` lingering about 2 s after a dialog key, and an `agent read` format mismatch (L31) all passed 300 stub checks and showed only in T005 and T008. The live task order (T005, T008, T012, T015) found all three before the feature closed.
 - Rule: A task that adds a herdr or `claude` call is ticked only after a live run of its start, blocked, finished and close paths is recorded in research.md, or `Not run, <first error line>` is written beside the tick.
 
-### L28. A review fix that adds `--` to a real CLI call broke the call
+### L33. A review fix that adds `--` to a real CLI call broke the call
 
 - What happened: A review fix for option injection made `answer` send `herdr agent send-keys worker-t901 -- 1`. herdr took `--` as a key and answered `invalid_key: unsupported key --`; nothing was sent (research R7, live T008). The fix was to refuse a value that starts with `-` before any herdr call (case A4) and pass no `--`.
 - Rule: A review fix that adds a flag or `--` to a call of a real CLI is run once against that CLI before the commit, and test A1 asserts the exact argv without it.
 
-### L29. `blocked` lingers about 2 s after a dialog key
+### L34. `blocked` lingers about 2 s after a dialog key
 
 - What happened: In live T008 every `answer` printed `state blocked` and exit 4 right after the key, and an `agent get` 2 s later said `working`. The orchestrator would read exit 4 as a failed answer. 6fb6e4d added `agent wait --until working --timeout 5000` before the last `agent get`.
 - Rule: `answer` waits for the worker to leave `blocked` before it reads the state, and test A1 asserts the order `send-keys`, `agent wait --until working`, `agent get`.
 
-### L30. The models hook builds its allowed names from `agents/*.md`
+### L35. The models hook builds its allowed names from `agents/*.md`
 
 - What happened: D27 reads an `st-worker` entry from `.stratum/models.json`, but `st-worker` is not an agent file. A models.json holding only that key made the hook deny an `st-git` start with `unknown agent "st-worker"` (research R16). D28 added the name to `hooks/st-models.py`.
 - Rule: A new key in `.stratum/models.json` is added to `hooks/st-models.py` in the same task, and `tests/test_model_hook.py` has a case where a file holding only that key does not deny an agent start.
 
-### L31. A quiet test command gives the `/goal` evaluator no evidence
+### L36. A quiet test command gives the `/goal` evaluator no evidence
 
 - What happened: The headless run used `grep -qx h demo/h.txt`, which prints nothing on success. Goal turn 1 ended `met: false` ("insufficient evidence in transcript") and turn 2 re-ran the test with `&& echo PASS` (research R12). The run took 9 model requests instead of about 5.
 - Rule: A test command that goes into a `/goal` condition prints a line on success (for example `&& echo PASS`), and the quickstart and task examples for `st-worker` show one.
 
-### L32. Two brief rules that used the word "merge" were read as a clash
+### L37. Two brief rules that used the word "merge" were read as a clash
 
 - What happened: Team rule 2 said "merge its branch" and rule 4 said "Never merge". In live T012 worker-t913 read rule 2 as the teammate case and merged without asking. 823708e reworded rule 4 to "Never merge into the base branch and never push." The same run showed the brief had no plugin root. The contract had the old rule 4 text.
 - Rule: A rule in the brief that forbids an action names the target it forbids, test S1 asserts the whole rule 4 text, and a change to a brief line changes contracts/script.md section 3 in the same commit.

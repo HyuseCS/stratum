@@ -53,7 +53,7 @@ orchestrator passed and `docs/lessons.md`.
 | G6. lessons L6: tasks that share one test file are not parallel | Pass: T001, T002, T005, T006, T008, T009 share `tests/test_herdr_workspace.sh` and run in order. T003 (`tests/test_on_demand.sh` only) is the one `[P]` task |
 | G7. lessons L7: README lists are checked both ways | Pass: `tests/test_inspect.sh` already diffs skills against README rows both ways and needs every `tests/test_*` in README. T001 and T004 add those rows |
 | G8. lessons L8: test runs leave no file in the repo | Pass: stubs, logs and git repos live in `mktemp -d`, removed by `trap`. T010 checks `git status --porcelain` |
-| G9. lessons L17: a conditional task skipped says why | Pass: T007 (remote live run) gets `Not run, <herdr error>.` if the laptop still does not answer |
+| G9. lessons L24: a conditional task skipped says why | Pass: T007 (remote live run) gets `Not run, <herdr error>.` if the laptop still does not answer |
 | G10. Settled decisions D1 to D11 kept (D11 is for the next feature; it needs nothing here beyond the `workspace` line naming the machine) | Pass: D20 replaces D7's method (`pane wait-output`) with `pane process-info` polling; D7's outcome (short wait, `running` or `not seen`, never fatal) is kept |
 
 Post-design re-check: all gates pass. Complexity Tracking stays empty.

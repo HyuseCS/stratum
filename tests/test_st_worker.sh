@@ -198,7 +198,7 @@ prej() {
 
 s1() {
   fresh; run bash "$1" start "${sargs[@]}"
-  local b pr; b="$(wt)/brief.md"; pr=$(cd "$(dirname "$1")/.." && pwd)
+  local b pr sd; b="$(wt)/brief.md"; pr=$(cd "$(dirname "$1")/.." && pwd); sd=$(dirname "$1")
   check "S1 exit 0" '[ $rc = 0 ]'
   check "S1 one worktree create, argv as built" '[ "$(cnt "^worktree\tcreate\t")" = 1 ] && hascall "worktree\tcreate\t--cwd\t%s\t--branch\tworker-t004\t--base\t%s\t--path\t%s\t--label\tworker-t004\t--no-focus" "$repo" "$sha" "$tmp/repo-worker-t004"'
   check "S1 brief has the task text" 'grep -qxF "TASK BODY $(rnd)" "$b"'
@@ -208,7 +208,7 @@ s1() {
   check "S1 brief has every roster row" 'grep -qxF "| worker-t004 | local | worker-t004 | T004 |" "$b" && grep -qxF "| worker-t005 | local | worker-t005 | T005 |" "$b"'
   check "S1 brief has the four team rules" '[ "$(grep -cxFf "$rules" "$b")" = 4 ]'
   check "S1 brief rule 1 names .stratum/git-guard.json" 'grep -q "^1\. .*Never commit .*\.stratum/git-guard\.json\.\$" "$b"'
-  check "S1 brief has no advisor block" '[ -f "$b" ] && ! grep -q "^## Advisor" "$b"'
+  check "S1 brief has the advisor block only when st-advisor.sh is next to the script" '[ -f "$b" ] && if [ -f "$sd/st-advisor.sh" ]; then grep -qxF "## Advisor" "$b"; else ! grep -q "^## Advisor" "$b"; fi'
   check "S1 git-guard.json in the worktree is auto" '[ "$(cat "$(wt)/.stratum/git-guard.json")" = "{\"commit\":\"auto\"}" ]'
   check "S1 repo has no git-guard.json and is unchanged" '[ ! -e "$repo/.stratum/git-guard.json" ] && [ -z "$(git -C "$repo" status --porcelain)" ]'
   check "S1 one agent start, args after -- are exactly the permission mode and name" '[ "$(cnt "^agent\tstart\t")" = 1 ] && hascall "agent\tstart\tworker-t004\t--kind\tclaude\t--pane\t%s\t--timeout\t120000\t--\t--permission-mode\tauto\t-n\tworker-t004" "$(pane)"'

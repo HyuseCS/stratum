@@ -331,7 +331,7 @@ Rules the test enforces, for every subcommand:
 ## 5. Output
 
 Stdout, TAB-separated fields, one entity per line. Lines are printed only after the call that
-makes their facts succeeded (lessons L20).
+makes their facts succeeded (lessons L27).
 
 ```text
 worker	<N>	<m|local>	<WS|->	<pane|->	<branch|->	<WT|->      (start)
@@ -353,7 +353,7 @@ result:                                                           (headless, the
 Stubs on `PATH`: `herdr`, `ssh`, `claude`, `timeout` (logs its arguments, then execs the rest of
 the argv), and a `git` wrapper that logs `fetch` and passes every
 other call to the real git. The stub `herdr` logs each argv as one TAB-joined line, gives ids with
-a random part per run (L19), makes the `--path` folder on `worktree create`, answers `agent get`
+a random part per run (L26), makes the `--path` folder on `worktree create`, answers `agent get`
 from a state list the case sets, returns pane text `STUB PANE <random>` as plain text (the live CLI prints text, research R1), and fails a named call on
 request. The result file the test writes holds `RESULT FILE <random>`. Expectations come from the
 stub log, never from built ids.
@@ -441,4 +441,4 @@ stub log, never from built ids.
 NC1 to NC7 each name one line the build keeps unique, so the `sed` that breaks it matches once.
 Every case also asserts the never-list and the `--machine` rule of section 4. Each NC first checks
 that its copy differs from the script, then runs the real script on the same input and state and
-needs it green right before the copy runs (lessons L18).
+needs it green right before the copy runs (lessons L25).
