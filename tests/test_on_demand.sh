@@ -248,6 +248,8 @@ phrases <<'EOF'
 #17 C4 resume machine	skills/st-worker/SKILL.md	run the follow-ups with the same `--machine <m>`
 #17 F5 headless test	skills/st-worker/SKILL.md	run the test command here and commit only on its exit 0
 #17 F5 headless cmd	skills/st-worker/SKILL.md	bash <plugin root>/scripts/st-worker.sh headless <id> --task <file> --test <cmd>
+#17 F7 red before	skills/st-worker/SKILL.md	red before the merge: no merge
+#17 F7 red after	skills/st-worker/SKILL.md	red after it: stop, bring it to the user, merge no later branch
 EOF
 check "#17 skill" 'f="$root/skills/st-worker/SKILL.md"; [ -f "$f" ] && grep -qx "name: st-worker" "$f" && grep -q "^# /stratum:st-worker" "$f"'
 check "#17 FR-009 order" 'f="$root/skills/st-worker/SKILL.md"; [ -f "$f" ] && r=$(grep -nF "/stratum:st-review" "$f" | head -1 | cut -d: -f1) && m=$(grep -nF "git merge --no-ff" "$f" | head -1 | cut -d: -f1) && c=$(grep -nF "st-worker.sh close" "$f" | head -1 | cut -d: -f1) && [ -n "$r" ] && [ -n "$m" ] && [ -n "$c" ] && [ "$r" -lt "$m" ] && [ "$m" -lt "$c" ]'

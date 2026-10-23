@@ -56,6 +56,8 @@ line of the file, because the test greps it with `grep -qF`.
      Skill tool, and check each finding against the source. A real critical or high finding: no
      merge, bring it to the user. For a worker on this machine, run its test command in its
      worktree. Then `git merge --no-ff --no-edit worker-<id>` and run the test command here.
+     A test that is red before the merge: no merge, report it.
+     A test that is red after it: stop, bring it to the user, merge no later branch.
   9. A merge conflict: list the files (`git diff --name-only --diff-filter=U`), run
      `git merge --abort`, bring the files to the user, and merge no later branch.
   10. After each merge, tick the task in tasks.md and commit it through the `stratum:st-git` agent.
@@ -112,6 +114,8 @@ line of the file, because the test greps it with `grep -qF`.
 | `#17 F5 headless cmd` | `bash <plugin root>/scripts/st-worker.sh headless <id> --task <file> --test <cmd>` |
 | `#17 stop` | `On a one-line failure, show the line and stop.` |
 | `#17 no retry` | `After a failure, do not run start again` |
+| `#17 F7 red before` | `red before the merge: no merge` |
+| `#17 F7 red after` | `red after it: stop, bring it to the user, merge no later branch` |
 
 The phrase is the cell text inside its outer backticks, with no space at either end.
 
