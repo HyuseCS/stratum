@@ -32,7 +32,12 @@ case "$1 $2" in
     case "$1" in --path) p=$2 ;; --branch) b=$2 ;; --label) l=$2 ;; esac
     shift
   done
-  [ -n "$M" ] || mkdir -p "$p/.stratum"
+  [ -n "$M" ] || case "${STUB_WT_LINK:-}" in
+    stratum) mkdir -p "$p" && ln -s "$T/outside-dir" "$p/.stratum" ;;
+    brief) mkdir -p "$p/.stratum" && ln -s "$T/outside.txt" "$p/brief.md" ;;
+    guard) mkdir -p "$p/.stratum" && ln -s "$T/outside.json" "$p/.stratum/git-guard.json" ;;
+    *) mkdir -p "$p/.stratum" ;;
+  esac
   p=${STUB_WT_PATH:-$p}
   w="stubWS$X"
   jq -nc --arg w "$w" --arg p "$p" --arg b "$b" '{result:{type:"worktree_created",workspace:{workspace_id:$w},tab:{tab_id:($w+":t1")},root_pane:{pane_id:($w+":p1")},worktree:{path:$p,branch:$b}}}' | tee "$T/wc.json"
@@ -79,12 +84,12 @@ cat > "$tmp/bin/ssh" <<'EOF'
 T=$STUB_T
 n=$(cat "$T/n_ssh" 2>/dev/null || echo 0); n=$((n+1)); echo $n > "$T/n_ssh"
 ( IFS=$'\t'; printf '%s\n' "$*" >> "$T/ssh" )
-if [ -n "${STUB_SSH_RC:-}" ]; then echo 'ssh: stub failure' >&2; exit "$STUB_SSH_RC"; fi
+if [ -n "${STUB_SSH_RC:-}" ]; then [ -n "${STUB_SSH_QUIET:-}" ] || echo 'ssh: stub failure' >&2; exit "$STUB_SSH_RC"; fi
 while [ $# -gt 0 ] && [ "$1" != -- ]; do shift; done
 shift 2
 c="$*"
 case "$c" in
-"cat > "*) cat > "$T/ssh_in.$n" ;;
+*"cat > "*) cat > "$T/ssh_in.$n" ;;
 "cat -- "*result.md) printf 'RESULT FILE %s\n' "$(cat "$T/x")" ;;
 "test -f "*) [ -e "$T/ssh_has_result" ] ;;
 esac
@@ -319,6 +324,22 @@ check "S11b exactly 10 agent start calls, 9 sleep 1" '[ "$(cnt "^agent\tstart\t"
 check "S11b stopped line with the stub agent_pane_busy line" 'grep -qxF "stopped: {\"error\":{\"code\":\"agent_pane_busy\",\"message\":\"stub refused\"}}" <<<"$out"'
 check "S11b worker line with ids" 'hasline "worker\tworker-t004\tlocal\t%s\t%s\tworker-t004\t%s" "$(wsid)" "$(pane)" "$(wt)"'
 check "S11b no agent prompt, nothing closed" 'never 0 0'
+
+mkdir -p "$tmp/outside-dir"
+printf 'OUTSIDE TXT\n' > "$tmp/outside.txt"
+printf '{"outside":true}\n' > "$tmp/outside.json"
+printf 'KEEP\n' > "$tmp/outside-dir/keep"
+snap() { ls -A "$tmp/outside-dir"; cat "$tmp/outside.txt" "$tmp/outside.json" "$tmp/outside-dir/keep"; }
+before=$(snap)
+for k in brief:brief.md stratum:.stratum guard:.stratum/git-guard.json; do
+  fresh
+  STUB_WT_LINK=${k%%:*} run bash "$script" start "${sargs[@]}"
+  check "S12 ${k%%:*} exit 1" '[ $rc = 1 ]'
+  check "S12 ${k%%:*} one stopped line naming the symlink" '[ "$(grep -c "^stopped:" <<<"$out")" = 1 ] && hasline "stopped: %s is a symlink" "$(wt)/${k#*:}"'
+  check "S12 ${k%%:*} worker line with ids" 'hasline "worker\tworker-t004\tlocal\t%s\t%s\tworker-t004\t%s" "$(wsid)" "$(pane)" "$(wt)"'
+  check "S12 ${k%%:*} no agent start, no prompt" '[ "$(cnt "^agent\tstart\t")" = 0 ] && never 0 0'
+  check "S12 ${k%%:*} outside targets unchanged" '[ "$(snap)" = "$before" ]'
+done
 
 fresh; run bash "$script" start 'bad id' --task "$task" --test "$testcmd" --lane "$lane" --roster "$roster"
 prej P1 "Task id must be letters, digits or dash, start with a letter or digit, and be at most 25 characters."
@@ -612,6 +633,16 @@ rrun bash "$script" list --machine laptop
 check "R12 exit 0" '[ $rc = 0 ]'
 check "R12 found lines name laptop, the other workspace is absent" '[ "$(grep -cP "^found\t" <<<"$out")" = 2 ] && hasline "found\tworker-t004\tlaptop\tstubA%s\tstubA%s:p1\tblocked\t/stub/a%s" "$x" "$x" "$x" && hasline "found\tworker-t005\tlaptop\tstubB%s\t-\tgone\t/stub/b%s" "$x" "$x" && ! grep -q notaworker <<<"$out"'
 check "R12 --machine rule, never-list" 'rnever 0 0'
+
+rfresh; STUB_WT_PATH=/home/u/proj-worker-t004 rrun bash "$script" start "${rsargs[@]}"
+c=$(sshs); pre=${c%%cat > *}
+check "R13 exit 0, one ssh call" '[ $rc = 0 ] && [ "$(grep -c . "$tmp/ssh")" = 1 ]'
+check "R13 ssh guards the three paths with -L before the cat > write" '[ "$pre" != "$c" ] && grep -qF -- "for p in /home/u/proj-worker-t004/brief.md /home/u/proj-worker-t004/.stratum /home/u/proj-worker-t004/.stratum/git-guard.json; do [ ! -L \"\$p\" ] || { echo \"\$p is a symlink\" >&2; exit 3; }; done && " <<<"$pre"'
+
+for k in "3::ssh: stub failure" "3:1:exit 3"; do
+  rfresh; STUB_SSH_RC=${k%%:*} STUB_SSH_QUIET=$(cut -d: -f2 <<<"$k") rrun bash "$script" start "${rsargs[@]}"
+  check "R13b remote write fails (${k#*:*:}): exit 1, one stopped line with WT, machine and the reason" '[ $rc = 1 ] && [ "$(grep -c "^stopped:" <<<"$out")" = 1 ] && hasline "stopped: cannot write brief.md and .stratum/git-guard.json in ~/proj-worker-t004 on laptop: %s" "${k#*:*:}" && [ "$(cnt "^--machine\tlaptop\tagent\tstart\t")" = 0 ]'
+done
 
 h1() {
   fresh; rm -f "$tmp/claude_args" "$tmp/brief.path" "$tmp/brief.copy" "$tmp/claude_nums" "$tmp/timeout_args"

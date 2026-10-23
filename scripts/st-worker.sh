@@ -102,8 +102,9 @@ stop() {
 h() { r=$("${H[@]}" "$@" 2>"$e") || stop "$(head -1 "$e")"; }
 rsh() {
   ssh -o BatchMode=yes -- "$target" "$*" 2>"$e" && return
-  [ $? != 255 ] || stop "ssh to $target failed: $(head -1 "$e")" >&4
-  return 1
+  local c=$?
+  [ $c != 255 ] || stop "ssh to $target failed: $(head -1 "$e")" >&4
+  return $c
 }
 quote() {
   Q=$(printf %q "$WT")
@@ -182,12 +183,13 @@ start)
   get WT .result.worktree.path
   [ -n "$m" ] || [ "$WT" = "$path" ] || stop "herdr made the worktree in $WT, not $path"
   if [ -z "$m" ]; then
+    for p in "$WT/brief.md" "$WT/.stratum" "$WT/.stratum/git-guard.json"; do [ ! -L "$p" ] || stop "$p is a symlink"; done
     brief >"$WT/brief.md" || stop "cannot write $WT/brief.md"
     mkdir -p "$WT/.stratum" || stop "cannot make $WT/.stratum"
     printf '%s\n' "$G" >"$WT/.stratum/git-guard.json" || stop "cannot write the commit guard file in $WT/.stratum"
   else
     quote
-    rsh "cat > $Q/brief.md && mkdir -p $Q/.stratum && printf '%s\n' $(printf %q "$G") > $Q/.stratum/git-guard.json" < <(brief) || stop "cannot write brief.md and .stratum/git-guard.json in $WT on $m: $(head -1 "$e")"
+    rsh "for p in $Q/brief.md $Q/.stratum $Q/.stratum/git-guard.json; do [ ! -L \"\$p\" ] || { echo \"\$p is a symlink\" >&2; exit 3; }; done && cat > $Q/brief.md && mkdir -p $Q/.stratum && printf '%s\n' $(printf %q "$G") > $Q/.stratum/git-guard.json" < <(brief) || { rc=$? msg=$(head -1 "$e"); stop "cannot write brief.md and .stratum/git-guard.json in $WT on $m: ${msg:-exit $rc}"; }
   fi
   busy=10 # ponytail: fixed 10 s agent_pane_busy retry bound, same shape as D20 in specs/007-herdr-workspace, raise it if a live run measures a slower pane shell
   for ((i = 1; ; i++)); do
