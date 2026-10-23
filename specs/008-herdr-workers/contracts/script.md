@@ -64,7 +64,7 @@ Each failure prints exactly one line (to stderr) and exits 1. The script builds 
 | 10 | `--machine`: a `label` or `id` matches | `Unknown machine: <m>. Saved: <labels, comma separated>.` |
 | 11 | `--machine`: `herdr --machine <m> workspace list` exits 0 | `Machine <m> does not answer: <first stderr line from herdr>` |
 | 12 | `start`: no workspace in `H workspace list` has the label `N` (a read call, after rows 7 to 11; plan G10, lessons L11) | `A worker <N> already exists.` |
-| 13 | `start`, `headless`: the model (from `--model`, or `st-worker.model` in models.json, section 4) matches `^[A-Za-z0-9._-]+$` | `Model must be one token of letters, digits, dot, underscore or dash.` (no herdr or claude call) |
+| 13 | `start`, `headless`: the model (from `--model`, or `st-worker.model` in models.json, section 4) matches `^[A-Za-z0-9][A-Za-z0-9._-]*$` (first character a letter or digit, so a value like `--dangerously-skip-permissions` cannot land after `--model` as an option) | `Model must be one token of letters, digits, dot, underscore or dash, starting with a letter or digit.` (no herdr or claude call) |
 
 Checks 9 to 11 are the ones in `scripts/st-herdr-workspace.sh` (#32 contract section 2, rows 4c0
 to 4d), copied with their words. `<target>` is the `target` field of the matched entry and
@@ -193,7 +193,7 @@ Model `M` (D27, D28, `start` and `headless`): `--model <name>` if given. Else
 `jq -r '."st-worker".model // empty'` of `<top>/.stratum/models.json`, where `<top>` is the calling
 folder's `git rev-parse --show-toplevel` (as for the guard file). A missing file, an unparsable
 file or a missing `st-worker.model` means no model, and no `--model` is passed (`ponytail:`
-ignored, not an error). A present value from either source goes through section 2 row 13 before
+ignored, not an error). A present value from either source must match `^[A-Za-z0-9][A-Za-z0-9._-]*$` (section 2 row 13) before
 any command line. `effort` is not read: `claude` has no flag for it here.
 
 `goal` (after a `start` that ended `blocked`): steps 4 and 5.
@@ -404,6 +404,7 @@ stub log, never from built ids.
 | M2 | `start` with no `--model`, models.json `{"st-worker":{"model":"sonnet"}}`: `--model sonnet` in the `agent start` argv; brief `- Model: sonnet` |
 | M3 | `start` with no `--model` and no models.json: no `--model` in any argv; brief `- Model: default` (S1 stays as it is) |
 | M4 | `start --model 'a b'` and `start --model 'x;y'`: the row 13 line, exit 1, no herdr call |
+| M4d | models.json `{"st-worker":{"model":"--dangerously-skip-permissions"}}`, no `--model`: `start` and `headless` each print the row 13 line, exit 1, no herdr or claude call |
 | M5 | `headless --model opus`: the claude argv has `--model opus` right after `-n worker-t004` |
 | M6 | `headless` with no `--model`, models.json `{"st-worker":{"model":"sonnet"}}`: `--model sonnet` right after `-n worker-t004` |
 | M7 | `--model` given twice, or `--model ''`: usage, exit 2, no call |

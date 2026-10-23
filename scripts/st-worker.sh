@@ -55,7 +55,7 @@ fi
 [ "$cmd" != headless ] || [[ $test != *\** ]] || fail "Test command must not contain * for headless."
 if [ "$cmd" = start ] || [ "$cmd" = headless ]; then
   [ -n "${model+x}" ] || { top=$(git rev-parse --show-toplevel 2>/dev/null) && model=$(jq -r '."st-worker".model // empty' "$top/.stratum/models.json" 2>/dev/null); } || model=
-  [ -z "$model" ] || [[ $model =~ ^[A-Za-z0-9._-]+$ ]] || fail "Model must be one token of letters, digits, dot, underscore or dash."
+  [ -z "$model" ] || [[ $model =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || fail "Model must be one token of letters, digits, dot, underscore or dash, starting with a letter or digit."
 fi
 if [ "$cmd" = start ]; then
   [[ -n $lane && $lane != *$'\n'* ]] || fail "Lane must be one line."

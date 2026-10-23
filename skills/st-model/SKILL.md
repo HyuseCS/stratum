@@ -37,4 +37,4 @@ named means `default`.
    If step 3 copied the template, say so and list its entries. Then reply in one line:
    `<agent>: model <model or "default (<frontmatter model>)">, effort <effort or "default">.
    Applies on the next start.` The frontmatter model is the `model:` line in
-   `<plugin root>/agents/<agent>.md`.
+   `<plugin root>/agents/<agent>.md`; for `st-worker` it is `default (the user's claude default)`.

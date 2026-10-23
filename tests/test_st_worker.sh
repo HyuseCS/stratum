@@ -690,7 +690,7 @@ fresh
 run bash "$script" start T004 --task "$task" --test 'grep -q a *' --lane "$lane" --roster "$roster"
 check "H10 start still accepts * in the test" '! grep -qF "must not contain *" <<<"$out"'
 
-mphrase='Model must be one token of letters, digits, dot, underscore or dash.'
+mphrase='Model must be one token of letters, digits, dot, underscore or dash, starting with a letter or digit.'
 mfile="$repo/.stratum/models.json"
 startargv() { printf 'agent\tstart\tworker-t004\t--kind\tclaude\t--pane\t%s\t--timeout\t120000\t--\t%s' "$(pane)" "$1"; }
 
@@ -725,6 +725,22 @@ printf '{"st-worker":{"model":"x;y"}}\n' > "$mfile"
 run bash "$script" start "${sargs[@]}"
 prej "M4 models.json value" "$mphrase"
 rm -f "$mfile"
+fresh
+printf '{"st-worker":{"model":"--dangerously-skip-permissions"}}\n' > "$mfile"
+run bash "$script" start "${sargs[@]}"
+prej "M4d start models.json leading dash" "$mphrase"
+fresh; rm -f "$tmp/claude_args"
+run bash "$script" headless T004 --task "$task" --test "$testcmd"
+prej "M4d headless models.json leading dash" "$mphrase"
+check "M4d headless no claude call" '[ ! -e "$tmp/claude_args" ]'
+rm -f "$mfile"
+fresh
+run bash "$script" start "${sargs[@]}" --model -x
+prej "M4d start --model -x" "$mphrase"
+fresh; rm -f "$tmp/claude_args"
+run bash "$script" headless T004 --task "$task" --test "$testcmd" --model -x
+prej "M4d headless --model -x" "$mphrase"
+check "M4d headless --model -x no claude call" '[ ! -e "$tmp/claude_args" ]'
 
 fresh; rm -f "$tmp/claude_args" "$tmp/brief.copy"
 run bash "$script" headless T004 --task "$task" --test "$testcmd" --model opus

@@ -338,6 +338,8 @@ branch `18-codex-advisor`.
   `pgrep -af -- '-n worker-t91[0]'` exit 1 (run 2 s after `close`). SC-005 holds: closing the
   workspace ended the `claude`. Left for the user: folder `/home/hyuse/Desktop/stratum-worker-t910`
   and branch `worker-t910`.
+- Live (2026-10-23, from the demo folder, no workers open): `list` printed `no workers on local`,
+  exit 0 (FR-016 empty case).
 
 ## R12. Headless worker (FR-011, D12, D19)
 
@@ -487,7 +489,9 @@ branch `18-codex-advisor`.
 - Decision: the script passes only `model`, as `--model <model>` after `-n N` (pane worker args
   after `--`, and `claude -p`). `effort` is not passed: `claude` has no flag for it in these
   calls. A file value is limited to the hook's model list; a `--model` value from the request can
-  be any one token (`^[A-Za-z0-9._-]+$`, contracts/script.md section 2 row 13).
+  be any one token starting with a letter or digit (`^[A-Za-z0-9][A-Za-z0-9._-]*$`,
+  contracts/script.md section 2 row 13), so a value such as `--dangerously-skip-permissions`
+  cannot land after `--model` as an option.
 
 ## Open decisions
 

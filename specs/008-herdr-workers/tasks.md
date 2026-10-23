@@ -148,7 +148,7 @@ and conflict steps (FR-009) are built in T004 and tested by T002.
 
 **Goal**: an optional model per worker, from `--model` or the `st-worker` entry of `.stratum/models.json` (FR-017).
 
-- [X] T017 [US1] Add the cases M1 to M7 of contracts/script.md section 6 to `tests/test_st_worker.sh` (models.json written in the temp repo for M2 and M6), the `#17 D27 model` row of contracts/skill.md section 2 to `tests/test_on_demand.sh`, a case in `tests/test_model_hook.py` where models.json holds `{"st-worker":{"model":"sonnet"}}` and an `st-git` start is not denied, and, in `tests/test_model_files.sh`, a check that `skills/st-model/SKILL.md` names `` `st-worker` ``. Run all four and show they fail before T018. Lessons L1, L18.
+- [X] T017 [US1] Add the cases M1 to M7 and M4d of contracts/script.md section 6 to `tests/test_st_worker.sh` (models.json written in the temp repo for M2 and M6), the `#17 D27 model` row of contracts/skill.md section 2 to `tests/test_on_demand.sh`, a case in `tests/test_model_hook.py` where models.json holds `{"st-worker":{"model":"sonnet"}}` and an `st-git` start is not denied, and, in `tests/test_model_files.sh`, a check that `skills/st-model/SKILL.md` names `` `st-worker` ``. Run all four and show they fail before T018. Lessons L1, L18.
 
 - [X] T018 [US1] Build FR-017: `scripts/st-worker.sh` (`--model` for `start` and `headless`, the models.json read, row 13, the `- Model:` brief line, `--model M` after `-n N`), `skills/st-worker/SKILL.md` (the `--model` line of contracts/skill.md step 1), `hooks/st-models.py` (accept `st-worker` beside the names from `agents/*.md`), `skills/st-model/SKILL.md` (list `st-worker` with the agents). Done when `bash tests/test_st_worker.sh`, `bash tests/test_on_demand.sh`, `PYTHONDONTWRITEBYTECODE=1 python3 -B tests/test_model_hook.py` and `bash tests/test_model_files.sh` are green.
 
@@ -172,7 +172,7 @@ and conflict steps (FR-009) are built in T004 and tested by T002.
 | FR-014 | T002 st-build check; T016 diff | T004 |
 | FR-015 | the test file and NC1 to NC7 | T001, T006, T009, T013 |
 | FR-016 | T001 L1 and every subcommand found by id | T003 |
-| FR-017 | T017 M1 to M7, hook case, phrase row, st-model check | T018 |
+| FR-017 | T017 M1 to M7 and M4d, hook case, phrase row, st-model check | T018 |
 
 ## Dependencies & Execution Order
 

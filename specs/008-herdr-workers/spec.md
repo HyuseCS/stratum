@@ -223,7 +223,7 @@ the change is in the working tree, nothing is committed by the worker, and no pr
   worker's `claude` (`herdr agent start ... -- --permission-mode auto -n <name> --model <model>`)
   or to `claude -p` for a headless worker. Without it, the `model` of the `st-worker` entry in
   `.stratum/models.json` is passed if present, else nothing is passed and the user's default
-  applies. The value MUST be one token matching `[A-Za-z0-9._-]+`, checked before any command
+  applies. The value MUST be one token matching `[A-Za-z0-9._-]+`, starting with a letter or digit, checked before any command
   line. The brief MUST say `Model: <model or default>`. `hooks/st-models.py` accepts `st-worker`
   beside the agent names, `tests/test_model_hook.py` covers it, and `skills/st-model/SKILL.md`
   lists `st-worker` (D27, D28).
