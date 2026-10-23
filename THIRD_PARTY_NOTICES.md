@@ -13,7 +13,7 @@ keeps its original license. Full license texts are in `licenses/`. Pinned upstre
 | ui-ux-pro-max | Copyright (c) 2024 Next Level Builder | MIT | `skills/st-ui-ux` | `licenses/ui-ux-pro-max.MIT.txt` |
 | impeccable | Copyright 2025 Paul Bakaus | Apache-2.0 | `skills/st-impeccable` | `licenses/impeccable.Apache-2.0.txt`, `licenses/impeccable.NOTICE.md` |
 | frontend-design | anthropics/claude-plugins-official authors | Apache-2.0 | `skills/st-frontend-design` | `licenses/frontend-design.Apache-2.0.txt` |
-| graphify skill | Copyright 2026 Safi Shamsi and the Graphify contributors | Apache-2.0 (earlier parts MIT) | `skills/st-graphify` | `licenses/graphify.Apache-2.0.txt`, `licenses/graphify.NOTICE.txt`, `licenses/graphify.MIT.txt` |
+| graphify skill | Copyright 2026 Safi Shamsi and the Graphify contributors | Apache-2.0 (earlier parts MIT) | `skills/st-graphify` (`graphify/skill.md` -> `skills/st-graphify/SKILL.md`; `graphify/skills/claude/references/*.md` -> `skills/st-graphify/references/`) | `licenses/graphify.Apache-2.0.txt`, `licenses/graphify.NOTICE.txt`, `licenses/graphify.MIT.txt` |
 | Token Weather | anthropics/claude-code-playground authors | Apache-2.0 | `hooks/token-weather.mjs`, `statusline/st-statusline.sh` (third line) | `licenses/claude-code-playground.Apache-2.0.txt` |
 | claude-powerline theme colors | Copyright (c) 2025 Owloops | MIT | `statusline/themes.json` | `licenses/claude-powerline.MIT.txt` |
 
@@ -28,3 +28,8 @@ keeps its original license. Full license texts are in `licenses/`. Pinned upstre
   into Stratum's phase skills.
 - **vibecode-pro-max-kit agents:** rewritten to read Spec Kit-style `specs/` files instead of the
   `process/` tree; renamed to `st-*`.
+- **ponytail:** renamed to `st-ponytail*` (`/st-ponytail...` triggers, hooks under `hooks/ponytail/`); the
+  shortcut comment marker stays `ponytail:` (upstream uses `shortcut:` since #1068); the gain card
+  cites the upstream benchmark file by URL; the upstream band/board mod is not shipped; the codebase
+  map lists tracked files only (no directory walk when `git ls-files` is empty or fails) and reads at
+  most 64 KiB of each file.
