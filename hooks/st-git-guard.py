@@ -42,6 +42,8 @@ def parse_git(seg):
                 cdir.append(seg[i + 1])
             i += 2
         else:
+            if seg[i].startswith("-C") and len(seg[i]) > 2:
+                cdir.append(seg[i][2:])
             i += 1
     if i >= len(seg):
         return None
@@ -131,7 +133,7 @@ def destructive(key, reason):
     return m, f"DESTRUCTIVE ({key}: {m}): {reason}"
 
 
-def judge(sub, args, gitdir):
+def judge(sub, args, gitdir, elsewhere=False):
     if "--no-verify" in args:
         return "deny", "--no-verify is blocked: hooks must run."
     if sub == "config":
@@ -144,10 +146,11 @@ def judge(sub, args, gitdir):
     if sub == "commit":
         m = mode("commit")
         amend = "--amend" in args
-        if m == "auto" and not amend:
+        if m == "auto" and not amend and not elsewhere:
             return None, ""
         decision = "deny" if m == "deny" else "ask"
-        head = f"git commit (commit: {m})" + (" with --amend rewrites the last commit" if amend else "")
+        head = f"git commit (commit: {m})" + (" with --amend rewrites the last commit" if amend else "") \
+            + (" targets another folder (-C or cd)" if elsewhere else "")
         return decision, head + "\n" + staged_summary(gitdir)
     if sub == "push":
         if "--delete" in args or short_has(args, "d") or any(a.startswith(":") for a in args):
@@ -180,12 +183,14 @@ def main():
     cwd = data.get("cwd") or os.getcwd()
     GUARD.update(guard_file(cwd))
     decision, reasons = None, []
-    for seg in segments(command):
+    segs = list(segments(command))
+    moved = any(seg[0] == "cd" for seg in segs)
+    for seg in segs:
         parsed = parse_git(seg)
         if not parsed:
             continue
         sub, args, cdir = parsed
-        d, reason = judge(sub, args, os.path.join(cwd, cdir))
+        d, reason = judge(sub, args, os.path.join(cwd, cdir), bool(cdir) or moved)
         if d:
             reasons.append(reason)
             if RANK[d] > RANK[decision]:

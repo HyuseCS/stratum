@@ -43,6 +43,7 @@ project, offers to upgrade graphify, installs its post-commit hook, and checks y
 | `bunx` (Bun) | statusline bar (falls back to markers only) |
 | `graphify` 0.9.74 or later (`uv tool install graphifyy`) | code navigation graph, Dart support |
 | `gh` | optional, for `st-issues` and `st-pr` |
+| `herdr` 0.9.4, `jq` | optional, for `st-herdr-workspace` and `st-worker` |
 | `codex` 0.163.0 or later, logged in, and GNU `timeout` | optional, the Codex advisor |
 
 ## Use
@@ -92,6 +93,8 @@ The lane follows the highest impact area the change touches.
 | `st-define`, `st-plan`, `st-inspect`, `st-build`, `st-close` | Run or resume one Full-lane phase. |
 | `st-review`, `st-test`, `st-debug`, `st-git` | Run one Build-loop agent on demand. A missing feature comes from `.stratum/state.json`, a missing range is `main..HEAD`. |
 | `st-triage <issue#>...` | Check GitHub issues against the code and git history, read-only: verdict, what is built, blocker, next step. |
+| `st-herdr-workspace <folder>` | Open a project folder as a new herdr workspace with the full or basic layout, here or on a saved machine. |
+| `st-worker <task>...` | Run tasks in worker sessions (a `claude` in its own herdr pane and worktree, here or on a saved machine, or headless), then review and merge their branches. |
 | `st-status` | Feature, phase, lane, tasks done, git guard options, next gate, missing tools, duplicate installs, days since the last upstream sync, model overrides. |
 | `st-shape arrow\|rounded\|slanted\|blocks\|flat` | Set the statusline shape. |
 | `st-theme <name>` | Set the color theme of the statusline and Token Weather. |
@@ -295,11 +298,13 @@ python3 tests/test_model_hook.py
 python3 tests/test_phase_hook.py
 bash tests/test_advisor.sh
 bash tests/test_model_files.sh
+bash tests/test_herdr_workspace.sh
 bash tests/test_inspect.sh
 bash tests/test_on_demand.sh
 bash tests/test_pr_skill.sh
 bash tests/test_session_hooks.sh
 bash tests/test_shortcuts.sh
+bash tests/test_st_worker.sh
 bash tests/test_statusline.sh
 bash tests/test_verify.sh
 node tests/test_token_weather.mjs

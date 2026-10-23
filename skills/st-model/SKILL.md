@@ -8,7 +8,7 @@ description: Set the model or effort a Stratum agent uses in this project, saved
 Plugin root is two levels up from this skill's base directory.
 
 Agents: `st-build`, `st-close`, `st-debug`, `st-fast`, `st-git`, `st-impeccable`, `st-inspect`,
-`st-plan`, `st-ponytail-audit`, `st-ponytail-debt`, `st-quick`, `st-review`, `st-test`, `st-triage`.
+`st-plan`, `st-ponytail-audit`, `st-ponytail-debt`, `st-quick`, `st-review`, `st-test`, `st-triage`, `st-worker`.
 
 | Value | Effect on the agent's entry |
 |-------|-----------------------------|
@@ -37,4 +37,4 @@ named means `default`.
    If step 3 copied the template, say so and list its entries. Then reply in one line:
    `<agent>: model <model or "default (<frontmatter model>)">, effort <effort or "default">.
    Applies on the next start.` The frontmatter model is the `model:` line in
-   `<plugin root>/agents/<agent>.md`.
+   `<plugin root>/agents/<agent>.md`; for `st-worker` it is `default (the user's claude default)`.

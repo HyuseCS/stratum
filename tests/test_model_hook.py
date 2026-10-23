@@ -127,6 +127,12 @@ class ModelHookTest(unittest.TestCase):
         for a in AGENT_NAMES:
             self.assertIn(a, r)
 
+    def test_st_worker_key_allowed(self):
+        self.write_models('{"st-worker": {"model": "sonnet"}}')
+        self.assertNotIn("deny", self.run_hook(self.call(subagent_type="stratum:st-git")))
+        r = self.deny('{"st-nobody": {"model": "sonnet"}}', self.call(subagent_type="stratum:st-git"))
+        self.assertIn("st-nobody", r)
+
     def test_deny_entry_not_object(self):
         r = self.deny('{"st-close": "haiku"}')
         self.assertIn("st-close", r)
@@ -141,6 +147,11 @@ class ModelHookTest(unittest.TestCase):
         r = self.deny('{"st-close": {"model": "gpt"}}')
         for w in ("gpt", "st-close", "sonnet", "opus", "haiku", "fable"):
             self.assertIn(w, r)
+
+    def test_deny_st_worker_unknown_model(self):
+        r = self.deny('{"st-worker": {"model": "x"}}')
+        self.assertIn("st-worker", r)
+        self.assertIn("Allowed: sonnet, opus, haiku, fable.", r)
 
     def test_deny_unknown_effort(self):
         r = self.deny('{"st-close": {"effort": "ultra"}}')
