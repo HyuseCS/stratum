@@ -344,9 +344,9 @@ After step 3 (Verify), a new step 4; the commit step becomes step 5 (D26):
 | #18 FR-001 build test point | skills/st-build/SKILL.md | `bash <plugin root>/scripts/st-advisor.sh test <feature dir> <task file> <test path> <failure 1 file> <failure 2 file>` |
 | #18 FR-001 build quick | skills/st-build/SKILL.md | `The Quick lane has no advisor.` |
 | #18 FR-001 build worktree | skills/st-build/SKILL.md | `with the working directory at that worktree's root and `<feature dir>` as the main checkout's absolute path, so the record lands in the main checkout.` |
-| #18 FR-001 inspect plan point | skills/st-plan/SKILL.md | `bash <plugin root>/scripts/st-advisor.sh plan <feature dir>` |
+| #18 FR-001 plan point | skills/st-plan/SKILL.md | `bash <plugin root>/scripts/st-advisor.sh plan <feature dir>` |
 | #18 FR-002 wait build | skills/st-build/SKILL.md | `in the foreground, with a Bash timeout of 600000 ms, and wait for it. No background run, no polling.` |
-| #18 FR-002 wait inspect | skills/st-plan/SKILL.md | `in the foreground, with a Bash timeout of 600000 ms, and wait for it.` |
+| #18 FR-002 wait plan | skills/st-plan/SKILL.md | `in the foreground, with a Bash timeout of 600000 ms, and wait for it.` |
 | #18 FR-005 revise | skills/st-build/SKILL.md | `Two rounds at most per point per gate pass, then the user decides.` |
 | #18 FR-005 revise | skills/st-build/SKILL.md | `Then run the same point once more on the changed input.` |
 | #18 FR-006 blocked | skills/st-build/SKILL.md | `stop and show the user the reason. Nothing passes the gate.` |
@@ -362,7 +362,7 @@ After step 3 (Verify), a new step 4; the commit step becomes step 5 (D26):
 | #18 FR-011 no codex | skills/st-build/SKILL.md | ``no advisor: mode not set` (show the user its line) or `no advisor: mode off`: go on as before` |
 | #18 FR-011 no codex | skills/st-build/SKILL.md | ``no advisor: codex not found`, `no advisor: mode not set`` |
 | #18 FR-012 review only | skills/st-build/SKILL.md | `Never run `codex` to build or fix.` |
-| #18 FR-016 inspect rules | skills/st-plan/SKILL.md | `Handle its answer as in "Advisor" in `<plugin root>/skills/st-build/SKILL.md`` |
+| #18 FR-016 plan rules | skills/st-plan/SKILL.md | `Handle its answer as in "Advisor" in `<plugin root>/skills/st-build/SKILL.md`` |
 | #18 FR-015 init | skills/st-init/SKILL.md | `If `.stratum/advisor.json` is missing, ask the user in one question: advisor mode `codex` (recommended` |
 | #18 FR-015 init | skills/st-init/SKILL.md | `Write `.stratum/advisor.json` as `{"mode": "<answer>"}`.` |
 | #18 FR-016 readme | README.md | `The orchestrator runs `scripts/st-advisor.sh` in the foreground and waits for the answer.` |
@@ -373,7 +373,7 @@ After step 3 (Verify), a new step 4; the commit step becomes step 5 (D26):
 | #18 FR-016 readme | README.md | `A failed, empty, malformed or late answer (540 seconds) is `BLOCKED`, never approval.` |
 | #18 FR-016 readme | README.md | `An approval of a plan that changed since then is stale.` |
 | #18 D13 readme | README.md | `Whether Codex's own shell sees your environment variables is not checked.` |
-| #18 inspect keep | skills/st-plan/SKILL.md | `; big ones go to the user before the gate.` |
+| #18 plan keep | skills/st-plan/SKILL.md | `; big ones go to the user before the gate.` |
 | #18 FR-014 readme | README.md | `Optional `model` and `effort` keys in the same file pick the Codex model and reasoning effort` |
 | #18 D23 readme | README.md | `The call runs with `--ignore-user-config`: neither `~/.codex/config.toml` nor a project `.codex/config.toml` is read` |
 | #18 FR-014 init | skills/st-init/SKILL.md | `Optional `model` and `effort` keys pick the Codex model and reasoning effort` |
