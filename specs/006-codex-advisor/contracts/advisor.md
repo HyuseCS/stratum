@@ -70,11 +70,13 @@ The only Codex call, exactly these arguments, stdin from the prompt file, stdout
 files in the temp dir:
 
 ```text
-timeout -k 10 540 codex exec -s read-only [-m <model>] [-c model_reasoning_effort="<effort>"] --ephemeral --output-schema <tmp>/schema.json -o <tmp>/answer.json -
+timeout -k 10 540 codex exec -s read-only --ignore-user-config [-m <model>] [-c model_reasoning_effort="<effort>"] --ephemeral --output-schema <tmp>/schema.json -o <tmp>/answer.json -
 ```
 
 - Codex runs only when `.stratum/advisor.json` exists and is valid with mode `codex` or `both`
   (D11).
+- `--ignore-user-config` is always passed: neither `~/.codex/config.toml` nor a project
+  `.codex/config.toml` is read (D23).
 - `model` and `effort` are checked with Python `re.fullmatch` against
   `[A-Za-z0-9][A-Za-z0-9._:/-]{0,63}` and `[a-z]{1,16}` (not `re.match` with `$`, which accepts a
   trailing newline).
@@ -307,7 +309,7 @@ New step after step 10 (Tool check); step 11 (Report) becomes 12:
 
 ```markdown
 11. **Advisor.** If `.stratum/advisor.json` is missing, ask the user in one question: advisor mode `codex` (recommended: Codex reviews the plan, a test red after 2 tries, and the full diff; needs `codex` logged in), `both` (Codex, then `/advisor` if set), or `off` (no Codex, nothing sent to OpenAI)?
-   Write `.stratum/advisor.json` as `{"mode": "<answer>"}`. It is committed. New projects get the file here; without it the advisor is off. Say how to change it later: edit the file. Optional `model` and `effort` keys pick the Codex model and reasoning effort; without them Codex uses the user's own config.
+   Write `.stratum/advisor.json` as `{"mode": "<answer>"}`. It is committed. New projects get the file here; without it the advisor is off. Say how to change it later: edit the file. Optional `model` and `effort` keys pick the Codex model and reasoning effort; without them Codex uses its own default model and effort.
 ```
 
 In the Report step (`skills/st-init/SKILL.md:62-65`), the committed file list reads, as it is in
@@ -337,18 +339,13 @@ The Built in **Advisor.** bullet (lines 159-162) becomes:
   `.stratum/advisor.json` sets the mode: `{"mode": "codex"}`, `{"mode": "both"}` (Codex, then `/advisor` if you set one), or `{"mode": "off"}`. `"mode": "off"` is the off switch: nothing goes to OpenAI.
   With no file the advisor is off and prints `no advisor: mode not set. Write .stratum/advisor.json with "mode": "codex", "both" or "off".` `st-init` writes the file for new projects. A project set up before this feature has no file, so the advisor stays off until you write it.
   With no `codex` on PATH you get one line, `no advisor: codex not found`, and the flow runs as before, with `/advisor` if you set one.
-  Optional `model` and `effort` keys in the same file pick the Codex model and reasoning effort, for example `{"mode": "codex", "model": "gpt-6-astra", "effort": "high"}`. Without them Codex uses your own Codex config.
+  Optional `model` and `effort` keys in the same file pick the Codex model and reasoning effort, for example `{"mode": "codex", "model": "gpt-6-astra", "effort": "high"}`. Without them Codex uses its own default.
+  The call runs with `--ignore-user-config`: neither `~/.codex/config.toml` nor a project `.codex/config.toml` is read, so no MCP server, hook or notify command from them runs during a review, and the model and effort come only from this file. Your Codex login works as before.
 ```
 
-Last line of the bullet (D15). T011's probe showed that a trusted project loads a committed
-`.codex/config.toml` (D17), so the line is in the README and has its phrase row:
-
-```markdown
-  A committed .codex/config.toml in the project can change the Codex model, provider or host, like any committed code.
-```
-
-Its phrase row, in `tests/test_on_demand.sh`:
-`#18 D15 readme<TAB>README.md<TAB>A committed .codex/config.toml in the project can change the Codex model, provider or host, like any committed code.`
+The last line of the bullet (D23) replaces the D15 line: with `--ignore-user-config` a project
+`.codex/config.toml` is not read. Its phrase row, in `tests/test_on_demand.sh`:
+`#18 D23 readme<TAB>README.md<TAB>The call runs with `--ignore-user-config`: neither `~/.codex/config.toml` nor a project `.codex/config.toml` is read`
 
 Project files tree: after the `state.json` line add
 
@@ -421,6 +418,7 @@ Tests list (T001 adds it, so `tests/test_inspect.sh` "README tests" stays green)
 | #18 D13 readme | README.md | `Whether Codex's own shell sees your environment variables is not checked.` |
 | #18 inspect keep | skills/st-inspect/SKILL.md | `; big ones go to the user before the gate.` |
 | #18 FR-014 readme | README.md | `Optional `model` and `effort` keys in the same file pick the Codex model and reasoning effort` |
+| #18 D23 readme | README.md | `The call runs with `--ignore-user-config`: neither `~/.codex/config.toml` nor a project `.codex/config.toml` is read` |
 | #18 FR-014 init | skills/st-init/SKILL.md | `Optional `model` and `effort` keys pick the Codex model and reasoning effort` |
 | #18 FR-001 build worktree stop | skills/st-build/SKILL.md | `a subagent whose test is still red after 2 tries stops and reports both failures` |
 | #18 L16 commit build | skills/st-build/SKILL.md | `with tasks.md, and `<feature dir>/advisor.md` if it changed.` |

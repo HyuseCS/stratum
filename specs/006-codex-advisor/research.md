@@ -202,7 +202,11 @@ D3). A foreground Bash call is capped at 600000 ms.
 
 - Decision: when the file sets `model`, the call adds `-m <model>`. When it sets `effort`, the
   call adds `-c model_reasoning_effort="<effort>"` (one argv element). Without the keys neither
-  flag is passed and Codex uses the user's `~/.codex/config.toml`. `model` must pass Python
+  flag is passed. D23 adds `--ignore-user-config` to every call: neither `~/.codex/config.toml`
+  nor a project `.codex/config.toml` is read (a trusted project's config no longer loads), so
+  without the keys Codex uses its own default model (`gpt-6.1-sol` on 2026-10-23). A one-word
+  live probe with the flag in a scratch repo exited 0 with the answer `ok`: auth still works.
+  `model` must pass Python
   `re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:/-]{0,63}", v)` and `effort`
   `re.fullmatch(r"[a-z]{1,16}", v)`. Anything else, a non-string value, a file with no `mode`,
   or a key other than `mode`, `model`, `effort` is `BLOCKED: bad advisor.json`.

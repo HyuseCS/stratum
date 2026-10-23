@@ -26,7 +26,8 @@ No database. Two files and the answer Codex writes. Exact formats are in
   `BLOCKED: bad advisor.json` (research R11). A file that sets `model` without `mode` is bad: the
   owner chooses the mode, Stratum never assumes `codex`. Read as bytes and
   decoded by `json.loads` (lessons L3).
-- Without `model` and `effort`, Codex takes both from the user's own config. Stratum checks
+- `model` and `effort` are the only source of the model and effort: the call passes
+  `--ignore-user-config` (D23), so without them Codex uses its own default. Stratum checks
   their shape, not whether OpenAI accepts them: a wrong value comes back as a Codex error, which
   is `BLOCKED: codex exited <rc>` (research R11).
 - Effect: `codex` runs Codex. `both` runs Codex and prints

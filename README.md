@@ -169,8 +169,8 @@ copy for that project only.
   `.stratum/advisor.json` sets the mode: `{"mode": "codex"}`, `{"mode": "both"}` (Codex, then `/advisor` if you set one), or `{"mode": "off"}`. `"mode": "off"` is the off switch: nothing goes to OpenAI.
   With no file the advisor is off and prints `no advisor: mode not set. Write .stratum/advisor.json with "mode": "codex", "both" or "off".` `st-init` writes the file for new projects. A project set up before this feature has no file, so the advisor stays off until you write it.
   With no `codex` on PATH you get one line, `no advisor: codex not found`, and the flow runs as before, with `/advisor` if you set one.
-  Optional `model` and `effort` keys in the same file pick the Codex model and reasoning effort, for example `{"mode": "codex", "model": "gpt-6-astra", "effort": "high"}`. Without them Codex uses your own Codex config.
-  A committed .codex/config.toml in the project can change the Codex model, provider or host, like any committed code.
+  Optional `model` and `effort` keys in the same file pick the Codex model and reasoning effort, for example `{"mode": "codex", "model": "gpt-6-astra", "effort": "high"}`. Without them Codex uses its own default.
+  The call runs with `--ignore-user-config`: neither `~/.codex/config.toml` nor a project `.codex/config.toml` is read, so no MCP server, hook or notify command from them runs during a review, and the model and effort come only from this file. Your Codex login works as before.
 - **Git guard.** One mode per command: `commit`, `worktree_remove`, `worktree_prune`,
   `branch_delete`, `reset_hard`, `clean` (`clean -f`), `discard` (`checkout .`, `restore .`), and
   `force_push`. Each is `auto` (runs), `ask`, or `deny` (blocked). The guard reads the repo's

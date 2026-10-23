@@ -60,6 +60,7 @@ h=$(plan_hash)
 check "plan APPROVED: exit 0, verdict line with the plan hash" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "APPROVED sha256 $h" ]'
 check "plan record header" 'last_header plan | grep -qE "^## plan \| [0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z \| sha256 $h \| APPROVED$"'
 check "FR-012 argv read-only" '[ "$(head -n1 "$tmp/argv" 2>/dev/null)" = exec ] && grep -x -A1 -- "-s" "$tmp/argv" | grep -qx read-only && grep -qx -- "--ephemeral" "$tmp/argv" && grep -qx -- "--output-schema" "$tmp/argv" && grep -qx -- "-o" "$tmp/argv" && [ "$(tail -n1 "$tmp/argv")" = "-" ]'
+check "D23 argv ignore-user-config after read-only" 'grep -x -A1 -- read-only "$tmp/argv" | grep -qx -- --ignore-user-config'
 check "FR-012 script has no write flag" '[ -f "$root/scripts/st-advisor.sh" ] && ! grep -qE -- "workspace-write|danger-full-access|dangerously-bypass|approve-for-me|add-dir|full-auto|exec review" "$root/scripts/st-advisor.sh"'
 cat > "$tmp/schema.expected" <<'EOF'
 {"type":"object","additionalProperties":false,"required":["verdict","summary","findings"],"properties":{"verdict":{"type":"string","enum":["APPROVED","REVISE","BLOCKED"]},"summary":{"type":"string"},"findings":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["claim","evidence","location","severity"],"properties":{"claim":{"type":"string"},"evidence":{"type":"string"},"location":{"type":"string"},"severity":{"type":"string","enum":["CRITICAL","HIGH","MEDIUM","LOW"]}}}}}}
@@ -410,7 +411,7 @@ check "bad advisor.json: BLOCKED, no codex, 12 cases" 'badjson'
 printf '{"mode": "codex", "model": "gpt-test-1", "effort": "high"}' > "$mf"
 rm -f "$tmp/argv"
 run plan specs/001-demo
-check "FR-014 model and effort from the file" '[ "$(grep -cx -- -c "$tmp/argv")" = 1 ] && [ "$(sed -n 2,7p "$tmp/argv")" = "$(printf "%s\n" -s read-only -m gpt-test-1 -c "model_reasoning_effort=\"high\"")" ] && grep -x -A1 -- "-m" "$tmp/argv" | grep -qx gpt-test-1 && grep -x -A1 -- "-c" "$tmp/argv" | grep -qxF "model_reasoning_effort=\"high\"" && grep -x -A1 -- "-s" "$tmp/argv" | grep -qx read-only'
+check "FR-014 model and effort from the file" '[ "$(grep -cx -- -c "$tmp/argv")" = 1 ] && [ "$(sed -n 2,8p "$tmp/argv")" = "$(printf "%s\n" -s read-only --ignore-user-config -m gpt-test-1 -c "model_reasoning_effort=\"high\"")" ] && grep -x -A1 -- "-m" "$tmp/argv" | grep -qx gpt-test-1 && grep -x -A1 -- "-c" "$tmp/argv" | grep -qxF "model_reasoning_effort=\"high\"" && grep -x -A1 -- "-s" "$tmp/argv" | grep -qx read-only'
 
 printf '{"mode": "codex", "model": "gpt-test-1"}' > "$mf"
 rm -f "$tmp/argv"

@@ -111,7 +111,7 @@ printf '%s\n' '{"type":"object","additionalProperties":false,"required":["verdic
 } > "$tmp/prompt"
 
 rc=0
-timeout -k 10 540 codex exec -s read-only "${opts[@]}" --ephemeral --output-schema "$tmp/schema.json" -o "$tmp/answer.json" - < "$tmp/prompt" > "$tmp/out" 2> "$tmp/err" || rc=$?
+timeout -k 10 540 codex exec -s read-only --ignore-user-config "${opts[@]}" --ephemeral --output-schema "$tmp/schema.json" -o "$tmp/answer.json" - < "$tmp/prompt" > "$tmp/out" 2> "$tmp/err" || rc=$?
 
 python3 -I - "$point" "$f" "$hash" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$tmp/answer.json" "$rc" "$tmp/err" <<'PY'
 import json, os, sys
