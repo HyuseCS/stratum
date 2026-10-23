@@ -161,6 +161,7 @@ printf '{}\n' > "$repo/.stratum/state.json"
 git -C "$repo" add .stratum/state.json
 printf '.stratum/models.json\n' >> "$repo/.git/info/exclude"
 git -C "$repo" -c user.name=t -c user.email=t@t commit -q -m first
+git -C "$repo" remote add origin https://github.com/stub/stub.git
 sha=$(git -C "$repo" rev-parse HEAD)
 
 task="$tmp/task.md"
@@ -513,6 +514,14 @@ mk; states done
 STUB_GH_FAIL=1 run bash "$script" close T004
 check "C10 exit 1" '[ $rc = 1 ]'
 check "C10 the cannot-read-PRs refuse line, no closed line, no workspace close" '[ "$out" = "Worker worker-t004: cannot read its PRs. Close refused." ] && ! grep -q "^closed" <<<"$out" && never 0 0'
+
+mk; states done
+git -C "$repo" remote set-url origin https://gitlab.com/stub/stub.git
+STUB_GH_FAIL=1 run bash "$script" close T004
+git -C "$repo" remote set-url origin https://github.com/stub/stub.git
+check "C11 no GitHub remote: exit 0" '[ $rc = 0 ]'
+check "C11 no GitHub remote: closed and folder lines, one workspace close" 'hasline "closed\tworker-t004" && hasline "folder\t%s\tready to remove" "$(wt)" && hascall "workspace\tclose\t%s" "$(wsid)" && never 1 0'
+check "C11 no GitHub remote: no gh call" '[ ! -s "$tmp/gh_calls" ]'
 
 fresh
 x=$(rnd)

@@ -298,8 +298,11 @@ close)
   else
     [ "$(code)" = agent_not_found ] || fail "Worker $N: cannot read worker state. Close refused."
   fi
-  p=$(gh pr list --head "$N" --state open --json number -q length 2>/dev/null) || fail "Worker $N: cannot read its PRs. Close refused."
-  [ "$p" = 0 ] || fail "Worker $N has an open PR. Close refused."
+  # ponytail: GitHub remote found by "github" in a remote URL, use gh's host list if a GitHub Enterprise host lacks the word
+  if git remote -v 2>/dev/null | grep -q github; then
+    p=$(gh pr list --head "$N" --state open --json number -q length 2>/dev/null) || fail "Worker $N: cannot read its PRs. Close refused."
+    [ "$p" = 0 ] || fail "Worker $N has an open PR. Close refused."
+  fi
   h workspace close "$WS"
   for k in agent:name workspace:label; do
     h "${k%:*}" list
