@@ -22,8 +22,8 @@ line of the file, because the test greps it with `grep -qF`.
      Put a task that builds on a teammate's work on that teammate's machine: no commit crosses machines (D25).
      When the request names a model ("model <name>"), pass `--model <name>` to `start` or `headless` (D27); else pass none.
   2. Per task: the task text from `<feature>/tasks.md` (or the user's words), the test command the
-     task names (none: ask the user), the lane (`/stratum:st-build, task <id> only` for a task in
-     tasks.md). For a saved machine, the repo path there (unknown: ask the user).
+     task names (none: ask the user), the lane: the default lane is `plain edit, no lane`, and pass a
+     Stratum lane only when the user names one in the request (D29). For a saved machine, the repo path there (unknown: ask the user).
   3. Record the base: `git rev-parse HEAD` of the current branch before the first `start`. This sha is `<base>` in step 8.
      Write the roster to a scratchpad file: one line per worker, `worker-<id>`, machine (`local`
      for this machine), branch (`worker-<id>`), task id, split by TAB. Write each task text to its
@@ -116,6 +116,8 @@ line of the file, because the test greps it with `grep -qF`.
 | `#17 no retry` | `After a failure, do not run start again` |
 | `#17 F7 red before` | `red before the merge: no merge` |
 | `#17 F7 red after` | `red after it: stop, bring it to the user, merge no later branch` |
+| `#17 D29 lane default` | `` the default lane is `plain edit, no lane` `` |
+| `#17 D29 lane named` | `pass a Stratum lane only when the user names one` |
 
 The phrase is the cell text inside its outer backticks, with no space at either end.
 

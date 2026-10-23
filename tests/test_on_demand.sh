@@ -250,6 +250,8 @@ phrases <<'EOF'
 #17 F5 headless cmd	skills/st-worker/SKILL.md	bash <plugin root>/scripts/st-worker.sh headless <id> --task <file> --test <cmd>
 #17 F7 red before	skills/st-worker/SKILL.md	red before the merge: no merge
 #17 F7 red after	skills/st-worker/SKILL.md	red after it: stop, bring it to the user, merge no later branch
+#17 D29 lane default	skills/st-worker/SKILL.md	the default lane is `plain edit, no lane`
+#17 D29 lane named	skills/st-worker/SKILL.md	pass a Stratum lane only when the user names one
 EOF
 check "#17 skill" 'f="$root/skills/st-worker/SKILL.md"; [ -f "$f" ] && grep -qx "name: st-worker" "$f" && grep -q "^# /stratum:st-worker" "$f"'
 check "#17 FR-009 order" 'f="$root/skills/st-worker/SKILL.md"; [ -f "$f" ] && r=$(grep -nF "/stratum:st-review" "$f" | head -1 | cut -d: -f1) && m=$(grep -nF "git merge --no-ff" "$f" | head -1 | cut -d: -f1) && c=$(grep -nF "st-worker.sh close" "$f" | head -1 | cut -d: -f1) && [ -n "$r" ] && [ -n "$m" ] && [ -n "$c" ] && [ "$r" -lt "$m" ] && [ "$m" -lt "$c" ]'
