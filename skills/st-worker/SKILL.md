@@ -32,7 +32,7 @@ Make no herdr call yourself. Run only `scripts/st-worker.sh`, git and the `st-re
 11. Close: `bash <plugin root>/scripts/st-worker.sh close <id> [--machine <m>]` per merged worker. Show the `folder ... ready to remove` line. Never close a blocked, stopped or failed worker: its pane stays for the user.
 12. In a new session, run `bash <plugin root>/scripts/st-worker.sh list` here and `bash <plugin root>/scripts/st-worker.sh list --machine <m>` per saved machine the user names, then go on from step 6 with the ids found, and run the follow-ups with the same `--machine <m>`.
 
-Headless: run `bash <plugin root>/scripts/st-worker.sh headless <id> --task <file> --test <cmd>` and show its lines. A reply that says what is missing goes to the user. On exit 0, commit the changed files through the `stratum:st-git` agent, because the headless worker never commits.
+Headless: run `bash <plugin root>/scripts/st-worker.sh headless <id> --task <file> --test <cmd>` and show its lines. A reply that says what is missing goes to the user. On exit 0, run the test command here and commit only on its exit 0: commit the changed files through the `stratum:st-git` agent, because the headless worker never commits. A red test means no commit: report it.
 
 Never run `herdr machine reconnect` or `herdr server stop`, never push, and never remove a worktree folder.
 

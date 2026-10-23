@@ -64,8 +64,9 @@ line of the file, because the test greps it with `grep -qF`.
   12. In a new session, run `bash <plugin root>/scripts/st-worker.sh list` here and `bash <plugin root>/scripts/st-worker.sh list --machine <m>` per saved
       machine the user names, then go on from step 6 with the ids found, and run the follow-ups with the same `--machine <m>`.
 - Headless: run `bash <plugin root>/scripts/st-worker.sh headless <id> --task <file> --test <cmd>` and show its lines. A reply that
-  says what is missing goes to the user. On exit 0, commit the changed files through the
-  `stratum:st-git` agent, because the headless worker never commits.
+  says what is missing goes to the user. On exit 0, run the test command here and commit only on its exit 0: commit the
+  changed files through the `stratum:st-git` agent, because the headless worker never commits. A red test means no commit:
+  report it.
 - Never run `herdr machine reconnect` or `herdr server stop`, never push, and never remove a worktree folder.
 - `The build loop (/stratum:st-build) does not use workers.` (FR-014)
 
@@ -107,6 +108,8 @@ line of the file, because the test greps it with `grep -qF`.
 | `#17 C4 close machine` | `bash <plugin root>/scripts/st-worker.sh close <id> [--machine <m>]` |
 | `#17 C4 resume machine` | `` run `bash <plugin root>/scripts/st-worker.sh list` here `` |
 | `#17 C4 resume machine` | `` run the follow-ups with the same `--machine <m>` `` |
+| `#17 F5 headless test` | `run the test command here and commit only on its exit 0` |
+| `#17 F5 headless cmd` | `bash <plugin root>/scripts/st-worker.sh headless <id> --task <file> --test <cmd>` |
 | `#17 stop` | `On a one-line failure, show the line and stop.` |
 | `#17 no retry` | `After a failure, do not run start again` |
 
