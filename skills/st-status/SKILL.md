@@ -19,7 +19,7 @@ block. Change nothing.
    else `ask`. Show each mode and where it comes from (repo file, global option, default).
    Change the repo file by hand, the global ones in `/config` or `/plugin config`.
 4. **Tools:** check each and name any missing or too old: `git`, `python3`, `node`, `bunx`
-   (statusline), `graphify --version` (needs 0.9.74 or later for Dart), and whether the graphify
+   (statusline), `herdr` and `jq` (optional, for `st-herdr-workspace` and `st-worker`), `graphify --version` (needs 0.9.74 or later for Dart), and whether the graphify
    post-commit hook is installed (`graphify hook status`). For graphify too old or missing, give
    `uv tool install --force graphifyy`; for no hook, give `graphify hook install`.
 5. **Duplicates:** list Stratum skills that also exist outside the plugin and could run twice or
@@ -31,7 +31,9 @@ block. Change nothing.
 6. **Upstream sync:** days since `synced` in `<plugin root>/vendor.lock`. Over 30 days: say so.
 7. **Model overrides:** from `<project>/.stratum/models.json`, list each agent in the file with its
    model and effort. For a key the entry does not set, show the default: the model from the
-   `model:` line in `<plugin root>/agents/<agent>.md`, effort `default`. Say the values come from
+   `model:` line in `<plugin root>/agents/<agent>.md`, effort `default`. `st-worker` has no agents
+   file: its default model is the user's claude default, and its `effort` has no effect (the script
+   passes only `model`). Say the values come from
    `.stratum/models.json` and change with `/stratum:st-model` or by editing the file. No file or no
    entries: say every agent uses the plugin defaults. A bad file: say so and quote the problem.
    To find the problem, run from the project root `echo '{"tool_input":{"subagent_type":"stratum:st-inspect"}}' | python3 <plugin root>/hooks/st-models.py`

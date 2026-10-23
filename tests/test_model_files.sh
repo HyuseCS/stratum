@@ -40,6 +40,7 @@ check "st-model description names models.json" 'grep -m1 "^description:" "$sm" |
 check "st-model description has examples" 'd=$(grep -m1 "^description:" "$sm"); grep -qF "make st-close use opus" <<<"$d" && grep -qF "put st-test on high effort" <<<"$d" && grep -qF "put st-close back on its default" <<<"$d"'
 check "st-model description names model and effort" 'd=$(grep -m1 "^description:" "$sm"); grep -qw model <<<"$d" && grep -qw effort <<<"$d"'
 check "st-model names every agent" '(for a in $(ls "$root/agents" | sed "s/\.md$//"); do grep -qF "\`$a\`" "$sm" || exit 1; done)'
+check "st-model Agents line names st-worker" 'grep -A1 "^Agents:" "$sm" | grep -qF "\`st-worker\`"'
 check "st-model names default forms" 'grep -qF "model default" "$sm" && grep -qF "effort default" "$sm" && grep -F "remove the whole entry" "$sm" | grep -qF "\`default\`"'
 check "st-model runs the hook" 'grep -qF "hooks/st-models.py" "$sm"'
 check "st-model uses template" 'grep -qF "templates/models.json" "$sm"'

@@ -1,0 +1,6 @@
+{
+  "name": "spike-start",
+  "version": "0.0.1",
+  "description": "Spike: start a headless session with a host process and show its status in a pane",
+  "types": "./types/index.d.ts"
+}

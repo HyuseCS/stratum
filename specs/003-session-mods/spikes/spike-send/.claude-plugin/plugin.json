@@ -1,0 +1,6 @@
+{
+  "name": "spike-send",
+  "version": "0.0.1",
+  "description": "Spike: send one message to another session and show the reply in a pane",
+  "types": "./types/index.d.ts"
+}

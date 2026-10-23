@@ -91,6 +91,13 @@ class GitGuardTest(unittest.TestCase):
         self.set_mode("auto")
         self.assertEqual(self.run_guard("git commit --amend --no-edit")[0], "ask")
 
+    def test_commit_auto_only_in_session_folder(self):
+        self.write_guard_file('{"commit":"auto"}')
+        self.assertEqual(self.run_guard("git commit -m x"), (None, ""))
+        for cmd in ("git -C /other/repo commit -m x", "git -C/other/repo commit -m x",
+                    "cd /other && git commit -m x", "git commit --amend"):
+            self.assertEqual(self.run_guard(cmd)[0], "ask", cmd)
+
     def test_push(self):
         d, reason = self.run_guard("git push origin main")
         self.assertEqual(d, "ask")
