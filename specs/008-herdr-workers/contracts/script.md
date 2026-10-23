@@ -88,7 +88,8 @@ ssh call, with `G` quoted by `printf %q`:
 `ponytail:` on a saved machine `G` comes from this machine's repo file; the saved machine's own
 repo guard file is not read. The script never writes `git-guard.json` anywhere else.
 
-Exact text, with `<...>` filled in. The advisor block is written only when `st-advisor.sh` exists
+Exact text, with `<...>` filled in. `<plugin root>` is the parent of the script's own folder,
+`$(cd "$(dirname "$0")/.." && pwd)`. The advisor block is written only when `st-advisor.sh` exists
 in the same folder as `st-worker.sh`.
 
 ```text
@@ -106,6 +107,7 @@ You are worker <N>, started by the Stratum orchestrator. Read this file first an
 - Lane: <lane>. If it names a skill, start it with the Skill tool. Run only task <id>; skip every other task, ticked or not.
 - Branch: <N>
 - Model: <model or default>
+- Plugin root: <plugin root>
 - Your machine: <m or local>. `local` is the orchestrator's machine.
 - Result file: <WT>/result.md
 
@@ -120,7 +122,7 @@ You are worker <N>, started by the Stratum orchestrator. Read this file first an
 1. Commit each finished unit with the st-git agent, exact paths only. Never commit brief.md, result.md or .stratum/git-guard.json.
 2. Before you build on a teammate's work, merge its branch: `git log <branch>`, `git merge <branch>`. A teammate on another machine shares no commits with you: send it messages only, and do not build on its work.
 3. Ask a teammate by name: on your machine, SendMessage to its name; on another machine, `herdr --machine <label> agent prompt <name> "<text>"`, with `<label>` from `herdr machine list` on your machine.
-4. Never merge and never push. The orchestrator reviews every branch and is the only one who merges.
+4. Never merge into the base branch and never push. Merging a teammate's branch into your own (rule 2) is fine. The orchestrator reviews every branch and is the only one who merges into the base.
 
 ## Questions
 
@@ -347,7 +349,7 @@ stub log, never from built ids.
 
 | Case | What it asserts |
 |------|-----------------|
-| S1 | `start` here: one `worktree create` with `--cwd <repo> --branch worker-t004 --base <HEAD sha> --path <parent>/<repo>-worker-t004 --label worker-t004 --no-focus`; brief.md in the stub's path with the task text, test command, lane, the line `Run only task T004; skip every other task, ticked or not.`, result path, every roster row and the four team rules; with no guard file in the repo, `<WT>/.stratum/git-guard.json` is `{"commit":"auto"}` and the repo still has no guard file; no advisor block; one `agent start` with `-- --permission-mode auto -n worker-t004`; exactly one `agent prompt` with text `P` and `--wait --until working --until blocked`; `worker` line ids from the stub log; exit 0 |
+| S1 | `start` here: one `worktree create` with `--cwd <repo> --branch worker-t004 --base <HEAD sha> --path <parent>/<repo>-worker-t004 --label worker-t004 --no-focus`; brief.md in the stub's path with the task text, test command, lane, the line `Run only task T004; skip every other task, ticked or not.`, result path, every roster row and the four team rules; the line `- Plugin root: <dir>` where `<dir>` is the parent of the folder that holds the script under test; with no guard file in the repo, `<WT>/.stratum/git-guard.json` is `{"commit":"auto"}` and the repo still has no guard file; no advisor block; one `agent start` with `-- --permission-mode auto -n worker-t004`; exactly one `agent prompt` with text `P` and `--wait --until working --until blocked`; `worker` line ids from the stub log; exit 0 |
 | S1b | `start` here with the repo file `.stratum/git-guard.json` = `{"force_push":"deny"}`: `<WT>/.stratum/git-guard.json` is the one line `{"force_push":"deny","commit":"auto"}`; the repo file is unchanged |
 | S2 | same with a dummy `st-advisor.sh` next to a copy of the script: the advisor block is in the brief |
 | S3 | `agent start` fails with `agent_not_ready`: `state blocked`, `pane text:`, the stub pane text, no `agent prompt`, exit 4; then `goal` sends exactly one `agent prompt`, exit 0 |

@@ -152,7 +152,7 @@ printf '%s\n' \
   '1. Commit each finished unit with the st-git agent, exact paths only. Never commit brief.md, result.md or .stratum/git-guard.json.' \
   "2. Before you build on a teammate's work, merge its branch: \`git log <branch>\`, \`git merge <branch>\`. A teammate on another machine shares no commits with you: send it messages only, and do not build on its work." \
   '3. Ask a teammate by name: on your machine, SendMessage to its name; on another machine, `herdr --machine <label> agent prompt <name> "<text>"`, with `<label>` from `herdr machine list` on your machine.' \
-  '4. Never merge and never push. The orchestrator reviews every branch and is the only one who merges.' > "$rules"
+  '4. Never merge into the base branch and never push. Merging a teammate'"'"'s branch into your own (rule 2) is fine. The orchestrator reviews every branch and is the only one who merges into the base.' > "$rules"
 P="/goal \`$testcmd\` exits 0, the change is committed on branch worker-t004, and result.md is written; read brief.md in this folder first and follow it"
 sargs=(T004 --task "$task" --test "$testcmd" --lane "$lane" --roster "$roster")
 
@@ -197,11 +197,12 @@ prej() {
 
 s1() {
   fresh; run bash "$1" start "${sargs[@]}"
-  local b; b="$(wt)/brief.md"
+  local b pr; b="$(wt)/brief.md"; pr=$(cd "$(dirname "$1")/.." && pwd)
   check "S1 exit 0" '[ $rc = 0 ]'
   check "S1 one worktree create, argv as built" '[ "$(cnt "^worktree\tcreate\t")" = 1 ] && hascall "worktree\tcreate\t--cwd\t%s\t--branch\tworker-t004\t--base\t%s\t--path\t%s\t--label\tworker-t004\t--no-focus" "$repo" "$sha" "$tmp/repo-worker-t004"'
   check "S1 brief has the task text" 'grep -qxF "TASK BODY $(rnd)" "$b"'
   check "S1 brief heading, test, lane, branch, machine, result path" 'grep -qxF "# Brief: worker-t004" "$b" && grep -qxF -- "- Test command: \`$testcmd\`" "$b" && grep -qxF -- "- Lane: $lane. If it names a skill, start it with the Skill tool. Run only task T004; skip every other task, ticked or not." "$b" && grep -qxF -- "- Branch: worker-t004" "$b" && grep -qxF -- "- Your machine: local. \`local\` is the orchestrator'"'"'s machine." "$b" && grep -qxF -- "- Result file: $(wt)/result.md" "$b"'
+  check "S1 brief names the plugin root" 'grep -qxF -- "- Plugin root: $pr" "$b"'
   check "S1 brief has every roster row" 'grep -qxF "| worker-t004 | local | worker-t004 | T004 |" "$b" && grep -qxF "| worker-t005 | local | worker-t005 | T005 |" "$b"'
   check "S1 brief has the four team rules" '[ "$(grep -cxFf "$rules" "$b")" = 4 ]'
   check "S1 brief rule 1 names .stratum/git-guard.json" 'grep -q "^1\. .*Never commit .*\.stratum/git-guard\.json\.\$" "$b"'

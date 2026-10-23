@@ -151,7 +151,7 @@ brief() {
   printf '%s\n\n' "# Brief: $N" "You are worker $N, started by the Stratum orchestrator. Read this file first and follow it." "## Task $id"
   cat -- "$task"
   printf '\n%s\n\n' '## Facts'
-  printf '%s\n' "- Test command: \`$test\`" "- Lane: $lane. If it names a skill, start it with the Skill tool. Run only task $id; skip every other task, ticked or not." "- Branch: $N" "- Model: ${model:-default}" "- Your machine: ${m:-local}. \`local\` is the orchestrator's machine." "- Result file: $WT/result.md"
+  printf '%s\n' "- Test command: \`$test\`" "- Lane: $lane. If it names a skill, start it with the Skill tool. Run only task $id; skip every other task, ticked or not." "- Branch: $N" "- Model: ${model:-default}" "- Your machine: ${m:-local}. \`local\` is the orchestrator's machine." "- Result file: $WT/result.md" "- Plugin root: $(cd "$(dirname "$0")/.." && pwd)"
   printf '\n%s\n\n%s\n%s\n' '## Roster' '| Name | Machine | Branch | Task |' '|------|---------|--------|------|'
   printf '| %s | %s | %s | %s |\n' "${R[@]}"
   printf '\n%s\n\n' '## Team rules'
@@ -159,7 +159,7 @@ brief() {
     '1. Commit each finished unit with the st-git agent, exact paths only. Never commit brief.md, result.md or .stratum/git-guard.json.' \
     "2. Before you build on a teammate's work, merge its branch: \`git log <branch>\`, \`git merge <branch>\`. A teammate on another machine shares no commits with you: send it messages only, and do not build on its work." \
     '3. Ask a teammate by name: on your machine, SendMessage to its name; on another machine, `herdr --machine <label> agent prompt <name> "<text>"`, with `<label>` from `herdr machine list` on your machine.' \
-    '4. Never merge and never push. The orchestrator reviews every branch and is the only one who merges.'
+    "4. Never merge into the base branch and never push. Merging a teammate's branch into your own (rule 2) is fine. The orchestrator reviews every branch and is the only one who merges into the base."
   printf '\n%s\n\n%s\n%s\n' '## Questions' 'Ask a question only with the AskUserQuestion tool, then wait for the answer. Do not ask in plain text and do not guess.' 'Do not edit tasks.md or .stratum/state.json. The orchestrator ticks the task after the merge.'
   printf '\n%s\n\n%s\n' '## When done' 'Write the result file with four lines:'
   printf '%s\n' 'Built: <what you built>' 'Tests: <test command> exit <code>' 'Commit: <sha>' 'Open: <open points, or none>'
