@@ -104,7 +104,9 @@ say where it is, and stop.
 
 PR URL, base, draft or ready, each failed check with its link, what the PR includes in two
 lines, and the warnings from the gate.
+End with: Ready for you to test. I merge only on your word.
 
 ## Always
 
 - Never skip the commit guard. If a push is blocked, tell the user; do not work around it.
+- Never merge the PR. The user tests it first.

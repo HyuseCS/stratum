@@ -142,7 +142,14 @@ jq -nc --argjson n "$turns" --argjson c "$cost" --arg r "HEADLESS $(cat "$T/x")"
 [ "${STUB_CLAUDE:-}" != okfail ] || exit 1
 EOF
 chmod +x "$tmp/bin/claude"
-for b in herdr ssh git sleep timeout claude; do
+cat > "$tmp/bin/gh" <<'EOF2'
+#!/usr/bin/env bash
+( IFS=$'\t'; printf '%s\n' "$*" >> "$STUB_T/gh_calls" )
+if [ -n "${STUB_GH_FAIL:-}" ]; then echo 'gh: stub failure' >&2; exit 1; fi
+if [ -n "${STUB_PR_OPEN:-}" ]; then echo 1; else echo 0; fi
+EOF2
+chmod +x "$tmp/bin/gh"
+for b in herdr ssh git sleep timeout claude gh; do
   found=$(PATH="$tmp/bin:$PATH" command -v $b)
   if [ "$found" != "$tmp/bin/$b" ]; then echo "FAIL stub $b is first on PATH: found $found"; exit 1; fi
 done
@@ -154,6 +161,7 @@ printf '{}\n' > "$repo/.stratum/state.json"
 git -C "$repo" add .stratum/state.json
 printf '.stratum/models.json\n' >> "$repo/.git/info/exclude"
 git -C "$repo" -c user.name=t -c user.email=t@t commit -q -m first
+git -C "$repo" remote add origin https://github.com/stub/stub.git
 sha=$(git -C "$repo" rev-parse HEAD)
 
 task="$tmp/task.md"
@@ -166,11 +174,11 @@ printf '%s\n' \
   '1. Commit each finished unit with the st-git agent, exact paths only. Never commit brief.md, result.md or .stratum/git-guard.json.' \
   "2. Before you build on a teammate's work, merge its branch: \`git log <branch>\`, \`git merge <branch>\`. A teammate on another machine shares no commits with you: send it messages only, and do not build on its work." \
   '3. Ask a teammate by name: on your machine, SendMessage to its name; on another machine, `herdr --machine <label> agent prompt <name> "<text>"`, with `<label>` from `herdr machine list` on your machine.' \
-  '4. Never merge into the base branch and never push. Merging a teammate'"'"'s branch into your own (rule 2) is fine. The orchestrator reviews every branch and is the only one who merges into the base.' > "$rules"
+  '4. Never merge into the base branch and never push. Merging a teammate'"'"'s branch into your own (rule 2) is fine. When your task says to run /stratum:st-pr, run it: it pushes your branch and opens the PR, and that is the only push allowed. The orchestrator reviews every branch and is the only one who merges into the base.' > "$rules"
 P="/goal \`$testcmd\` exits 0, the change is committed on branch worker-t004, and result.md is written; read brief.md in this folder first and follow it"
 sargs=(T004 --task "$task" --test "$testcmd" --lane "$lane" --roster "$roster")
 
-reset() { : > "$tmp/calls"; }
+reset() { : > "$tmp/calls"; : > "$tmp/gh_calls"; }
 states() { rm -f "$tmp/n_get"; printf '%s\n' "$@" > "$tmp/states"; }
 fresh() {
   rm -rf "$tmp"/repo-worker-* "$tmp"/n_* "$tmp/closed" "$tmp/resume_result" "$tmp/wc.json" "$tmp/s2"
@@ -455,6 +463,7 @@ run bash "$script" close T004
 check "C1 exit 0" '[ $rc = 0 ]'
 check "C1 one workspace close on the stub WS" 'hascall "workspace\tclose\t%s" "$(wsid)" && never 1 0'
 check "C1 closed and folder lines" 'hasline "closed\tworker-t004" && hasline "folder\t%s\tready to remove" "$(wt)"'
+check "C1 one gh call: pr list --head worker-t004 --state open" '[ "$(cat "$tmp/gh_calls")" = "$(printf "pr\tlist\t--head\tworker-t004\t--state\topen\t--json\tnumber\t-q\tlength")" ]'
 
 mk; states working
 run bash "$script" close T004
@@ -495,6 +504,24 @@ for k in agent:'{}' agent:'not json' workspace:'{}' workspace:'not json'; do
   check "C8 ${k%%:*} list answers ${k#*:} after the close: one cannot-read line" '[ "$out" = "close left ${k%%:*} worker-t004: cannot read the list" ]'
   check "C8 ${k%%:*} list answers ${k#*:} after the close: one workspace close" 'hascall "workspace\tclose\t%s" "$(wsid)" && never 1 0'
 done
+
+mk; states done
+STUB_PR_OPEN=1 run bash "$script" close T004
+check "C9 exit 1" '[ $rc = 1 ]'
+check "C9 the open-PR refuse line, no closed line, no workspace close" '[ "$out" = "Worker worker-t004 has an open PR. Close refused." ] && ! grep -q "^closed" <<<"$out" && never 0 0'
+
+mk; states done
+STUB_GH_FAIL=1 run bash "$script" close T004
+check "C10 exit 1" '[ $rc = 1 ]'
+check "C10 the cannot-read-PRs refuse line, no closed line, no workspace close" '[ "$out" = "Worker worker-t004: cannot read its PRs. Close refused." ] && ! grep -q "^closed" <<<"$out" && never 0 0'
+
+mk; states done
+git -C "$repo" remote set-url origin https://gitlab.com/stub/stub.git
+STUB_GH_FAIL=1 run bash "$script" close T004
+git -C "$repo" remote set-url origin https://github.com/stub/stub.git
+check "C11 no GitHub remote: exit 0" '[ $rc = 0 ]'
+check "C11 no GitHub remote: closed and folder lines, one workspace close" 'hasline "closed\tworker-t004" && hasline "folder\t%s\tready to remove" "$(wt)" && hascall "workspace\tclose\t%s" "$(wsid)" && never 1 0'
+check "C11 no GitHub remote: no gh call" '[ ! -s "$tmp/gh_calls" ]'
 
 fresh
 x=$(rnd)
