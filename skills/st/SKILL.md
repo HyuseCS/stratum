@@ -59,6 +59,9 @@ tell the user in one line, and restart at the higher lane with what was learned.
   from the project root. It re-runs the tests and greps the diff for added comment lines. Send
   back any `FAIL`.
 - Push only when the user says "push".
+- Every merge into main goes through its GitHub PR (`gh pr merge --merge`), never a local merge
+  into main. Never merge a PR before the user says they tested it. A session that works a branch
+  toward main opens the PR itself with `/stratum:st-pr` and stays open until the PR is merged.
 - Make GitHub issues only when the user asks, or at the `st-plan` question. Do not end a reply
   with an offer to file issues for the items in a list. Keep the list in the conversation and
   the handoff.

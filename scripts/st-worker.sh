@@ -162,7 +162,7 @@ brief() {
     '1. Commit each finished unit with the st-git agent, exact paths only. Never commit brief.md, result.md or .stratum/git-guard.json.' \
     "2. Before you build on a teammate's work, merge its branch: \`git log <branch>\`, \`git merge <branch>\`. A teammate on another machine shares no commits with you: send it messages only, and do not build on its work." \
     '3. Ask a teammate by name: on your machine, SendMessage to its name; on another machine, `herdr --machine <label> agent prompt <name> "<text>"`, with `<label>` from `herdr machine list` on your machine.' \
-    "4. Never merge into the base branch and never push. Merging a teammate's branch into your own (rule 2) is fine. The orchestrator reviews every branch and is the only one who merges into the base."
+    "4. Never merge into the base branch and never push. Merging a teammate's branch into your own (rule 2) is fine. When your task says to run /stratum:st-pr, run it: it pushes your branch and opens the PR, and that is the only push allowed. The orchestrator reviews every branch and is the only one who merges into the base."
   printf '\n%s\n\n%s\n%s\n' '## Questions' 'Ask a question only with the AskUserQuestion tool, then wait for the answer. Do not ask in plain text and do not guess.' 'Do not edit tasks.md or .stratum/state.json. The orchestrator ticks the task after the merge.'
   printf '\n%s\n\n%s\n' '## When done' 'Write the result file with four lines:'
   printf '%s\n' 'Built: <what you built>' 'Tests: <test command> exit <code>' 'Commit: <sha>' 'Open: <open points, or none>'
@@ -298,6 +298,8 @@ close)
   else
     [ "$(code)" = agent_not_found ] || fail "Worker $N: cannot read worker state. Close refused."
   fi
+  p=$(gh pr list --head "$N" --state open --json number -q length 2>/dev/null) || fail "Worker $N: cannot read its PRs. Close refused."
+  [ "$p" = 0 ] || fail "Worker $N has an open PR. Close refused."
   h workspace close "$WS"
   for k in agent:name workspace:label; do
     h "${k%:*}" list

@@ -311,4 +311,17 @@ check "#18 FR-001 quick lane" '! grep -qF st-advisor "$root/skills/st-quick/SKIL
 check "#18 FR-016 st-inspect old advisor text gone" '! grep -qF "If an advisor is set (\`/advisor\`)" "$root/skills/st-inspect/SKILL.md"'
 check "#18 D27 st-plan no validation risk text" '! grep -qF "missed auth invariants" "$root/skills/st-plan/SKILL.md"'
 
+phrases <<'EOF'
+#pr-flow st merge via PR	skills/st/SKILL.md	Every merge into main goes through its GitHub PR (`gh pr merge --merge`), never a local merge
+#pr-flow st tested first	skills/st/SKILL.md	Never merge a PR before the user says they tested it.
+#pr-flow st session opens PR	skills/st/SKILL.md	opens the PR itself with `/stratum:st-pr` and stays open until the PR is merged.
+#pr-flow st-pr report	skills/st-pr/SKILL.md	End with: Ready for you to test. I merge only on your word.
+#pr-flow st-pr never merge	skills/st-pr/SKILL.md	- Never merge the PR. The user tests it first.
+#pr-flow worker own PR	skills/st-worker/SKILL.md	A worker whose branch goes to main (a whole issue) opens its own PR: end its task text with "When done, run /stratum:st-pr main."
+#pr-flow worker no merge to main	skills/st-worker/SKILL.md	A branch that goes to main is never merged here: after the review, its PR replaces the merge and steps 9 and 10, and the user merges it on GitHub after testing.
+#pr-flow worker feature merge	skills/st-worker/SKILL.md	Task workers inside one feature merge into the feature branch here, because that branch reaches main through its own PR.
+#pr-flow worker close after merged	skills/st-worker/SKILL.md	A worker whose branch goes to main closes only after `gh pr view worker-<id> --json state -q .state` shows `MERGED`; until then tell the user its PR is ready to test and keep the pane.
+#pr-flow worker close refuses	skills/st-worker/SKILL.md	`close` refuses while the branch has an open PR (`gh pr list --head worker-<id> --state open`) or when it cannot read the PRs.
+EOF
+
 exit $fail
