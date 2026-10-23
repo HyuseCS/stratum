@@ -242,11 +242,11 @@ phrases <<'EOF'
 #18 D23 readme	README.md	The call runs with `--ignore-user-config`: neither `~/.codex/config.toml` nor a project `.codex/config.toml` is read
 #18 FR-014 init	skills/st-init/SKILL.md	Optional `model` and `effort` keys pick the Codex model and reasoning effort
 #18 FR-001 build worktree stop	skills/st-build/SKILL.md	a subagent whose test is still red after 2 tries stops and reports both failures
-#18 L16 commit build	skills/st-build/SKILL.md	with tasks.md, and `<feature dir>/advisor.md` if it changed.
-#18 L16 commit build	skills/st-build/SKILL.md	then have `st-git` commit `<feature dir>/advisor.md` if it changed.
-#18 L16 commit inspect	skills/st-inspect/SKILL.md	Have `st-git` commit `<feature dir>/advisor.md` if it changed.
-#18 L16 commit fast	skills/st-fast/SKILL.md	with `<feature dir>/advisor.md` if it changed.
-#18 L17 debug worktree	skills/st-build/SKILL.md	Start `st-debug` from the main session too, with the worktree path; it diagnoses, fixes and verifies in that worktree.
+#18 L18 commit build	skills/st-build/SKILL.md	with tasks.md, and `<feature dir>/advisor.md` if it changed.
+#18 L18 commit build	skills/st-build/SKILL.md	then have `st-git` commit `<feature dir>/advisor.md` if it changed.
+#18 L18 commit inspect	skills/st-inspect/SKILL.md	Have `st-git` commit `<feature dir>/advisor.md` if it changed.
+#18 L18 commit fast	skills/st-fast/SKILL.md	with `<feature dir>/advisor.md` if it changed.
+#18 L19 debug worktree	skills/st-build/SKILL.md	Start `st-debug` from the main session too, with the worktree path; it diagnoses, fixes and verifies in that worktree.
 #18 exit 2	skills/st-build/SKILL.md	Exit 2 with a `usage:` line or `cannot hash inputs`: the script could not read or hash its inputs.
 #18 exit 2	skills/st-build/SKILL.md	Nothing was recorded and nothing was sent. Fix the input or the tool and run the point again.
 EOF
