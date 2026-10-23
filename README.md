@@ -182,6 +182,20 @@ copy for that project only.
   staged-file summary. Push, `rebase`, and `commit --amend` always ask. `git config` writes,
   `git add -A`, `git add .`, and `--no-verify` are always blocked. Remote branch delete is
   blocked: you delete remote branches yourself.
+  `commit: auto` runs only in this checkout. A commit asks when `cd`, `pushd` or `-C` points at
+  another checkout, or with `--git-dir`, `--work-tree`, or a `GIT_DIR=` or `GIT_WORK_TREE=`
+  prefix. `merge`, `pull`, `cherry-pick`, `revert` and `am` there ask too. `update-ref`,
+  `branch -f`, `-M` or `-C`, and a `fetch` or `pull` with a `<src>:<dst>` refspec always ask:
+  they move a branch with no commit. `-c core.hooksPath` is blocked like `--no-verify`, and
+  `-c alias.*` asks. A command the guard cannot parse asks. Known gap: an `env`, `export`,
+  `sudo`, `nice`, `nohup` or `timeout` wrapper, or a `GIT_CONFIG_*` override, is not checked.
+- **Worker guard.** `st-worker` writes the worker's guard file with `commit: auto` and its
+  branch. Commit and the merge family run without a question only while that branch is checked
+  out. `st-worker.sh close` deletes the file, and refuses while the branch has an open PR.
+- **PR flow.** Every merge into main goes through its GitHub PR, never a local merge. The
+  session that works a branch opens its own PR with `st-pr` and stays open until it is merged.
+  Nothing merges before you test it. An Approve at the `st-pr` gate counts as "push". A worker
+  whose branch goes to main opens its own PR.
 - **Model overrides.** `.stratum/models.json` maps an agent name to an optional `model` and
   `effort`, for example `{ "st-close": { "model": "haiku", "effort": "xhigh" } }`. Agents:
   `st-build`, `st-close`, `st-debug`, `st-fast`, `st-git`, `st-impeccable`, `st-inspect`,
