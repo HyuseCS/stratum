@@ -12,19 +12,19 @@ Decisions are in `decisions.md` (D1 to D14).
 
 ## User Scenarios & Testing *(mandatory)*
 
-### User Story 1 - Codex reviews at the three advisor points (Priority: P1)
+### User Story 1 - Codex reviews at the two advisor points (Priority: P1)
 
-A Stratum user runs a feature through the Full or Fast lane. At each advisor point the orchestrator asks Codex, waits for its answer, and reads a verdict (`APPROVED`, `REVISE`, `BLOCKED`) with findings. The three points are: the plan before the build gate (Inspect phase), a task test that is still red after two build tries, and the full diff before the build is called done. The user sees the verdict and the findings at the next gate and never has to run anything by hand.
+A Stratum user runs a feature through the Full lane. At each advisor point the orchestrator asks Codex, waits for its answer, and reads a verdict (`APPROVED`, `REVISE`, `BLOCKED`) with findings. The two points are: the plan at the end of the Plan phase, before the Plan gate, and a task test that is still red after two build tries. The full diff before the build is called done and every Fast-lane point use `/advisor` (D26). The user sees the verdict and the findings at the next gate and never has to run anything by hand.
 
-**Why this priority**: This is the feature. A second model from another vendor catches what the first misses, and without the three points nothing else has value.
+**Why this priority**: This is the feature. A second model from another vendor catches what the first misses, and without the two points nothing else has value.
 
 **Independent Test**: Run the advisor at one point against a small plan in a test repo with a fake `codex` on PATH that returns a fixed structured answer. The orchestrator gets the verdict and findings, and a record is written. Delivers the full review loop for one point.
 
 **Acceptance Scenarios**:
 
-1. **Given** `codex` is installed and logged in and the mode is `codex`, **When** the Inspect phase reaches step 4, **Then** the orchestrator calls the advisor with the paths of `spec.md`, `plan.md` and `tasks.md`, waits for the answer, and shows the verdict and findings before the gate "user OKs the build".
+1. **Given** `codex` is installed and logged in and the mode is `codex`, **When** the Plan phase reaches step 4, **Then** the orchestrator calls the advisor with the paths of `spec.md`, `plan.md` and `tasks.md`, waits for the answer, and shows the verdict and findings before the Plan gate. At the gate "user OKs the build" the Inspect phase checks that the approval is not stale.
 2. **Given** a task test is still red after two build tries, **When** the orchestrator reaches the "two tries" step, **Then** it calls the advisor with the task text, the test path and both failure outputs, waits, and passes the answer to the debug agent.
-3. **Given** all tasks are ticked, **When** the orchestrator reaches the end of the build, **Then** it calls the advisor with the base commit, waits, and handles the findings like review findings before it says the build is done.
+3. **Given** all tasks are ticked, **When** the orchestrator reaches the end of the build, **Then** it consults `/advisor` if one is set, not Codex (D26), and handles its notes like review findings before it says the build is done.
 4. **Given** the verdict is `REVISE`, **When** the findings are checked against the source, **Then** real small ones are fixed, big ones go to the user, and the advisor runs once more on the changed input. Two rounds at most; then the user decides.
 5. **Given** the verdict is `BLOCKED`, **When** the orchestrator reads it, **Then** it stops at once and shows the user the reason. Nothing passes the gate.
 6. **Given** the advisor call is running, **When** the orchestrator waits, **Then** it does nothing else until the answer and the record exist. No background run, no polling.
@@ -50,7 +50,7 @@ A user without `codex`, or with a Codex that fails, still gets the same Stratum 
 
 ### User Story 3 - Approval is tied to what was reviewed (Priority: P2)
 
-Every advisor call appends a record to `specs/<feature>/advisor.md`: the point, a SHA256 of the input Codex reviewed, the verdict and the findings. At a gate, the orchestrator checks that the latest record for that point matches the current input. A changed plan or diff makes the old approval stale.
+Every advisor call appends a record to `specs/<feature>/advisor.md`: the point, a SHA256 of the input Codex reviewed, the verdict and the findings. At a gate, the orchestrator checks that the latest record for that point matches the current input. A changed plan makes the old approval stale.
 
 **Why this priority**: Without the tie, an approval of an old plan can carry a changed plan through the gate.
 
@@ -58,8 +58,8 @@ Every advisor call appends a record to `specs/<feature>/advisor.md`: the point, 
 
 **Acceptance Scenarios**:
 
-1. **Given** an `APPROVED` record for the plan, **When** `spec.md`, `plan.md` and `tasks.md` are unchanged at the gate, **Then** the gate shows `APPROVED` with the record's hash.
-2. **Given** an `APPROVED` record for the plan, **When** any of `spec.md`, `plan.md` or `tasks.md` changed after the record, **Then** the gate shows "advisor approval is stale" and treats it as no approval.
+1. **Given** an `APPROVED` record for the plan, **When** `spec.md`, `plan.md` and `tasks.md` are unchanged at the gate, or only the `## Validate` section of `plan.md` changed (D27), **Then** the gate shows `APPROVED` with the record's hash.
+2. **Given** an `APPROVED` record for the plan, **When** any of `spec.md`, `plan.md` (outside its `## Validate` section) or `tasks.md` changed after the record, **Then** the gate shows "advisor approval is stale" and treats it as no approval.
 3. **Given** two records for the same point, **When** the gate reads them, **Then** the latest record counts.
 
 ---
@@ -83,7 +83,7 @@ A project owner sets the advisor mode in `.stratum/advisor.json`: `codex`, `both
 
 ### User Story 5 - Codex is review-only and the user knows what leaves the machine (Priority: P1)
 
-Codex never changes a file, never builds, never fixes. It runs in the read-only sandbox at every point. The prompt tells it to stay inside the named files and the diff and never open env or secret files. The README says in plain words that each call sends the prompt, and the files Codex reads, to OpenAI, and that `mode: off` is the switch.
+Codex never changes a file, never builds, never fixes. It runs in the read-only sandbox at every point. The prompt tells it to stay inside the named files and never open env or secret files. The README says in plain words that each call sends the prompt, and the files Codex reads, to OpenAI, and that `mode: off` is the switch.
 
 **Why this priority**: A reviewer with write access is a second builder, and a hidden data flow is a privacy problem.
 
@@ -102,9 +102,8 @@ Codex never changes a file, never builds, never fixes. It runs in the read-only 
 - `codex` is installed but not logged in: `BLOCKED: <codex's error line>`.
 - Codex answers with a verdict but zero findings: valid. `APPROVED` with no findings is a real result.
 - Codex answers with findings but a missing or unknown verdict: `BLOCKED: no verdict`.
-- The feature directory does not exist yet (Fast lane change outside a feature): not possible, the Fast lane requires a feature in `specs/`. The record goes to that feature's `advisor.md`.
-- The input for the diff point is empty (no diff against the base): the advisor still runs and Codex reports no changes. The hash is of the empty diff.
-- A named input (a plan file, the task file or a failure file) is not a readable regular file (a directory, no permission): the `usage:` line, exit 2, no record, no Codex call. The hash tool or `git` fails while the hash is built, or an untracked file cannot be read at the diff point: `cannot hash inputs`, exit 2, no record, no Codex call. Both stop `check` too, so a failed hash never passes as a fresh approval.
+- The Fast lane runs no Codex (D26), so it writes no record.
+- A named input (a plan file, the task file or a failure file) is not a readable regular file (a directory, no permission): the `usage:` line, exit 2, no record, no Codex call. The hash tool fails while the hash is built: `cannot hash inputs`, exit 2, no record, no Codex call. Both stop `check` too, so a failed hash never passes as a fresh approval.
 - `.stratum/advisor.json` is not valid JSON or has an unknown mode: `BLOCKED: bad advisor.json`, never a silent default.
 - Two advisor runs for the same point in one session: both records stay, the latest counts.
 
@@ -112,23 +111,23 @@ Codex never changes a file, never builds, never fixes. It runs in the read-only 
 
 ### Functional Requirements
 
-- **FR-001**: The orchestrator MUST consult the Codex advisor at exactly three points: the plan before the build gate (Inspect phase step 4), a task test still red after two build tries (Full and Fast lanes), and the full diff before the build is called done (Full and Fast lanes). The Quick lane has no advisor.
+- **FR-001**: The orchestrator MUST consult the Codex advisor at exactly two points in the Full lane: the plan at the end of the Plan phase, before the Plan gate (`st-plan` step 4, stale-checked by `check plan` at the Inspect gate), and a task test still red after two build tries. The full diff before the build is called done and every Fast-lane point consult `/advisor` if one is set, not Codex (D26). The Quick lane has no advisor.
 - **FR-002**: The orchestrator MUST wait for the advisor's answer in the foreground and read the verdict before it moves on. No background run, no polling.
 - **FR-003**: Every answer MUST carry one verdict: `APPROVED`, `REVISE` or `BLOCKED`, and a list of findings, each with a claim, the evidence, a severity, and where it points (file and line when known). `APPROVED` with zero findings is valid. `REVISE` with zero findings is malformed and counts as `BLOCKED: REVISE with no findings`. `APPROVED` with findings is malformed and counts as `BLOCKED: APPROVED with findings`.
 - **FR-004**: An empty, failed, malformed or late answer MUST count as `BLOCKED` with a one-line reason, never as approval. `BLOCKED` exits with a non-zero status; `no advisor` lines exit with success.
 - **FR-005**: The orchestrator MUST treat `REVISE` findings like review findings: check each against the source, fix the real small ones, bring big ones to the user, drop the false ones, then run the advisor once more on the changed input. Two rounds at most per point per gate pass, then the user decides. A later gate pass on the same point starts a new count.
 - **FR-006**: On `BLOCKED` the orchestrator MUST stop at that point and show the user the reason. If the user says to continue, the point is recorded as `BLOCKED, user continued` and skipped; the advisor is not retried at that point in this gate pass.
-- **FR-007**: Every run that reaches a verdict MUST append a record to `specs/<feature>/advisor.md` with: the point, the date and time, the SHA256 of the input (the bytes of `spec.md`, `plan.md` and `tasks.md` joined in that order at the plan point, the bytes of `git diff <base> -- . ':(exclude)specs/<feature>/advisor.md'` followed by `git diff --no-index -- /dev/null <path>` for each untracked file (same exclusion) at the diff point, the bytes of both failure outputs joined at the test point), the verdict and the findings. If a named input file is not a readable regular file, the run MUST stop with the `usage:` line, exit status 2, and no record. If the hash cannot be built (an unreadable untracked file at the diff point, a failing `git` or `sha256sum`, a digest that is not 64 hex characters), the run MUST stop with `cannot hash inputs`, exit status 2, and no record.
+- **FR-007**: Every run that reaches a verdict MUST append a record to `specs/<feature>/advisor.md` with: the point, the date and time, the SHA256 of the input (the bytes of `spec.md`, `plan.md` and `tasks.md` joined in that order at the plan point, with every line from a line that is exactly `## Validate` up to, not including, the next line that starts with `## ` left out of `plan.md`; a `## Validate` or `## ` line inside a code fence (the lines between two lines that start with three backticks) does not count (D27, D28), the bytes of both failure outputs joined at the test point), the verdict and the findings. If a named input file is not a readable regular file, the run MUST stop with the `usage:` line, exit status 2, and no record. If the hash cannot be built (a failing `cat`, `awk` or `sha256sum`, a digest that is not 64 hex characters), the run MUST stop with `cannot hash inputs`, exit status 2, and no record.
 - **FR-008**: At a gate the orchestrator MUST compare the latest record's hash for that point with the current input. A mismatch is "advisor approval is stale" and counts as no approval.
-- **FR-009**: The prompt MUST name paths and a base commit, not paste file contents, except the test point, where the task text, test path and both failure outputs are pasted because they are in no file.
+- **FR-009**: The prompt MUST name paths, not paste file contents, except the test point, where the task text, test path and both failure outputs are pasted because they are in no file.
 - **FR-010**: The mode MUST come from `.stratum/advisor.json`: `codex`, `both`, or `off`. A missing file means `off`: the advisor prints `no advisor: mode not set` with the one-line instruction to write the file, exits with success, and nothing is sent to OpenAI. `both` runs Codex and tells the orchestrator to also consult `/advisor` if one is set. `off` prints `no advisor: mode off` and the flow runs as before this feature. A file that is not valid or has an unknown mode is `BLOCKED: bad advisor.json`.
 - **FR-011**: When `codex` is not on PATH the advisor MUST print `no advisor: codex not found`, exit with success, and the flow MUST run as before this feature, with `/advisor` if the user set one.
 - **FR-012**: Codex MUST run in the read-only sandbox at every point, with no flag that allows writes or bypasses the sandbox. Codex is used for review only, never to build or fix.
-- **FR-013**: The prompt MUST tell Codex to review only, to stay inside the named inputs, never to open env or secret files, and never to quote a secret value in a finding. At the diff point, untracked paths whose file name matches, case-insensitive and in any directory, `.env*`, `*.env`, `*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.jks`, `*.keystore`, `id_rsa*`, `id_ed25519*`, `id_ecdsa*`, `.npmrc`, `.netrc`, `.pypirc` or `credentials*` MUST be left out of the list sent to Codex. The same names MUST be excluded, case-insensitive, from the `git diff` command Codex is told to run. These paths MUST stay in the hashed input.
+- **FR-013**: The prompt MUST tell Codex to review only, to stay inside the named inputs, never to open env or secret files, and never to quote a secret value in a finding. The diff-point secret-name filter is removed by D26 with the diff point. This supersedes D25.
 - **FR-014**: The Codex model and reasoning effort MUST come from the optional `model` and `effort` keys in `.stratum/advisor.json` when present, else from the user's own Codex configuration. `st-init` writes only `mode`.
 - **FR-015**: `st-init` MUST ask one question about the advisor mode, with `codex` as the recommended answer, and write `.stratum/advisor.json`, unless the file exists.
-- **FR-016**: The README "Built in" advisor bullet, `skills/st-inspect/SKILL.md` step 4, `skills/st-build/SKILL.md` steps "Two tries" and the end-of-build advisor paragraph, and `skills/st-fast/SKILL.md` steps 3 and 4 MUST describe the Codex advisor, the wait, the verdict handling, the modes, the record, and the no-Codex path. The README MUST state what each call sends to OpenAI and that `mode: off` is the switch.
-- **FR-017**: A test MUST cover: the happy path with a fake `codex`, `codex` missing from PATH, `codex` exiting non-zero, an empty answer, a malformed answer, a stale hash, each mode, and a check that the command carries the read-only sandbox and no write-capable flag.
+- **FR-016**: The README "Built in" advisor bullet, `skills/st-plan/SKILL.md` step 4, the `skills/st-inspect/SKILL.md` gate, and `skills/st-build/SKILL.md` step "Two tries" and section "Advisor" MUST describe the Codex advisor, the wait, the verdict handling, the modes, the record, and the no-Codex path. The README MUST state what each call sends to OpenAI and that `mode: off` is the switch. The `skills/st-build/SKILL.md` end-of-build paragraph and `skills/st-fast/SKILL.md` steps 3 and 4 MUST consult `/advisor` if one is set and MUST NOT call `st-advisor.sh` (D26).
+- **FR-017**: A test MUST cover: the happy path with a fake `codex`, `codex` missing from PATH, `codex` exiting non-zero, an empty answer, a malformed answer, a stale hash, each mode, the usage line for the removed `diff` forms, and a check that the command carries the read-only sandbox and no write-capable flag.
 
 ### Key Entities
 
@@ -141,7 +140,7 @@ Codex never changes a file, never builds, never fixes. It runs in the read-only 
 
 ### Measurable Outcomes
 
-- **SC-001**: In a Full-lane run with Codex installed, all three advisor points produce a verdict and a record with no human step. 3 of 3.
+- **SC-001**: In a Full-lane run with Codex installed, both advisor points produce a verdict and a record with no human step. 2 of 2.
 - **SC-002**: With Codex missing, a Full-lane run completes with the same gates and outputs as before this feature, plus one `no advisor` line per point.
 - **SC-003**: Every failure path (codex error, empty answer, malformed answer, timeout, bad mode file) ends in a one-line `BLOCKED: <reason>`. 0 silent approvals in the test.
 - **SC-004**: A plan changed after approval is reported stale at the gate in 100% of test runs.
@@ -153,7 +152,7 @@ Codex never changes a file, never builds, never fixes. It runs in the read-only 
 - `codex` CLI 0.163.0 or later is installed and logged in by the user. Stratum does not install it or log in.
 - Running Codex in this repository is acceptable to the user, since the user already runs `codex` here. The off switch exists for projects where it is not.
 - The read-only sandbox blocks writes but not reads. The prompt, not a technical block, keeps Codex out of env and secret files.
-- The time and token cost per point are unknown until the Plan phase measures them on a real plan and a real diff. The time limit is set from those measurements, under the 10-minute cap of a foreground orchestrator call.
-- One record file per feature is enough. Fast-lane changes record to their feature's `advisor.md`.
+- The time and token cost per point are unknown until the Plan phase measures them on a real plan. The time limit is set from those measurements, under the 10-minute cap of a foreground orchestrator call.
+- One record file per feature is enough. Fast-lane changes run no Codex and write no record (D26).
 - The existing `/advisor` path is unchanged. Mode `both` adds Codex before it; mode `off`, a missing mode file and a missing `codex` leave it as the only advisor.
 - Projects set up before this feature have no `.stratum/advisor.json`, so they stay on the old flow until the owner writes the file.

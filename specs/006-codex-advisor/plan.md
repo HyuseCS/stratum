@@ -1,5 +1,7 @@
 # Implementation Plan: Codex Advisor
 
+> **Superseded by D26 and D27 (decisions.md, changes/001-codex-plan-only.md):** the diff point, the "three points" and the `st-inspect` plan run described below are history. Codex now runs at the plan point (end of `st-plan`, advice only) and the test point. The diff point and `st-fast` use `/advisor`. Current rules: spec.md, data-model.md, contracts/advisor.md.
+
 **Branch**: `18-codex-advisor` | **Date**: 2026-10-23 | **Spec**: [spec.md](spec.md)
 
 **Input**: Feature specification from `/specs/006-codex-advisor/spec.md`, decisions D1 to D15 in

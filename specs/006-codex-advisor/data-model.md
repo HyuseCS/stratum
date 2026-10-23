@@ -73,7 +73,7 @@ No database. Two files and the answer Codex writes. Exact formats are in
 
 ## Advisor record (`specs/<feature>/advisor.md`)
 
-- One entry per run of `plan`, `test`, `diff` that reaches a verdict (every row of the answer
+- One entry per run of `plan` or `test` that reaches a verdict (every row of the answer
   mapping above, plus `BLOCKED: bad advisor.json`) and per `continued` call (FR-007). No entry
   for `no advisor` lines or bad arguments.
 - Format: an empty line goes before a record when the file already has content, never after one
@@ -84,22 +84,16 @@ No database. Two files and the answer Codex writes. Exact formats are in
   the record that counts (US3 scenario 3).
 - Committed. The lane commits it with its next `st-git` commit (plan.md, Project Structure).
 - Input hashed per point (FR-007, research R6):
-  - `plan`: the bytes of `<feature>/spec.md`, then `<feature>/plan.md`, then `<feature>/tasks.md`,
-    no separator (`cat spec.md plan.md tasks.md`, D10). A change to any of the three makes the
-    plan approval stale.
+  - `plan`: the bytes of `<feature>/spec.md`, then `<feature>/plan.md` without its `## Validate`
+    section, then `<feature>/tasks.md`, no separator (D10, D27, D28):
+    `{ cat spec.md && awk '/^```/{f=!f} !f&&/^## Validate$/{s=1;next} !f&&/^## /{s=0} !s' plan.md && cat tasks.md; } | sha256sum`.
+    The left-out lines run from a line that is exactly `## Validate` up to, not including, the
+    next line that starts with `## `. A `## Validate` or `## ` line inside a code fence (the lines between two lines that start with three backticks) does not count.
+    So `st-inspect` writing or replacing that section keeps the approval from `st-plan` step 4
+    fresh. Any change outside the real, unfenced `## Validate` section makes it stale.
   - `test`: the bytes of failure output 1, then the bytes of failure output 2.
-  - `diff`: `git diff <base> -- . ':(exclude)<feature>/advisor.md'`, then for each untracked path
-    (`git ls-files -z --others --exclude-standard -- . ':(exclude)<feature>/advisor.md'`, in that
-    order) `git diff --no-index -- /dev/null <path>`. `<base>` is the full SHA. Every untracked
-    path is hashed, including the secret-looking ones that the prompt's `Untracked files:` list
-    leaves out (basename in the FR-013 name list, case-insensitive, D12). So a new `.env`
-    makes a diff approval stale without being named to Codex. Both diffs run with
-    `--no-ext-diff --no-color --no-renames --default-prefix`, so the user's git config cannot
-    change the digest. An untracked entry ending in `/` (a nested repository or worktree) is
-    skipped in the hash and in the `Untracked files:` list.
-- Hash failure (D20, D21): every input must be a readable regular file. `git ls-files`, `git diff`
-  and `git diff --no-index` (exit 1 allowed, by design) must succeed, and the digest must be 64
-  lowercase hex characters. Else, or when `cat` or `sha256sum` fails, the script prints
+- Hash failure (D20, D21): every input must be a readable regular file, and the digest must be 64
+  lowercase hex characters. Else, or when `cat`, `awk` or `sha256sum` fails, the script prints
   `cannot hash inputs`, exits 2 and writes no record. `check` stops the same way, so an empty or
   partial digest never matches an old record.
 - State over one gate pass: no record, then `APPROVED` (go on), or `REVISE` (fix, then one more

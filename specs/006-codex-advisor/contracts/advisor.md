@@ -15,20 +15,17 @@ Run from the project root. `<feature dir>` is the project-relative feature path,
 ```text
 st-advisor.sh plan <feature dir>
 st-advisor.sh test <feature dir> <task file> <test path> <failure 1 file> <failure 2 file>
-st-advisor.sh diff <feature dir> <base>
 st-advisor.sh check plan <feature dir>
-st-advisor.sh check diff <feature dir> <base>
-st-advisor.sh continued <plan|test|diff> <feature dir>
+st-advisor.sh continued <plan|test> <feature dir>
 ```
 
 - `<task file>` holds the task text. The two failure files hold the two failure outputs. The
   orchestrator writes all three to its scratchpad.
-- `<base>` is any commit name. The script resolves it with
-  `git rev-parse --verify --quiet "<base>^{commit}"` and uses only the full SHA it prints.
+- The `diff` forms (`diff`, `check diff`, `continued diff`) are removed (D26): each is the usage
+  line, exit 2.
 - Bad arguments (wrong count, unknown form, no `<feature dir>/spec.md`, for `plan` no
-  `<feature dir>/plan.md` or `<feature dir>/tasks.md`, a base that is not a commit, a missing task
-  or failure file; every input file must be a readable regular file, so a directory or an
-  unreadable file is bad too, D20; a `<feature dir>/advisor.md` that is a symlink): `usage: st-advisor.sh plan|test|diff|check|continued ...` on one line, exit 2,
+  `<feature dir>/plan.md` or `<feature dir>/tasks.md`, a missing task or failure file; every input file must be a readable regular file, so a directory or an
+  unreadable file is bad too, D20; a `<feature dir>/advisor.md` that is a symlink): `usage: st-advisor.sh plan|test|check|continued ...` on one line, exit 2,
   no record, no Codex call.
 - `check` reads the records first. No record for the point: `no record: <point>`, exit 1, even
   when `plan.md` or `tasks.md` does not exist yet. With a record, it hashes the current input; a
@@ -36,22 +33,18 @@ st-advisor.sh continued <plan|test|diff> <feature dir>
 - `continued` with no record for that point: `no record: <point>`, exit 2.
 - Arguments go to commands as quoted argv. No `eval`, no `bash -c`.
 
-## 2. Order of a `plan`, `test` or `diff` run
+## 2. Order of a `plan` or `test` run
 
 1. Check the arguments (section 1).
 2. Compute the input hash (data-model.md, Advisor record): `plan` hashes the bytes of
-   `<f>/spec.md`, `<f>/plan.md` and `<f>/tasks.md` joined in that order (D10). `test` hashes the
-   two failure files joined in order. `diff` hashes
-   `git diff <sha> -- . ':(exclude)<f>/advisor.md'` followed by
-   `git diff --no-index -- /dev/null <path>` for each untracked path (same exclusion, D9). Every
-   untracked path is in the hash, secret-looking ones too (D12). Both hash diffs run with
-   `--no-ext-diff --no-color --no-renames --default-prefix`, so the user's git config cannot change
-   the digest. An untracked entry ending in `/` (a nested repository or worktree) is skipped in the
-   hash and in the prompt's untracked list.
-   A hash that cannot be built stops the run (D20, D21): `git ls-files`, `git diff` and each
-   `git diff --no-index` (which may exit 1, by design) must succeed, and the digest must be 64
-   lowercase hex characters. Else print `cannot hash inputs`, exit 2, no record, no Codex call.
-   A failing `cat` or `sha256sum` also stops the run with `cannot hash inputs` (`pipefail`).
+   `<f>/spec.md`, `<f>/plan.md` and `<f>/tasks.md` joined in that order (D10), with
+   every line from a line that is exactly `## Validate` up to, not including, the next line that starts with `## ` left out of `plan.md`. A `## Validate` or `## ` line inside a code fence (the lines between two lines that start with three backticks) does not count (D27, D28):
+   `{ cat <f>/spec.md && awk '/^```/{f=!f} !f&&/^## Validate$/{s=1;next} !f&&/^## /{s=0} !s' <f>/plan.md && cat <f>/tasks.md; } | sha256sum`.
+   `test` hashes the
+   two failure files joined in order.
+   A hash that cannot be built stops the run (D20): the digest must be 64 lowercase hex
+   characters. Else print `cannot hash inputs`, exit 2, no record, no Codex call.
+   A failing `cat`, `awk` or `sha256sum` also stops the run with `cannot hash inputs` (`pipefail`).
    `check` does the same, so a failed hash never matches an old record.
 3. Read the settings (data-model.md, Advisor settings). No file: print
    `no advisor: mode not set. Write .stratum/advisor.json with "mode": "codex", "both" or "off".`,
@@ -105,12 +98,12 @@ Never quote a secret value in a finding.
 Answer with verdict APPROVED (nothing to fix), REVISE (findings to fix) or BLOCKED (you cannot review, or the work must stop). Each finding has a claim, the evidence, a location (file:line when known) and a severity.
 ```
 
-Then, per point (`<f>` is the feature dir, `<sha>` the full base SHA):
+Then, per point (`<f>` is the feature dir):
 
-Plan point (names paths, pastes nothing):
+Plan point (names paths, pastes nothing, advice only, D27):
 
 ```text
-Point: plan. Review the plan before the build. Risks: missed access rules, schema or contract breaks, hidden breaking changes. Improvements: a simpler approach, tasks to cut or merge.
+Point: plan. Advise only on how the plan could be built better or done differently for a better outcome: a simpler or better approach, tasks to cut or merge. Do not check correctness, coverage or risks: the Inspect phase does that.
 Inputs: <f>/spec.md, <f>/plan.md, <f>/tasks.md
 ```
 
@@ -129,25 +122,6 @@ Failure output 2:
 
 A pasted file that does not end in a newline gets one before the next label, so a label never sits on the same line as pasted text.
 
-Diff point:
-
-```text
-Point: diff. Review the full diff before the build is called done: hidden regressions, broken project rules, missed requirements.
-Inputs: run git diff <sha> -- . ':(exclude)<f>/advisor.md' ':(exclude,icase).env*' ':(exclude,icase)*/.env*' ':(exclude,icase)*.env' ':(exclude,icase)*.pem' ':(exclude,icase)*.key' ':(exclude,icase)*.p12' ':(exclude,icase)*.pfx' ':(exclude,icase)*.jks' ':(exclude,icase)*.keystore' ':(exclude,icase)id_rsa*' ':(exclude,icase)*/id_rsa*' ':(exclude,icase)id_ed25519*' ':(exclude,icase)*/id_ed25519*' ':(exclude,icase)id_ecdsa*' ':(exclude,icase)*/id_ecdsa*' ':(exclude,icase).npmrc' ':(exclude,icase)*/.npmrc' ':(exclude,icase).netrc' ':(exclude,icase)*/.netrc' ':(exclude,icase).pypirc' ':(exclude,icase)*/.pypirc' ':(exclude,icase)credentials*' ':(exclude,icase)*/credentials*' and read each untracked file listed below. Env and secret files are left out of that diff. The feature dir is <f>.<rules>
-Untracked files:
-<one path per line, or the line: none>
-```
-
-`<rules>` is ` Read the project rules in .stratum/constitution.md.` when `.stratum/constitution.md`
-exists, and empty when it does not.
-
-The `Untracked files:` list leaves out each path whose basename matches, case-insensitive,
-`.env*`, `*.env`, `*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.jks`, `*.keystore`, `id_rsa*`,
-`id_ed25519*`, `id_ecdsa*`, `.npmrc`, `.netrc`, `.pypirc` or `credentials*` (shell `case` on
-`${path##*/}` under `nocasematch`, any directory). The `git diff` command in the prompt excludes
-the same names with `icase` pathspecs. Those paths stay in the hash (section 2, D12). If every
-untracked path is left out, the list is `none`.
-
 ## 5. Output and exit status
 
 | Case | stdout | Exit |
@@ -159,7 +133,7 @@ untracked path is left out, the list is `none`.
 | `BLOCKED` from Codex | `BLOCKED: <summary>`, one line per finding, `record: <f>/advisor.md` | 1 |
 | Codex exited non-zero (not 124 or 137) | `BLOCKED: codex exited <rc>`, the last stderr line that starts `ERROR:` if there is one, `record: <f>/advisor.md` | 1 |
 | any other `BLOCKED` | `BLOCKED: <reason>`, `record: <f>/advisor.md` | 1 |
-| the input hash cannot be built (D20, D21) | `cannot hash inputs` | 2 |
+| the input hash cannot be built (D20) | `cannot hash inputs` | 2 |
 
 - Mode `both` adds `mode both: also consult /advisor if one is set` as the first line of every
   row except the no-file row and `off`.
@@ -195,7 +169,7 @@ reason: <reason>               (when the script set BLOCKED)
 
 - An empty line goes before a record when the file already has content, never after one, so the
   file ends with the last line of the last record and one newline.
-- `<point>` is `plan`, `test` or `diff`. `<VERDICT>` is `APPROVED`, `REVISE`, `BLOCKED` or
+- `<point>` is `plan` or `test` (older records may say `diff`, D26). `<VERDICT>` is `APPROVED`, `REVISE`, `BLOCKED` or
   `BLOCKED, user continued`. Time from `date -u +%Y-%m-%dT%H:%M:%SZ`.
 - The header is the only line that starts with `## `. `check` reads the last line that starts
   with `## <point> | `.
@@ -221,14 +195,12 @@ Step 5 (line 31) becomes:
 5. **Commit.** The `st-git` agent (`stratum:st-git`) commits the exact paths of the task, with tasks.md, and `<feature dir>/advisor.md` if it changed.
 ```
 
-The end-of-build paragraph (lines 56-59) becomes:
+The end-of-build paragraph keeps its pre-#18 text (D26, `932295b^1`):
 
 ```markdown
-When all tasks are ticked, run the advisor on the feature's full diff (see Advisor):
-`bash <plugin root>/scripts/st-advisor.sh diff <feature dir> <base>`: hidden regressions, broken rules from the constitution.
-The base: on a branch, `git merge-base main HEAD`. On `main`, `git rev-parse "$(git log --diff-filter=A --format=%H -- <feature dir>/spec.md | tail -1)^"`.
-Before you say the build is done, run `bash <plugin root>/scripts/st-advisor.sh check diff <feature dir> <base>`, then have `st-git` commit `<feature dir>/advisor.md` if it changed.
-Then say so, list the small decisions and findings (fixed and dropped), and name the
+When all tasks are ticked, consult the advisor if one is set (`/advisor`) on the feature's full
+diff: hidden regressions, broken rules from the constitution. Handle its notes like review
+findings. Then say so, list the small decisions and findings (fixed and dropped), and name the
 next phase: `/stratum:st-close`.
 ```
 
@@ -244,7 +216,7 @@ New section before `## Always`:
 ```markdown
 ## Advisor
 
-The advisor is Codex (the `codex` CLI), a model from another vendor. It runs at three points: the plan before the build gate (`st-inspect` step 4), a test still red after 2 tries, and the full diff before the build is called done. The Quick lane has no advisor.
+The advisor is Codex (the `codex` CLI), a model from another vendor. It runs at two points: the plan before the Plan gate (`st-plan` step 4, stale-checked at the build gate by `st-inspect`) and a test still red after 2 tries. The full diff before the build is called done and every Fast-lane point use `/advisor`. The Quick lane has no advisor.
 
 - Run `bash <plugin root>/scripts/st-advisor.sh <point> ...` from the project root in the foreground, with a Bash timeout of 600000 ms, and wait for it. No background run, no polling.
 - Codex only reviews, in the read-only sandbox. Never run `codex` to build or fix.
@@ -254,61 +226,44 @@ The advisor is Codex (the `codex` CLI), a model from another vendor. It runs at 
 - `REVISE`: handle each finding like a review finding: check it against the source, fix the real small ones, bring big ones to the user, drop the false ones. Then run the same point once more on the changed input. Two rounds at most per point per gate pass, then the user decides. A later gate pass starts a new count.
 - `BLOCKED: <reason>`: stop and show the user the reason. Nothing passes the gate. If the user says to continue, run `bash <plugin root>/scripts/st-advisor.sh continued <point> <feature dir>` and skip the point. Do not retry it in this gate pass.
 - Each run appends a record to `<feature dir>/advisor.md`: the point, the time, the SHA256 of the input, the verdict and the findings. The mode comes from `.stratum/advisor.json` (`codex`, `both` or `off`). No file means off, with the `mode not set` line.
-- At a gate, `check` compares the latest record with the current input. `advisor approval is stale` or `no record` counts as no approval: run the point once more, as a round. Skip the check after a `no advisor` line.
+- At the build gate, `check plan` compares the latest plan record with the current input. `advisor approval is stale` or `no record` counts as no approval: run the plan point once more, as a round. Skip the check after a `no advisor` line.
 - Exit 2 with a `usage:` line or `cannot hash inputs`: the script could not read or hash its inputs. Nothing was recorded and nothing was sent. Fix the input or the tool and run the point again.
 ```
 
 ### 7.2 `skills/st-inspect/SKILL.md`
 
-Step 4 (lines 29-33) becomes:
+No Codex run (D26). Step 5 becomes step 4 and refers to step 2 only:
 
 ```markdown
-4. **Advisor.** Run `bash <plugin root>/scripts/st-advisor.sh plan <feature dir>` from the project root in the foreground, with a Bash timeout of 600000 ms, and wait for it.
-   Codex reviews spec, plan and tasks in the read-only sandbox. Risks: missed auth invariants, schema or contract breaks, hidden breaking changes.
-   Improvements: a simpler or better approach, tasks to cut or merge.
-   Handle its answer as in "Advisor" in `<plugin root>/skills/st-build/SKILL.md`; big ones go to the user before the gate.
-   A later re-run of `st-inspect` (step 5) changes `plan.md` and costs a round.
+4. If a fix removed or renamed a task in step 2, grep each old ID from the fix's diff of `tasks.md` in the `## Validate` section of `plan.md`; on any hit run `st-inspect` once more.
 ```
 
 The gate's first line (line 38) gains a sentence before it:
 
 ```markdown
-Run `bash <plugin root>/scripts/st-advisor.sh check plan <feature dir>` and show its line; `advisor approval is stale` counts as no approval. Have `st-git` commit `<feature dir>/advisor.md` if it changed.
+Run `bash <plugin root>/scripts/st-advisor.sh check plan <feature dir>` and show its line; `advisor approval is stale` counts as no approval: run the plan point (`st-plan` step 4) once more, as a round, before the gate. Have `st-git` commit `<feature dir>/advisor.md` if it changed.
 ```
 
 ### 7.3 `skills/st-fast/SKILL.md`
 
-Step 3 (lines 16-18) becomes:
+No Codex and no `st-advisor.sh` call (D26). Steps 3 and 4 consult `/advisor`:
 
 ```markdown
 3. For each test in the change plan: the `stratum:st-test` agent writes it and shows it fails; the `stratum:st-build` agent makes it
    pass. A test still red after 2 tries goes to the `stratum:st-debug` agent, with the advisor's answer
-   first: save the task text and both failure outputs to files in your scratchpad, then run
-   `bash <plugin root>/scripts/st-advisor.sh test <feature dir> <task file> <test path> <failure 1 file> <failure 2 file>`: root cause or rabbit hole?
-   Run it in the foreground, with a Bash timeout of 600000 ms, and wait; handle the answer as in step 4.
+   first if one is set (`/advisor`): root cause or rabbit hole?
+4. Verify with `bash <plugin root>/scripts/st-verify.sh '<test command>' <files touched>` (see `/stratum:st`). If an
+   advisor is set, consult it on the diff: hidden regressions? Handle its notes like findings.
 ```
 
-Step 4 (lines 19-20) becomes:
-
-```markdown
-4. Verify with `bash <plugin root>/scripts/st-verify.sh '<test command>' <files touched>` (see `/stratum:st`). Then run
-   `bash <plugin root>/scripts/st-advisor.sh diff <feature dir> <base from step 1>` in the foreground, with a Bash timeout of 600000 ms, and wait: hidden regressions?
-   Handle each advisor answer as in "Advisor" in `<plugin root>/skills/st-build/SKILL.md` (verdicts, rounds, modes, record, no Codex).
-```
-
-Step 6 (line 25) becomes:
-
-```markdown
-6. Before the commit, run `bash <plugin root>/scripts/st-advisor.sh check diff <feature dir> <base from step 1>`. If review fixes made it stale, run the diff point once more if a round is left; else tell the user.
-   The `stratum:st-git` agent commits exact paths, with `<feature dir>/advisor.md` if it changed.
-```
+Step 6 is `6. The `stratum:st-git` agent commits exact paths.` (pre-#18).
 
 ### 7.4 `skills/st-init/SKILL.md`
 
 New step after step 10 (Tool check); step 11 (Report) becomes 12:
 
 ```markdown
-11. **Advisor.** If `.stratum/advisor.json` is missing, ask the user in one question: advisor mode `codex` (recommended: Codex reviews the plan, a test red after 2 tries, and the full diff; needs `codex` logged in), `both` (Codex, then `/advisor` if set), or `off` (no Codex, nothing sent to OpenAI)?
+11. **Advisor.** If `.stratum/advisor.json` is missing, ask the user in one question: advisor mode `codex` (recommended: Codex reviews the plan and a test red after 2 tries; needs `codex` logged in), `both` (Codex, then `/advisor` if set), or `off` (no Codex, nothing sent to OpenAI)?
    Write `.stratum/advisor.json` as `{"mode": "<answer>"}`. It is committed. New projects get the file here; without it the advisor is off. Say how to change it later: edit the file. Optional `model` and `effort` keys pick the Codex model and reasoning effort; without them Codex uses its own default model and effort.
 ```
 
@@ -325,17 +280,17 @@ line wrap of the file.
 
 ### 7.5 `README.md`
 
-The Built in **Advisor.** bullet (lines 159-162) becomes:
+The Built in **Advisor.** bullet becomes:
 
 ```markdown
-- **Advisor.** Codex (OpenAI's `codex` CLI), a model from another vendor, reviews the work at three points in the Full and Fast lanes: the plan before the build gate, a test still red after two tries, and the full diff before the build is called done. The Quick lane has no advisor.
+- **Advisor.** Codex (OpenAI's `codex` CLI), a model from another vendor, runs at two points in the Full lane. At the end of the Plan phase, before its gate, it only advises on a simpler or better approach and does not validate the plan (`st-inspect` does that). It also reviews a test still red after two tries. The full diff before the build is called done and the whole Fast lane use `/advisor` if you set one. The Quick lane has no advisor.
   The orchestrator runs `scripts/st-advisor.sh` in the foreground and waits for the answer. Codex runs in the read-only sandbox and only reviews: it never builds or fixes.
   It answers `APPROVED`, `REVISE` (findings, checked against the source like any finding, then one more run, two rounds at most), or `BLOCKED` (the orchestrator stops and asks you).
   A failed, empty, malformed or late answer (540 seconds) is `BLOCKED`, never approval.
-  Each run appends the point, a SHA256 of the input, the verdict and the findings to `specs/<feature>/advisor.md`. An approval of a plan or diff that changed since then is stale.
-  What leaves the machine: each call sends the prompt and the files Codex reads to OpenAI, on your Codex login and quota (about 37,000 tokens per plan or diff review). The prompt names paths and a base commit; at the test point it holds the task text, the test path and both failure outputs.
+  Each run appends the point, a SHA256 of the input, the verdict and the findings to `specs/<feature>/advisor.md`. An approval of a plan that changed since then is stale.
+  What leaves the machine: each call sends the prompt and the files Codex reads to OpenAI, on your Codex login and quota (about 37,000 tokens per plan review). At the plan point the prompt names the plan files and Codex reads them; at the test point it holds the task text, the test path and both failure outputs.
   The prompt tells Codex to stay inside the named inputs, never open env or secret files, and never quote a secret value. The sandbox does not block reads.
-  At the diff point, untracked `.env*`, `*.env`, `*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.jks`, `*.keystore`, `id_rsa*`, `id_ed25519*`, `id_ecdsa*`, `.npmrc`, `.netrc`, `.pypirc` and `credentials*` files (any case) are left out of the list Codex is given. Whether Codex's own shell sees your environment variables is not checked.
+  Whether Codex's own shell sees your environment variables is not checked.
   `.stratum/advisor.json` sets the mode: `{"mode": "codex"}`, `{"mode": "both"}` (Codex, then `/advisor` if you set one), or `{"mode": "off"}`. `"mode": "off"` is the off switch: nothing goes to OpenAI.
   With no file the advisor is off and prints `no advisor: mode not set. Write .stratum/advisor.json with "mode": "codex", "both" or "off".` `st-init` writes the file for new projects. A project set up before this feature has no file, so the advisor stays off until you write it.
   With no `codex` on PATH you get one line, `no advisor: codex not found`, and the flow runs as before, with `/advisor` if you set one.
@@ -368,6 +323,18 @@ Project files tree, `specs/NNN-feature/` line: `checklists/, changes/` becomes
 Tests list (T001 adds it, so `tests/test_inspect.sh` "README tests" stays green): add
 `bash tests/test_advisor.sh` before `bash tests/test_model_files.sh`.
 
+### 7.6 `skills/st-plan/SKILL.md`
+
+After step 3 (Verify), a new step 4; the commit step becomes step 5 (D26):
+
+```markdown
+4. **Advisor.** Run `bash <plugin root>/scripts/st-advisor.sh plan <feature dir>` from the project root in the foreground, with a Bash timeout of 600000 ms, and wait for it.
+   Codex reads spec, plan and tasks in the read-only sandbox and only advises: a simpler or better approach, tasks to cut or merge. It does not validate; st-inspect does.
+   Handle its answer as in "Advisor" in `<plugin root>/skills/st-build/SKILL.md`; big ones go to the user before the gate.
+   Fixes go to the same `st-plan` subagent and cost a round.
+5. Have `st-git` commit the plan files with exact paths, and `<feature dir>/advisor.md` if it changed.
+```
+
 ## 8. Phrase table (`tests/test_on_demand.sh`, `#18` rows)
 
 `name<TAB>target<TAB>phrase`. The phrase is the cell text inside its outer backticks.
@@ -375,26 +342,18 @@ Tests list (T001 adds it, so `tests/test_inspect.sh` "README tests" stays green)
 | Name | Target | Phrase |
 |------|--------|--------|
 | #18 FR-001 build test point | skills/st-build/SKILL.md | `bash <plugin root>/scripts/st-advisor.sh test <feature dir> <task file> <test path> <failure 1 file> <failure 2 file>` |
-| #18 FR-001 build diff point | skills/st-build/SKILL.md | `bash <plugin root>/scripts/st-advisor.sh diff <feature dir> <base>` |
-| #18 FR-001 build base | skills/st-build/SKILL.md | `The base: on a branch, `git merge-base main HEAD`.` |
 | #18 FR-001 build quick | skills/st-build/SKILL.md | `The Quick lane has no advisor.` |
 | #18 FR-001 build worktree | skills/st-build/SKILL.md | `with the working directory at that worktree's root and `<feature dir>` as the main checkout's absolute path, so the record lands in the main checkout.` |
-| #18 FR-001 build worktree stop | skills/st-build/SKILL.md | `a subagent whose test is still red after 2 tries stops and reports both failures` |
-| #18 FR-001 inspect plan point | skills/st-inspect/SKILL.md | `bash <plugin root>/scripts/st-advisor.sh plan <feature dir>` |
-| #18 FR-001 fast test point | skills/st-fast/SKILL.md | `bash <plugin root>/scripts/st-advisor.sh test <feature dir> <task file> <test path> <failure 1 file> <failure 2 file>` |
-| #18 FR-001 fast diff point | skills/st-fast/SKILL.md | `bash <plugin root>/scripts/st-advisor.sh diff <feature dir> <base from step 1>` |
+| #18 FR-001 plan point | skills/st-plan/SKILL.md | `bash <plugin root>/scripts/st-advisor.sh plan <feature dir>` |
 | #18 FR-002 wait build | skills/st-build/SKILL.md | `in the foreground, with a Bash timeout of 600000 ms, and wait for it. No background run, no polling.` |
-| #18 FR-002 wait inspect | skills/st-inspect/SKILL.md | `in the foreground, with a Bash timeout of 600000 ms, and wait for it.` |
-| #18 FR-002 wait fast | skills/st-fast/SKILL.md | `in the foreground, with a Bash timeout of 600000 ms, and wait: hidden regressions?` |
+| #18 FR-002 wait plan | skills/st-plan/SKILL.md | `in the foreground, with a Bash timeout of 600000 ms, and wait for it.` |
 | #18 FR-005 revise | skills/st-build/SKILL.md | `Two rounds at most per point per gate pass, then the user decides.` |
 | #18 FR-005 revise | skills/st-build/SKILL.md | `Then run the same point once more on the changed input.` |
 | #18 FR-006 blocked | skills/st-build/SKILL.md | `stop and show the user the reason. Nothing passes the gate.` |
 | #18 FR-006 blocked | skills/st-build/SKILL.md | `bash <plugin root>/scripts/st-advisor.sh continued <point> <feature dir>` |
 | #18 FR-007 record | skills/st-build/SKILL.md | `Each run appends a record to `<feature dir>/advisor.md`` |
-| #18 FR-008 stale build | skills/st-build/SKILL.md | `bash <plugin root>/scripts/st-advisor.sh check diff <feature dir> <base>` |
 | #18 FR-008 stale build | skills/st-build/SKILL.md | ``advisor approval is stale` or `no record` counts as no approval` |
 | #18 FR-008 stale inspect | skills/st-inspect/SKILL.md | `bash <plugin root>/scripts/st-advisor.sh check plan <feature dir>` |
-| #18 FR-008 stale fast | skills/st-fast/SKILL.md | `bash <plugin root>/scripts/st-advisor.sh check diff <feature dir> <base from step 1>` |
 | #18 FR-010 modes | skills/st-build/SKILL.md | `The mode comes from `.stratum/advisor.json` (`codex`, `both` or `off`).` |
 | #18 FR-010 modes | skills/st-build/SKILL.md | `First line `mode both: also consult /advisor if one is set`` |
 | #18 FR-010 no file | skills/st-build/SKILL.md | `No file means off, with the `mode not set` line.` |
@@ -403,8 +362,7 @@ Tests list (T001 adds it, so `tests/test_inspect.sh` "README tests" stays green)
 | #18 FR-011 no codex | skills/st-build/SKILL.md | ``no advisor: mode not set` (show the user its line) or `no advisor: mode off`: go on as before` |
 | #18 FR-011 no codex | skills/st-build/SKILL.md | ``no advisor: codex not found`, `no advisor: mode not set`` |
 | #18 FR-012 review only | skills/st-build/SKILL.md | `Never run `codex` to build or fix.` |
-| #18 FR-016 inspect rules | skills/st-inspect/SKILL.md | `Handle its answer as in "Advisor" in `<plugin root>/skills/st-build/SKILL.md`` |
-| #18 FR-016 fast rules | skills/st-fast/SKILL.md | `Handle each advisor answer as in "Advisor" in `<plugin root>/skills/st-build/SKILL.md` (verdicts, rounds, modes, record, no Codex)` |
+| #18 FR-016 plan rules | skills/st-plan/SKILL.md | `Handle its answer as in "Advisor" in `<plugin root>/skills/st-build/SKILL.md`` |
 | #18 FR-015 init | skills/st-init/SKILL.md | `If `.stratum/advisor.json` is missing, ask the user in one question: advisor mode `codex` (recommended` |
 | #18 FR-015 init | skills/st-init/SKILL.md | `Write `.stratum/advisor.json` as `{"mode": "<answer>"}`.` |
 | #18 FR-016 readme | README.md | `The orchestrator runs `scripts/st-advisor.sh` in the foreground and waits for the answer.` |
@@ -413,27 +371,30 @@ Tests list (T001 adds it, so `tests/test_inspect.sh` "README tests" stays green)
 | #18 FR-016 readme | README.md | ``"mode": "off"` is the off switch: nothing goes to OpenAI.` |
 | #18 FR-016 readme | README.md | `With no `codex` on PATH you get one line, `no advisor: codex not found`` |
 | #18 FR-016 readme | README.md | `A failed, empty, malformed or late answer (540 seconds) is `BLOCKED`, never approval.` |
-| #18 FR-016 readme | README.md | `An approval of a plan or diff that changed since then is stale.` |
-| #18 FR-013 readme | README.md | `untracked `.env*`, `*.env`, `*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.jks`, `*.keystore`, `id_rsa*`, `id_ed25519*`, `id_ecdsa*`, `.npmrc`, `.netrc`, `.pypirc` and `credentials*` files (any case) are left out of the list Codex is given` |
+| #18 FR-016 readme | README.md | `An approval of a plan that changed since then is stale.` |
 | #18 D13 readme | README.md | `Whether Codex's own shell sees your environment variables is not checked.` |
-| #18 inspect keep | skills/st-inspect/SKILL.md | `; big ones go to the user before the gate.` |
+| #18 plan keep | skills/st-plan/SKILL.md | `; big ones go to the user before the gate.` |
 | #18 FR-014 readme | README.md | `Optional `model` and `effort` keys in the same file pick the Codex model and reasoning effort` |
 | #18 D23 readme | README.md | `The call runs with `--ignore-user-config`: neither `~/.codex/config.toml` nor a project `.codex/config.toml` is read` |
 | #18 FR-014 init | skills/st-init/SKILL.md | `Optional `model` and `effort` keys pick the Codex model and reasoning effort` |
 | #18 FR-001 build worktree stop | skills/st-build/SKILL.md | `a subagent whose test is still red after 2 tries stops and reports both failures` |
 | #18 L18 commit build | skills/st-build/SKILL.md | `with tasks.md, and `<feature dir>/advisor.md` if it changed.` |
-| #18 L18 commit build | skills/st-build/SKILL.md | `then have `st-git` commit `<feature dir>/advisor.md` if it changed.` |
+| #18 L18 commit plan | skills/st-plan/SKILL.md | `and `<feature dir>/advisor.md` if it changed.` |
+| #18 D27 plan advice only | skills/st-plan/SKILL.md | `It does not validate; st-inspect does.` |
 | #18 L18 commit inspect | skills/st-inspect/SKILL.md | `Have `st-git` commit `<feature dir>/advisor.md` if it changed.` |
-| #18 L18 commit fast | skills/st-fast/SKILL.md | `with `<feature dir>/advisor.md` if it changed.` |
 | #18 L19 debug worktree | skills/st-build/SKILL.md | `Start `st-debug` from the main session too, with the worktree path; it diagnoses, fixes and verifies in that worktree.` |
 | #18 exit 2 | skills/st-build/SKILL.md | `Exit 2 with a `usage:` line or `cannot hash inputs`: the script could not read or hash its inputs.` |
 | #18 exit 2 | skills/st-build/SKILL.md | `Nothing was recorded and nothing was sent. Fix the input or the tool and run the point again.` |
+| #18 plan-only st-fast diff point | skills/st-fast/SKILL.md | `advisor is set, consult it on the diff: hidden regressions? Handle its notes like findings.` |
 
-Plus two checks that are not phrases:
+Plus checks that are not phrases:
 
+- `#18 plan-only st-inspect no plan run`: `skills/st-inspect/SKILL.md` has no
+  `st-advisor.sh plan <feature dir>` and still has `st-advisor.sh check plan <feature dir>`.
+- `#18 D27 st-plan no validation risk text`: `skills/st-plan/SKILL.md` has no `missed auth invariants`.
+- `#18 plan-only st-fast no script`: `skills/st-fast/SKILL.md` has no `st-advisor.sh`.
+- `#18 plan-only st-build no diff point`: `skills/st-build/SKILL.md` has no `st-advisor.sh diff`
+  and no `check diff`.
 - `#18 FR-001 quick lane`: `! grep -qF st-advisor "$root/skills/st-quick/SKILL.md"`.
-- `#18 FR-016 old advisor text gone`: none of these old phrases is left:
-  `consult the advisor if one is set` in `skills/st-build/SKILL.md`,
-  ``first if one is set (`/advisor`)`` and `advisor is set, consult it on the diff` in
-  `skills/st-fast/SKILL.md`, ``If an advisor is set (`/advisor`)`` in `skills/st-inspect/SKILL.md`.
-  Each is a `grep -qF` that must find nothing.
+- `#18 FR-016 st-inspect old advisor text gone`: ``If an advisor is set (`/advisor`)`` is not in
+  `skills/st-inspect/SKILL.md` (a `grep -qF` that must find nothing).

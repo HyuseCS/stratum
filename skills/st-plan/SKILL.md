@@ -25,7 +25,11 @@ Plugin root (`<plugin root>`) is two levels up from this skill's base directory.
 3. **Verify.** Check that `plan.md`, `research.md`, `quickstart.md` and `tasks.md` exist in the
    feature dir, that every FR has a test task before its build task, and that every task names
    exact file paths. Send gaps back to the same subagent.
-4. Have `st-git` commit the plan files with exact paths.
+4. **Advisor.** Run `bash <plugin root>/scripts/st-advisor.sh plan <feature dir>` from the project root in the foreground, with a Bash timeout of 600000 ms, and wait for it.
+   Codex reads spec, plan and tasks in the read-only sandbox and only advises: a simpler or better approach, tasks to cut or merge. It does not validate; st-inspect does.
+   Handle its answer as in "Advisor" in `<plugin root>/skills/st-build/SKILL.md`; big ones go to the user before the gate.
+   Fixes go to the same `st-plan` subagent and cost a round.
+5. Have `st-git` commit the plan files with exact paths, and `<feature dir>/advisor.md` if it changed.
 
 ## Gate
 

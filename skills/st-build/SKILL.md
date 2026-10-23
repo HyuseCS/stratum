@@ -55,16 +55,14 @@ Never delete a remote branch: the user does that. If the project is another repo
   to the user, one question at a time, with your recommendation. Decide small ones yourself.
 - Work touches a higher impact area than the lane allows: move up a lane.
 
-When all tasks are ticked, run the advisor on the feature's full diff (see Advisor):
-`bash <plugin root>/scripts/st-advisor.sh diff <feature dir> <base>`: hidden regressions, broken rules from the constitution.
-The base: on a branch, `git merge-base main HEAD`. On `main`, `git rev-parse "$(git log --diff-filter=A --format=%H -- <feature dir>/spec.md | tail -1)^"`.
-Before you say the build is done, run `bash <plugin root>/scripts/st-advisor.sh check diff <feature dir> <base>`, then have `st-git` commit `<feature dir>/advisor.md` if it changed.
-Then say so, list the small decisions and findings (fixed and dropped), and name the
+When all tasks are ticked, consult the advisor if one is set (`/advisor`) on the feature's full
+diff: hidden regressions, broken rules from the constitution. Handle its notes like review
+findings. Then say so, list the small decisions and findings (fixed and dropped), and name the
 next phase: `/stratum:st-close`.
 
 ## Advisor
 
-The advisor is Codex (the `codex` CLI), a model from another vendor. It runs at three points: the plan before the build gate (`st-inspect` step 4), a test still red after 2 tries, and the full diff before the build is called done. The Quick lane has no advisor.
+The advisor is Codex (the `codex` CLI), a model from another vendor. It runs at two points: the plan before the Plan gate (`st-plan` step 4, stale-checked at the build gate by `st-inspect`) and a test still red after 2 tries. The full diff before the build is called done and every Fast-lane point use `/advisor`. The Quick lane has no advisor.
 
 - Run `bash <plugin root>/scripts/st-advisor.sh <point> ...` from the project root in the foreground, with a Bash timeout of 600000 ms, and wait for it. No background run, no polling.
 - Codex only reviews, in the read-only sandbox. Never run `codex` to build or fix.
@@ -74,7 +72,7 @@ The advisor is Codex (the `codex` CLI), a model from another vendor. It runs at 
 - `REVISE`: handle each finding like a review finding: check it against the source, fix the real small ones, bring big ones to the user, drop the false ones. Then run the same point once more on the changed input. Two rounds at most per point per gate pass, then the user decides. A later gate pass starts a new count.
 - `BLOCKED: <reason>`: stop and show the user the reason. Nothing passes the gate. If the user says to continue, run `bash <plugin root>/scripts/st-advisor.sh continued <point> <feature dir>` and skip the point. Do not retry it in this gate pass.
 - Each run appends a record to `<feature dir>/advisor.md`: the point, the time, the SHA256 of the input, the verdict and the findings. The mode comes from `.stratum/advisor.json` (`codex`, `both` or `off`). No file means off, with the `mode not set` line.
-- At a gate, `check` compares the latest record with the current input. `advisor approval is stale` or `no record` counts as no approval: run the point once more, as a round. Skip the check after a `no advisor` line.
+- At the build gate, `check plan` compares the latest plan record with the current input. `advisor approval is stale` or `no record` counts as no approval: run the plan point once more, as a round. Skip the check after a `no advisor` line.
 - Exit 2 with a `usage:` line or `cannot hash inputs`: the script could not read or hash its inputs. Nothing was recorded and nothing was sent. Fix the input or the tool and run the point again.
 
 ## Always
