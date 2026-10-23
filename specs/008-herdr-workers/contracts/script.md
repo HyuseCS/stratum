@@ -90,7 +90,8 @@ repo guard file is not read. The script never writes `git-guard.json` anywhere e
 
 Exact text, with `<...>` filled in. `<plugin root>` is the parent of the script's own folder,
 `$(cd "$(dirname "$0")/.." && pwd)`. The advisor block is written only when `st-advisor.sh` exists
-in the same folder as `st-worker.sh`.
+in the same folder as `st-worker.sh`. On a saved machine the brief has no `- Plugin root:` line and
+no `## Advisor` block: both name paths on this machine.
 
 ```text
 # Brief: <N>
@@ -280,6 +281,7 @@ F1, F2
 ```text
 1 cd "$(git rev-parse --show-toplevel)"; old=$(git rev-parse HEAD)
 2 brief to a mktemp file outside the repo (headless text below), removed on exit
+2b git status --porcelain is not empty   -> "Working tree is not clean.", exit 1, no claude call
 3 timeout -k 10 540 claude -p <HP> --output-format json --max-turns 30 -n N [--model M]
     --tools Read,Edit,Write,Glob,Grep,Bash
     --allowedTools Read Edit Write Glob Grep "Bash(<test>)"
@@ -395,9 +397,11 @@ stub log, never from built ids.
 | C4 | `close`, no workspace with the label: `No worker worker-t004 on local.`, no `workspace close`, exit 1 |
 | C5 | `close`, `agent get` fails (agent gone): one `workspace close` on the stub's WS, `closed`, `folder <WT> ready to remove`, exit 0 |
 | L1 | `list` with two worker workspaces and one other workspace: two `found` lines, the other label absent, states from the stub |
-| R1 | `start --machine laptop --repo '~/proj'`: every call `--machine laptop` but `machine list --json`; `worktree create` has `--path ~/proj-worker-t004`; the stub answers `/home/u/proj-worker-t004` as `.result.worktree.path`; one ssh line `-o BatchMode=yes -- u@stubhost` with `cat > ` and the `git-guard.json` write, both under the path the stub answered; the brief on its stdin holds the roster and rules |
+| R1 | `start --machine laptop --repo '~/proj'`: every call `--machine laptop` but `machine list --json`; `worktree create` has `--path ~/proj-worker-t004`; the stub answers `/home/u/proj-worker-t004` as `.result.worktree.path`; one ssh line `-o BatchMode=yes -- u@stubhost` with `cat > ` and the `git-guard.json` write, both under the path the stub answered; the brief on its stdin holds the roster and rules, and has no `- Plugin root:` line and no `## Advisor` line |
+| R1d | as R1, run from a copy of the script with a dummy `st-advisor.sh` next to it: the brief on ssh stdin still has no `- Plugin root:` line and no `## Advisor` line |
 | R1b | `start --machine laptop --repo '~/proj'`, the stub answers `~/proj-worker-t004` as the worktree path: ssh holds `cat > ~/proj-worker-t004/brief.md` and no `\~` |
 | R1c | `start --machine laptop`, ssh exits 255: one `stopped: ssh to u@stubhost failed` line, one `worker` line, exit 1 |
+| R14 | `start --machine laptop`, the stub answers `<tmp>/remote-wt` (an empty folder the test makes) as the worktree path: ssh holds `cat > <tmp>/remote-wt/brief.md`, and the folder is still empty after `start` (nothing written on this machine) |
 | R2 | `result --machine laptop`: ssh `cat --` of the quoted result path, then `git fetch u@stubhost:<WT> worker-t004:worker-t004` in the git log with `GIT_SSH_COMMAND=ssh -o BatchMode=yes` in its environment (the wrapper logs it); the test makes branch `worker-t004` in the temp repo first, and the `fetched` line has its sha |
 | R2b | `result --machine laptop`, ssh exits 255: one `stopped: ssh to u@stubhost failed` line, no `no result file` line, no pane text, exit 1 |
 | R3 | `wait --machine laptop`: the result check is an ssh `test -f` |
@@ -422,6 +426,7 @@ stub log, never from built ids.
 | H8 | `headless --machine laptop`: exit 2, no herdr, ssh or claude call |
 | H9 | run from a subfolder of the repo: the script `cd`s to the toplevel first, the brief is outside the repo, the `HEAD` compare works (H2's commit is still caught) |
 | H10 | `headless --test 'a *'`: one line `Test command must not contain * for headless.`, no claude call, exit 1 |
+| H12 | the repo has an uncommitted change, a modified tracked file or an untracked file: one line `Working tree is not clean.`, no claude call, exit 1. The test repo ignores `.stratum/models.json` (as st-init does), so M6 keeps a clean tree |
 | M1 | `start --model opus`: `agent start` argv ends `-n worker-t004 --model opus`; the brief has `- Model: opus` |
 | M2 | `start` with no `--model`, models.json `{"st-worker":{"model":"sonnet"}}`: `--model sonnet` in the `agent start` argv; brief `- Model: sonnet` |
 | M3 | `start` with no `--model` and no models.json: no `--model` in any argv; brief `- Model: default` (S1 stays as it is) |

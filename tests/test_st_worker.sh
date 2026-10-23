@@ -152,6 +152,7 @@ mkdir -p "$repo/.stratum"
 git -C "$repo" init -q
 printf '{}\n' > "$repo/.stratum/state.json"
 git -C "$repo" add .stratum/state.json
+printf '.stratum/models.json\n' >> "$repo/.git/info/exclude"
 git -C "$repo" -c user.name=t -c user.email=t@t commit -q -m first
 sha=$(git -C "$repo" rev-parse HEAD)
 
@@ -603,12 +604,17 @@ r1() {
   check "R1 ssh writes brief.md and git-guard.json under the path herdr answered" 'c=$(sshs); [ "$(wt)" = /home/u/proj-worker-t004 ] && grep -qF -- "cat > /home/u/proj-worker-t004/brief.md" <<<"$c" && grep -qF -- "mkdir -p /home/u/proj-worker-t004/.stratum" <<<"$c" && grep -qF -- "> /home/u/proj-worker-t004/.stratum/git-guard.json" <<<"$c" && grep -qF -- "$g" <<<"$c" && ! grep -qF -- "~/proj-worker-t004" "$tmp/ssh"'
   check "R1 brief on ssh stdin: heading, task, machine, result path" 'grep -qxF "# Brief: worker-t004" "$in" && grep -qxF "TASK BODY $(rnd)" "$in" && grep -qxF -- "- Your machine: laptop. \`local\` is the orchestrator'"'"'s machine." "$in" && grep -qxF -- "- Result file: /home/u/proj-worker-t004/result.md" "$in"'
   check "R1 brief on ssh stdin: roster rows and the four rules" 'grep -qxF "| worker-t004 | laptop | worker-t004 | T004 |" "$in" && grep -qxF "| worker-t005 | local | worker-t005 | T005 |" "$in" && [ "$(grep -cxFf "$rules" "$in")" = 4 ]'
-  check "R1 nothing written on this machine" '[ ! -e "$tmp/repo-worker-t004" ] && [ ! -e "$repo/~" ]'
+  check "R1 brief on ssh stdin: no Plugin root line, no Advisor block" '[ -s "$in" ] && ! grep -q "^- Plugin root:" "$in" && ! grep -q "^## Advisor" "$in"'
   check "R1 agent start argv" 'rcall "agent\tstart\tworker-t004\t--kind\tclaude\t--pane\t%s\t--timeout\t120000\t--\t--permission-mode\tauto\t-n\tworker-t004" "$(pane)"'
   check "R1 agent prompt with P" 'rcall "agent\tprompt\tworker-t004\t%s\t--wait\t--until\tworking\t--until\tblocked\t--timeout\t30000" "$P"'
   check "R1 worker line names laptop, ids from the stub log" 'hasline "worker\tworker-t004\tlaptop\t%s\t%s\tworker-t004\t%s" "$(wsid)" "$(pane)" "$(wt)"'
 }
 r1 "$script"
+
+rfresh; mkdir -p "$tmp/r1d"; cp "$script" "$tmp/r1d/st-worker.sh"; : > "$tmp/r1d/st-advisor.sh"
+STUB_WT_PATH=/home/u/proj-worker-t004 rrun bash "$tmp/r1d/st-worker.sh" start "${rsargs[@]}"
+check "R1d st-advisor.sh next to the script, saved machine: exit 0, brief has no Plugin root line, no Advisor block" '[ $rc = 0 ] && [ -s "$tmp/ssh_in.1" ] && ! grep -q "^- Plugin root:" "$tmp/ssh_in.1" && ! grep -q "^## Advisor" "$tmp/ssh_in.1"'
+rm -rf "$tmp/r1d"
 
 rfresh; rrun bash "$script" start "${rsargs[@]}"
 check "R1b exit 0" '[ $rc = 0 ]'
@@ -686,6 +692,12 @@ c=$(sshs); pre=${c%%cat > *}
 check "R13 exit 0, one ssh call" '[ $rc = 0 ] && [ "$(grep -c . "$tmp/ssh")" = 1 ]'
 check "R13 ssh refuses a .stratum symlink, then a link or any existing brief.md, result.md, git-guard.json, before the cat > write" '[ "$pre" != "$c" ] && [ "${pre#*u@stubhost }" = "[ ! -L /home/u/proj-worker-t004/.stratum ] || { echo \"/home/u/proj-worker-t004/.stratum is a symlink\" >&2; exit 3; }; for p in /home/u/proj-worker-t004/brief.md /home/u/proj-worker-t004/result.md /home/u/proj-worker-t004/.stratum/git-guard.json; do [ ! -L \"\$p\" ] || { echo \"\$p is a symlink\" >&2; exit 3; }; [ ! -e \"\$p\" ] || { echo \"\$p already exists\" >&2; exit 3; }; done && " ]'
 
+rfresh; rm -rf "$tmp/remote-wt"; mkdir "$tmp/remote-wt"
+STUB_WT_PATH="$tmp/remote-wt" rrun bash "$script" start "${rsargs[@]}"
+check "R14 exit 0, ssh writes brief.md under the answered path" '[ $rc = 0 ] && sshs | grep -qF -- "cat > $tmp/remote-wt/brief.md"'
+check "R14 nothing written on this machine: the answered folder stays empty" '[ -d "$tmp/remote-wt" ] && [ -z "$(ls -A "$tmp/remote-wt")" ]'
+rm -rf "$tmp/remote-wt"
+
 for k in "3::ssh: stub failure" "3:1:exit 3"; do
   rfresh; STUB_SSH_RC=${k%%:*} STUB_SSH_QUIET=$(cut -d: -f2 <<<"$k") rrun bash "$script" start "${rsargs[@]}"
   check "R13b remote write fails (${k#*:*:}): exit 1, one stopped line with WT, machine and the reason" '[ $rc = 1 ] && [ "$(grep -c "^stopped:" <<<"$out")" = 1 ] && hasline "stopped: cannot write brief.md and .stratum/git-guard.json in ~/proj-worker-t004 on laptop: %s" "${k#*:*:}" && [ "$(cnt "^--machine\tlaptop\tagent\tstart\t")" = 0 ]'
@@ -749,6 +761,15 @@ check "H6 error_max_turns: exit 1, headless line and result text print" '[ $rc =
 fresh
 STUB_CLAUDE=okfail run bash "$script" headless T004 --task "$task" --test "$testcmd"
 check "H11 success JSON but exit 1: exit 1, claude exited line, no headless line" '[ $rc = 1 ] && hasline "claude exited 1" && ! grep -q "^headless" <<<"$out"'
+
+for k in tracked untracked; do
+  fresh; rm -f "$tmp/claude_args"
+  if [ $k = tracked ]; then printf '{"dirty":1}\n' > "$repo/.stratum/state.json"; else : > "$repo/stray.txt"; fi
+  run bash "$script" headless T004 --task "$task" --test "$testcmd"
+  check "H12 $k change: exit 1, one line, no claude call" '[ $rc = 1 ] && [ "$out" = "Working tree is not clean." ] && [ ! -e "$tmp/claude_args" ]'
+  printf '{}\n' > "$repo/.stratum/state.json"; rm -f "$repo/stray.txt"
+done
+check "H12 repo tree is clean again" '[ -z "$(git -C "$repo" status --porcelain)" ]'
 
 fresh; rm -f "$tmp/claude_nums"
 NOENV=1 run bash "$script" headless T004 --task "$task" --test "$testcmd"
