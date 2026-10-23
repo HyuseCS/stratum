@@ -15,18 +15,14 @@ to `/stratum:st-full`.
 2. **Gate:** show the user the change plan in short form. Continue only on their OK.
 3. For each test in the change plan: the `stratum:st-test` agent writes it and shows it fails; the `stratum:st-build` agent makes it
    pass. A test still red after 2 tries goes to the `stratum:st-debug` agent, with the advisor's answer
-   first: save the task text and both failure outputs to files in your scratchpad, then run
-   `bash <plugin root>/scripts/st-advisor.sh test <feature dir> <task file> <test path> <failure 1 file> <failure 2 file>`: root cause or rabbit hole?
-   Run it in the foreground, with a Bash timeout of 600000 ms, and wait; handle the answer as in step 4.
-4. Verify with `bash <plugin root>/scripts/st-verify.sh '<test command>' <files touched>` (see `/stratum:st`). Then run
-   `bash <plugin root>/scripts/st-advisor.sh diff <feature dir> <base from step 1>` in the foreground, with a Bash timeout of 600000 ms, and wait: hidden regressions?
-   Handle each advisor answer as in "Advisor" in `<plugin root>/skills/st-build/SKILL.md` (verdicts, rounds, modes, record, no Codex).
+   first if one is set (`/advisor`): root cause or rabbit hole?
+4. Verify with `bash <plugin root>/scripts/st-verify.sh '<test command>' <files touched>` (see `/stratum:st`). Then
+   consult the advisor if one is set (`/advisor`) on the diff: hidden regressions? Handle its notes like findings.
 5. Start the `stratum:st-review` agent with the change plan path and the change's uncommitted diff
    (`git diff HEAD` plus new files, since step 6 commits after the review). Check each finding
    against the source (see `/stratum:st`). Send the real, small ones to `stratum:st-build`; big
    ones go to the user.
-6. Before the commit, run `bash <plugin root>/scripts/st-advisor.sh check diff <feature dir> <base from step 1>`. If review fixes made it stale, run the diff point once more if a round is left; else tell the user.
-   The `stratum:st-git` agent commits exact paths, with `<feature dir>/advisor.md` if it changed.
+6. The `stratum:st-git` agent commits exact paths.
 7. Start the `stratum:st-close` agent with the base from step 1, for the drift fix and the shortcut
    list (no gap report, no lessons unless something went wrong). Do this only after the step 6
    commit landed: the shortcut list sees only committed work. If the commit did not land, stop

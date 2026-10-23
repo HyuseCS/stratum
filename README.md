@@ -158,14 +158,14 @@ copy for that project only.
 
 ## Built in
 
-- **Advisor.** Codex (OpenAI's `codex` CLI), a model from another vendor, reviews the work at three points in the Full and Fast lanes: the plan before the build gate, a test still red after two tries, and the full diff before the build is called done. The Quick lane has no advisor.
+- **Advisor.** Codex (OpenAI's `codex` CLI), a model from another vendor, runs at two points in the Full lane. At the end of the Plan phase, before its gate, it only advises on a simpler or better approach and does not validate the plan (`st-inspect` does that). It also reviews a test still red after two tries. The full diff before the build is called done and the whole Fast lane use `/advisor` if you set one. The Quick lane has no advisor.
   The orchestrator runs `scripts/st-advisor.sh` in the foreground and waits for the answer. Codex runs in the read-only sandbox and only reviews: it never builds or fixes.
   It answers `APPROVED`, `REVISE` (findings, checked against the source like any finding, then one more run, two rounds at most), or `BLOCKED` (the orchestrator stops and asks you).
   A failed, empty, malformed or late answer (540 seconds) is `BLOCKED`, never approval.
-  Each run appends the point, a SHA256 of the input, the verdict and the findings to `specs/<feature>/advisor.md`. An approval of a plan or diff that changed since then is stale.
-  What leaves the machine: each call sends the prompt and the files Codex reads to OpenAI, on your Codex login and quota (about 37,000 tokens per plan or diff review). The prompt names paths and a base commit; at the test point it holds the task text, the test path and both failure outputs.
+  Each run appends the point, a SHA256 of the input, the verdict and the findings to `specs/<feature>/advisor.md`. An approval of a plan that changed since then is stale.
+  What leaves the machine: each call sends the prompt and the files Codex reads to OpenAI, on your Codex login and quota (about 37,000 tokens per plan review). At the plan point the prompt names the plan files and Codex reads them; at the test point it holds the task text, the test path and both failure outputs.
   The prompt tells Codex to stay inside the named inputs, never open env or secret files, and never quote a secret value. The sandbox does not block reads.
-  At the diff point, untracked `.env*`, `*.env`, `*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.jks`, `*.keystore`, `id_rsa*`, `id_ed25519*`, `id_ecdsa*`, `.npmrc`, `.netrc`, `.pypirc` and `credentials*` files (any case) are left out of the list Codex is given. Whether Codex's own shell sees your environment variables is not checked.
+  Whether Codex's own shell sees your environment variables is not checked.
   `.stratum/advisor.json` sets the mode: `{"mode": "codex"}`, `{"mode": "both"}` (Codex, then `/advisor` if you set one), or `{"mode": "off"}`. `"mode": "off"` is the off switch: nothing goes to OpenAI.
   With no file the advisor is off and prints `no advisor: mode not set. Write .stratum/advisor.json with "mode": "codex", "both" or "off".` `st-init` writes the file for new projects. A project set up before this feature has no file, so the advisor stays off until you write it.
   With no `codex` on PATH you get one line, `no advisor: codex not found`, and the flow runs as before, with `/advisor` if you set one.

@@ -51,7 +51,7 @@ first=$(git -C "$proj" rev-parse HEAD)
 adv() { (cd "$proj" && bash "$root/scripts/st-advisor.sh" "$@"); }
 run() { out=$(adv "$@"); rc=$?; }
 last_header() { grep -E "^## $1 \| " "$proj/specs/001-demo/advisor.md" 2>/dev/null | tail -n1; }
-plan_hash() { (cd "$proj/specs/001-demo" && cat spec.md plan.md tasks.md | sha256sum | cut -d' ' -f1); }
+plan_hash() { (cd "$proj/specs/001-demo" && { cat spec.md; awk '/^## Validate$/{s=1;next} /^## /{s=0} !s' plan.md; cat tasks.md; } | sha256sum | cut -d' ' -f1); }
 answer() { printf '%s' "$1" > "$tmp/answer"; }
 
 answer '{"verdict":"APPROVED","summary":"fine","findings":[]}'
@@ -76,6 +76,7 @@ check "FR-013 prompt head is exact" 'head -n4 "$tmp/prompt" | cmp -s - "$tmp/hea
 check "FR-013 prompt rules" 'grep -qxF "You are a reviewer for Stratum. Review only: never create, change or delete a file, and never build or fix anything." "$tmp/prompt" && grep -qxF "Read only the inputs named below and the files they cite. Never open .env files, keys, credentials, tokens or other secret files." "$tmp/prompt"'
 check "FR-013 prompt: never quote a secret" 'grep -qxF "Never quote a secret value in a finding." "$tmp/prompt"'
 check "FR-009 plan prompt names paths, no plan text" 'grep -qxF "Inputs: specs/001-demo/spec.md, specs/001-demo/plan.md, specs/001-demo/tasks.md" "$tmp/prompt" && ! grep -qF PLANBODY7f3a "$tmp/prompt"'
+check "D27 plan prompt: advice-only Point line, no Risks line" 'grep -qxF "Point: plan. Advise only on how the plan could be built better or done differently for a better outcome: a simpler or better approach, tasks to cut or merge. Do not check correctness, coverage or risks: the Inspect phase does that." "$tmp/prompt" && ! grep -qF "Risks:" "$tmp/prompt"'
 
 rm -f "$tmp/argv"
 run plan specs/001-demo
@@ -104,32 +105,6 @@ printf 'FAILTWO2' > "$tmp/f2.txt"
 run test specs/001-demo "$tmp/task.txt" tests/x_test.sh "$tmp/f1.txt" "$tmp/f2.txt"
 check "test point labels on their own line" '[ "$(grep -xn -e "Task:" -e "Failure output 1:" -e "Failure output 2:" "$tmp/prompt" | cut -d: -f2- | paste -sd,)" = "Task:,Failure output 1:,Failure output 2:" ] && cmp -s "$tmp/prompt" "$tmp/prompt_nl"'
 
-printf 'x = 2\n' > "$proj/a.py"
-git -C "$proj" -c user.name=t -c user.email=t@t commit -q -am second
-short=$(git -C "$proj" rev-parse --short "$first")
-echo k > "$proj/new file.txt"
-echo S=1 > "$proj/.env"
-mkdir -p "$proj/sub"
-echo k > "$proj/sub/k.pem"
-echo k > "$proj/c.key"
-echo k > "$proj/c.p12"
-echo k > "$proj/c.pfx"
-run diff specs/001-demo "$short"
-lst=$(awk '/^Untracked files:/{f=1;next} f' "$tmp/prompt" 2>/dev/null)
-check "diff point names full base and untracked files" 'grep -qF "$first" "$tmp/prompt" && grep -qxF "new file.txt" <<<"$lst" && ! grep -qxE "\.env|sub/k\.pem|c\.key|c\.p12|c\.pfx" <<<"$lst" && last_header diff | grep -q "^## diff | "'
-rm -rf "$proj/new file.txt" "$proj/.env" "$proj/sub" "$proj/c.key" "$proj/c.p12" "$proj/c.pfx"
-sec=(.ENV Server.PEM prod.env id_rsa id_ed25519.pub .npmrc .netrc credentials.json app.jks release.keystore)
-for p in "${sec[@]}" notes.md config.json; do echo k > "$proj/$p"; done
-run diff specs/001-demo "$first"
-lst=$(awk '/^Untracked files:/{f=1;next} f' "$tmp/prompt" 2>/dev/null)
-check "FR-013 untracked filter: any case, keys, rc files, credentials" 'grep -qxF notes.md <<<"$lst" && grep -qxF config.json <<<"$lst" && ! grep -qxiE "\.env|server\.pem|prod\.env|id_rsa|id_ed25519\.pub|\.npmrc|\.netrc|credentials\.json|app\.jks|release\.keystore" <<<"$lst"'
-for p in "${sec[@]}" notes.md config.json; do rm -f "$proj/$p"; done
-echo k > "$proj/.stratum/constitution.md"
-run diff specs/001-demo "$first"
-rm -f "$proj/.stratum/constitution.md"
-check "diff point names the constitution when it exists" 'grep "^Inputs: " "$tmp/prompt" | grep -qF ".stratum/constitution.md"'
-run diff specs/001-demo "$first"
-check "diff point Inputs line has no constitution when none exists" 'grep -q "^Inputs: " "$tmp/prompt" && ! grep "^Inputs: " "$tmp/prompt" | grep -qF constitution'
 
 mkdir -p "$tmp/sys"
 IFS=: read -ra pdirs <<<"$PATH"
@@ -221,7 +196,7 @@ printf '# plan\n' > "$proj/specs/002-half/plan.md"
 badargs() {
   local ok=1 c
   n0=$(nrec)
-  for c in "plan" "plan specs/none" "plan specs/002-half" "diff specs/001-demo notacommit" "test specs/001-demo $tmp/task.txt tests/x_test.sh $tmp/f1.txt $tmp/missing.txt"; do
+  for c in "plan" "plan specs/none" "plan specs/002-half" "diff specs/001-demo $first" "check diff specs/001-demo $first" "continued diff specs/001-demo" "test specs/001-demo $tmp/task.txt tests/x_test.sh $tmp/f1.txt $tmp/missing.txt"; do
     rm -f "$tmp/argv"
     run $c
     [ "$rc" = 2 ] && [[ "$(head -n1 <<<"$out")" == "usage: st-advisor.sh"* ]] && [ ! -e "$tmp/argv" ] && [ "$(nrec)" = "$n0" ] || { ok=0; echo "  bad case: $c rc=$rc" >&2; }
@@ -231,7 +206,6 @@ badargs() {
 check "bad args: exit 2, no record" 'badargs'
 
 stale() { [ "$rc" = 1 ] && [ "$out" = "advisor approval is stale" ]; }
-gitc() { git -C "$proj" -c user.name=t -c user.email=t@t "$@"; }
 
 answer '{"verdict":"APPROVED","summary":"fine","findings":[]}'
 run plan specs/001-demo
@@ -250,6 +224,31 @@ echo "more" >> "$proj/specs/001-demo/tasks.md"
 run check plan specs/001-demo
 check "check plan stale after a tasks.md change" 'stale'
 
+pm="$proj/specs/001-demo/plan.md"
+cp "$pm" "$tmp/plan.save"
+answer '{"verdict":"APPROVED","summary":"fine","findings":[]}'
+run plan specs/001-demo
+printf '## Validate\n### sub\nPASS\n' >> "$pm"
+run check plan specs/001-demo
+check "check plan fresh after a Validate section is appended" '[ $rc = 0 ] && [[ "$out" == "APPROVED sha256 "* ]]'
+awk '/^## Validate$/{exit} 1' "$pm" > "$tmp/plan.cut"
+printf '## Validate\n### other\nFAIL different\n' >> "$tmp/plan.cut"
+cp "$tmp/plan.cut" "$pm"
+run check plan specs/001-demo
+check "check plan fresh after the Validate section is replaced" '[ $rc = 0 ] && [[ "$out" == "APPROVED sha256 "* ]]'
+sed -i 's/^PLANBODY7f3a$/PLANBODY7f3a edited/' "$pm"
+run check plan specs/001-demo
+check "check plan stale after a plan body change above Validate" 'stale'
+cp "$tmp/plan.save" "$pm"
+printf '## Validate\nPASS\n## After\nAFTER1\n' >> "$pm"
+run plan specs/001-demo
+run check plan specs/001-demo
+fresh_after=$rc
+sed -i 's/^AFTER1$/AFTER2/' "$pm"
+run check plan specs/001-demo
+check "check plan stale after a change in a section following Validate" '[ $fresh_after = 0 ] && stale'
+cp "$tmp/plan.save" "$pm"
+
 answer '{"verdict":"REVISE","summary":"fix","findings":[{"claim":"c","evidence":"e","location":"l","severity":"LOW"}]}'
 run plan specs/001-demo
 run check plan specs/001-demo
@@ -260,79 +259,6 @@ mkdir -p "$proj/specs/002-empty"
 printf '# spec\n' > "$proj/specs/002-empty/spec.md"
 run check plan specs/002-empty
 check "no record" '[ $rc = 1 ] && [ "$out" = "no record: plan" ]'
-
-answer '{"verdict":"APPROVED","summary":"fine","findings":[]}'
-run diff specs/001-demo "$first"
-run check diff specs/001-demo "$first"
-check "diff stays fresh with an untracked record" '[ $rc = 0 ] && [[ "$out" == "APPROVED sha256 "* ]]'
-
-git -C "$proj" add specs/001-demo/advisor.md
-gitc commit -q -m rec -- specs/001-demo/advisor.md
-run diff specs/001-demo "$first"
-run check diff specs/001-demo "$first"
-check "diff stays fresh after the record append" '[ $rc = 0 ] && [[ "$out" == "APPROVED sha256 "* ]]'
-
-echo k > "$proj/extra.txt"
-run check diff specs/001-demo "$first"
-rm -f "$proj/extra.txt"
-check "untracked file makes diff stale" 'stale'
-
-run diff specs/001-demo "$first"
-echo S=1 > "$proj/.env"
-run check diff specs/001-demo "$first"
-rm -f "$proj/.env"
-check "untracked .env makes diff stale" 'stale'
-
-echo S=1 > "$proj/.ENV"
-run diff specs/001-demo "$first"
-echo S=2 > "$proj/.ENV"
-run check diff specs/001-demo "$first"
-rm -f "$proj/.ENV"
-check "untracked .ENV edit makes diff stale" 'stale'
-
-run diff specs/001-demo "$first"
-echo 'x = 3' >> "$proj/a.py"
-run check diff specs/001-demo "$first"
-check "tracked edit makes diff stale" 'stale'
-
-printf '[diff]\n\texternal = /bin/true\n[color]\n\tui = always\n' > "$tmp/gitconfig"
-GIT_CONFIG_GLOBAL="$tmp/gitconfig" run diff specs/001-demo "$first"
-echo 'x = 4' >> "$proj/a.py"
-GIT_CONFIG_GLOBAL="$tmp/gitconfig" run check diff specs/001-demo "$first"
-check "diff hash ignores the user's diff.external and color" 'stale'
-GIT_CONFIG_GLOBAL="$tmp/gitconfig" run diff specs/001-demo "$first"
-echo newbytes > "$proj/ext_new.txt"
-GIT_CONFIG_GLOBAL="$tmp/gitconfig" run check diff specs/001-demo "$first"
-rm -f "$proj/ext_new.txt"
-check "untracked file under diff.external makes diff stale" 'stale'
-
-git init -q "$proj/nested"
-out=$(adv diff specs/001-demo "$first" 2>"$tmp/nested_err"); rc=$?
-lst=$(awk '/^Untracked files:/{f=1;next} f' "$tmp/prompt" 2>/dev/null)
-rm -rf "$proj/nested"
-check "untracked nested repo: diff run exit 0, not listed, no access error" '[ $rc = 0 ] && ! grep -qxF "nested/" <<<"$lst" && ! grep -qF "Could not access" "$tmp/nested_err"'
-
-printf 'TOKEN=oldsecret\n' > "$proj/.env"
-mkdir -p "$proj/sub"
-printf 'keyval1\n' > "$proj/sub/k.key"
-printf 'pemval1\n' > "$proj/Server.PEM"
-printf '{"k":"credval1"}\n' > "$proj/sub/credentials.json"
-gitc add .env sub/k.key Server.PEM sub/credentials.json
-gitc commit -q -m secrets -- .env sub/k.key Server.PEM sub/credentials.json
-sbase=$(git -C "$proj" rev-parse HEAD)
-printf 'TOKEN=newsecret\n' > "$proj/.env"
-printf 'pemval2\n' > "$proj/Server.PEM"
-printf '{"k":"credval2"}\n' > "$proj/sub/credentials.json"
-rm "$proj/sub/k.key"
-printf 'normchange9\n' >> "$proj/a.py"
-run diff specs/001-demo "$sbase"
-dcmd=$(sed -n 's/^Inputs: run \(.*\) and read each untracked file.*/\1/p' "$tmp/prompt")
-dout=$(cd "$proj" && eval "$dcmd")
-check "diff point command leaves out tracked secret files" '[ -n "$dcmd" ] && ! grep -qE "oldsecret|newsecret|keyval1" <<<"$dout" && grep -qF normchange9 <<<"$dout"'
-check "diff point command leaves out tracked secret files in any case and directory" '[ -n "$dcmd" ] && ! grep -qE "pemval|credval" <<<"$dout" && grep -qF normchange9 <<<"$dout"'
-printf 'TOKEN=newer\n' > "$proj/.env"
-run check diff specs/001-demo "$sbase"
-check "tracked .env edit makes diff stale" 'stale'
 
 h=$(plan_hash)
 n0=$(nrec)
@@ -363,8 +289,8 @@ run continued plan specs/001-demo 2>/dev/null
 chmod 644 "$proj/specs/001-demo/advisor.md"
 check "continued fails loudly when the record cannot be written" '[ $rc = 1 ] && ! grep -qF "BLOCKED, user continued" <<<"$out"'
 
-run continued diff specs/002-empty
-check "continued without a record" '[ $rc = 2 ] && [ "$out" = "no record: diff" ]'
+run continued plan specs/002-empty
+check "continued without a record" '[ $rc = 2 ] && [ "$out" = "no record: plan" ]'
 
 mf="$proj/.stratum/advisor.json"
 answer '{"verdict":"APPROVED","summary":"fine","findings":[]}'
@@ -474,8 +400,6 @@ out=$(cd "$proj" && PATH="$tmp/badsha:$PATH" bash "$root/scripts/st-advisor.sh" 
 check "sha256sum fails with a digest: plan run exit 2, no record" '[ $rc = 2 ] && [ "$out" = "cannot hash inputs" ] && [ ! -e "$tmp/argv" ] && [ "$(nrec)" = "$n0" ]'
 out=$(cd "$proj" && PATH="$tmp/badsha:$PATH" bash "$root/scripts/st-advisor.sh" check plan specs/001-demo); rc=$?
 check "sha256sum fails with a digest: check plan exit 2" '[ $rc = 2 ] && [ "$out" = "cannot hash inputs" ]'
-out=$(cd "$proj" && PATH="$tmp/badsha:$PATH" bash "$root/scripts/st-advisor.sh" diff specs/001-demo "$first"); rc=$?
-check "sha256sum fails with a digest: diff run exit 2, no record" '[ $rc = 2 ] && [ "$out" = "cannot hash inputs" ] && [ ! -e "$tmp/argv" ] && [ "$(nrec)" = "$n0" ]'
 
 if [ "$(id -u)" = 0 ]; then
   echo "skip unreadable plan.md: running as root"
@@ -486,20 +410,6 @@ else
   run plan specs/001-demo
   chmod 644 "$proj/specs/001-demo/plan.md"
   check "unreadable plan.md: usage, exit 2, no record" '[ "$rc" = 2 ] && [[ "$(head -n1 <<<"$out")" == "usage: st-advisor.sh"* ]] && [ ! -e "$tmp/argv" ] && [ "$(nrec)" = "$n0" ]'
-fi
-
-if [ "$(id -u)" = 0 ]; then
-  echo "skip unreadable untracked file: running as root"
-else
-  rm -f "$tmp/argv"
-  n0=$(nrec)
-  printf 'secret\n' > "$proj/u.txt"
-  chmod 000 "$proj/u.txt"
-  run diff specs/001-demo "$first"
-  check "unreadable untracked file: diff run exit 2, no record, no codex" '[ "$rc" = 2 ] && [ "$out" = "cannot hash inputs" ] && [ ! -e "$tmp/argv" ] && [ "$(nrec)" = "$n0" ]'
-  run check diff specs/001-demo "$first"
-  check "unreadable untracked file: check diff exit 2" '[ "$rc" = 2 ] && [ "$out" = "cannot hash inputs" ]'
-  rm -f "$proj/u.txt"
 fi
 
 answer '{"verdict":"APPROVED","summary":"fine","findings":[]}'

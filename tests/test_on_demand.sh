@@ -197,25 +197,18 @@ check "#16 general-purpose only as never" 'grep -qF general-purpose "$root/skill
 
 phrases <<'EOF'
 #18 FR-001 build test point	skills/st-build/SKILL.md	bash <plugin root>/scripts/st-advisor.sh test <feature dir> <task file> <test path> <failure 1 file> <failure 2 file>
-#18 FR-001 build diff point	skills/st-build/SKILL.md	bash <plugin root>/scripts/st-advisor.sh diff <feature dir> <base>
-#18 FR-001 build base	skills/st-build/SKILL.md	The base: on a branch, `git merge-base main HEAD`.
 #18 FR-001 build quick	skills/st-build/SKILL.md	The Quick lane has no advisor.
 #18 FR-001 build worktree	skills/st-build/SKILL.md	with the working directory at that worktree's root and `<feature dir>` as the main checkout's absolute path, so the record lands in the main checkout.
-#18 FR-001 inspect plan point	skills/st-inspect/SKILL.md	bash <plugin root>/scripts/st-advisor.sh plan <feature dir>
-#18 FR-001 fast test point	skills/st-fast/SKILL.md	bash <plugin root>/scripts/st-advisor.sh test <feature dir> <task file> <test path> <failure 1 file> <failure 2 file>
-#18 FR-001 fast diff point	skills/st-fast/SKILL.md	bash <plugin root>/scripts/st-advisor.sh diff <feature dir> <base from step 1>
+#18 FR-001 inspect plan point	skills/st-plan/SKILL.md	bash <plugin root>/scripts/st-advisor.sh plan <feature dir>
 #18 FR-002 wait build	skills/st-build/SKILL.md	in the foreground, with a Bash timeout of 600000 ms, and wait for it. No background run, no polling.
-#18 FR-002 wait inspect	skills/st-inspect/SKILL.md	in the foreground, with a Bash timeout of 600000 ms, and wait for it.
-#18 FR-002 wait fast	skills/st-fast/SKILL.md	in the foreground, with a Bash timeout of 600000 ms, and wait: hidden regressions?
+#18 FR-002 wait inspect	skills/st-plan/SKILL.md	in the foreground, with a Bash timeout of 600000 ms, and wait for it.
 #18 FR-005 revise	skills/st-build/SKILL.md	Two rounds at most per point per gate pass, then the user decides.
 #18 FR-005 revise	skills/st-build/SKILL.md	Then run the same point once more on the changed input.
 #18 FR-006 blocked	skills/st-build/SKILL.md	stop and show the user the reason. Nothing passes the gate.
 #18 FR-006 blocked	skills/st-build/SKILL.md	bash <plugin root>/scripts/st-advisor.sh continued <point> <feature dir>
 #18 FR-007 record	skills/st-build/SKILL.md	Each run appends a record to `<feature dir>/advisor.md`
-#18 FR-008 stale build	skills/st-build/SKILL.md	bash <plugin root>/scripts/st-advisor.sh check diff <feature dir> <base>
 #18 FR-008 stale build	skills/st-build/SKILL.md	`advisor approval is stale` or `no record` counts as no approval
 #18 FR-008 stale inspect	skills/st-inspect/SKILL.md	bash <plugin root>/scripts/st-advisor.sh check plan <feature dir>
-#18 FR-008 stale fast	skills/st-fast/SKILL.md	bash <plugin root>/scripts/st-advisor.sh check diff <feature dir> <base from step 1>
 #18 FR-010 modes	skills/st-build/SKILL.md	The mode comes from `.stratum/advisor.json` (`codex`, `both` or `off`).
 #18 FR-010 modes	skills/st-build/SKILL.md	First line `mode both: also consult /advisor if one is set`
 #18 FR-010 no file	skills/st-build/SKILL.md	No file means off, with the `mode not set` line.
@@ -224,8 +217,7 @@ phrases <<'EOF'
 #18 FR-011 no codex	skills/st-build/SKILL.md	`no advisor: mode not set` (show the user its line) or `no advisor: mode off`: go on as before
 #18 FR-011 no codex	skills/st-build/SKILL.md	`no advisor: codex not found`, `no advisor: mode not set`
 #18 FR-012 review only	skills/st-build/SKILL.md	Never run `codex` to build or fix.
-#18 FR-016 inspect rules	skills/st-inspect/SKILL.md	Handle its answer as in "Advisor" in `<plugin root>/skills/st-build/SKILL.md`
-#18 FR-016 fast rules	skills/st-fast/SKILL.md	Handle each advisor answer as in "Advisor" in `<plugin root>/skills/st-build/SKILL.md` (verdicts, rounds, modes, record, no Codex)
+#18 FR-016 inspect rules	skills/st-plan/SKILL.md	Handle its answer as in "Advisor" in `<plugin root>/skills/st-build/SKILL.md`
 #18 FR-015 init	skills/st-init/SKILL.md	If `.stratum/advisor.json` is missing, ask the user in one question: advisor mode `codex` (recommended
 #18 FR-015 init	skills/st-init/SKILL.md	Write `.stratum/advisor.json` as `{"mode": "<answer>"}`.
 #18 FR-016 readme	README.md	The orchestrator runs `scripts/st-advisor.sh` in the foreground and waits for the answer.
@@ -234,23 +226,29 @@ phrases <<'EOF'
 #18 FR-016 readme	README.md	`"mode": "off"` is the off switch: nothing goes to OpenAI.
 #18 FR-016 readme	README.md	With no `codex` on PATH you get one line, `no advisor: codex not found`
 #18 FR-016 readme	README.md	A failed, empty, malformed or late answer (540 seconds) is `BLOCKED`, never approval.
-#18 FR-016 readme	README.md	An approval of a plan or diff that changed since then is stale.
-#18 FR-013 readme	README.md	untracked `.env*`, `*.env`, `*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.jks`, `*.keystore`, `id_rsa*`, `id_ed25519*`, `id_ecdsa*`, `.npmrc`, `.netrc`, `.pypirc` and `credentials*` files (any case) are left out of the list Codex is given
+#18 FR-016 readme	README.md	An approval of a plan that changed since then is stale.
 #18 D13 readme	README.md	Whether Codex's own shell sees your environment variables is not checked.
-#18 inspect keep	skills/st-inspect/SKILL.md	; big ones go to the user before the gate.
+#18 inspect keep	skills/st-plan/SKILL.md	; big ones go to the user before the gate.
 #18 FR-014 readme	README.md	Optional `model` and `effort` keys in the same file pick the Codex model and reasoning effort
 #18 D23 readme	README.md	The call runs with `--ignore-user-config`: neither `~/.codex/config.toml` nor a project `.codex/config.toml` is read
 #18 FR-014 init	skills/st-init/SKILL.md	Optional `model` and `effort` keys pick the Codex model and reasoning effort
 #18 FR-001 build worktree stop	skills/st-build/SKILL.md	a subagent whose test is still red after 2 tries stops and reports both failures
 #18 L18 commit build	skills/st-build/SKILL.md	with tasks.md, and `<feature dir>/advisor.md` if it changed.
-#18 L18 commit build	skills/st-build/SKILL.md	then have `st-git` commit `<feature dir>/advisor.md` if it changed.
+#18 L18 commit plan	skills/st-plan/SKILL.md	and `<feature dir>/advisor.md` if it changed.
+#18 D27 plan advice only	skills/st-plan/SKILL.md	It does not validate; st-inspect does.
 #18 L18 commit inspect	skills/st-inspect/SKILL.md	Have `st-git` commit `<feature dir>/advisor.md` if it changed.
-#18 L18 commit fast	skills/st-fast/SKILL.md	with `<feature dir>/advisor.md` if it changed.
 #18 L19 debug worktree	skills/st-build/SKILL.md	Start `st-debug` from the main session too, with the worktree path; it diagnoses, fixes and verifies in that worktree.
 #18 exit 2	skills/st-build/SKILL.md	Exit 2 with a `usage:` line or `cannot hash inputs`: the script could not read or hash its inputs.
 #18 exit 2	skills/st-build/SKILL.md	Nothing was recorded and nothing was sent. Fix the input or the tool and run the point again.
 EOF
+phrases <<'EOF'
+#18 plan-only st-fast pointer	skills/st-fast/SKILL.md	consult the advisor if one is set
+EOF
+check "#18 plan-only st-inspect no plan run" '! grep -qF "st-advisor.sh plan <feature dir>" "$root/skills/st-inspect/SKILL.md" && grep -qF "st-advisor.sh check plan <feature dir>" "$root/skills/st-inspect/SKILL.md"'
+check "#18 plan-only st-fast no script" '! grep -qF "st-advisor.sh" "$root/skills/st-fast/SKILL.md"'
+check "#18 plan-only st-build no diff point" '! grep -qF "st-advisor.sh diff" "$root/skills/st-build/SKILL.md" && ! grep -qF "check diff" "$root/skills/st-build/SKILL.md"'
 check "#18 FR-001 quick lane" '! grep -qF st-advisor "$root/skills/st-quick/SKILL.md"'
-check "#18 FR-016 old advisor text gone" '! grep -qF "consult the advisor if one is set" "$root/skills/st-build/SKILL.md" && ! grep -qF "first if one is set (\`/advisor\`)" "$root/skills/st-fast/SKILL.md" && ! grep -qF "advisor is set, consult it on the diff" "$root/skills/st-fast/SKILL.md" && ! grep -qF "If an advisor is set (\`/advisor\`)" "$root/skills/st-inspect/SKILL.md"'
+check "#18 FR-016 st-inspect old advisor text gone" '! grep -qF "If an advisor is set (\`/advisor\`)" "$root/skills/st-inspect/SKILL.md"'
+check "#18 D27 st-plan no validation risk text" '! grep -qF "missed auth invariants" "$root/skills/st-plan/SKILL.md"'
 
 exit $fail
