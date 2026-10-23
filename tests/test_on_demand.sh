@@ -228,22 +228,23 @@ phrases <<'EOF'
 #17 FR-009 merge	skills/st-worker/SKILL.md	`git merge --no-ff --no-edit worker-<id>`
 #17 FR-009 conflict	skills/st-worker/SKILL.md	run `git merge --abort`, bring the files to the user, and merge no later branch
 #17 FR-010 close	skills/st-worker/SKILL.md	Never close a blocked, stopped or failed worker
-#17 FR-016 list	skills/st-worker/SKILL.md	`st-worker.sh list --machine <m>` per saved machine
+#17 FR-016 list	skills/st-worker/SKILL.md	`bash <plugin root>/scripts/st-worker.sh list --machine <m>` per saved machine
 #11 FR-011 headless	skills/st-worker/SKILL.md	the headless worker never commits
 #17 D27 model	skills/st-worker/SKILL.md	pass `--model <name>`
 #17 FR-014 build	skills/st-worker/SKILL.md	The build loop (/stratum:st-build) does not use workers.
 #17 D25 one machine	skills/st-worker/SKILL.md	Put a task that builds on a teammate's work on that teammate's machine
 #17 stop	skills/st-worker/SKILL.md	On a one-line failure, show the line and stop.
 #17 no retry	skills/st-worker/SKILL.md	After a failure, do not run start again
-#17 start exit 4	skills/st-worker/SKILL.md	then run `bash scripts/st-worker.sh goal <id> --test <cmd> [--machine <m>]`
-#17 C4 goal machine	skills/st-worker/SKILL.md	goal <id> --test <cmd> [--machine <m>]
-#17 C4 failure list machine	skills/st-worker/SKILL.md	run `list [--machine <m>]` and show what exists
-#17 C4 wait machine	skills/st-worker/SKILL.md	wait <id> [--machine <m>]
+#17 start exit 4	skills/st-worker/SKILL.md	then run `bash <plugin root>/scripts/st-worker.sh goal <id> --test <cmd> [--machine <m>]`
+#17 C4 goal machine	skills/st-worker/SKILL.md	bash <plugin root>/scripts/st-worker.sh goal <id> --test <cmd> [--machine <m>]
+#17 C4 failure list machine	skills/st-worker/SKILL.md	run `bash <plugin root>/scripts/st-worker.sh list [--machine <m>]` and show what exists
+#17 C4 wait machine	skills/st-worker/SKILL.md	bash <plugin root>/scripts/st-worker.sh wait <id> [--machine <m>]
 #17 C4 roster machine	skills/st-worker/SKILL.md	take <m> from the worker's roster row and pass it on every follow-up
-#17 C4 answer machine	skills/st-worker/SKILL.md	answer <id> --keys <key>... [--machine <m>]
-#17 C4 answer text machine	skills/st-worker/SKILL.md	answer <id> --text <text> [--machine <m>]
-#17 C4 result machine	skills/st-worker/SKILL.md	result <id> [--machine <m>]
-#17 C4 close machine	skills/st-worker/SKILL.md	close <id> [--machine <m>]
+#17 C4 answer machine	skills/st-worker/SKILL.md	bash <plugin root>/scripts/st-worker.sh answer <id> --keys <key>... [--machine <m>]
+#17 C4 answer text machine	skills/st-worker/SKILL.md	bash <plugin root>/scripts/st-worker.sh answer <id> --text <text> [--machine <m>]
+#17 C4 result machine	skills/st-worker/SKILL.md	bash <plugin root>/scripts/st-worker.sh result <id> [--machine <m>]
+#17 C4 close machine	skills/st-worker/SKILL.md	bash <plugin root>/scripts/st-worker.sh close <id> [--machine <m>]
+#17 C4 resume machine	skills/st-worker/SKILL.md	run `bash <plugin root>/scripts/st-worker.sh list` here
 #17 C4 resume machine	skills/st-worker/SKILL.md	run the follow-ups with the same `--machine <m>`
 EOF
 check "#17 skill" 'f="$root/skills/st-worker/SKILL.md"; [ -f "$f" ] && grep -qx "name: st-worker" "$f" && grep -q "^# /stratum:st-worker" "$f"'
