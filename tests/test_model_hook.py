@@ -148,6 +148,11 @@ class ModelHookTest(unittest.TestCase):
         for w in ("gpt", "st-close", "sonnet", "opus", "haiku", "fable"):
             self.assertIn(w, r)
 
+    def test_deny_st_worker_unknown_model(self):
+        r = self.deny('{"st-worker": {"model": "x"}}')
+        self.assertIn("st-worker", r)
+        self.assertIn("Allowed: sonnet, opus, haiku, fable.", r)
+
     def test_deny_unknown_effort(self):
         r = self.deny('{"st-close": {"effort": "ultra"}}')
         for w in ("ultra", "st-close", "low", "medium", "high", "xhigh", "max"):

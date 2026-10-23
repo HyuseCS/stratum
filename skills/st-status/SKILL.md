@@ -31,7 +31,9 @@ block. Change nothing.
 6. **Upstream sync:** days since `synced` in `<plugin root>/vendor.lock`. Over 30 days: say so.
 7. **Model overrides:** from `<project>/.stratum/models.json`, list each agent in the file with its
    model and effort. For a key the entry does not set, show the default: the model from the
-   `model:` line in `<plugin root>/agents/<agent>.md`, effort `default`. Say the values come from
+   `model:` line in `<plugin root>/agents/<agent>.md`, effort `default`. `st-worker` has no agents
+   file: its default model is the user's claude default, and its `effort` has no effect (the script
+   passes only `model`). Say the values come from
    `.stratum/models.json` and change with `/stratum:st-model` or by editing the file. No file or no
    entries: say every agent uses the plugin defaults. A bad file: say so and quote the problem.
    To find the problem, run from the project root `echo '{"tool_input":{"subagent_type":"stratum:st-inspect"}}' | python3 <plugin root>/hooks/st-models.py`

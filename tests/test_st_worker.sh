@@ -120,6 +120,7 @@ turns=$((RANDOM % 20 + 1)); cost="0.0$RANDOM"
 printf '%s\n%s\n' "$turns" "$cost" > "$T/claude_nums"
 case "${STUB_CLAUDE:-}" in
 slow) exit 124 ;;
+killed) exit 137 ;;
 commitslow) git -c user.name=t -c user.email=t@t commit -q --allow-empty -m worker; exit 124 ;;
 errturns) jq -nc --argjson n "$turns" --argjson c "$cost" --arg r "ERRTURNS $(cat "$T/x")" '{type:"result",subtype:"error_max_turns",is_error:true,num_turns:$n,total_cost_usd:$c,session_id:"stubsession",result:$r}'; exit 1 ;;
 commit) git -c user.name=t -c user.email=t@t commit -q --allow-empty -m worker ;;
@@ -203,6 +204,7 @@ s1() {
   check "S1 brief has the task text" 'grep -qxF "TASK BODY $(rnd)" "$b"'
   check "S1 brief heading, test, lane, branch, machine, result path" 'grep -qxF "# Brief: worker-t004" "$b" && grep -qxF -- "- Test command: \`$testcmd\`" "$b" && grep -qxF -- "- Lane: $lane. If it names a skill, start it with the Skill tool. Run only task T004; skip every other task, ticked or not." "$b" && grep -qxF -- "- Branch: worker-t004" "$b" && grep -qxF -- "- Your machine: local. \`local\` is the orchestrator'"'"'s machine." "$b" && grep -qxF -- "- Result file: $(wt)/result.md" "$b"'
   check "S1 brief names the plugin root" 'grep -qxF -- "- Plugin root: $pr" "$b"'
+  check "S1 brief order: Model, then Plugin root, then Your machine" 'mo=$(grep -n "^- Model: " "$b" | cut -d: -f1) && po=$(grep -n "^- Plugin root: " "$b" | cut -d: -f1) && yo=$(grep -n "^- Your machine: " "$b" | cut -d: -f1) && [ "$mo" -lt "$po" ] && [ "$po" -lt "$yo" ]'
   check "S1 brief has every roster row" 'grep -qxF "| worker-t004 | local | worker-t004 | T004 |" "$b" && grep -qxF "| worker-t005 | local | worker-t005 | T005 |" "$b"'
   check "S1 brief has the four team rules" '[ "$(grep -cxFf "$rules" "$b")" = 4 ]'
   check "S1 brief rule 1 names .stratum/git-guard.json" 'grep -q "^1\. .*Never commit .*\.stratum/git-guard\.json\.\$" "$b"'
@@ -454,7 +456,7 @@ a2() {
 }
 a3() {
   mk; states blocked blocked
-  run bash "$1" answer T004 --text "use main"
+  STUB_FAIL_UNTIL="agent wait" STUB_FAIL_CODE=timeout run bash "$1" answer T004 --text "use main"
   check "A3 exit 4" '[ $rc = 4 ]'
   check "A3 agent get, send-text, send-keys enter, agent wait until working, agent get, in order" '[ "$(sendlog)" = "$(printf "agent\tget\tworker-t004\npane\tsend-text\t%s\tuse main\nagent\tsend-keys\tworker-t004\tenter\nagent\twait\tworker-t004\t--until\tworking\t--timeout\t5000\nagent\tget\tworker-t004" "$(pane)")" ]'
   check "A3 state blocked line" 'hasline "state\tblocked\tworker-t004\t%s" "$(pane)"'
@@ -654,6 +656,10 @@ STUB_CLAUDE=slow run bash "$script" headless T004 --task "$task" --test "$testcm
 check "H3 exit 1, timed out line" '[ $rc = 1 ] && hasline "timed out after 540 s"'
 
 fresh
+STUB_CLAUDE=killed run bash "$script" headless T004 --task "$task" --test "$testcmd"
+check "H3c killed (137): exit 1, timed out line" '[ $rc = 1 ] && hasline "timed out after 540 s"'
+
+fresh
 STUB_CLAUDE=junk run bash "$script" headless T004 --task "$task" --test "$testcmd"
 check "H4 exit 1, no JSON line" '[ $rc = 1 ] && hasline "claude gave no JSON result."'
 
@@ -774,6 +780,12 @@ check "M7 headless --model without a value: usage line, exit 2, no call" '[ $rc 
 fresh; rm -f "$tmp/claude_args"
 run bash "$script" headless T004 --task "$task" --test "$testcmd" --model opus --model sonnet
 check "M7 headless --model twice: usage line, exit 2, no call" '[ $rc = 2 ] && [[ "$(head -n1 <<<"$out")" == usage:* ]] && [ ! -s "$tmp/calls" ] && [ ! -e "$tmp/claude_args" ]'
+fresh
+run bash "$script" start "${sargs[@]}" --model ''
+check "M7 start --model empty: usage line, exit 2, no call" '[ $rc = 2 ] && [[ "$(head -n1 <<<"$out")" == usage:* ]] && [ ! -s "$tmp/calls" ]'
+fresh; rm -f "$tmp/claude_args"
+run bash "$script" headless T004 --task "$task" --test "$testcmd" --model ''
+check "M7 headless --model empty: usage line, exit 2, no call" '[ $rc = 2 ] && [[ "$(head -n1 <<<"$out")" == usage:* ]] && [ ! -s "$tmp/calls" ] && [ ! -e "$tmp/claude_args" ]'
 
 sed -E '/--allowedTools/d' "$script" > "$tmp/NC6.sh" 2>/dev/null
 check "NC6 sed deletes exactly one line" '[ "$(diff "$script" "$tmp/NC6.sh" | grep -c "^<")" = 1 ]'

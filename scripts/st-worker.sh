@@ -151,7 +151,7 @@ brief() {
   printf '%s\n\n' "# Brief: $N" "You are worker $N, started by the Stratum orchestrator. Read this file first and follow it." "## Task $id"
   cat -- "$task"
   printf '\n%s\n\n' '## Facts'
-  printf '%s\n' "- Test command: \`$test\`" "- Lane: $lane. If it names a skill, start it with the Skill tool. Run only task $id; skip every other task, ticked or not." "- Branch: $N" "- Model: ${model:-default}" "- Your machine: ${m:-local}. \`local\` is the orchestrator's machine." "- Result file: $WT/result.md" "- Plugin root: $(cd "$(dirname "$0")/.." && pwd)"
+  printf '%s\n' "- Test command: \`$test\`" "- Lane: $lane. If it names a skill, start it with the Skill tool. Run only task $id; skip every other task, ticked or not." "- Branch: $N" "- Model: ${model:-default}" "- Plugin root: $(cd "$(dirname "$0")/.." && pwd)" "- Your machine: ${m:-local}. \`local\` is the orchestrator's machine." "- Result file: $WT/result.md"
   printf '\n%s\n\n%s\n%s\n' '## Roster' '| Name | Machine | Branch | Task |' '|------|---------|--------|------|'
   printf '| %s | %s | %s | %s |\n' "${R[@]}"
   printf '\n%s\n\n' '## Team rules'
