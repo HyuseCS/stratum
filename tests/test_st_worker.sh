@@ -134,6 +134,7 @@ commitjunk) git -c user.name=t -c user.email=t@t commit -q --allow-empty -m work
 junk) echo 'not json at all'; exit 0 ;;
 esac
 jq -nc --argjson n "$turns" --argjson c "$cost" --arg r "HEADLESS $(cat "$T/x")" '{type:"result",subtype:"success",is_error:false,num_turns:$n,total_cost_usd:$c,session_id:"stubsession",result:$r}'
+[ "${STUB_CLAUDE:-}" != okfail ] || exit 1
 EOF
 chmod +x "$tmp/bin/claude"
 for b in herdr ssh git sleep timeout claude; do
@@ -709,6 +710,10 @@ fresh
 STUB_CLAUDE=errturns run bash "$script" headless T004 --task "$task" --test "$testcmd"
 turns=$(sed -n 1p "$tmp/claude_nums"); cost=$(sed -n 2p "$tmp/claude_nums")
 check "H6 error_max_turns: exit 1, headless line and result text print" '[ $rc = 1 ] && hasline "headless\tworker-t004\terror_max_turns\t%s\t%s" "$turns" "$cost" && [ "$(grep -xF -A1 "result:" <<<"$out" | tail -n1)" = "ERRTURNS $(rnd)" ]'
+
+fresh
+STUB_CLAUDE=okfail run bash "$script" headless T004 --task "$task" --test "$testcmd"
+check "H11 success JSON but exit 1: exit 1, claude exited line, no headless line" '[ $rc = 1 ] && hasline "claude exited 1" && ! grep -q "^headless" <<<"$out"'
 
 fresh; rm -f "$tmp/claude_nums"
 NOENV=1 run bash "$script" headless T004 --task "$task" --test "$testcmd"

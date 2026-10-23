@@ -336,6 +336,7 @@ headless)
   new=$(git rev-parse HEAD)
   [ "$old" = "$new" ] || fail "worker committed: $old -> $new"
   [ "$rc" != 124 ] && [ "$rc" != 137 ] || fail "timed out after $bound s"
+  [ "$rc" = 0 ] || jq -e '.is_error == true or .subtype != "success"' <<<"$j" >/dev/null 2>&1 || fail "claude exited $rc"
   jq -e 'type == "object"' <<<"$j" >/dev/null 2>&1 || fail "claude gave no JSON result."
   printf 'headless\t%s\t%s\n' "$N" "$(jq -r '[.subtype, .num_turns, .total_cost_usd] | @tsv' <<<"$j")"
   echo 'result:'
