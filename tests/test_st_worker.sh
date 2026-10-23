@@ -26,6 +26,7 @@ if [ "${STUB_FAIL:-}" = "$1 $2" ] || { [ "${STUB_FAIL_UNTIL:-}" = "$1 $2" ] && [
   exit 1
 fi
 upd() { jq -c "${@:2}" "$T/$1" > "$T/$1.new" && mv "$T/$1.new" "$T/$1"; }
+if [ -e "$T/closed" ] && [ "${STUB_LIST_JUNK:-}" = "$1 $2" ]; then printf '%s\n' "$STUB_JUNK_BODY"; exit 0; fi
 case "$1 $2" in
 "worktree create")
   while [ $# -gt 0 ]; do
@@ -55,6 +56,7 @@ case "$1 $2" in
   if [ -n "${STUB_DOWN:-}" ] && [ -n "$M" ]; then echo 'Error: stub machine down' >&2; exit 1; fi
   jq -c '{result:{workspaces:.}}' "$T/ws.json" ;;
 "workspace close")
+  : > "$T/closed"
   upd ws.json --arg w "$3" 'map(select(.workspace_id!=$w))'
   [ -n "${STUB_KEEP_AGENT:-}" ] || upd agents.json --arg w "$3" 'map(select(.workspace_id!=$w))'
   jq -nc --arg w "$3" '{result:{type:"workspace_closed",workspace_id:$w}}' ;;
@@ -235,6 +237,13 @@ run bash "$script" start "${sargs[@]}"
 check "S1b exit 0" '[ $rc = 0 ]'
 check "S1b worker git-guard.json merges the repo file with commit auto" '[ "$(jq -S -c . "$(wt)/.stratum/git-guard.json")" = "$(jq -S -c -n "{force_push:\"deny\",commit:\"auto\"}")" ] && [ "$(grep -c . "$(wt)/.stratum/git-guard.json")" = 1 ]'
 check "S1b repo git-guard.json is unchanged" '[ "$(cat "$repo/.stratum/git-guard.json")" = "{\"force_push\":\"deny\"}" ]'
+rm -f "$repo/.stratum/git-guard.json"
+
+fresh
+: > "$repo/.stratum/git-guard.json"
+run bash "$script" start "${sargs[@]}"
+check "S1c exit 0" '[ $rc = 0 ]'
+check "S1c empty repo git-guard.json gives a worker guard file of exactly commit auto" '[ "$(cat "$(wt)/.stratum/git-guard.json")" = "{\"commit\":\"auto\"}" ]'
 rm -f "$repo/.stratum/git-guard.json"
 
 fresh
@@ -478,6 +487,14 @@ STUB_NO_STATUS=1 run bash "$script" close T004
 check "C7 exit 1" '[ $rc = 1 ]'
 check "C7 the cannot-read refuse line, no closed line, no workspace close" '[ "$out" = "Worker worker-t004: cannot read worker state. Close refused." ] && ! grep -q "^closed" <<<"$out" && never 0 0'
 
+for k in agent:'{}' agent:'not json' workspace:'{}' workspace:'not json'; do
+  mk; states done
+  STUB_LIST_JUNK="${k%%:*} list" STUB_JUNK_BODY="${k#*:}" run bash "$script" close T004
+  check "C8 ${k%%:*} list answers ${k#*:} after the close: exit 1" '[ $rc = 1 ]'
+  check "C8 ${k%%:*} list answers ${k#*:} after the close: one cannot-read line" '[ "$out" = "close left ${k%%:*} worker-t004: cannot read the list" ]'
+  check "C8 ${k%%:*} list answers ${k#*:} after the close: one workspace close" 'hascall "workspace\tclose\t%s" "$(wsid)" && never 1 0'
+done
+
 fresh
 x=$(rnd)
 jq -nc --arg x "$x" '[{workspace_id:("stubA"+$x),label:"worker-t004"},{workspace_id:("stubB"+$x),label:"worker-t005"},{workspace_id:("stubC"+$x),label:"notaworker"}]' > "$tmp/ws.json"
@@ -607,7 +624,7 @@ rrun bash "$script" result T004 --machine laptop
 check "R2 exit 0" '[ $rc = 0 ]'
 check "R2 one ssh cat of the quoted result path" '[ "$(grep -c . "$tmp/ssh")" = 1 ] && grep -qP "^-o\tBatchMode=yes\t--\tu@stubhost\t" "$tmp/ssh" && sshs | grep -qF -- "cat -- ~/proj-worker-t004/result.md"'
 check "R2 result line and the file text" 'hasline "result\tworker-t004\t~/proj-worker-t004/result.md" && grep -qxF "RESULT FILE $(rnd)" <<<"$out"'
-check "R2 one git fetch of target:WT worker-t004:worker-t004 with GIT_SSH_COMMAND BatchMode" '[ "$(grep -c . "$tmp/gitlog")" = 1 ] && grep -qxF "$(printf "ENV=ssh -o BatchMode=yes\tfetch\tu@stubhost:~/proj-worker-t004\tworker-t004:worker-t004")" "$tmp/gitlog"'
+check "R2 one git fetch of target:WT worker-t004:worker-t004 with GIT_SSH_COMMAND BatchMode" '[ "$(grep -c . "$tmp/gitlog")" = 1 ] && grep -qxF "$(printf "ENV=ssh -o BatchMode=yes\tfetch\t--\tu@stubhost:~/proj-worker-t004\tworker-t004:worker-t004")" "$tmp/gitlog"'
 check "R2 fetched line has the branch sha" 'hasline "fetched\tworker-t004\t%s" "$bsha"'
 check "R2 the pane is not printed, never-list" 'nopane && rnever 0 0'
 git -C "$repo" branch -q -D worker-t004

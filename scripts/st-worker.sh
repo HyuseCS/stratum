@@ -172,6 +172,7 @@ start)
   top=$(git rev-parse --show-toplevel 2>/dev/null) && sha=$(git rev-parse HEAD 2>/dev/null) || fail "Run start inside a git repo with a commit."
   [ -n "$m" ] || repo=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
   G=$(jq -c '.commit="auto"' <(cat "$top/.stratum/git-guard.json" 2>/dev/null || echo '{}')) || stop "cannot read $top/.stratum/git-guard.json"
+  [ -n "$G" ] || G='{"commit":"auto"}'
   h workspace list
   c=$(jq -er --arg n "$N" '[.result.workspaces[] | select(.label == $n)] | length' <<<"$r") || stop "no .result.workspaces in the herdr answer"
   [ "$c" = 0 ] || fail "A worker $N already exists."
@@ -283,7 +284,7 @@ result)
   rsh cat -- "$Q/result.md" >"$t" || noresult
   printf 'result\t%s\t%s/result.md\n' "$N" "$WT"
   cat -- "$t"
-  GIT_SSH_COMMAND='ssh -o BatchMode=yes' git fetch "$target:$WT" "$N:$N" >/dev/null 2>"$e" || stop "$(head -1 "$e")"
+  GIT_SSH_COMMAND='ssh -o BatchMode=yes' git fetch -- "$target:$WT" "$N:$N" >/dev/null 2>"$e" || stop "$(head -1 "$e")"
   f=$(git rev-parse --verify "$N" 2>"$e") || stop "$(head -1 "$e")"
   printf 'fetched\t%s\t%s\n' "$N" "$f"
   ;;
@@ -296,10 +297,13 @@ close)
     [ "$(code)" = agent_not_found ] || fail "Worker $N: cannot read worker state. Close refused."
   fi
   h workspace close "$WS"
-  h agent list
-  ! jq -e --arg n "$N" 'any(.result.agents[]; .name == $n)' <<<"$r" >/dev/null 2>&1 || fail "close left agent $N"
-  h workspace list
-  ! jq -e --arg n "$N" 'any(.result.workspaces[]; .label == $n)' <<<"$r" >/dev/null 2>&1 || fail "close left workspace $N"
+  for k in agent:name workspace:label; do
+    h "${k%:*}" list
+    c=0
+    jq -e --arg n "$N" "any(.result.${k%:*}s[]; .${k#*:} == \$n)" <<<"$r" >/dev/null 2>&1 || c=$?
+    [ $c != 0 ] || fail "close left ${k%:*} $N"
+    [ $c = 1 ] || fail "close left ${k%:*} $N: cannot read the list"
+  done
   printf 'closed\t%s\nfolder\t%s\tready to remove\n' "$N" "$WT"
   ;;
 list)
