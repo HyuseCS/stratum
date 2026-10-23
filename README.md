@@ -29,7 +29,7 @@ Then, in a new session in your project:
 ```
 
 `st-init` creates the project's `.stratum/` files and `specs/`,
-asks for the git guard modes and any model overrides, grills you for the project's rules (the
+asks for the git guard modes and any model overrides, asks for the advisor mode, grills you for the project's rules (the
 constitution), writes the `AGENTS.md` and `CLAUDE.md` pointers, sets the statusline and asks for its
 theme, shape and Token Weather line, turns off a global ponytail or Token Weather plugin for this
 project, offers to upgrade graphify, installs its post-commit hook, and checks your tools.
@@ -43,6 +43,7 @@ project, offers to upgrade graphify, installs its post-commit hook, and checks y
 | `bunx` (Bun) | statusline bar (falls back to markers only) |
 | `graphify` 0.9.74 or later (`uv tool install graphifyy`) | code navigation graph, Dart support |
 | `gh` | optional, for `st-issues` and `st-pr` |
+| `codex` 0.163.0 or later, logged in, and GNU `timeout` | optional, the Codex advisor |
 
 ## Use
 
@@ -141,13 +142,14 @@ search, then read. Code-writing agents carry the ponytail rule and add no explan
 .stratum/
 ├── constitution.md      project rules (committed)
 ├── state.json           current feature, phase, lane (committed)
+├── advisor.json         advisor mode (codex, both, off), optional Codex model and effort (committed)
 ├── templates/           optional overrides of plugin templates (committed)
 ├── handoff.md           session handoff (git-ignored)
 ├── powerline.json       statusline theme, shape, colors (git-ignored, per machine)
 ├── git-guard.json       git guard modes for this repo (git-ignored, per machine)
 ├── models.json         agent model and effort overrides (git-ignored, per machine)
 └── weather.json         Token Weather growth and compact point (git-ignored)
-specs/NNN-feature/       spec, plan, research, data model, contracts, quickstart, tasks, checklists/, changes/
+specs/NNN-feature/       spec, plan, research, data model, contracts, quickstart, tasks, checklists/, changes/, advisor.md
 AGENTS.md, CLAUDE.md     point every tool at the constitution
 ```
 
@@ -156,10 +158,19 @@ copy for that project only.
 
 ## Built in
 
-- **Advisor.** If you set one with `/advisor`, the orchestrator consults it at three points: on
-  the plan before the build gate, for risks and improvements (a simpler approach, tasks to cut or
-  merge), when a test fails twice, and on the full diff before calling the build done. Its notes
-  are checked against the source like any finding. No advisor, no change.
+- **Advisor.** Codex (OpenAI's `codex` CLI), a model from another vendor, reviews the work at three points in the Full and Fast lanes: the plan before the build gate, a test still red after two tries, and the full diff before the build is called done. The Quick lane has no advisor.
+  The orchestrator runs `scripts/st-advisor.sh` in the foreground and waits for the answer. Codex runs in the read-only sandbox and only reviews: it never builds or fixes.
+  It answers `APPROVED`, `REVISE` (findings, checked against the source like any finding, then one more run, two rounds at most), or `BLOCKED` (the orchestrator stops and asks you).
+  A failed, empty, malformed or late answer (540 seconds) is `BLOCKED`, never approval.
+  Each run appends the point, a SHA256 of the input, the verdict and the findings to `specs/<feature>/advisor.md`. An approval of a plan or diff that changed since then is stale.
+  What leaves the machine: each call sends the prompt and the files Codex reads to OpenAI, on your Codex login and quota (about 37,000 tokens per plan or diff review). The prompt names paths and a base commit; at the test point it holds the task text, the test path and both failure outputs.
+  The prompt tells Codex to stay inside the named inputs, never open env or secret files, and never quote a secret value. The sandbox does not block reads.
+  At the diff point, untracked `.env*`, `*.env`, `*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.jks`, `*.keystore`, `id_rsa*`, `id_ed25519*`, `id_ecdsa*`, `.npmrc`, `.netrc`, `.pypirc` and `credentials*` files (any case) are left out of the list Codex is given. Whether Codex's own shell sees your environment variables is not checked.
+  `.stratum/advisor.json` sets the mode: `{"mode": "codex"}`, `{"mode": "both"}` (Codex, then `/advisor` if you set one), or `{"mode": "off"}`. `"mode": "off"` is the off switch: nothing goes to OpenAI.
+  With no file the advisor is off and prints `no advisor: mode not set. Write .stratum/advisor.json with "mode": "codex", "both" or "off".` `st-init` writes the file for new projects. A project set up before this feature has no file, so the advisor stays off until you write it.
+  With no `codex` on PATH you get one line, `no advisor: codex not found`, and the flow runs as before, with `/advisor` if you set one.
+  Optional `model` and `effort` keys in the same file pick the Codex model and reasoning effort, for example `{"mode": "codex", "model": "gpt-6-astra", "effort": "high"}`. Without them Codex uses its own default.
+  The call runs with `--ignore-user-config`: neither `~/.codex/config.toml` nor a project `.codex/config.toml` is read, so no MCP server, hook or notify command from them runs during a review, and the model and effort come only from this file. Your Codex login works as before.
 - **Git guard.** One mode per command: `commit`, `worktree_remove`, `worktree_prune`,
   `branch_delete`, `reset_hard`, `clean` (`clean -f`), `discard` (`checkout .`, `restore .`), and
   `force_push`. Each is `auto` (runs), `ask`, or `deny` (blocked). The guard reads the repo's
@@ -282,6 +293,7 @@ ports, and waits for review before updating `vendor.lock`.
 python3 tests/test_git_guard.py
 python3 tests/test_model_hook.py
 python3 tests/test_phase_hook.py
+bash tests/test_advisor.sh
 bash tests/test_model_files.sh
 bash tests/test_inspect.sh
 bash tests/test_on_demand.sh
