@@ -85,11 +85,12 @@ No database. Two files and the answer Codex writes. Exact formats are in
 - Committed. The lane commits it with its next `st-git` commit (plan.md, Project Structure).
 - Input hashed per point (FR-007, research R6):
   - `plan`: the bytes of `<feature>/spec.md`, then `<feature>/plan.md` without its `## Validate`
-    section, then `<feature>/tasks.md`, no separator (D10, D27):
-    `{ cat spec.md && awk '/^## Validate$/{s=1;next} /^## /{s=0} !s' plan.md && cat tasks.md; } | sha256sum`.
+    section, then `<feature>/tasks.md`, no separator (D10, D27, D28):
+    `{ cat spec.md && awk '/^```/{f=!f} !f&&/^## Validate$/{s=1;next} !f&&/^## /{s=0} !s' plan.md && cat tasks.md; } | sha256sum`.
     The left-out lines run from a line that is exactly `## Validate` up to, not including, the
-    next line that starts with `## `. So `st-inspect` writing or replacing that section keeps the
-    approval from `st-plan` step 4 fresh. Any other change to the three files makes it stale.
+    next line that starts with `## `. A `## Validate` or `## ` line inside a code fence (the lines between two lines that start with three backticks) does not count.
+    So `st-inspect` writing or replacing that section keeps the approval from `st-plan` step 4
+    fresh. Any change outside the real, unfenced `## Validate` section makes it stale.
   - `test`: the bytes of failure output 1, then the bytes of failure output 2.
 - Hash failure (D20, D21): every input must be a readable regular file, and the digest must be 64
   lowercase hex characters. Else, or when `cat`, `awk` or `sha256sum` fails, the script prints

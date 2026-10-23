@@ -51,7 +51,7 @@ first=$(git -C "$proj" rev-parse HEAD)
 adv() { (cd "$proj" && bash "$root/scripts/st-advisor.sh" "$@"); }
 run() { out=$(adv "$@"); rc=$?; }
 last_header() { grep -E "^## $1 \| " "$proj/specs/001-demo/advisor.md" 2>/dev/null | tail -n1; }
-plan_hash() { (cd "$proj/specs/001-demo" && { cat spec.md; awk '/^## Validate$/{s=1;next} /^## /{s=0} !s' plan.md; cat tasks.md; } | sha256sum | cut -d' ' -f1); }
+plan_hash() { (cd "$proj/specs/001-demo" && { cat spec.md; awk '/^```/{f=!f} !f&&/^## Validate$/{s=1;next} !f&&/^## /{s=0} !s' plan.md; cat tasks.md; } | sha256sum | cut -d' ' -f1); }
 answer() { printf '%s' "$1" > "$tmp/answer"; }
 
 answer '{"verdict":"APPROVED","summary":"fine","findings":[]}'
@@ -247,6 +247,19 @@ fresh_after=$rc
 sed -i 's/^AFTER1$/AFTER2/' "$pm"
 run check plan specs/001-demo
 check "check plan stale after a change in a section following Validate" '[ $fresh_after = 0 ] && stale'
+cp "$tmp/plan.save" "$pm"
+printf '```\n## Validate\n```\nFENCEAFTER1\n' >> "$pm"
+answer '{"verdict":"APPROVED","summary":"fine","findings":[]}'
+run plan specs/001-demo
+sed -i 's/^FENCEAFTER1$/FENCEAFTER2/' "$pm"
+run check plan specs/001-demo
+check "check plan stale after an edit following a fenced Validate heading" 'stale'
+cp "$tmp/plan.save" "$pm"
+printf '```\n## Validate\n```\nFENCEAFTER1\n## Validate\nPASS one\n' >> "$pm"
+run plan specs/001-demo
+sed -i 's/^PASS one$/FAIL two/' "$pm"
+run check plan specs/001-demo
+check "check plan fresh after a real Validate section changes beside a fenced one" '[ $rc = 0 ] && [[ "$out" == "APPROVED sha256 "* ]]'
 cp "$tmp/plan.save" "$pm"
 
 answer '{"verdict":"REVISE","summary":"fix","findings":[{"claim":"c","evidence":"e","location":"l","severity":"LOW"}]}'

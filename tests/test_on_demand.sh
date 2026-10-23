@@ -302,9 +302,7 @@ phrases <<'EOF'
 #18 L19 debug worktree	skills/st-build/SKILL.md	Start `st-debug` from the main session too, with the worktree path; it diagnoses, fixes and verifies in that worktree.
 #18 exit 2	skills/st-build/SKILL.md	Exit 2 with a `usage:` line or `cannot hash inputs`: the script could not read or hash its inputs.
 #18 exit 2	skills/st-build/SKILL.md	Nothing was recorded and nothing was sent. Fix the input or the tool and run the point again.
-EOF
-phrases <<'EOF'
-#18 plan-only st-fast pointer	skills/st-fast/SKILL.md	consult the advisor if one is set
+#18 plan-only st-fast diff point	skills/st-fast/SKILL.md	advisor is set, consult it on the diff: hidden regressions? Handle its notes like findings.
 EOF
 check "#18 plan-only st-inspect no plan run" '! grep -qF "st-advisor.sh plan <feature dir>" "$root/skills/st-inspect/SKILL.md" && grep -qF "st-advisor.sh check plan <feature dir>" "$root/skills/st-inspect/SKILL.md"'
 check "#18 plan-only st-fast no script" '! grep -qF "st-advisor.sh" "$root/skills/st-fast/SKILL.md"'

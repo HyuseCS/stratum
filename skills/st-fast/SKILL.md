@@ -16,8 +16,8 @@ to `/stratum:st-full`.
 3. For each test in the change plan: the `stratum:st-test` agent writes it and shows it fails; the `stratum:st-build` agent makes it
    pass. A test still red after 2 tries goes to the `stratum:st-debug` agent, with the advisor's answer
    first if one is set (`/advisor`): root cause or rabbit hole?
-4. Verify with `bash <plugin root>/scripts/st-verify.sh '<test command>' <files touched>` (see `/stratum:st`). Then
-   consult the advisor if one is set (`/advisor`) on the diff: hidden regressions? Handle its notes like findings.
+4. Verify with `bash <plugin root>/scripts/st-verify.sh '<test command>' <files touched>` (see `/stratum:st`). If an
+   advisor is set, consult it on the diff: hidden regressions? Handle its notes like findings.
 5. Start the `stratum:st-review` agent with the change plan path and the change's uncommitted diff
    (`git diff HEAD` plus new files, since step 6 commits after the review). Check each finding
    against the source (see `/stratum:st`). Send the real, small ones to `stratum:st-build`; big

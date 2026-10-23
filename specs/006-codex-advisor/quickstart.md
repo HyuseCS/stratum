@@ -59,7 +59,8 @@ L2, L10).
 | C7 | map a missing `-o` file to `APPROVED` | `empty answer (no file)` |
 | C7b | hash `plan.md` alone at the plan point | `check plan stale after a tasks.md change` and `plan APPROVED: exit 0, verdict line with the plan hash` |
 | C7c | hash all of `plan.md` again (drop the `## Validate` cut) | `check plan fresh after a Validate section is appended`, `check plan fresh after the Validate section is replaced` (D27) |
-| C7d | let the cut run to the end of `plan.md` (drop the `/^## /{s=0}` rule) | `check plan stale after a change in a section following Validate` (D27) |
+| C7d | let the cut run to the end of `plan.md` (drop the `!f&&/^## /{s=0}` rule) | `check plan stale after a change in a section following Validate` (D27) |
+| C7e | let a fenced `## Validate` start the cut (drop the fence toggle `/^```/{f=!f}`) | `check plan stale after an edit following a fenced Validate heading` (D28) |
 | C8 | paste the bytes of `plan.md` into the plan prompt | `FR-009 plan prompt names paths, no plan text` |
 | C9 | drop the `model` pattern check; then, in a second copy, change `re.fullmatch` to `re.match` with `^...$` for `model` | `bad advisor.json` (first: the `--dangerously-bypass-approvals-and-sandbox`, `a b` and `x\n` cases; second: the `x\n` case) |
 | C10 | drop the `effort` pattern check; then, in a second copy, change `re.fullmatch` to `re.match` with `^...$` for `effort` | `bad advisor.json` (first: the `high\"x` and `high\n` cases; second: the `high\n` case) |

@@ -38,8 +38,8 @@ st-advisor.sh continued <plan|test> <feature dir>
 1. Check the arguments (section 1).
 2. Compute the input hash (data-model.md, Advisor record): `plan` hashes the bytes of
    `<f>/spec.md`, `<f>/plan.md` and `<f>/tasks.md` joined in that order (D10), with
-   every line from a line that is exactly `## Validate` up to, not including, the next line that starts with `## ` left out of `plan.md` (D27):
-   `{ cat <f>/spec.md && awk '/^## Validate$/{s=1;next} /^## /{s=0} !s' <f>/plan.md && cat <f>/tasks.md; } | sha256sum`.
+   every line from a line that is exactly `## Validate` up to, not including, the next line that starts with `## ` left out of `plan.md`. A `## Validate` or `## ` line inside a code fence (the lines between two lines that start with three backticks) does not count (D27, D28):
+   `{ cat <f>/spec.md && awk '/^```/{f=!f} !f&&/^## Validate$/{s=1;next} !f&&/^## /{s=0} !s' <f>/plan.md && cat <f>/tasks.md; } | sha256sum`.
    `test` hashes the
    two failure files joined in order.
    A hash that cannot be built stops the run (D20): the digest must be 64 lowercase hex
@@ -252,8 +252,8 @@ No Codex and no `st-advisor.sh` call (D26). Steps 3 and 4 consult `/advisor`:
 3. For each test in the change plan: the `stratum:st-test` agent writes it and shows it fails; the `stratum:st-build` agent makes it
    pass. A test still red after 2 tries goes to the `stratum:st-debug` agent, with the advisor's answer
    first if one is set (`/advisor`): root cause or rabbit hole?
-4. Verify with `bash <plugin root>/scripts/st-verify.sh '<test command>' <files touched>` (see `/stratum:st`). Then
-   consult the advisor if one is set (`/advisor`) on the diff: hidden regressions? Handle its notes like findings.
+4. Verify with `bash <plugin root>/scripts/st-verify.sh '<test command>' <files touched>` (see `/stratum:st`). If an
+   advisor is set, consult it on the diff: hidden regressions? Handle its notes like findings.
 ```
 
 Step 6 is `6. The `stratum:st-git` agent commits exact paths.` (pre-#18).
@@ -385,7 +385,7 @@ After step 3 (Verify), a new step 4; the commit step becomes step 5 (D26):
 | #18 L19 debug worktree | skills/st-build/SKILL.md | `Start `st-debug` from the main session too, with the worktree path; it diagnoses, fixes and verifies in that worktree.` |
 | #18 exit 2 | skills/st-build/SKILL.md | `Exit 2 with a `usage:` line or `cannot hash inputs`: the script could not read or hash its inputs.` |
 | #18 exit 2 | skills/st-build/SKILL.md | `Nothing was recorded and nothing was sent. Fix the input or the tool and run the point again.` |
-| #18 plan-only st-fast pointer | skills/st-fast/SKILL.md | `consult the advisor if one is set` |
+| #18 plan-only st-fast diff point | skills/st-fast/SKILL.md | `advisor is set, consult it on the diff: hidden regressions? Handle its notes like findings.` |
 
 Plus checks that are not phrases:
 

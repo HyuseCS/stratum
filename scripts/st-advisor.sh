@@ -54,7 +54,7 @@ tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
 case $point in
-  plan) hash=$({ cat "$f/spec.md" && awk '/^## Validate$/{s=1;next} /^## /{s=0} !s' "$f/plan.md" && cat "$f/tasks.md"; } | sha256sum) || { echo "cannot hash inputs"; exit 2; } ;;
+  plan) hash=$({ cat "$f/spec.md" && awk '/^```/{f=!f} !f&&/^## Validate$/{s=1;next} !f&&/^## /{s=0} !s' "$f/plan.md" && cat "$f/tasks.md"; } | sha256sum) || { echo "cannot hash inputs"; exit 2; } ;;
   test) hash=$(cat "$5" "$6" | sha256sum) || { echo "cannot hash inputs"; exit 2; } ;;
 esac
 hash=${hash%% *}
