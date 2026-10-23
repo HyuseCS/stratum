@@ -165,7 +165,7 @@ No match: `No worker <N> on <m or local>.`, exit 1. More than one: `More than on
 
 ```text
 1 H worktree create --cwd <repo> --branch N --base <sha> --path <repo parent>/<repo name>-N --label N --no-focus
-                                         -> WS, T, PANE, WT
+                                         -> WS, PANE, BR, WT (the tab id is not read)
 2 write brief.md and .stratum/git-guard.json (section 3)
 3 H agent start N --kind claude --pane PANE --timeout 120000 -- --permission-mode auto -n N [--model M]
 4 H agent prompt N P --wait --until working --until blocked --timeout 30000
@@ -177,6 +177,13 @@ No match: `No worker <N> on <m or local>.`, exit 1. More than one: `More than on
   (`linked_worktree_source`, research R3). On a saved machine, `--repo`. `<repo parent>` and
   `<repo name>` in `--path` come from that same `<repo>`. `<sha>`: `git rev-parse HEAD` of the
   calling folder.
+- Here only: when `.result.worktree.path` is not `<repo parent>/<repo name>-N`, `start` prints
+  `stopped: herdr made the worktree in <WT>, not <path>` and the `worker` line with the ids made so
+  far, exit 1, and writes no brief (S9).
+- On a saved machine the ssh write of step 2 that fails with ssh's own exit 255 prints
+  `stopped: ssh to <target> failed: <first stderr line>`; any other failure prints
+  `stopped: cannot write brief.md and .stratum/git-guard.json in <WT> on <m>: <first stderr line>`.
+  Both then print the `worker` line, exit 1 (R1c).
 - Step 3 answers `agent_pane_busy` (the new pane's shell is not at its prompt yet, research R1):
   `sleep 1` and run step 3 again, up to 10 tries in total. `ponytail:` fixed 10 s bound, the same
   shape as D20 in specs/007-herdr-workspace. Any other error, or still busy after the 10th try, is
@@ -211,7 +218,9 @@ F1, F2
 
 The result file check is `test -f <WT>/result.md` here and
 `ssh -o BatchMode=yes -- <target> test -f <Q>/result.md` on a saved machine. `unknown` counts as
-`working` for step 3 (back to 1).
+`working` for step 3 (back to 1). An ssh that fails with exit 255 prints
+`stopped: ssh to <target> failed: <first stderr line>`, exit 1; any other ssh failure on `test -f`
+means no result file yet (R3b).
 
 `answer`:
 
@@ -245,7 +254,9 @@ F1, F2
 ```
 
 Missing file: `no result file: <WT>/result.md`, then `pane text:` and the 40 pane lines, exit 1.
-The pane text is never printed when the file exists.
+The pane text is never printed when the file exists. On a saved machine, an ssh that fails with
+exit 255 is not a missing file: `stopped: ssh to <target> failed: <first stderr line>`, exit 1, no
+`no result file` line and no pane text (R2b).
 
 `close` (research R11):
 
@@ -343,7 +354,7 @@ Stubs on `PATH`: `herdr`, `ssh`, `claude`, `timeout` (logs its arguments, then e
 the argv), and a `git` wrapper that logs `fetch` and passes every
 other call to the real git. The stub `herdr` logs each argv as one TAB-joined line, gives ids with
 a random part per run (L19), makes the `--path` folder on `worktree create`, answers `agent get`
-from a state list the case sets, returns pane text `STUB PANE <random>`, and fails a named call on
+from a state list the case sets, returns pane text `STUB PANE <random>` as plain text (the live CLI prints text, research R1), and fails a named call on
 request. The result file the test writes holds `RESULT FILE <random>`. Expectations come from the
 stub log, never from built ids.
 
@@ -357,12 +368,16 @@ stub log, never from built ids.
 | S5 | `agent prompt` fails with `agent_prompt_stalled`: `stopped:` line, no second prompt, nothing closed, exit 1 |
 | S6 | `start` when `workspace list` already has the label `worker-t004`: one line `A worker worker-t004 already exists.`, no `worktree create`, no other mutating call, exit 1 (plan G10, lessons L11) |
 | S7 | `agent prompt` fails with `agent_blocked`: `worker` line, `state blocked`, `pane text:`, the stub pane text, no second prompt, nothing closed, exit 4; then `goal` sends exactly one `agent prompt` |
+| S8 | `start` with `agent get` answering `idle` after the prompt: the `state` line says `working`, no `idle` word, exit 0 |
+| S9 | `worktree create` answers a path other than the one asked (the stub's `STUB_WT_PATH`): `stopped: herdr made the worktree in <got>, not <asked>`, the `worker` line with the stub's ids and the path it answered, no `agent start`, no `agent prompt`, exit 1 |
 | S10 | `start` run from a linked worktree of the temp repo: `worktree create` has `--cwd <main checkout>` and `--path <main checkout parent>/<main checkout name>-worker-t004`, `--base` is HEAD of the linked worktree, and the guard file is read from the linked worktree's `.stratum/git-guard.json` |
 | S11 | the stub's `agent start` answers `agent_pane_busy` on the first N calls (N below 10), then succeeds; a stub `sleep` exits 0 at once: the log shows N+1 `agent start` calls with the same argv and N `sleep 1`, then one `agent prompt`, exit 0 |
 | S11b | `agent start` answers `agent_pane_busy` on every call: exactly 10 `agent start` calls, then `stopped: ` with the stub's `agent_pane_busy` line, the `worker` line, no `agent prompt`, nothing closed, exit 1 |
 | P1-P7 | each check of section 2 rows 1 to 7: one line with the phrase, no herdr call, exit 1 |
 | P2b | `start` with a task file that exists but is empty: section 2 row 2 line, no herdr call, exit 1 |
-| P5b | roster with an empty TAB field on one line: section 2 row 5 line `Roster line <n> must be ...`, exit 1; a roster that ends with a blank line passes the check |
+| P5b | roster with no line for `N`: `Roster has no line for worker-t004.`, no herdr call, exit 1 |
+| P5c | roster line with an empty TAB field: section 2 row 5 line `Roster line 1 must be ...`, no herdr call, exit 1 |
+| P5d | roster that ends with a blank line starts: exit 0, two roster rows in the brief |
 | W1 | `wait`, stub settles `done`, result.md present: `state finished`, exit 0, zero `agent prompt` |
 | W2 | `wait`, agent wait times out: `state working` with the pane, exit 3 |
 | W3 | `wait`, settles `idle`, no result.md, resume check matches, then `done` with result.md: `state finished`, two `agent wait` without `--until`, exit 0 |
@@ -380,19 +395,26 @@ stub log, never from built ids.
 | C4 | `close`, no workspace with the label: `No worker worker-t004 on local.`, no `workspace close`, exit 1 |
 | C5 | `close`, `agent get` fails (agent gone): one `workspace close` on the stub's WS, `closed`, `folder <WT> ready to remove`, exit 0 |
 | L1 | `list` with two worker workspaces and one other workspace: two `found` lines, the other label absent, states from the stub |
-| R1 | `start --machine laptop --repo '~/proj'`: every call `--machine laptop` but `machine list --json`; `worktree create` has `--path ~/proj-worker-t004`; the stub answers that path as `.result.worktree.path`; one ssh line `-o BatchMode=yes -- u@stubhost` with `cat > ` and the `git-guard.json` write, holding `~/proj-worker-t004/` unescaped (no `\~`); the brief on its stdin holds the roster and rules |
+| R1 | `start --machine laptop --repo '~/proj'`: every call `--machine laptop` but `machine list --json`; `worktree create` has `--path ~/proj-worker-t004`; the stub answers `/home/u/proj-worker-t004` as `.result.worktree.path`; one ssh line `-o BatchMode=yes -- u@stubhost` with `cat > ` and the `git-guard.json` write, both under the path the stub answered; the brief on its stdin holds the roster and rules |
+| R1b | `start --machine laptop --repo '~/proj'`, the stub answers `~/proj-worker-t004` as the worktree path: ssh holds `cat > ~/proj-worker-t004/brief.md` and no `\~` |
+| R1c | `start --machine laptop`, ssh exits 255: one `stopped: ssh to u@stubhost failed` line, one `worker` line, exit 1 |
 | R2 | `result --machine laptop`: ssh `cat --` of the quoted result path, then `git fetch u@stubhost:<WT> worker-t004:worker-t004` in the git log with `GIT_SSH_COMMAND=ssh -o BatchMode=yes` in its environment (the wrapper logs it); the test makes branch `worker-t004` in the temp repo first, and the `fetched` line has its sha |
+| R2b | `result --machine laptop`, ssh exits 255: one `stopped: ssh to u@stubhost failed` line, no `no result file` line, no pane text, exit 1 |
 | R3 | `wait --machine laptop`: the result check is an ssh `test -f` |
+| R3b | `wait --machine laptop`, settles `done`, `test -f` says no and the resume check times out: `state stopped`, exit 5 |
 | R4-R7 | unknown machine, machine down, machine list fails, machine list junk: the #32 lines, no mutating call |
 | R8 | `start --machine laptop` with no `--repo`: section 2 row 8 line |
+| R8b | `start --machine laptop --repo proj` (no leading `/` or `~`): the same line |
 | R9 | `close --machine laptop`: every herdr call starts `--machine laptop` but `machine list --json`; `closed` line |
 | R10 | `answer --machine laptop --keys 1`, state `blocked`: same `--machine` rule; one `agent send-keys` |
 | R11 | `goal --machine laptop --test <cmd>`: same `--machine` rule; exactly one `agent prompt` |
 | R12 | `list --machine laptop`: same `--machine` rule; `found` lines name `laptop` |
 | H1 | `headless`: stub claude argv has exactly the flags in section 4 step 3, the prompt `HP`, the brief file outside the repo; output `headless worker-t004 success <turns> <cost>` and the stub's result text; exit 0; the `timeout` log has `-k 10 540` |
 | H2 | stub claude commits in the repo: `worker committed: <old> -> <new>`, exit 1 |
+| H2b | stub claude commits and prints junk: the `worker committed` line wins, no `no JSON` line, exit 1 |
 | H3 | stub claude exits 124: `timed out after 540 s`, exit 1 |
 | H3b | stub claude commits, then exits 124: the `worker committed` line wins, not `timed out`, exit 1 |
+| H3c | stub claude exits 137 (killed): `timed out after 540 s`, exit 1 |
 | H4 | stub claude prints junk: `claude gave no JSON result.`, exit 1 |
 | H5 | the brief file is gone after the run |
 | H6 | stub claude prints `subtype` `error_max_turns` and `is_error` true: the `headless` line and the result text print, exit 1 |

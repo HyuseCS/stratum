@@ -1,5 +1,5 @@
 {
   "feature_directory": "specs/008-herdr-workers",
-  "phase": "build",
+  "phase": "done",
   "lane": "full"
 }

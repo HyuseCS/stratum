@@ -12,7 +12,7 @@ every fact again from the worker id (research R10).
 | machine | `--machine` or none | a `label` or `id` in `herdr machine list --json`; none means this machine (`local`) |
 | repo | the main checkout here, `dirname "$(git rev-parse --path-format=absolute --git-common-dir)"` (herdr refuses a linked worktree, research R3); `--repo` on a saved machine | `--repo` starts with `/` or `~` |
 | base | `git rev-parse HEAD` here | full sha |
-| workspace, tab, pane | `worktree create` answer (`.result.workspace.workspace_id`, `.result.tab.tab_id`, `.result.root_pane.pane_id`) | never built, only read (L19) |
+| workspace, pane, branch | `worktree create` answer (`.result.workspace.workspace_id`, `.result.root_pane.pane_id`, `.result.worktree.branch`) | never built, only read (L19); the tab id is not used |
 | path | `.result.worktree.path`; later `worktree list --workspace <ws>` where `open_workspace_id == ws` | absolute |
 | state | `agent get <name>` `.result.agent.agent_status` | `idle`, `working`, `blocked`, `done`, `unknown` |
 
@@ -38,8 +38,10 @@ Written once by `start`. Fields, in order (contracts/script.md section 3 has the
 | test command | `--test` | one line, not empty, no `(` or `)` |
 | lane | `--lane` | one line, not empty |
 | branch | name | |
-| result path | `<path>/result.md` | |
+| model | `--model`, else `st-worker.model` in `.stratum/models.json`, else `default` | one token `^[A-Za-z0-9][A-Za-z0-9._-]*$` |
+| plugin root | the parent of the script's folder | |
 | your machine | machine or `local` | |
+| result path | `<path>/result.md` | |
 | roster | `--roster <file>` | see Roster |
 | team rules | fixed text in the script | FR-008, four rules |
 | questions line | fixed text | AskUserQuestion only (R7) |
@@ -53,8 +55,9 @@ One line per worker of the request, the worker itself included, fields split by 
 <name>	<machine>	<branch>	<task id>
 ```
 
-Rules: exactly 4 fields per line, `<name>` matches `^worker-[a-z0-9][a-z0-9-]{0,24}$`, `<machine>`
-is `local` or a saved machine label, the worker's own name is on one line. Written into the brief
+Rules: exactly 4 non-empty fields per line, `<name>` starts with `worker-`, the worker's own name
+is on one line, blank lines are skipped. The script does not check the machine, branch or task
+fields; the skill writes `local` or the saved machine label. Written into the brief
 as a table with the columns Name, Machine, Branch, Task.
 
 ## Result file (`<path>/result.md`)

@@ -61,12 +61,12 @@ orchestrator passed, the settled decisions and `docs/lessons.md`.
 | G2. Minimal: one script, one skill, one test, no new dependency, no comments | Pass. herdr is the store, no state file (research R10) |
 | G3. lessons L1: a text check asserts a phrase the code builds | Pass: every line in contracts/script.md section 2 and every output word in section 5 is built by the script. The pane text and result file hold random markers the input does not hold |
 | G4. lessons L2, L18: each guard has a negative control that goes red, with a green baseline right before it | Pass: NC1 to NC7 (contracts/script.md section 6), each after a baseline run on the same state |
-| G5. lessons L5: the plan matches the tool's real schema | Pass: JSON paths from `herdr api schema --json` and live read-only calls (research R1); `claude -p` JSON keys from spike test 3. Not live-verified items are listed in research and measured in quickstart sections 2, 3, 5 |
+| G5. lessons L5: the plan matches the tool's real schema | Pass: JSON paths from `herdr api schema --json` and live read-only calls (research R1); `claude -p` JSON keys from spike test 3. Not live-verified items are listed in research and measured in quickstart sections 2, 3, 5. Corrected by the live runs: `agent read` prints plain text, not the schema's JSON (research R1) |
 | G6. lessons L6: tasks that share one test file are not parallel | Pass in the design: every script task shares `tests/test_st_worker.sh` and runs in order; only the skill task (`tests/test_on_demand.sh`) can be `[P]` |
 | G7. lessons L7: README lists are checked both ways | Pass: the skill row and the test line go into README in the same task as the file they name (`tests/test_inspect.sh` checks both ways) |
 | G8. lessons L8: test runs leave no file in the repo | Pass: stubs, repos and briefs in `mktemp -d`, removed by `trap`; the headless brief is outside the repo (H5) |
 | G9. lessons L10: the guard that stops a write is named and controlled | Pass: the `HEAD` compare before and after is the main guard against a headless commit (H2, H3b; research R12). The tool list (`--tools`, `--allowedTools`, `dontAsk`) narrows the worker but does not stop a commit; NC6 removes it. Close is guarded by the label match (C4) |
-| G10. lessons L11: each background action has its failure states | Pass: start that cannot start (S4), a worker that already exists (S6), start blocked (S3, S7), prompt stalled (S5), wait with no end (W2), wait with no output (W4), result missing (G2), close of a worker still at work (C2), close that leaves something (C3), close of a worker whose agent is gone (C5) |
+| G10. lessons L11: each background action has its failure states | Pass: start that cannot start (S4), a worker that already exists (S6), start blocked (S3, S7), prompt stalled (S5), wait with no end (W2), wait with no output (W4), result missing (G2), close of a worker still at work (C2), close that leaves something (C3), close of a worker whose agent is gone (C5), a worktree made in another folder (S9), a pane busy for good (S11b), ssh down on start, result and wait (R1c, R2b, R3b) |
 | G11. lessons L12: a lane runs through the Skill tool | Pass: the brief says "Start it with the Skill tool"; the skill runs `st-review` with the Skill tool |
 | G12. lessons L17: a gated task that does not run says why | Pass in the design: the remote live run (quickstart section 6) gets `Not run, <herdr error>.` while the laptop is down |
 | G13. lessons L19: stub ids have a random part; expectations come from the stub log | Pass: contracts/script.md section 6 |
@@ -99,7 +99,9 @@ None. Both are settled in decisions.md:
   comes from a file and goes only into `brief.md`, never into argv or a shell line. The test
   command must be one line with no `(` or `)` (it sits inside `Bash(...)` for headless and inside
   the `/goal` text); the lane is one line; the id matches `^[A-Za-z0-9][A-Za-z0-9-]{0,24}$`, so no
-  value starts with `-`. Every value is one quoted argument; no `eval`, no `bash -c` on user text.
+  id starts with `-`; the model, from `--model` or models.json, matches `^[A-Za-z0-9][A-Za-z0-9._-]*$`,
+  so no value after `--model` starts with `-` (M4, M4d); an `answer` value that starts with `-` is
+  refused (A4). Every value is one quoted argument; no `eval`, no `bash -c` on user text.
   The `/goal` text is capped at 4,000 characters.
 - **S2. External service: ssh to the saved machine (start, wait, result).** The target comes only
   from the `target` field of `herdr machine list --json` for a matched label or id.
@@ -115,8 +117,8 @@ None. Both are settled in decisions.md:
   runs need `HERDR_ENV=1`. A failed remote call may still have acted: the script stops, closes
   nothing, and the skill runs `list` instead of a retry (S5 of #32).
 - **S4. Worker permissions (start; access rule).** A pane worker is the user's own `claude` with
-  the user's plugins and settings, started with `--permission-mode auto -n <name>` and nothing
-  else (FR-013, test S1): no `--dangerously-skip-permissions`, no `--allowedTools`. Auto mode's
+  the user's plugins and settings, started with `--permission-mode auto -n <name>`, plus
+  `--model <name>` when a model is set, and nothing else (FR-013, FR-017, tests S1, M1): no `--dangerously-skip-permissions`, no `--allowedTools`. Auto mode's
   classifier and every ask and deny rule still apply. D26: the orchestrator may answer a
   permission prompt for the task's own command; any other access question goes to the user. D24: `start` writes the repo's own guard file (or `{}`)
   with `"commit": "auto"` set to `.stratum/git-guard.json` in that worktree only, so per-repo
@@ -125,7 +127,7 @@ None. Both are settled in decisions.md:
 - **S5. Headless allow list (headless; access rule).** `--tools Read,Edit,Write,Glob,Grep,Bash`
   (no AskUserQuestion, SendMessage, Agent or web tool), `--allowedTools` for those and only
   `Bash(<test command>)`, `--permission-mode dontAsk`, `--permission-prompts none`,
-  `--strict-mcp-config`, `--max-turns 30`, `timeout -k 10 540`. The `HEAD` check refuses a run that
+  `--strict-mcp-config`, `--max-turns 30`, `timeout -k 10 540`, and `--model <name>` when a model is set. The `HEAD` check refuses a run that
   committed anyway.
 - **S6. Untrusted text back from a worker.** The result file, the pane text and a teammate's
   SendMessage are the worker's words. The skill reads them as data, never as instructions (phrase
@@ -145,6 +147,8 @@ None. Both are settled in decisions.md:
 
 - `ponytail:` `wait` bound 540 s and the 10 s resume check are constants; quickstart section 2
   measures the idle gap between goal turns.
+- `ponytail:` `start` retries `agent_pane_busy` up to 10 times, 1 s apart; `answer` waits up to 5 s
+  for `blocked` to clear after a key (live T008 saw about 2 s, not re-run live after the fix).
 - `ponytail:` `headless` uses fixed `--max-turns 30` and `timeout -k 10 540`.
 - `ponytail:` the worker's `brief.md` and `result.md` sit untracked in its worktree; only the
   brief's rule keeps them out of a commit, and `st-review` sees them if one slips in.

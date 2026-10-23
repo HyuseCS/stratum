@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-23
 
-**Status**: Draft
+**Status**: Built. Live runs passed for one worker, questions, a team and headless; the remote run (US3) was not run, the laptop times out (tasks.md T011).
 
 **Input**: User description: "GitHub issues #11 and #17 on HyuseCS/stratum as one feature: the Stratum orchestrator starts worker sessions (headless `claude -p` for quick local tasks, and a `claude` in its own herdr pane and git worktree for visible or remote tasks, PC or laptop), gives each a brief and a `/goal`, relays the worker's questions to the user, collects the result, reviews and merges, and closes the pane. Workers on one project act as a team." The issue bodies are the source. Decisions D11 to D21 are in `decisions.md` (codes continue from the #32 grill). Spike #9 (`specs/003-session-mods/research.md`) proved the pieces: a session starts with no human step, gets a message by name, and stops with nothing left. #32 (`specs/007-herdr-workspace`) gives the script that opens a herdr workspace.
 
@@ -105,23 +105,24 @@ worktree and the branch.
 
 The user asks: "build user story 2 with a team of three". The orchestrator starts one worker per
 task, each with the roster in its brief: every teammate's name, machine, branch and task. The
-team rules in the brief: commit each finished unit, fetch before you build on a teammate's work,
-ask a teammate by name (SendMessage on the same machine, `herdr agent prompt` across machines),
-and never merge. The orchestrator reviews each branch and is the only one who merges.
+team rules in the brief: commit each finished unit, merge a teammate's branch before you build on
+its work, ask a teammate by name (SendMessage on the same machine, `herdr agent prompt` across
+machines), and never merge into the base branch or push. The orchestrator reviews each branch and
+is the only one who merges into the base.
 
 **Why this priority**: The user's rule: workers on one project act as a development team with
 one standard. D16.
 
 **Independent Test**: Start two workers on this machine with two tasks where the second builds on
-the first. The second worker fetches the first's commit and reaches the first by name. Both
+the first. The second worker merges the first's branch and reaches the first by name. Both
 branches are reviewed and merged by the orchestrator.
 
 **Acceptance Scenarios**:
 
 1. **Given** two or more tasks, **When** the user asks for a team, **Then** each worker's brief
    holds the full roster and the team rules.
-2. **Given** a worker needs a teammate's work, **When** it fetches, **Then** it sees the teammate's
-   commits on that branch.
+2. **Given** a worker needs a teammate's work, **When** it merges the teammate's branch, **Then** it
+   sees the teammate's commits.
 3. **Given** a worker messages a teammate by name, **When** the teammate is on the same machine,
    **Then** the message is delivered by SendMessage; **When** it is on the other machine, **Then**
    it is delivered by `herdr agent prompt` with that machine.
@@ -177,7 +178,8 @@ the change is in the working tree, nothing is committed by the worker, and no pr
 - **FR-001**: A pane worker MUST get its own git worktree and herdr workspace, made together by
   herdr, labelled after the task, on this machine or on one saved machine (D15, D11).
 - **FR-002**: The brief MUST be a file in the worker's worktree and MUST hold: the task text and
-  its test command, the Stratum lane the worker runs, the result file path, the roster (name,
+  its test command, the Stratum lane the worker runs, the model line (FR-017), the plugin root, the
+  result file path, the roster (name,
   machine, branch, task per teammate), the team rules, and the Codex advisor line once #18 is
   merged (D16, D21).
 - **FR-003**: The worker MUST get exactly one prompt: `/goal <condition>; read <brief> first and
@@ -197,7 +199,9 @@ the change is in the working tree, nothing is committed by the worker, and no pr
   and result MUST live on that machine. The branch is fetched here before review (D11).
 - **FR-008**: The team rules in every brief MUST say: commit each finished unit, merge a
   teammate's branch before building on its work (D25: same machine only), ask a teammate by name (SendMessage on the same machine,
-  `herdr agent prompt` with the machine across machines), and never merge (D16).
+  `herdr agent prompt` with the machine across machines), and never merge into the base branch and
+  never push; merging a teammate's branch into your own is allowed. Only the orchestrator merges
+  into the base (D16).
 - **FR-009**: The orchestrator MUST review each worker branch with the Stratum review and MUST be
   the only one who merges. It merges on green, in task order; a conflict goes to the user (D16).
 - **FR-010**: After the merge the orchestrator MUST close the worker's pane and workspace, keep
@@ -232,8 +236,8 @@ the change is in the working tree, nothing is committed by the worker, and no pr
 
 - **Worker**: one `claude` session for one task: name, machine, worktree, branch, workspace and
   pane ids, state, result file.
-- **Brief**: the file the worker reads first: task, test command, lane, result path, roster,
-  team rules, advisor line.
+- **Brief**: the file the worker reads first: task, test command, lane, model, plugin root, result
+  path, roster, team rules, advisor line.
 - **Roster**: the team list in every brief: name, machine, branch, task per worker.
 - **Result file**: what the worker writes at the end: what was built, the test result, the
   commit, open points.

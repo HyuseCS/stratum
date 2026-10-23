@@ -206,3 +206,50 @@
 
 - What happened: `facts:scan` is one agent that reads every patch in the range, and `--diff-merges=first-parent` repeats main's delta for each merge of main. On a big branch it can run out of context and return `{finds: []}`, the same value as a clean scan. The schema cannot tell the two apart.
 - Rule: A scan that gates a push must return a count of commits it read, and the script must add `unverified: facts:scan` when that count is lower than `commits.length`.
+
+## 2026-10-23: 008-herdr-workers
+
+### L24. herdr makes a worktree only from the main checkout
+
+- What happened: The first live `start` ran from a linked worktree (`stratum-003-demo`) with `--cwd` set to the calling folder. herdr answered `linked_worktree_source` at once and nothing was made (research R1, R3). Every Stratum feature runs in a linked worktree, so `start` broke in the normal case. Fixed in 012a33f.
+- Rule: `st-worker.sh start` passes the main checkout (`dirname "$(git rev-parse --path-format=absolute --git-common-dir)"`) as `--cwd` and in `--path`, and test S10 runs it from a linked worktree of the temp repo.
+
+### L25. `agent start` right after `worktree create` answers `agent_pane_busy`
+
+- What happened: The second live `start` failed 0.1 s after `worktree create`: the new pane's shell was not at its prompt. The stub answered `agent start` at once, so 308 stub checks hid it. Fixed in 77369ae with a 10-try retry, 1 s apart.
+- Rule: `start` retries `agent start` on `agent_pane_busy` and stops with herdr's line after the 10th try, and tests S11 (busy N times, then ok) and S11b (busy every time, exactly 10 calls) check both.
+
+### L26. The CLI printed text where the schema said JSON
+
+- What happened: `herdr api schema --json` gave `pane_read` with `.result.read.text`, but `herdr agent read` prints plain text. The script piped it through `jq` and printed an empty `pane text:` on blocked, stopped and no-result stops, while the stub answered JSON and every test stayed green (research R1, third attempt; fixed in b39c626). This repeats the schema-versus-reality gap of L5.
+- Rule: A stub for a herdr call answers in the format the real CLI printed in a recorded live run (`agent read`: plain text), and the case for each stop that shows pane text asserts the stub's `STUB PANE` marker appears.
+
+### L27. A stub that answers at once hides timing bugs, so each state path needs a live run
+
+- What happened: `agent_pane_busy` (L25), `blocked` lingering about 2 s after a dialog key, and an `agent read` format mismatch (L26) all passed 300 stub checks and showed only in T005 and T008. The live task order (T005, T008, T012, T015) found all three before the feature closed.
+- Rule: A task that adds a herdr or `claude` call is ticked only after a live run of its start, blocked, finished and close paths is recorded in research.md, or `Not run, <first error line>` is written beside the tick.
+
+### L28. A review fix that adds `--` to a real CLI call broke the call
+
+- What happened: A review fix for option injection made `answer` send `herdr agent send-keys worker-t901 -- 1`. herdr took `--` as a key and answered `invalid_key: unsupported key --`; nothing was sent (research R7, live T008). The fix was to refuse a value that starts with `-` before any herdr call (case A4) and pass no `--`.
+- Rule: A review fix that adds a flag or `--` to a call of a real CLI is run once against that CLI before the commit, and test A1 asserts the exact argv without it.
+
+### L29. `blocked` lingers about 2 s after a dialog key
+
+- What happened: In live T008 every `answer` printed `state blocked` and exit 4 right after the key, and an `agent get` 2 s later said `working`. The orchestrator would read exit 4 as a failed answer. 6fb6e4d added `agent wait --until working --timeout 5000` before the last `agent get`.
+- Rule: `answer` waits for the worker to leave `blocked` before it reads the state, and test A1 asserts the order `send-keys`, `agent wait --until working`, `agent get`.
+
+### L30. The models hook builds its allowed names from `agents/*.md`
+
+- What happened: D27 reads an `st-worker` entry from `.stratum/models.json`, but `st-worker` is not an agent file. A models.json holding only that key made the hook deny an `st-git` start with `unknown agent "st-worker"` (research R16). D28 added the name to `hooks/st-models.py`.
+- Rule: A new key in `.stratum/models.json` is added to `hooks/st-models.py` in the same task, and `tests/test_model_hook.py` has a case where a file holding only that key does not deny an agent start.
+
+### L31. A quiet test command gives the `/goal` evaluator no evidence
+
+- What happened: The headless run used `grep -qx h demo/h.txt`, which prints nothing on success. Goal turn 1 ended `met: false` ("insufficient evidence in transcript") and turn 2 re-ran the test with `&& echo PASS` (research R12). The run took 9 model requests instead of about 5.
+- Rule: A test command that goes into a `/goal` condition prints a line on success (for example `&& echo PASS`), and the quickstart and task examples for `st-worker` show one.
+
+### L32. Two brief rules that used the word "merge" were read as a clash
+
+- What happened: Team rule 2 said "merge its branch" and rule 4 said "Never merge". In live T012 worker-t913 read rule 2 as the teammate case and merged without asking. 823708e reworded rule 4 to "Never merge into the base branch and never push." The same run showed the brief had no plugin root. The contract had the old rule 4 text.
+- Rule: A rule in the brief that forbids an action names the target it forbids, test S1 asserts the whole rule 4 text, and a change to a brief line changes contracts/script.md section 3 in the same commit.

@@ -222,6 +222,10 @@ branch `18-codex-advisor`.
   ends the turn as `idle`, not `blocked`, and the `/goal` loop starts the next turn on its own, so
   the question would never reach the orchestrator. The state check is what keeps a second answer out when
   the user already answered in the pane (US2 scenario 3).
+- After the keys or the text, `answer` runs `H agent wait <name> --until working --timeout 5000`
+  and ignores its timeout, then `agent get`, because `blocked` lingers about 2 s after a dialog key
+  (live T008, below). Cases A1 and A3 check the order. The fix was not re-run live: T012 asked no
+  question.
 - A permission prompt (Stratum's commit guard, `hooks/st-git-guard.py:144-150`: `ask` unless the
   worktree's `.stratum/git-guard.json` says `auto`) shows as `blocked` the same way (US2
   scenario 4). D24: `start` writes the repo's own `.stratum/git-guard.json` (or `{}`) with
@@ -284,7 +288,7 @@ branch `18-codex-advisor`.
 
 - Decision: `result` finds the worktree path (R10), then reads `<path>/result.md`: `cat` here,
   `ssh -o BatchMode=yes -- <target> cat -- <quoted path>/result.md` on a saved machine. For a
-  saved machine it then runs `git fetch <target>:<path> <name>:<name>` here. A missing file
+  saved machine it then runs `GIT_SSH_COMMAND='ssh -o BatchMode=yes' git fetch <target>:<path> <name>:<name>` here (no password prompt can hang it; case R2). A missing file
   prints `no result file: <path>/result.md`, then the last 40 pane lines marked as pane text, and
   exits 1 (no merge).
 - Rationale: D13 and FR-005: the file is the result, the pane is a fallback for a look. `git fetch`
@@ -413,6 +417,9 @@ branch `18-codex-advisor`.
 - The brief also tells the worker not to edit `tasks.md` or `.stratum/state.json`. Two workers that
   tick adjacent task lines would make the merge conflict; the orchestrator ticks after the merge.
 - The brief tells the worker to start its lane through the Skill tool (lessons L12) and to run only its own task: `st-build` works every unticked task in order, so a worker for T005 would start on an unticked T004.
+- The Facts list also names the model (`- Model: <model or default>`, R16) and the plugin root
+  (`- Plugin root: <parent of the script's folder>`), so the worker's st-git agent can find plugin
+  files (R15).
 - The headless brief says to run the test command exactly as written, as one Bash call: `Bash(<test>)` is an exact-match allow rule.
 
 ## R14. Merge and review (FR-009)
@@ -471,10 +478,13 @@ branch `18-codex-advisor`.
 - End-of-run answer list: empty. No worker asked a question.
 - Timings: first `start` to both finished 2 min 43 s (07:52:23 to 07:55:06), to both closed
   3 min 5 s.
-- Finding: the brief's team rule 2 says "merge its branch" and rule 4 says "Never merge". T913
-  read rule 2 as the teammate case and merged without asking. The wording clash stays open.
+- Finding: the brief's team rule 2 says "merge its branch" and rule 4 said "Never merge". T913
+  read rule 2 as the teammate case and merged without asking. Fixed in 823708e: rule 4 now reads
+  "Never merge into the base branch and never push. Merging a teammate's branch into your own
+  (rule 2) is fine." (contracts/script.md section 3, test S1). Not re-run live.
 - Finding: the T912 pane says its st-git agent did not read a plugin root file because the brief
-  gives no plugin root. The commit still went through. The brief has no plugin root line.
+  gave no plugin root. The commit still went through. Fixed in 823708e: the Facts list has
+  `- Plugin root: <parent of the script's folder>` (test S1). Not re-run live.
 - Not run: cross-machine messages (D25, laptop down).
 
 ## R16. Worker model (FR-017, D27, D28)
