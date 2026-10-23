@@ -37,7 +37,7 @@ Record in research.md:
 
 1. `start` exit code, and whether a trust dialog showed (R4). Expected: exit 0, `state working`. Live: exit 0 in about 4.6 s, no trust dialog; `agent start` may first answer `agent_pane_busy`, which the script retries.
 2. The worker pane shows `◎ /goal active` (R5: the pasted `/goal` ran as the command).
-3. The commit: the worker commits with no dialog (D24), and `cat ../stratum-worker-t910/.stratum/git-guard.json` shows `{"commit":"auto"}`.
+3. The commit: the worker commits with no dialog (D24), and `cat ../stratum-worker-t910/.stratum/git-guard.json` shows `{"commit":"auto","branch":"worker-t910"}`.
 4. `bash $S wait T910` until `state finished`. Note every `state` line and how long the worker sat
    `idle` between goal turns, if at all (R6). Live: one `state finished` line after 133 s, the goal took one turn, so no idle gap was measured.
 5. `bash $S result T910`: the four result lines; the pane text is not printed.

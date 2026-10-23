@@ -6,48 +6,51 @@ import subprocess
 import sys
 
 SEPARATORS = {"&&", "||", ";", "|", "&", "\n"}
-GIT_OPTS_WITH_VALUE = {"-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path"}
+GIT_OPTS_WITH_VALUE = {"-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path",
+                       "--config-env"}
 RANK = {None: 0, "ask": 1, "deny": 2}
 
 
 def segments(command):
     lex = shlex.shlex(command.replace("\n", " ; "), posix=True, punctuation_chars=True)
     lex.whitespace_split = True
+    lex.commenters = ""
     seg = []
-    try:
-        for tok in lex:
-            if tok in SEPARATORS or set(tok) <= set("&|;()"):
-                if seg:
-                    yield seg
-                seg = []
-            else:
-                seg.append(tok)
-    except ValueError:
-        pass
+    for tok in lex:
+        if tok in SEPARATORS or set(tok) <= set("&|;()"):
+            if seg:
+                yield seg
+            seg = []
+        else:
+            seg.append(tok)
     if seg:
         yield seg
 
 
 def parse_git(seg):
-    i = 0
-    while i < len(seg) and "=" in seg[i] and not seg[i].startswith("-"):
-        i += 1
-    if i >= len(seg) or os.path.basename(seg[i]) != "git":
+    if os.path.basename(seg[0]) != "git":
         return None
-    i += 1
-    cdir = []
+    i = 1
+    elsewhere = False
+    cdir, conf = [], []
     while i < len(seg) and seg[i].startswith("-"):
+        if seg[i].startswith(("--git-dir", "--work-tree")):
+            elsewhere = True
         if seg[i] in GIT_OPTS_WITH_VALUE and i + 1 < len(seg):
             if seg[i] == "-C":
                 cdir.append(seg[i + 1])
+            if seg[i] in ("-c", "--config-env"):
+                conf.append(seg[i + 1].split("=", 1)[0].lower())
             i += 2
         else:
             if seg[i].startswith("-C") and len(seg[i]) > 2:
                 cdir.append(seg[i][2:])
+            if seg[i].startswith("--config-env="):
+                conf.append(seg[i][13:].split("=", 1)[0].lower())
             i += 1
     if i >= len(seg):
         return None
-    return seg[i], seg[i + 1:], os.path.join(*cdir) if cdir else ""
+    return seg[i], seg[i + 1:], os.path.join(*cdir) if cdir else "", elsewhere, conf
 
 
 def short_has(args, letter):
@@ -83,7 +86,7 @@ def git(args, cwd):
 
 
 def staged_summary(cwd):
-    ns = git(["diff", "--cached", "--name-status"], cwd)
+    ns = git(["-c", "core.fsmonitor=false", "diff", "--cached", "--name-status"], cwd)
     if not ns:
         return "No files are staged."
     groups = {}
@@ -98,10 +101,16 @@ def staged_summary(cwd):
     for top in sorted(groups):
         out.append(f" {top}")
         out.extend(groups[top])
-    stat = git(["diff", "--cached", "--stat"], cwd).splitlines()
+    stat = git(["-c", "core.fsmonitor=false", "diff", "--cached", "--stat"], cwd).splitlines()
     if stat:
         out.append(stat[-1].strip())
     return "\n".join(out)
+
+
+def resolve(base, target, fix=os.path.realpath):
+    if base is None or not target or target.startswith("-") or any(c in target for c in "$`*?["):
+        return None
+    return fix(os.path.join(base, os.path.expanduser(target)))
 
 
 def guard_file(cwd):
@@ -133,9 +142,9 @@ def destructive(key, reason):
     return m, f"DESTRUCTIVE ({key}: {m}): {reason}"
 
 
-def judge(sub, args, gitdir, elsewhere=False):
-    if "--no-verify" in args:
-        return "deny", "--no-verify is blocked: hooks must run."
+def judge(sub, args, gitdir, elsewhere=False, conf=()):
+    if "--no-verify" in args or "core.hookspath" in conf:
+        return "deny", "--no-verify and -c core.hooksPath are blocked: hooks must run."
     if sub == "config":
         return ("deny", "git config writes are blocked: change git config yourself.") \
             if config_writes(args) else (None, "")
@@ -150,7 +159,7 @@ def judge(sub, args, gitdir, elsewhere=False):
             return None, ""
         decision = "deny" if m == "deny" else "ask"
         head = f"git commit (commit: {m})" + (" with --amend rewrites the last commit" if amend else "") \
-            + (" targets another folder (-C or cd)" if elsewhere else "")
+            + (" may target another folder or branch" if elsewhere else "")
         return decision, head + "\n" + staged_summary(gitdir)
     if sub == "push":
         if "--delete" in args or short_has(args, "d") or any(a.startswith(":") for a in args):
@@ -167,10 +176,17 @@ def judge(sub, args, gitdir, elsewhere=False):
         return destructive("discard", f"git {sub} . discards working tree changes.")
     if sub == "branch" and (short_has(args, "D") or short_has(args, "d") or "--delete" in args):
         return destructive("branch_delete", "deleting a local branch needs the user's OK.")
+    if sub == "update-ref" or sub == "branch" and ("--force" in args or any(short_has(args, c) for c in "fMC")) \
+            or sub in ("fetch", "pull") and any(":" in a for a in [a for a in args if not a.startswith("-")][1:]):
+        return "ask", f"git {sub} moves a local branch without a commit."
     if sub == "worktree" and args[:1] in (["remove"], ["prune"]):
         return destructive(f"worktree_{args[0]}", f"git worktree {args[0]} deletes a worktree; it needs the user's OK.")
+    if sub in ("merge", "pull", "cherry-pick", "revert", "am") and elsewhere:
+        return "ask", f"git {sub} may target another folder or branch."
     if sub == "rebase":
         return "ask", "git rebase rewrites history."
+    if any(c.startswith("alias.") for c in conf):
+        return "ask", "git -c alias.* defines a command the guard cannot read."
     return None, ""
 
 
@@ -183,18 +199,48 @@ def main():
     cwd = data.get("cwd") or os.getcwd()
     GUARD.update(guard_file(cwd))
     decision, reasons = None, []
-    segs = list(segments(command))
-    moved = any(seg[0] == "cd" for seg in segs)
-    for seg in segs:
-        parsed = parse_git(seg)
-        if not parsed:
-            continue
-        sub, args, cdir = parsed
-        d, reason = judge(sub, args, os.path.join(cwd, cdir), bool(cdir) or moved)
+    home = git(["rev-parse", "--show-toplevel"], cwd)
+
+    def away(d):
+        return d is None or not home or git(["rev-parse", "--show-toplevel"], d) != home
+
+    def off_branch(d):
+        return "branch" in GUARD and git(["symbolic-ref", "--short", "HEAD"], d) != GUARD["branch"]
+
+    def note(d, reason):
+        nonlocal decision
         if d:
             reasons.append(reason)
             if RANK[d] > RANK[decision]:
                 decision = d
+
+    here, left = cwd, False
+    try:
+        for seg in segments(command):
+            i = 0
+            while i < len(seg) and (seg[i] in ("command", "builtin", "exec")
+                                    or "=" in seg[i] and not seg[i].startswith("-")):
+                i += 1
+            env = any(w.startswith(("GIT_DIR=", "GIT_WORK_TREE=")) for w in seg[:i])
+            seg = seg[i:]
+            if not seg:
+                continue
+            if seg[0] in ("cd", "pushd"):
+                target = (seg[1:] or [None])[0]
+                logical, physical = resolve(here, target, os.path.normpath), resolve(here, target)
+                left = left or away(logical) or away(physical)
+                here = logical if logical and os.path.isdir(logical) else physical
+                continue
+            parsed = parse_git(seg)
+            if not parsed:
+                continue
+            sub, args, cdir, elsewhere, conf = parsed
+            gitdir = resolve(here, cdir) if cdir else here
+            note(*judge(sub, args, gitdir or cwd,
+                        env or elsewhere or left or away(gitdir) or off_branch(gitdir), conf))
+            left = left or sub in ("switch", "checkout")
+    except ValueError:
+        note("ask", "The git guard could not parse the command.")
     if decision:
         print(json.dumps({"hookSpecificOutput": {
             "hookEventName": "PreToolUse",

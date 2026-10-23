@@ -230,7 +230,7 @@ s1() {
   check "S1 brief has the four team rules" '[ "$(grep -cxFf "$rules" "$b")" = 4 ]'
   check "S1 brief rule 1 names .stratum/git-guard.json" 'grep -q "^1\. .*Never commit .*\.stratum/git-guard\.json\.\$" "$b"'
   check "S1 brief has the advisor block only when st-advisor.sh is next to the script" '[ -f "$b" ] && if [ -f "$sd/st-advisor.sh" ]; then grep -qxF "## Advisor" "$b"; else ! grep -q "^## Advisor" "$b"; fi'
-  check "S1 git-guard.json in the worktree is auto" '[ "$(cat "$(wt)/.stratum/git-guard.json")" = "{\"commit\":\"auto\"}" ]'
+  check "S1 git-guard.json in the worktree is auto with the worker branch" '[ "$(jq -S -c . "$(wt)/.stratum/git-guard.json")" = "$(jq -S -c -n "{commit:\"auto\",branch:\"worker-t004\"}")" ] && [ "$(grep -c . "$(wt)/.stratum/git-guard.json")" = 1 ]'
   check "S1 repo has no git-guard.json and is unchanged" '[ ! -e "$repo/.stratum/git-guard.json" ] && [ -z "$(git -C "$repo" status --porcelain)" ]'
   check "S1 one agent start, args after -- are exactly the permission mode and name" '[ "$(cnt "^agent\tstart\t")" = 1 ] && hascall "agent\tstart\tworker-t004\t--kind\tclaude\t--pane\t%s\t--timeout\t120000\t--\t--permission-mode\tauto\t-n\tworker-t004" "$(pane)"'
   check "S1 one agent prompt with P" 'hascall "agent\tprompt\tworker-t004\t%s\t--wait\t--until\tworking\t--until\tblocked\t--timeout\t30000" "$P"'
@@ -241,18 +241,18 @@ s1() {
 s1 "$script"
 
 fresh
-printf '{"force_push":"deny"}\n' > "$repo/.stratum/git-guard.json"
+printf '{"force_push":"deny","branch":"main"}\n' > "$repo/.stratum/git-guard.json"
 run bash "$script" start "${sargs[@]}"
 check "S1b exit 0" '[ $rc = 0 ]'
-check "S1b worker git-guard.json merges the repo file with commit auto" '[ "$(jq -S -c . "$(wt)/.stratum/git-guard.json")" = "$(jq -S -c -n "{force_push:\"deny\",commit:\"auto\"}")" ] && [ "$(grep -c . "$(wt)/.stratum/git-guard.json")" = 1 ]'
-check "S1b repo git-guard.json is unchanged" '[ "$(cat "$repo/.stratum/git-guard.json")" = "{\"force_push\":\"deny\"}" ]'
+check "S1b worker git-guard.json merges the repo file with commit auto and overwrites its branch with the worker branch" '[ "$(jq -S -c . "$(wt)/.stratum/git-guard.json")" = "$(jq -S -c -n "{force_push:\"deny\",commit:\"auto\",branch:\"worker-t004\"}")" ] && [ "$(grep -c . "$(wt)/.stratum/git-guard.json")" = 1 ]'
+check "S1b repo git-guard.json is unchanged" '[ "$(cat "$repo/.stratum/git-guard.json")" = "{\"force_push\":\"deny\",\"branch\":\"main\"}" ]'
 rm -f "$repo/.stratum/git-guard.json"
 
 fresh
 : > "$repo/.stratum/git-guard.json"
 run bash "$script" start "${sargs[@]}"
 check "S1c exit 0" '[ $rc = 0 ]'
-check "S1c empty repo git-guard.json gives a worker guard file of exactly commit auto" '[ "$(cat "$(wt)/.stratum/git-guard.json")" = "{\"commit\":\"auto\"}" ]'
+check "S1c empty repo git-guard.json gives a worker guard file of exactly commit auto and the worker branch" '[ "$(jq -S -c . "$(wt)/.stratum/git-guard.json")" = "$(jq -S -c -n "{commit:\"auto\",branch:\"worker-t004\"}")" ]'
 rm -f "$repo/.stratum/git-guard.json"
 
 fresh
@@ -326,7 +326,7 @@ printf '{"force_push":"deny"}\n' > "$tmp/repo-feat/.stratum/git-guard.json"
 repo="$tmp/repo-feat" run bash "$script" start "${sargs[@]}"
 check "S10 exit 0" '[ $rc = 0 ]'
 check "S10 worktree create from the main checkout, base is the linked worktree HEAD" '[ "$featsha" != "$sha" ] && [ "$(cnt "^worktree\tcreate\t")" = 1 ] && hascall "worktree\tcreate\t--cwd\t%s\t--branch\tworker-t004\t--base\t%s\t--path\t%s\t--label\tworker-t004\t--no-focus" "$repo" "$featsha" "$tmp/repo-worker-t004"'
-check "S10 guard file read from the linked worktree" '[ ! -e "$repo/.stratum/git-guard.json" ] && [ "$(jq -S -c . "$(wt)/.stratum/git-guard.json")" = "$(jq -S -c -n "{force_push:\"deny\",commit:\"auto\"}")" ]'
+check "S10 guard file read from the linked worktree" '[ ! -e "$repo/.stratum/git-guard.json" ] && [ "$(jq -S -c . "$(wt)/.stratum/git-guard.json")" = "$(jq -S -c -n "{force_push:\"deny\",commit:\"auto\",branch:\"worker-t004\"}")" ]'
 check "S10 never-list, one prompt" 'never 0 1'
 git -C "$repo" worktree remove --force "$tmp/repo-feat"
 git -C "$repo" branch -q -D feat
@@ -459,7 +459,9 @@ check "G2 no result file line, pane text, the stub pane text" 'grep -qxF "no res
 check "G2 never-list" 'never 0 0'
 
 mk; states done
+check "C1b guard file present before close" '[ -e "$(wt)/.stratum/git-guard.json" ]'
 run bash "$script" close T004
+check "C1b guard file gone after close" '[ ! -e "$(wt)/.stratum/git-guard.json" ]'
 check "C1 exit 0" '[ $rc = 0 ]'
 check "C1 one workspace close on the stub WS" 'hascall "workspace\tclose\t%s" "$(wsid)" && never 1 0'
 check "C1 closed and folder lines" 'hasline "closed\tworker-t004" && hasline "folder\t%s\tready to remove" "$(wt)"'
@@ -469,6 +471,7 @@ mk; states working
 run bash "$script" close T004
 check "C2 exit 1" '[ $rc = 1 ]'
 check "C2 the refuse line, no closed line, no workspace close" '[ "$out" = "Worker worker-t004 is working. Close refused." ] && ! grep -q "^closed" <<<"$out" && never 0 0'
+check "C2 refused close keeps git-guard.json" '[ -e "$(wt)/.stratum/git-guard.json" ]'
 
 mk; states done
 STUB_KEEP_AGENT=1 run bash "$script" close T004
@@ -509,6 +512,7 @@ mk; states done
 STUB_PR_OPEN=1 run bash "$script" close T004
 check "C9 exit 1" '[ $rc = 1 ]'
 check "C9 the open-PR refuse line, no closed line, no workspace close" '[ "$out" = "Worker worker-t004 has an open PR. Close refused." ] && ! grep -q "^closed" <<<"$out" && never 0 0'
+check "C9 refused close keeps git-guard.json" '[ -e "$(wt)/.stratum/git-guard.json" ]'
 
 mk; states done
 STUB_GH_FAIL=1 run bash "$script" close T004
@@ -522,6 +526,14 @@ git -C "$repo" remote set-url origin https://github.com/stub/stub.git
 check "C11 no GitHub remote: exit 0" '[ $rc = 0 ]'
 check "C11 no GitHub remote: closed and folder lines, one workspace close" 'hasline "closed\tworker-t004" && hasline "folder\t%s\tready to remove" "$(wt)" && hascall "workspace\tclose\t%s" "$(wsid)" && never 1 0'
 check "C11 no GitHub remote: no gh call" '[ ! -s "$tmp/gh_calls" ]'
+
+mk; states done
+mkdir "$tmp/guard-target"; echo '{}' > "$tmp/guard-target/git-guard.json"
+rm -rf "$(wt)/.stratum"; ln -s "$tmp/guard-target" "$(wt)/.stratum"
+run bash "$script" close T004
+check "C12 exit 1" '[ $rc = 1 ]'
+check "C12 the symlink refuse line, no closed line, no workspace close" '[ "$out" = "Worker worker-t004: .stratum is a symlink. Close refused." ] && ! grep -q "^closed" <<<"$out" && never 0 0'
+check "C12 the symlink target keeps git-guard.json" '[ -e "$tmp/guard-target/git-guard.json" ]'
 
 fresh
 x=$(rnd)
@@ -622,7 +634,7 @@ rrej() {
 
 r1() {
   rfresh; STUB_WT_PATH=/home/u/proj-worker-t004 rrun bash "$1" start "${rsargs[@]}"
-  local in="$tmp/ssh_in.1" g; g=$(printf '%q' '{"commit":"auto"}')
+  local in="$tmp/ssh_in.1" g; g=$(printf '%q' '{"commit":"auto","branch":"worker-t004"}')
   check "R1 exit 0" '[ $rc = 0 ]'
   check "R1 machine list, every other call starts --machine laptop, never-list, one prompt" 'rnever 0 1'
   check "R1 workspace list on the machine" 'rcall "workspace\tlist"'
@@ -693,6 +705,8 @@ rrun bash "$script" close T004 --machine laptop
 check "R9 exit 0" '[ $rc = 0 ]'
 check "R9 one workspace close on the stub WS, --machine rule" 'rcall "workspace\tclose\t%s" "$(wsid)" && rnever 1 0'
 check "R9 closed and folder lines" 'hasline "closed\tworker-t004" && hasline "folder\t%s\tready to remove" "$(wt)"'
+check "R9b ssh rm -f of the quoted git-guard.json path" 'sshs | grep -qF -- "rm -f $(wt)/.stratum/git-guard.json"'
+check "R9c ssh tests .stratum is not a symlink before the rm" 'c=$(sshs); t=${c%%rm -f *}; [ "$t" != "$c" ] && [[ $t == *"[ ! -L $(wt)/.stratum ]"* ]]'
 
 rmk; states blocked working
 rrun bash "$script" answer T004 --machine laptop --keys 1
