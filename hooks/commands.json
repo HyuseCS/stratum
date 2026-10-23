@@ -27,8 +27,8 @@
           { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/st-session-start.sh\"", "timeout": 10, "statusMessage": "Stratum · loading handoff" },
           {
             "type": "command",
-            "command": "node -e \"require(require('node:path').join(process.env.CLAUDE_PLUGIN_ROOT.replaceAll(String.fromCharCode(92), '/'), 'hooks/ponytail/ponytail-activate.js'))\"",
-            "timeout": 5,
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PLUGIN_ROOT.split(String.fromCharCode(92)).join('/'), 'hooks/ponytail/ponytail-activate.js'))\"",
+            "timeout": 15,
             "statusMessage": "Stratum · loading ponytail"
           }
         ]
@@ -39,8 +39,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('node:path').join(process.env.CLAUDE_PLUGIN_ROOT.replaceAll(String.fromCharCode(92), '/'), 'hooks/ponytail/ponytail-subagent.js'))\"",
-            "timeout": 5,
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PLUGIN_ROOT.split(String.fromCharCode(92)).join('/'), 'hooks/ponytail/ponytail-subagent.js'))\"",
+            "timeout": 15,
             "statusMessage": "Stratum · ponytail for subagent"
           }
         ]
@@ -51,8 +51,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('node:path').join(process.env.CLAUDE_PLUGIN_ROOT.replaceAll(String.fromCharCode(92), '/'), 'hooks/ponytail/ponytail-mode-tracker.js'))\"",
-            "timeout": 5,
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PLUGIN_ROOT.split(String.fromCharCode(92)).join('/'), 'hooks/ponytail/ponytail-mode-tracker.js'))\"",
+            "timeout": 15,
             "statusMessage": "Stratum · ponytail check"
           },
           { "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/st-phase.py\"", "timeout": 10 }

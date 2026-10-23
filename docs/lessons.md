@@ -194,3 +194,15 @@
 
 - What happened: D7 used `pane wait-output` to see `claude` and `lazygit` start. The planner (F2) found it matches the echo of the typed command, so it cannot fail. D20 replaced it with `pane process-info` (71cc766, 0054744).
 - Rule: "Program started" is decided from `herdr pane process-info` foreground process names, and a test where `process-info` fails must report `not seen` (case L16).
+
+## 2026-10-23: 006-pr-workflow-script
+
+### L22. Review fixes to prompt text left the contract's prompt table behind
+
+- What happened: Commit `cf7feae` added rules to the agent prompts in `workflows/pr.js` (scan command flag, "Do not stage, commit, push or run gh." on the draft and fixers, a template search order, a no-feature-dir refuter line, the `facts:tests` JSON handoff) and a `bodyPath` missing case to the skill. `contracts/pr-workflow.md` section 2.4 and 4.2 and the fake `pipeline` in section 6 kept the old text until this close. The node test only checks five prompt strings, so no check failed.
+- Rule: A review fix that changes a prompt string in `workflows/pr.js` must change the matching row of `contracts/pr-workflow.md` section 2.4 in the same commit, and any rule a prompt must hold goes into the `prompt rules` case of `tests/test_pr_workflow.mjs`.
+
+### L23. A prompt-only scan has a volume ceiling that reads as a clean result
+
+- What happened: `facts:scan` is one agent that reads every patch in the range, and `--diff-merges=first-parent` repeats main's delta for each merge of main. On a big branch it can run out of context and return `{finds: []}`, the same value as a clean scan. The schema cannot tell the two apart.
+- Rule: A scan that gates a push must return a count of commits it read, and the script must add `unverified: facts:scan` when that count is lower than `commits.length`.
