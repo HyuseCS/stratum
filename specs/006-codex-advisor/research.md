@@ -1,5 +1,7 @@
 # Research: Codex Advisor
 
+> **Superseded by D26 and D27 (decisions.md, changes/001-codex-plan-only.md):** the diff point, the "three points" and the `st-inspect` plan run described below are history. Codex now runs at the plan point (end of `st-plan`, advice only) and the test point. The diff point and `st-fast` use `/advisor`. Current rules: spec.md, data-model.md, contracts/advisor.md.
+
 Facts checked on 2026-10-23 against codex-cli 0.163.0 (`/usr/bin/codex`, logged in with ChatGPT,
 model `gpt-6-astra`, reasoning `medium` from `~/.codex/config.toml`), Claude Code 2.1.302,
 Bash 5.3.20, Python 3.14.8, git 2.56.0, GNU coreutils `timeout` 9.12, and the repo at `f0ac746`
