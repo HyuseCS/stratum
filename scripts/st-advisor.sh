@@ -94,15 +94,7 @@ printf '%s\n' '{"type":"object","additionalProperties":false,"required":["verdic
         'Point: plan. Review the plan before the build. Risks: missed access rules, schema or contract breaks, hidden breaking changes. Improvements: a simpler approach, tasks to cut or merge.' \
         "Inputs: $f/spec.md, $f/plan.md, $f/tasks.md" ;;
     test)
-      printf '%s\n' 'Point: test. This task'"'"'s test is still red after two build tries. Root cause or rabbit hole?' "Test: $4" 'Task:'
-      cat "$3"
-      [ -z "$(tail -c1 "$3")" ] || echo
-      echo 'Failure output 1:'
-      cat "$5"
-      [ -z "$(tail -c1 "$5")" ] || echo
-      echo 'Failure output 2:'
-      cat "$6"
-      [ -z "$(tail -c1 "$6")" ] || echo ;;
+      printf '%s\n' 'Point: test. This task'"'"'s test is still red after two build tries. Root cause or rabbit hole?' "Test: $4" 'Task:' "$(cat "$3")" 'Failure output 1:' "$(cat "$5")" 'Failure output 2:' "$(cat "$6")" ;;
     diff)
       rules=
       [ -f .stratum/constitution.md ] && rules=' Read the project rules in .stratum/constitution.md.'
@@ -110,15 +102,11 @@ printf '%s\n' '{"type":"object","additionalProperties":false,"required":["verdic
         'Point: diff. Review the full diff before the build is called done: hidden regressions, broken project rules, missed requirements.' \
         "Inputs: run git diff $sha -- . ':(exclude)$f/advisor.md' ':(exclude,icase).env*' ':(exclude,icase)*/.env*' ':(exclude,icase)*.env' ':(exclude,icase)*.pem' ':(exclude,icase)*.key' ':(exclude,icase)*.p12' ':(exclude,icase)*.pfx' ':(exclude,icase)*.jks' ':(exclude,icase)*.keystore' ':(exclude,icase)id_rsa*' ':(exclude,icase)*/id_rsa*' ':(exclude,icase)id_ed25519*' ':(exclude,icase)*/id_ed25519*' ':(exclude,icase)id_ecdsa*' ':(exclude,icase)*/id_ecdsa*' ':(exclude,icase).npmrc' ':(exclude,icase)*/.npmrc' ':(exclude,icase).netrc' ':(exclude,icase)*/.netrc' ':(exclude,icase).pypirc' ':(exclude,icase)*/.pypirc' ':(exclude,icase)credentials*' ':(exclude,icase)*/credentials*' and read each untracked file listed below. Env and secret files are left out of that diff. The feature dir is $f.$rules" \
         'Untracked files:'
-      list=
-      shopt -s nocasematch
-      while IFS= read -r -d '' p; do
+      list=$(shopt -s nocasematch; while IFS= read -r -d '' p; do
         [[ $p == */ ]] && continue
-        case ${p##*/} in .env*|*.env|*.pem|*.key|*.p12|*.pfx|*.jks|*.keystore|id_rsa*|id_ed25519*|id_ecdsa*|.npmrc|.netrc|.pypirc|credentials*) ;; *) list+="$p"$'\n' ;; esac
-      done < "$tmp/untracked"
-      shopt -u nocasematch
-      [ -n "$list" ] || list=$'none\n'
-      printf '%s' "$list" ;;
+        case ${p##*/} in .env*|*.env|*.pem|*.key|*.p12|*.pfx|*.jks|*.keystore|id_rsa*|id_ed25519*|id_ecdsa*|.npmrc|.netrc|.pypirc|credentials*) ;; *) printf '%s\n' "$p" ;; esac
+      done < "$tmp/untracked")
+      printf '%s\n' "${list:-none}" ;;
   esac
 } > "$tmp/prompt"
 
