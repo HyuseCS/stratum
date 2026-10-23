@@ -235,7 +235,16 @@ phrases <<'EOF'
 #17 D25 one machine	skills/st-worker/SKILL.md	Put a task that builds on a teammate's work on that teammate's machine
 #17 stop	skills/st-worker/SKILL.md	On a one-line failure, show the line and stop.
 #17 no retry	skills/st-worker/SKILL.md	After a failure, do not run start again
-#17 start exit 4	skills/st-worker/SKILL.md	then run `bash scripts/st-worker.sh goal <id> --test <cmd>`
+#17 start exit 4	skills/st-worker/SKILL.md	then run `bash scripts/st-worker.sh goal <id> --test <cmd> [--machine <m>]`
+#17 C4 goal machine	skills/st-worker/SKILL.md	goal <id> --test <cmd> [--machine <m>]
+#17 C4 failure list machine	skills/st-worker/SKILL.md	run `list [--machine <m>]` and show what exists
+#17 C4 wait machine	skills/st-worker/SKILL.md	wait <id> [--machine <m>]
+#17 C4 roster machine	skills/st-worker/SKILL.md	take <m> from the worker's roster row and pass it on every follow-up
+#17 C4 answer machine	skills/st-worker/SKILL.md	answer <id> --keys <key>... [--machine <m>]
+#17 C4 answer text machine	skills/st-worker/SKILL.md	answer <id> --text <text> [--machine <m>]
+#17 C4 result machine	skills/st-worker/SKILL.md	result <id> [--machine <m>]
+#17 C4 close machine	skills/st-worker/SKILL.md	close <id> [--machine <m>]
+#17 C4 resume machine	skills/st-worker/SKILL.md	run the follow-ups with the same `--machine <m>`
 EOF
 check "#17 skill" 'f="$root/skills/st-worker/SKILL.md"; [ -f "$f" ] && grep -qx "name: st-worker" "$f" && grep -q "^# /stratum:st-worker" "$f"'
 check "#17 FR-009 order" 'f="$root/skills/st-worker/SKILL.md"; [ -f "$f" ] && r=$(grep -nF "/stratum:st-review" "$f" | head -1 | cut -d: -f1) && m=$(grep -nF "git merge --no-ff" "$f" | head -1 | cut -d: -f1) && c=$(grep -nF "st-worker.sh close" "$f" | head -1 | cut -d: -f1) && [ -n "$r" ] && [ -n "$m" ] && [ -n "$c" ] && [ "$r" -lt "$m" ] && [ "$m" -lt "$c" ]'
