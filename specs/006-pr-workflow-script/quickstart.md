@@ -103,3 +103,9 @@ base `p1-lane-wording-test` (223 commits, 208 files): passed. `Path: workflow.`,
 `wf_2f9cec96-88b` started by `Workflow({name: "stratum:pr"})`, 20 agents, 0 errors,
 `blocked: false`, no current-path fallback line, the gate showed. Answered Abort: nothing pushed,
 the worktree clean, `workflows/pr.js` unchanged.
+
+M1 and M2 run on 2026-10-24 in `/home/hyuse/Desktop/stratum` on `d8-workflow-by-name`: passed.
+M1, Ultracode on, base `main`: `Path: current. Ultracode on, 5 commits (not more than 30), 8 files
+(not more than 40).`, no workflow; the gate was the real D8 PR, answered Approve (PR #50). M2,
+Ultracode off, base `p1-lane-wording-test`: `Path: current. Ultracode off, 224 commits, 208 files.`,
+no workflow; step 4 found open PR #50, answered Abort.

@@ -80,7 +80,7 @@ to 4 as today. Built by T003 (step 1 item 5). No file of its own.
 
 **Independent Test**: quickstart section 3 rows M1 and M2.
 
-- [ ] T005 [US2] Manual: quickstart section 3 rows M1 (Ultracode on, under the rule: current path) and M2 (Ultracode off, over the rule: current path), Abort at the gate. Reads `skills/st-pr/SKILL.md`, edits nothing. US2 scenario 3 (exactly 30 and 40) is the text `more than 30 commits or more than 40 changed files`, checked by `tests/test_pr_skill.sh` rows FR-002 (FR-002, FR-003, FR-004, SC-002).
+- [x] T005 [US2] Manual: quickstart section 3 rows M1 (Ultracode on, under the rule: current path) and M2 (Ultracode off, over the rule: current path), Abort at the gate. Reads `skills/st-pr/SKILL.md`, edits nothing. US2 scenario 3 (exactly 30 and 40) is the text `more than 30 commits or more than 40 changed files`, checked by `tests/test_pr_skill.sh` rows FR-002 (FR-002, FR-003, FR-004, SC-002).
 
 **Checkpoint**: the one-line path message shows on both paths.
 
