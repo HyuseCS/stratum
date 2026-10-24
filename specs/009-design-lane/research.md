@@ -1,0 +1,276 @@
+# Research: Design Lane
+
+All facts below were read from the files named, on 2026-10-24. Hallmark was read through
+`gh api repos/nutlope/hallmark/contents/...` at commit `7ec868225c6caa040558c321ee0fefa0e73f83a8`
+(main, 2026-10-22). No hallmark code was run.
+
+D20 and D21 were decided by the user on 2026-10-24 (decisions.md, O35 and O39). Research R2,
+R12 and R13 follow them. Impeccable's detector was run only on scratch copies of hallmark's
+fixture HTML, outside the repo.
+
+## R1. Design file name
+
+- Decision: `DESIGN.md` at the project root.
+- Rationale: hallmark reads `design.md` or `DESIGN.md` at the root (`skills/hallmark/SKILL.md:56`,
+  `references/flow.md:7`, `references/design-md.md` "If `design.md` or `DESIGN.md` exists at the
+  root"). `st-impeccable document` writes `DESIGN.md` (`skills/st-impeccable/reference/document.md:1`).
+  One name both see. The spec assumption is resolved.
+- Alternatives considered: `design.md` (impeccable would not write it).
+- Risk: a project whose `DESIGN.md` is an architecture doc (this repo has one) is read as a design
+  file by hallmark. `document` asks before it overwrites (`document.md` "do not silently
+  overwrite"), so no data is lost.
+
+## R2. The four checks against the real tools (FR-008)
+
+| Check | Real command | Concern | Pass rule (two highest levels) |
+|-------|--------------|---------|--------------------------------|
+| Lint | `node <st-hallmark>/scripts/sloplint.mjs <files> --render --json [--url <dev server route>]`, findings whose evidence has no `[<width>px]` prefix | generic patterns in the code | 0 `FAIL` and 0 `REFLEX` |
+| Render check | the same run, findings whose evidence starts with `[<width>px]` (`scripts/sloplint-render.mjs:156-201`), widths 320 to 1920 (`:6`) | layout at each width | 0 `FAIL` and 0 `REFLEX`, and `summary.render` is `ran` |
+| Audit | `st-impeccable audit`, dimensions 1 (Accessibility) and 2 (Performance) only (`reference/audit.md:11`, `:24`) | accessibility and speed | 0 `P0` and 0 `P1` (`audit.md:92-96`) |
+| Critique | `st-impeccable critique` in full, run by the skill in the main session (R13), with the detector's sloplint-owned rules ignored (R12) | UX | 0 `P0` and 0 `P1` in Priority Issues (`critique.md:154`, `:627-636`) |
+
+- Hallmark grades (`references/gates.md:16`): `FAIL` (Floor), `REFLEX`, `WAIVED`, `WARN`,
+  `ANSWERED`, `NOTE`. `FAIL` and `REFLEX` are the two highest. sloplint exits 1 when either is
+  above 0 (`scripts/sloplint.mjs:4421`), so the exit code is the lint and render pass. A `REFLEX`
+  waived in the stamp with hallmark's rules (`gates.md` section 2) counts as a pass; the report
+  lists each waiver.
+- Lint and render check are one run. Running sloplint twice (with and without `--render`) would
+  run the static gates twice. The lane splits the one run by the `[<width>px]` evidence prefix.
+- `render tier not run: <reason>` (`sloplint.mjs:4383`, `summary.render: "not run: ..."`) is a
+  failed render check, never a pass. The start check (R5) makes this rare.
+- Audit dimensions 3 (Theming), 4 (Responsive) and 5 (Implementation Integrity) are not run.
+  Responsive is the duplicate FR-008 names. Implementation Integrity runs `impeccable detect`
+  (`audit.md:60`) a second time, and the detector has one owner, the critique (D21). Theming
+  (tokens, hard-coded colors) is hallmark Floor rule 1 and gate 48 (`SKILL.md:20`), so sloplint
+  owns it.
+- Hallmark's own reviewers are its hero review and finish review in fresh context (`gates.md:239`,
+  `SKILL.md:133`, `:146`). The lane does not start them.
+- Impeccable P0 to P3 (`critique.md:631-636`): P0 blocking, P1 major. P0 and P1 are the two
+  highest.
+- Critique's final-question gate (`critique.md:258`) asks the user when it lists 3 or more
+  Priority Issues. The lane runs with no user in the loop (FR-007), so the skill answers it with
+  fixed answers: priority = P0 and P1 first, scope = blocking findings only. The report lists them
+  as assumed answers.
+- Critique writes a snapshot under `.impeccable/critique/` (`critique.md:198-213`). The lane does
+  not commit it.
+
+## R3. Where the lane's build runs
+
+- Decision: a new agent, `agents/st-design.md` (opus; tools Read, Grep, Glob, Bash, Edit, Write,
+  Skill).
+- Rationale: `st-build` brief mode stops when the brief "grows beyond a small bounded change"
+  (`agents/st-build.md:67`) and a page build is not small. It also loads `st-ui-ux` for every
+  screen task (`agents/st-build.md:44`). D10 forbids changing `st-build`. The orchestrator does
+  not implement (`skills/st/SKILL.md:8`). The main session keeps the grill, the gates and the
+  commit, which need the user.
+- Ripple (feature 005 pattern): `tests/test_inspect.sh:89` (14 to 15 agents) and its rename phrase at `:97`
+  for `skills/st-init/SKILL.md:26`, `tests/test_model_hook.py:213-215`,
+  `skills/st-model/SKILL.md:10-11`, README agent row (two-way check `tests/test_inspect.sh:114-118`)
+  and model overrides lists (`README.md:200-202`, `:207`), `DESIGN.md` roles table. `hooks/st-models.py:8`
+  reads `agents/`, so no hook edit. `tests/test_session_hooks.sh:40-43` and
+  `tests/test_on_demand.sh:50` pass once the agent has its report tag and its skill.
+- Alternatives considered: `st-build` with hallmark loaded (blocked by line 67 and D10); the main
+  session builds (breaks the orchestrator rule).
+
+## R4. Vendoring hallmark (FR-017, FR-018)
+
+- Decision: copy upstream `skills/hallmark/` whole into `skills/st-hallmark/`. Change only the
+  frontmatter `name: hallmark` to `name: st-hallmark`. Keep `skills/st-hallmark/LICENSE`, add
+  `licenses/hallmark.MIT.txt` (upstream root `LICENSE`, "Copyright (c) 2026 Hallmark
+  contributors", MIT), a `THIRD_PARTY_NOTICES.md` row and a "Changes made" bullet, and a
+  `vendor.lock` entry `"hallmark": { "repo": "nutlope/hallmark", "ref": "main", "commit": "<sha at
+  vendoring>", "path": "skills/hallmark", "version": "2.0.0", "license": "MIT" }`.
+- Rationale: `st-sync` already loops over every `vendor.lock` entry and limits the log to `path`
+  (`skills/st-sync/SKILL.md` step 1), so it lists hallmark's changes with no skill edit (US4
+  scenario 5). The scripts use `<skill-dir>`-relative paths (`SKILL.md:35`, `:80`, `:95`), so no
+  path rewrite.
+- Size: 178 files, 6.8 MB. 5.5 MB are the 98 theme files (48 pictures that the deal step shows).
+  `scripts/fixtures/` (about 200 KB) is not read at runtime (no reference in `theme.mjs` or
+  `sloplint.mjs`), but keeping the folder whole keeps the `st-sync` diff simple.
+- Not run by the lane: `scripts/install.mjs` (installs into `~/.claude/skills`),
+  `scripts/install-hook.mjs` (edit-time hook), `scripts/imagegen.mjs` unless the user set
+  `TOGETHER_API_KEY`.
+- Risk: hallmark's description says "Use when the user asks to build or design something new"
+  (`SKILL.md:3`). Outside the lane, Claude can start `st-hallmark` on such a request. The vendoring
+  rule keeps the description as is. `st-status` step 5 also lists `~/.claude/skills/hallmark` as a
+  duplicate install.
+
+## R5. Tool check (FR-015, SC-005)
+
+- Decision: one script, `scripts/st-design-check.sh`, used by the lane at its start and by
+  `st-status` step 4 (and so `st-init` step 10, which reuses step 4: `skills/st-init/SKILL.md:60`).
+  One script means one list of tools.
+- What it checks, copied from the code that uses the tools (`scripts/sloplint-render.mjs:7`,
+  `:79-111`, `references/flow.md:117`):
+  1. `node` 18 or later (`node -p process.versions.node`).
+  2. `puppeteer-core` or `puppeteer`: `node_modules/` in the project, then `$(npm root -g)`.
+     `command -v` cannot see a node module. The script skips `$HALLMARK_PUPPETEER`, which would
+     put the engine's name in a lane file (FR-010); a user who relies on it alone sees "missing"
+     and the harmless `npm i -g puppeteer-core`.
+  3. Chrome or Chromium: `$CHROME_PATH` if the file exists, then `command -v google-chrome
+     google-chrome-stable chromium chromium-browser`, then the macOS and Windows paths of
+     `sloplint-render.mjs:7`.
+- Output: one line per missing tool, `missing: <tool>. Install: <command>`, exit 1. All present:
+  `design tools: ok`, exit 0.
+- Install commands: `npm i -g puppeteer-core` (`flow.md:117`). Node and the browser by the
+  package manager found first: `pacman` (`sudo pacman -S nodejs npm`, `sudo pacman -S chromium`),
+  `apt-get` (`sudo apt install nodejs npm`, `sudo apt install chromium`), `dnf`
+  (`sudo dnf install nodejs`, `sudo dnf install chromium`), `brew` (`brew install node`,
+  `brew install --cask google-chrome`), `winget` (`winget install OpenJS.NodeJS.LTS`,
+  `winget install Google.Chrome`); none found: `https://nodejs.org/en/download` and `set
+  CHROME_PATH to a Chrome or Chromium binary`.
+- This machine: node v24.14.1, npm 11.11.0, `/usr/bin/chromium` and `/usr/bin/google-chrome-stable`
+  present, `puppeteer-core` absent from `npm root -g`. So a live SC-005 run is possible now.
+
+## R6. Framework projects need a running dev server
+
+- Decision: the lane never starts a dev server. For a framework project (`package.json` with
+  `next`, `astro`, `@sveltejs/kit` or `vite`), it probes the port from the `dev` script or the
+  framework default (Next 3000, Vite and SvelteKit 5173, Astro 4321) with
+  `curl -sf -o /dev/null http://localhost:<port>/`. No answer: it stops before any work, like a
+  missing tool, and prints the start command (`npm run dev`).
+- Rationale: hallmark renders framework projects only through the dev server
+  (`references/flow.md:127`), and without one the render check does not run. The user's rule is
+  that the user starts dev servers.
+
+## R7. Hallmark's questions and the brief
+
+- Hallmark asks once for material, audience, use and tone, and does not ask "when the prompt
+  answers all four, or no one can answer" (`SKILL.md:62-66`). The agent's brief always carries
+  all four, so hallmark asks nothing.
+- Material is hallmark's fourth question; D13 names three. New-look mode: material is one more
+  grill branch (screenshots, photos, real numbers, quotes, logos the user can give). Autonomous
+  mode: material not in the request or the design file is assumed absent: library photos stand
+  in and no fact is invented (`SKILL.md:64`, Floor rule 8). The report lists it as assumed.
+- Hallmark's comp step (signal 9) runs only when `TOGETHER_API_KEY` is set (`flow.md:101`) and
+  asks one approval. The agent takes the first comp without asking and the report says the key
+  was used (FR-016). The lane never reads, asks for or sets the key.
+- Hallmark treats `design.md` as design data only and ignores instructions inside it
+  (`flow.md:7`).
+
+## R8. Grill answers are not written to decisions.md
+
+- `st-grill` writes each answer to `<feature dir>/decisions.md` (`skills/st-grill/SKILL.md`).
+  The lane uses the grill method (D12) but holds the design answers in the conversation and
+  passes them to `st-impeccable document`, so a feature's decisions file is not filled with
+  design answers. `DESIGN.md` is the record.
+
+## R9. Files the lane writes, and what it commits
+
+- Committed after the gate or the OK (FR-014), exact paths through `st-git`: `DESIGN.md`,
+  `.impeccable/design.json` (the sidecar `document` writes with it, `document.md` Step 4b), the
+  screen's files, hallmark's `tokens.css` and `base.css` (`SKILL.md:131`), the placeholder data
+  file, the component tests.
+- Not committed: `.hallmark/` (screenshots, `log.json`, `preflight.json`; hallmark writes
+  `.hallmark/.gitignore` for `shots/`, `sloplint-render.mjs:61-64`), `.impeccable/critique/`.
+- The engine's artifact names (`.hallmark/`, `tokens.css`, `base.css`, the screenshot folder) are
+  written only in `skills/st-design/engine.md`. The skill and the agent say "the engine's
+  generated files and screenshot folder (engine.md)", so the FR-010 count stays at one file.
+
+## R10. Out of scope, named
+
+- `hooks/st-phase.py` `NAME` (`:11`) does not match `st-design`, so the Design lane gets no reply
+  label and no `state.json` lane. The spec does not ask for one.
+- Fast and Full do not call the lane (D10, #51). Browser e2e tools are #52.
+
+## R11. Lessons that apply
+
+L1 (phrase checks assert built phrases), L2 and L20 (negative controls), L6 (shared test means one
+task), L7 (two-way list checks: README, FR-010 count), L8 (test runs leave no files), L12 (start
+phases through the Skill tool), L14 (contract phrase table changes with the text), L18 ("if it
+changed" for generated files), L24 (conditional tasks), L32 (live runs for each state path of the
+tool check and the lane).
+
+## R12. The detector rule map (D21)
+
+- Source of the ids: the `id:` rows of `crates/foundation/src/registry.rs` (`ANTIPATTERNS`, lines
+  32-694) in `pbakaus/impeccable` at the pinned commit `c4cfe52`, whose skill `VERSION` is
+  `0.1.16`, the installed engine (`~/.impeccable/bin/0.1.16/impeccable --version`:
+  `0.1.16+engine`). 62 ids. 61 appear in the binary's strings; `hard-offset-shadow` does not, so
+  the source at the pin may be ahead of the binary. The map holds all 62: `hard-offset-shadow` is
+  on `keep:`, where an id that never fires costs nothing.
+- The id in `impeccable detect --json` output is the `antipattern` field (run on hallmark's
+  fixtures: `ai-color-palette`, `border-accent-on-rounded`, `bounce-easing`, `cramped-padding`,
+  `cream-palette`, `flat-type-hierarchy`, `gradient-text`, `low-contrast`, `overused-font`,
+  `skipped-heading`). `ignores add-rule` uses the same ids (`gradient-text` ignored, then gone
+  from the output).
+- `impeccable detect --list-rules` exists upstream (`crates/detect/src/list_rules.rs`) but the
+  0.1.16 binary prints nothing for it. A later engine will answer it.
+- `ignores add-rule` accepts any string (`bogus-id-xyz` was added), so a wrong id fails silently.
+  The runtime catch below finds it.
+- The map (user's measurement, orchestrator decision of 2026-10-25), all 62 ids, written out in
+  contracts section 2:
+  - `ignore:` 35 ids, each the same as or partly the same as a sloplint gate: `side-tab`,
+    `border-accent-on-rounded`, `overused-font`, `gradient-text`, `ai-color-palette`,
+    `cream-palette`, `nested-cards`, `bounce-easing`, `shape-assembled-illustration`, `dark-glow`,
+    `radial-halo`, `radial-spotlight-glow`, `icon-tile-stack`, `italic-serif-display`,
+    `hero-eyebrow-chip`, `kicker-above-heading`, `numbered-section-labels`, `em-dash-overuse`,
+    `marketing-buzzword`, `aphoristic-cadence`, `broken-image`, `content-hidden-at-rest`,
+    `text-occlusion`, `gray-on-color`, `low-contrast`, `line-length`, `cramped-padding`,
+    `body-text-viewport-edge`, `tight-leading`, `skipped-heading`, `heading-rhythm`,
+    `justified-text`, `unbalanced-heading`, `tiny-text`, `undersized-ui-text`.
+  - `keep:` 27 ids. 16 are detector-only: `flat-type-hierarchy`, `blinking-cursor`,
+    `buried-raster` (raster under a wash), `hard-offset-shadow`, `extreme-negative-tracking`
+    (crushed letter spacing), `script-error`, `edge-flush-cards` (scroller edge),
+    `first-viewport-column-overflow`, `straggler`, `clipped-overflow-container`,
+    `design-system-font`, `design-system-color`, `design-system-radius`,
+    `design-system-font-size`, `gpt-thin-border-wide-shadow` (the "card shadow row"),
+    `theater-slop-phrase`. 11 were unsure. For each, the sloplint gate checks a different thing
+    or a person judges it, so sloplint does not own it: `pulsing-dot`, `repeated-container-text`,
+    `oversized-h1`, `monotonous-spacing`, `marquee`, `text-overflow`, `all-caps-body`,
+    `wide-tracking`, `organic-clip-path`, `repeating-stripes-gradient`, `codex-grid-background`.
+- The map lives in `skills/st-design/engine.md` as two lines, `ignore:` and `keep:`. Checks with no
+  new script: the test asserts 62 ids (35 and 27), each once, the two lines share none, and the
+  16 detector-only ids are on `keep:`. At runtime, a detector id in critique's output that is on neither line is
+  reported as an unmapped rule. At `st-sync`, after an impeccable or hallmark port, the skill
+  diffs the map against `impeccable detect --list-rules` (or `registry.rs` at the new pin while
+  the engine does not answer it) and rechecks any rule whose sloplint gate changed.
+- Scope: `impeccable ignores add-rule <id> --local` writes `.impeccable/config.local.json` and
+  adds that path to `.git/info/exclude` (seen in a scratch repo). No committed file and no
+  `.gitignore` edit. In a folder with no `.git`, there is no exclude line. The skill adds only the
+  ids not already listed (`impeccable ignores list`) before the first critique and removes only
+  those after the last round, so the user's own detector runs are as before. The CLI scan and the
+  browser overlay both read this file (`skills/st-impeccable/scripts/live-browser-ignores.js`
+  header).
+
+## R13. Where the impeccable checks run
+
+- Decision: the skill runs `st-impeccable audit` (dimensions 1 and 2) and `st-impeccable
+  critique` in the main session, through the Skill tool. The agent runs the engine, the build, the
+  component tests and sloplint.
+- Rationale: critique must run Assessment A and B as two isolated subagents whenever a subagent
+  tool exists, and inline is a degraded run (`critique.md:8-9`). A subagent has no subagent tool,
+  so inside `st-design` critique could never run in full (D21). `skills/st-build/SKILL.md:46`
+  already has the orchestrator run the `st-impeccable` skill on changed screens. Both checks are
+  read-only, so the orchestrator still does not implement.
+- Fix round: the skill collects the blocking findings from the agent's report and its own two
+  checks, starts `st-design` again with them, then runs audit and critique again. The skill keeps
+  the round count (at most 2).
+- Live server: critique's overlay step starts `impeccable live-server --background` when a browser
+  can be driven (`critique.md:79`), each round. After each critique the skill makes sure the
+  server it started is stopped with `impeccable live-server stop --keep-inject` on the port it
+  printed. A bare `stop` edits the project's entry file. Failure states: a server already running
+  before the critique (left alone, critique picks a free port from 8400); a critique that prints no
+  port (no server started, the report says the overlay did not run); a server that cannot start
+  (critique reports the fallback signal; the report names it).
+
+## R14. New-look flow with the theme branch (D20)
+
+- The grill's tone answer gives the genre by hallmark's own rule (`SKILL.md:68`). The skill runs
+  the engine's deal command (`theme.mjs deal --genre <genre> --prompt "<brief>" --json`, read-only
+  but for reading `.hallmark/log.json`), shows the three themes with their pictures
+  (`references/themes/<slug>.jpg`), and recommends one. "Another three" reruns it with
+  `--reroll 1`, counting up.
+- After the pick, the skill runs the engine's scaffold command (`theme.mjs scaffold <slug>
+  --dealt "<n>/3, seed <seed>" [--dir <styles folder>]`, `theme.mjs` scaffold function), which
+  writes `tokens.css` and `base.css`. This is a generator run, not hand-written code.
+- `st-impeccable document` then runs in scan mode on the project with the grill answers as its
+  Step 3 answers (`document.md` Step 3). It writes `DESIGN.md` and `.impeccable/design.json` and
+  runs its Step 5 confirm, which is the first of the two stops (FR-006). With an existing
+  `DESIGN.md`, the skill answers its refresh, overwrite or merge question with "overwrite" from
+  the new-look request.
+- The agent brief names the theme slug, so hallmark takes its "user named a theme" route
+  (`SKILL.md:90`) and loads the theme file (`SKILL.md:104`).
+- No PRODUCT.md is written. Seed mode, which would need it, does not run.
+- A different direction at the gate goes back to the theme branch: a new deal, a new scaffold, a
+  new `DESIGN.md` confirm. That is the same two-stop loop again (FR-006 "the same gate again").

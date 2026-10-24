@@ -141,6 +141,9 @@ stop at the start with the install command, and `st-status` name it.
   placeholder data of the same shape and names the work behind it for Fast or Full (FR-012).
 - The user has set `TOGETHER_API_KEY`: hallmark may generate images, and the report says so. With
   no key, the lane never asks for one (FR-016).
+- A framework project (a dev server renders the page) with no dev server answering on its port:
+  the lane stops before any work, like a missing tool, and tells the user to start it with the
+  exact command. The lane never starts a dev server; the user does.
 - A new screen inside a bigger Full or Fast feature: this feature does not route it to the lane;
   the user calls `/stratum:st-design` (D10, #51).
 - An existing design file that the user wants to change: out of scope here; it is a new-look
@@ -159,7 +162,8 @@ stop at the start with the install command, and `st-status` name it.
 - **FR-003**: The lane MUST make a missing design file with the user through the `st-grill`
   method: one question at a time, each with a recommended answer, until the frontier is empty.
   The first branches MUST be North Star, overview voice, color character, elevation, components
-  and UX; in the new-look mode also audience, use and tone.
+  and UX; in the new-look mode also audience, use, tone and theme (the user picks one of 3 themes
+  hallmark deals, D20).
 - **FR-004**: The design file MUST be written by `st-impeccable document` from the grill's
   answers. The lane MUST give it those answers, so it does not ask its own questions again. The
   user MUST read and confirm the file before any screen is built.
@@ -178,8 +182,10 @@ stop at the start with the install command, and `st-status` name it.
 - **FR-008**: Before the lane shows a screen to the user, the screen MUST go through these checks,
   each owning one concern: hallmark's lint (generic patterns in the code), hallmark's render check
   (layout at each width), `st-impeccable audit` (accessibility and speed), `st-impeccable
-  critique` (UX). The duplicates (`impeccable detect`, hallmark's own reviewer, the responsive part
-  of the audit) MUST NOT run. A check passes when it reports no finding at its two highest severity levels; lower
+  critique` (UX). Critique runs in full, with its own detector, split by rule: for each rule that
+  hallmark's lint also checks (the same or partly the same), hallmark's lint owns it and the
+  detector MUST ignore it; the detector owns only the rules hallmark's lint lacks (D21). Hallmark's
+  own reviewer and the responsive part of the audit MUST NOT run. A check passes when it reports no finding at its two highest severity levels; lower
   findings go in the report. One fix round is: fix the findings that block a pass, then run all
   four checks again. The lane MUST run at most 2 fix rounds and then report what still blocks a
   pass as open.
