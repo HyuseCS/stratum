@@ -5,6 +5,8 @@ The lane stores no data of its own. These are the files and messages it reads an
 ## Design file
 
 - Path: `DESIGN.md` at the project root (research R1), with its sidecar `.impeccable/design.json`.
+  A root `DESIGN.md` or `design.md` with no sidecar beside it is not a design file: the lane stops
+  and asks the user to move it, so `document` never overwrites another document.
 - Written by: `st-impeccable document`, scan mode, with the grill answers as its Step 3 answers
   (FR-004, research R14). Never by the lane or the agent directly.
 - Content: impeccable's format (`skills/st-impeccable/reference/document.md` Step 4): YAML

@@ -33,13 +33,19 @@ conversation. Do not write them to a decisions file.
    the port from its `dev` script, else Next 3000, Vite and SvelteKit 5173, Astro 4321. Run
    `curl -sf -o /dev/null http://localhost:<port>/`. No answer: say "Start your dev server with
    `npm run dev`, then run /stratum:st-design again." and stop. Never start a dev server.
-3. Pick the mode and say it in one line. New look: the task asks for a new look or a change to the
-   design file, or the project has no `DESIGN.md` and no styled screens. Autonomous: the task asks
-   for a new page or screen in the existing look.
+3. A design file is a root `DESIGN.md` with `.impeccable/design.json` beside it. A root
+   `DESIGN.md` or `design.md` without it is not a design file: say "`DESIGN.md` is not a design
+   file. Move or rename it, then run /stratum:st-design again." and stop.
+4. Pick the mode and say it in one line. New look: the task asks for a new look or a change to the
+   design file, or the project has no design file and no styled screens. Autonomous: the task asks
+   for a new page or screen in the existing look. Else autonomous. Styled screens: a tracked file
+   (`git ls-files`) sets a color or a font: a `color:`, `font-family:`, `--color-` or `--font-`
+   declaration, or a Tailwind config.
 
 ## 2. New look
 
-The user is stopped exactly twice: the design file confirm (step 4) and the gate (step 6).
+The user is stopped exactly twice per direction: the design file confirm (step 4) and the gate
+(step 6).
 
 1. Grill with the `st-grill` method: one question per message, each with a recommended answer,
    until the frontier is empty. First branches: audience, use, tone, material, theme, North Star,
@@ -49,7 +55,7 @@ The user is stopped exactly twice: the design file confirm (step 4) and the gate
    recommend one. "Another three" deals again.
 3. When the grill ends, run the engine's scaffold command for the picked theme.
 4. Load `st-impeccable` (Skill tool) and run `document` in scan mode with the grill answers as
-   its Step 3 answers, so it asks nothing. If `DESIGN.md` exists, answer its refresh, overwrite
+   its Step 3 answers, so it asks nothing. If a design file exists, answer its refresh, overwrite
    or merge question with "overwrite". Its Step 5 confirm is the first stop: build nothing until
    the user confirms the file.
 5. Build and check one reference screen (section 4).
@@ -59,7 +65,7 @@ The user is stopped exactly twice: the design file confirm (step 4) and the gate
 
 ## 3. Autonomous
 
-1. No `DESIGN.md`: read the look from the code (tokens, the global stylesheet, the main
+1. No design file: read the look from the code (tokens, the global stylesheet, the main
    components) as a draft. Grill as in section 2 step 1, without audience, use, tone, material and
    theme, and start each recommended answer from the draft. Then run section 2 step 4. This
    happens once per project.
@@ -81,9 +87,11 @@ The user is stopped exactly twice: the design file confirm (step 4) and the gate
 3. Load `st-impeccable` and run `audit` on the screen, dimensions 1 (Accessibility) and 2
    (Performance) only. Then run `critique` on the screen in full. Answer its closing questions
    yourself: priority P0 and P1 first, scope blocking findings only. List both as assumed answers.
-4. After each critique, stop the live server it started: `<impeccable> live-server stop
-   --keep-inject` on the port it printed. Never a bare `stop`: it edits the project's entry file.
-   No port printed: the report says the overlay did not run.
+4. After each critique that printed the live server's connection JSON, run `<impeccable>
+   live-server stop --keep-inject`. The overlay went in through the browser, so this form leaves
+   the project's files as they were. Never a bare `stop`: it runs `live-inject --remove` on the
+   project's entry file. No connection JSON: run no stop, and the report says the overlay did not
+   run.
 5. A check passes when it has no finding at its two highest levels: P0 and P1 for audit and
    critique, the engine's two highest grades for the agent's two checks. A detector id in the
    critique's output that is on neither map line of `engine.md` goes in the report as an unmapped
@@ -119,9 +127,12 @@ work behind the screen for Fast or Full.
 # Engine
 
 The Design lane's new-look engine: hallmark. A swap to another engine changes this file, the
-vendored skill and its `vendor.lock` entry (D8). `<engine>` is `<plugin root>/skills/st-hallmark`.
+vendored skill, its `vendor.lock` entry, its `licenses/` file and `THIRD_PARTY_NOTICES.md` row,
+`skills/st-sync/SKILL.md` step 5, `skills/st-status/SKILL.md` step 5, `README.md` and the
+`DESIGN.md` D7 row (D8). `<engine>` is `<plugin root>/skills/st-hallmark`.
 
-- **Skill.** Load `st-hallmark` (Skill tool) for every build.
+- **Skill.** Read `<engine>/SKILL.md` and follow it for every build. Its frontmatter has
+  `disable-model-invocation: true` (D22), so it is never loaded with the Skill tool.
 - **Questions.** It needs material, audience, use and tone. The brief carries all four, so it asks
   nothing. Material not given: its library photos stand in, and no number, quote or logo is
   invented. List that as assumed.
@@ -136,8 +147,11 @@ vendored skill and its `vendor.lock` entry (D8). `<engine>` is `<plugin root>/sk
   `scripts/install.mjs` or `scripts/install-hook.mjs`.
 - **Image key.** With `TOGETHER_API_KEY` set, its comp step may run: take the first comp and ask
   nothing. Report "hallmark may have used your TOGETHER_API_KEY to make images; the brief went to
-  Together AI." With no key: "No image key set." Never ask for, print or set the key.
-- **Check.** `node <engine>/scripts/sloplint.mjs <files> --render --json`, with
+  Together AI." With no key: "No image key set." Test only `[ -n "${TOGETHER_API_KEY:-}" ]`.
+  Never ask for, print or set the key.
+- **Check.** If `CHROME_PATH` is unset, set it for the run to the first path that
+  `command -v google-chrome google-chrome-stable chromium chromium-browser` prints. Then
+  `node <engine>/scripts/sloplint.mjs <files> --render --json`, with
   `--url <dev server route>` in a framework project and `--scope app` or `--scope component`
   where the skill's scope rules say. Lint: findings whose evidence does not start with
   `[<width>px]`. Render check: findings whose evidence does. Each passes with 0 `FAIL` and 0
@@ -160,7 +174,7 @@ keep: flat-type-hierarchy blinking-cursor buried-raster hard-offset-shadow extre
 ---
 name: st-design
 description: Design-lane build. Builds one screen from the design file with the lane's engine as a frontend engineer, with placeholder data, writes and runs its component tests, runs the engine's checks, and reports.
-tools: Read, Grep, Glob, Bash, Edit, Write, Skill
+tools: Read, Grep, Glob, Bash, Edit, Write
 model: opus
 ---
 
@@ -222,7 +236,7 @@ Bash, no comments, builtins plus `node` and `npm` only. Run from the project roo
 | Check | Found when | Line when missing |
 |-------|-----------|-------------------|
 | node | `node -p process.versions.node` gives a major of 18 or more | `missing: node 18 or later. Install: <node command>` |
-| puppeteer | `node_modules/puppeteer-core` or `node_modules/puppeteer` in the project, or either under `$(npm root -g)` | `missing: puppeteer-core. Install: npm i -g puppeteer-core` |
+| puppeteer | `node_modules/puppeteer-core` or `node_modules/puppeteer` in the project folder or any folder above it (node's lookup, as `sloplint-render.mjs:79-93` uses it), or either under `$(npm root -g)` | `missing: puppeteer-core. Install: npm i -g puppeteer-core` |
 | browser | `$CHROME_PATH` is a file; or `command -v` finds `google-chrome`, `google-chrome-stable`, `chromium` or `chromium-browser`; or one of the macOS and Windows paths of `skills/st-hallmark/scripts/sloplint-render.mjs:7` is a file | `missing: Chrome or Chromium. Install: <browser command>` |
 
 - Commands by the first package manager on PATH, in this order:
@@ -253,12 +267,12 @@ Bash, no comments, builtins plus `node` and `npm` only. Run from the project roo
 | `skills/st-init/SKILL.md` | `Show a table of the 14 agents` to `Show a table of the 15 agents` |
 | `skills/st-model/SKILL.md` | Agents line: `st-design` after `st-debug` |
 | `vendor.lock` | After `token-weather`: `"hallmark": { "repo": "nutlope/hallmark", "ref": "main", "commit": "<40-hex sha copied>", "path": "skills/hallmark", "version": "2.0.0", "license": "MIT" },` |
-| `THIRD_PARTY_NOTICES.md` | Row: `\| hallmark \| Copyright (c) 2026 Hallmark contributors \| MIT \| \`skills/st-hallmark\` \| \`licenses/hallmark.MIT.txt\` \|`. Changes bullet: `- **hallmark:** renamed to \`st-hallmark\`. Nothing else changed.` |
+| `THIRD_PARTY_NOTICES.md` | Row: `\| hallmark \| Copyright (c) 2026 Hallmark contributors \| MIT \| \`skills/st-hallmark\` \| \`licenses/hallmark.MIT.txt\` \|`. Changes bullet: `- **hallmark:** renamed to \`st-hallmark\` and given \`disable-model-invocation: true\`. Nothing else changed.` |
 | `licenses/hallmark.MIT.txt` | Upstream root `LICENSE` at the copied sha, as is |
 | `README.md` | Lanes table: the `skills/st/SKILL.md` row. After the Quick lane line: `**Design lane:** a new look or a new page or screen. New look: a grill for the design file, one reference screen, its checks, your yes. Autonomous: the page in the existing look, checked, then your OK.` Skills: `\| \`st-design <task>\` \| Design lane: design file, reference screen or new page, checked before you see it. \|`; the design row gains `\`st-hallmark\``, its text `Design build rules, design review, visual direction, new-look engine.` Agents: `\| \`st-design\` \| Opus \| Design-lane build: one screen, its component tests and the engine's checks \|`. Requirements: `\| \`puppeteer-core\` (\`npm i -g puppeteer-core\`), Chrome or Chromium \| the Design lane's render check \|`. Model overrides: `st-design` in the Agents list (`README.md:200-202`) and in the "have no entry either" line (`:207`). Duplicate installs: `hallmark` in the list. Tests: `bash tests/test_design_check.sh` and `bash tests/test_design_lane.sh`. |
 | `DESIGN.md` | D7 table: `\| \`st-design\` \| issue #49 \| Opus \| Yes \| Design-lane build: one screen from the design file with hallmark, its component tests and hallmark's checks. \|`. D9: `Twenty-five entry skills`, row `\| \`st-design <task>\` \| Design lane: the design file with the user, a reference screen or a new page, checked before the user sees it. \|`. D10 table: the `skills/st/SKILL.md` row. D9 forked tools list gains `st-hallmark`. |
 | `tests/test_inspect.sh` | `check "15 agents" '[ "$count" = 15 ]'`, rename phrase `Show a table of the 15 agents` |
-| `tests/test_model_hook.py` | `test_module_constants`: `"st-design"` after `"st-debug"` |
+| `tests/test_model_hook.py` | `test_module_constants`: `"st-design"` after `"st-debug"`. New case (lessons L35): a `.stratum/models.json` holding only `{"st-design": {"model": "opus"}}` does not deny a `stratum:st-design` start |
 
 ## 6. Phrase table, `tests/test_design_lane.sh`
 
@@ -268,6 +282,9 @@ phrase is a substring of the text above, and none is a word the path already hol
 ```text
 FR-001	skills/st-design/SKILL.md	# /stratum:st-design <task>
 FR-001	skills/st-design/SKILL.md	Pick the mode and say it in one line.
+FR-001	skills/st-design/SKILL.md	Else autonomous. Styled screens: a tracked file
+FR-001	skills/st-design/SKILL.md	A design file is a root `DESIGN.md` with `.impeccable/design.json` beside it.
+FR-001	skills/st-design/SKILL.md	is not a design file: say
 FR-002	skills/st/SKILL.md	| New look, page or screen | a new look, or a page or screen the project does not have yet, when the screen is the whole task | Design |
 FR-002	skills/st/SKILL.md	Say "full", "fast", "quick" or "design" to override.
 FR-002	skills/st/SKILL.md	- **Design:** run `/stratum:st-design`.
@@ -280,7 +297,8 @@ FR-004	skills/st-design/SKILL.md	build nothing until
 FR-004	skills/st-design/SKILL.md	answer its refresh, overwrite
 FR-005	skills/st-design/SKILL.md	read the look from the code (tokens, the global stylesheet, the main
 FR-005	skills/st-design/SKILL.md	start each recommended answer from the draft
-FR-006	skills/st-design/SKILL.md	The user is stopped exactly twice
+FR-006	skills/st-design/SKILL.md	The user is stopped exactly twice per direction
+FR-006	skills/st-design/SKILL.md	A different direction: back to step 1 at
 FR-006	skills/st-design/SKILL.md	Gate rounds do not count as fix rounds.
 FR-007	skills/st-design/SKILL.md	Find the page's job, its visitor and its main action
 FR-007	skills/st-design/SKILL.md	ask once, with all missing items in one message
@@ -289,7 +307,7 @@ FR-008	skills/st-design/SKILL.md	run `critique` on the screen in full
 FR-008	skills/st-design/SKILL.md	ignores add-rule <id> --local
 FR-008	skills/st-design/SKILL.md	ignores remove-rule <id> --local
 FR-008	skills/st-design/SKILL.md	live-server stop
-FR-008	skills/st-design/SKILL.md	--keep-inject` on the port it printed.
+FR-008	skills/st-design/SKILL.md	so this form leaves
 FR-008	skills/st-design/SKILL.md	Never a bare `stop`
 FR-008	skills/st-design/SKILL.md	Run at most 2 fix rounds.
 FR-008	skills/st-design/SKILL.md	goes in the report as an unmapped
@@ -308,8 +326,8 @@ FR-014	skills/st-design/SKILL.md	report again before any commit
 FR-015	skills/st-design/SKILL.md	bash <plugin root>/scripts/st-design-check.sh
 FR-015	skills/st-design/SKILL.md	Never start a dev server.
 FR-015	skills/st-status/SKILL.md	Design lane: run `bash <plugin root>/scripts/st-design-check.sh`
-FR-015	skills/st-init/SKILL.md	steps 4 and 5
 FR-016	skills/st-design/engine.md	Never ask for, print or set the key.
+FR-016	skills/st-design/engine.md	Test only `[ -n "${TOGETHER_API_KEY:-}" ]`.
 FR-016	skills/st-design/SKILL.md	Ask for an image key or turn on image generation.
 FR-017	skills/st-sync/SKILL.md	Design lane detector map: after an impeccable or hallmark port
 FR-017	THIRD_PARTY_NOTICES.md	| `skills/st-hallmark` | `licenses/hallmark.MIT.txt` |
@@ -322,19 +340,20 @@ Checks beside the phrases:
 | Name | Check |
 |------|-------|
 | FR-001 skill frontmatter | `name: st-design` line in `skills/st-design/SKILL.md` |
-| FR-001 agent frontmatter | `name: st-design`, `tools: Read, Grep, Glob, Bash, Edit, Write, Skill`, `model: opus` lines in `agents/st-design.md` |
+| FR-001 agent frontmatter | `name: st-design`, `tools: Read, Grep, Glob, Bash, Edit, Write`, `model: opus` lines in `agents/st-design.md` |
 | FR-001 one start each | `(\`stratum:st-design\`)` and `(\`stratum:st-git\`)` each once in the skill |
 | FR-010 one place | `grep -rliE 'hallmark\|sloplint'` over `skills/st-design`, `agents/st-design.md`, `scripts/st-design-check.sh` prints exactly `skills/st-design/engine.md` |
 | FR-008 map | `ignore:` and `keep:` lines in `engine.md`: no id twice, no id on both, 62 ids in all, 35 on `ignore:` and 27 on `keep:`, and the 16 detector-only ids of research R12 on `keep:` |
 | FR-017 lock | `python3 -I` reads `vendor.lock`: `hallmark.repo` is `nutlope/hallmark`, `commit` is 40 hex, `path` is `skills/hallmark`, `license` is `MIT` |
-| FR-017 copy | `skills/st-hallmark/SKILL.md` has `name: st-hallmark` and no `name: hallmark`; `skills/st-hallmark/LICENSE`, `scripts/sloplint.mjs`, `scripts/sloplint-render.mjs`, `scripts/theme.mjs`, `references/themes/index.json` exist; `licenses/hallmark.MIT.txt` holds `MIT License` |
+| FR-017 copy | `skills/st-hallmark/SKILL.md` has `name: st-hallmark`, `disable-model-invocation: true` and no `name: hallmark`; `skills/st-hallmark/LICENSE`, `scripts/sloplint.mjs`, `scripts/sloplint-render.mjs`, `scripts/theme.mjs`, `references/themes/index.json` exist; `licenses/hallmark.MIT.txt` holds `MIT License` |
 
 ## 7. Cases, `tests/test_design_check.sh`
 
 Each case runs `"$BASH" <root>/scripts/st-design-check.sh` in a `mktemp -d` project with
 `PATH=<stub dir>` only, so `/usr/bin/chromium` and the real `node` are out of sight. Stub `node`
 prints a version for `-p`. Stub `npm` prints a temp folder for `root -g`. Stub package managers
-are empty executables. Each case asserts the exit code and the whole output.
+are empty executables. Each case asserts the exit code and the whole output. K3, K8, K9 and K10 run on Linux only: on
+macOS or Windows the fixed browser paths find an installed Chrome.
 
 | Case | Setup | Exit | Output |
 |------|-------|------|--------|
@@ -348,4 +367,5 @@ are empty executables. Each case asserts the exit code and the whole output.
 | K8 no manager | K3 with no `pacman` | 1 | `missing: Chrome or Chromium. Install: set CHROME_PATH to a Chrome or Chromium binary` |
 | K9 dead CHROME_PATH | K1 with `CHROME_PATH` to a missing file, stub `dnf` | 1 | `missing: Chrome or Chromium. Install: sudo dnf install chromium` |
 | K10 order | no `node`, no `npm`, no browser, stub `winget` | 1 | three lines in order node, puppeteer, browser, with the winget commands |
+| K12 parent puppeteer | K2 plus `node_modules/puppeteer-core` in the project's parent folder | 0 | `design tools: ok` |
 | K11 no writes | after all cases | - | `git -C <root> status --porcelain` is the same as before |

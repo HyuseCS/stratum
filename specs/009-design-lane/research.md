@@ -56,8 +56,9 @@ fixture HTML, outside the repo.
 
 ## R3. Where the lane's build runs
 
-- Decision: a new agent, `agents/st-design.md` (opus; tools Read, Grep, Glob, Bash, Edit, Write,
-  Skill).
+- Decision: a new agent, `agents/st-design.md` (opus; tools Read, Grep, Glob, Bash, Edit, Write).
+  It reads the engine's `SKILL.md` as a file (D22) and runs no other skill, so it has no Skill
+  tool.
 - Rationale: `st-build` brief mode stops when the brief "grows beyond a small bounded change"
   (`agents/st-build.md:67`) and a page build is not small. It also loads `st-ui-ux` for every
   screen task (`agents/st-build.md:44`). D10 forbids changing `st-build`. The orchestrator does
@@ -75,7 +76,8 @@ fixture HTML, outside the repo.
 ## R4. Vendoring hallmark (FR-017, FR-018)
 
 - Decision: copy upstream `skills/hallmark/` whole into `skills/st-hallmark/`. Change only the
-  frontmatter `name: hallmark` to `name: st-hallmark`. Keep `skills/st-hallmark/LICENSE`, add
+  frontmatter: `name: hallmark` to `name: st-hallmark`, and add `disable-model-invocation: true`
+  (D22). Keep `skills/st-hallmark/LICENSE`, add
   `licenses/hallmark.MIT.txt` (upstream root `LICENSE`, "Copyright (c) 2026 Hallmark
   contributors", MIT), a `THIRD_PARTY_NOTICES.md` row and a "Changes made" bullet, and a
   `vendor.lock` entry `"hallmark": { "repo": "nutlope/hallmark", "ref": "main", "commit": "<sha at
@@ -90,10 +92,10 @@ fixture HTML, outside the repo.
 - Not run by the lane: `scripts/install.mjs` (installs into `~/.claude/skills`),
   `scripts/install-hook.mjs` (edit-time hook), `scripts/imagegen.mjs` unless the user set
   `TOGETHER_API_KEY`.
-- Risk: hallmark's description says "Use when the user asks to build or design something new"
-  (`SKILL.md:3`). Outside the lane, Claude can start `st-hallmark` on such a request. The vendoring
-  rule keeps the description as is. `st-status` step 5 also lists `~/.claude/skills/hallmark` as a
-  duplicate install.
+- Hallmark's description says "Use when the user asks to build or design something new"
+  (`SKILL.md:3`). `disable-model-invocation: true` keeps Claude from loading `st-hallmark` on its
+  own in Fast, Full, Quick or `st-build` (D22, keeps D10). The user can still call it by name.
+  `st-status` step 5 also lists `~/.claude/skills/hallmark` as a duplicate install.
 
 ## R5. Tool check (FR-015, SC-005)
 
@@ -119,8 +121,15 @@ fixture HTML, outside the repo.
   `brew install --cask google-chrome`), `winget` (`winget install OpenJS.NodeJS.LTS`,
   `winget install Google.Chrome`); none found: `https://nodejs.org/en/download` and `set
   CHROME_PATH to a Chrome or Chromium binary`.
-- This machine: node v24.14.1, npm 11.11.0, `/usr/bin/chromium` and `/usr/bin/google-chrome-stable`
-  present, `puppeteer-core` absent from `npm root -g`. So a live SC-005 run is possible now.
+- This machine (the laptop, 2026-10-25): `/usr/bin/google-chrome-stable` present, no
+  `/usr/bin/chromium`. The check finds the browser either way. `puppeteer-core` was absent from
+  `npm root -g` on the desktop, so a live SC-005 run is possible.
+- Hallmark looks for a browser only in `CHROME_PATH` and the 8 fixed paths
+  (`sloplint-render.mjs:7`, `:105`), not on PATH. So engine.md sets `CHROME_PATH` from
+  `command -v` for the run when it is unset, and a browser the check finds on PATH also renders.
+- Puppeteer lookup: hallmark resolves `puppeteer-core` with `createRequire` from the project
+  folder (`sloplint-render.mjs:79-93`), which also looks in every folder above it. The script
+  walks up the same way (case K12).
 
 ## R6. Framework projects need a running dev server
 
@@ -160,7 +169,10 @@ fixture HTML, outside the repo.
 - Committed after the gate or the OK (FR-014), exact paths through `st-git`: `DESIGN.md`,
   `.impeccable/design.json` (the sidecar `document` writes with it, `document.md` Step 4b), the
   screen's files, hallmark's `tokens.css` and `base.css` (`SKILL.md:131`), the placeholder data
-  file, the component tests.
+  file, the component tests, and library photos saved with `theme.mjs photos --save <dir>`
+  (`references/imagery.md:37`, Wikimedia only, `theme.mjs:405`) or product captures from
+  `capture.mjs <url>` (`imagery.md:56`, `SKILL.md:135`) only when the agent reports them as
+  written.
 - Not committed: `.hallmark/` (screenshots, `log.json`, `preflight.json`; hallmark writes
   `.hallmark/.gitignore` for `shots/`, `sloplint-render.mjs:61-64`), `.impeccable/critique/`.
 - The engine's artifact names (`.hallmark/`, `tokens.css`, `base.css`, the screenshot folder) are
@@ -185,8 +197,10 @@ tool check and the lane).
 
 - Source of the ids: the `id:` rows of `crates/foundation/src/registry.rs` (`ANTIPATTERNS`, lines
   32-694) in `pbakaus/impeccable` at the pinned commit `c4cfe52`, whose skill `VERSION` is
-  `0.1.16`, the installed engine (`~/.impeccable/bin/0.1.16/impeccable --version`:
-  `0.1.16+engine`). 62 ids. 61 appear in the binary's strings; `hard-offset-shadow` does not, so
+  `0.1.16`, the engine the desktop had installed (`~/.impeccable/bin/0.1.16/impeccable --version`:
+  `0.1.16+engine`). The laptop has no engine binary: the launcher
+  `skills/st-impeccable/scripts/impeccable` downloads it from GitHub releases on its first call.
+  Run `skills/st-impeccable/scripts/impeccable engine-probe` once with network before T006. 62 ids. 61 appear in the binary's strings; `hard-offset-shadow` does not, so
   the source at the pin may be ahead of the binary. The map holds all 62: `hard-offset-shadow` is
   on `keep:`, where an id that never fires costs nothing.
 - The id in `impeccable detect --json` output is the `antipattern` field (run on hallmark's
@@ -247,12 +261,16 @@ tool check and the lane).
   checks, starts `st-design` again with them, then runs audit and critique again. The skill keeps
   the round count (at most 2).
 - Live server: critique's overlay step starts `impeccable live-server --background` when a browser
-  can be driven (`critique.md:79`), each round. After each critique the skill makes sure the
-  server it started is stopped with `impeccable live-server stop --keep-inject` on the port it
-  printed. A bare `stop` edits the project's entry file. Failure states: a server already running
-  before the critique (left alone, critique picks a free port from 8400); a critique that prints no
-  port (no server started, the report says the overlay did not run); a server that cannot start
-  (critique reports the fallback signal; the report names it).
+  can be driven (`critique.md:79`), each round, and injects the overlay through the browser.
+  `live-server stop` takes no port (`impeccable live-server --help`). A bare `stop` also runs
+  `live-inject --remove` on the project's entry file (`reference/live.md:318-321`,
+  `critique.md:79`). `stop --keep-inject` stops only the server. No script tag went into a file,
+  so that form leaves the project's files as they were. The skill runs it after each critique
+  that printed connection JSON. Failure states: a server already running before the critique
+  (critique picks a free port from 8400; the stop may stop that server too, and the report says
+  so); a critique that prints no connection JSON (no stop runs, the report says the overlay did
+  not run); a server that cannot start (critique reports the fallback signal; the report names
+  it).
 
 ## R14. New-look flow with the theme branch (D20)
 

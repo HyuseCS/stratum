@@ -4,7 +4,11 @@ Run from the repo root. Texts and cases are in [contracts/design-lane.md](contra
 
 ## 0. Prerequisites
 
-- node 18 or later, npm, Chrome or Chromium (this machine: node v24.14.1, `/usr/bin/chromium`).
+- node 18 or later, npm, Chrome or Chromium (the laptop: `/usr/bin/google-chrome-stable`, no
+  `/usr/bin/chromium`).
+- The impeccable engine binary. The laptop has none. Run
+  `skills/st-impeccable/scripts/impeccable engine-probe` once with network: the launcher downloads
+  it from GitHub releases. T006 and L3 to L9 need it.
 - `puppeteer-core` is not installed on this machine. Section 4 L1 runs before it is installed;
   then run `npm i -g puppeteer-core` for L2 to L6.
 - A scratch web project for the live runs, outside this repo:
@@ -33,14 +37,15 @@ Red states before each build task (tasks.md names the task):
 | After | Red |
 |-------|-----|
 | T001 | every K case of `tests/test_design_check.sh` (no script) |
+| T001 to T002, T003 to T004 | `tests/test_inspect.sh` `README tests`, until T002 or T004 adds the README Tests line |
 | T003 | `FR-017 lock`, `FR-017 copy`, the `FR-017` phrase rows |
 | T005 | `FR-010 one place`, `FR-008 map`, the `skills/st-design/engine.md` rows |
 | T007 | the `FR-001` checks, the US1 rows of `skills/st-design/SKILL.md` and `agents/st-design.md`; `tests/test_inspect.sh` `15 agents`; `test_module_constants` |
 | T010, T013 | the `skills/st-design/SKILL.md` rows of that story |
 | T016 | the `skills/st/SKILL.md`, `skills/st-status/SKILL.md` and `skills/st-sync/SKILL.md` rows |
 
-The `FR-015 st-init` row (`steps 4 and 5`) is green from the start: it guards a line that already
-reuses `st-status` step 4.
+`st-init` reuses `st-status` step 4 for the tool check. `tests/test_model_files.sh:27` already
+checks that line, so `tests/test_design_lane.sh` has no row for it.
 
 ## 2. Negative controls (lessons L2, L7, L20)
 
@@ -59,6 +64,7 @@ command is green on the unbroken copy (lessons L25).
 | N7 | delete the step 4 sentence from `skills/st-status/SKILL.md` | `FR-015` |
 | N8 | add a README skills row `st-nothing` | `tests/test_inspect.sh` `README skills` |
 | N9 | delete the README agent row `st-design` | `tests/test_inspect.sh` `README agents` |
+| N10 | delete `disable-model-invocation: true` from `skills/st-hallmark/SKILL.md` | `FR-017 copy` |
 
 N8 and N9 run `ST_INSPECT_README="$SCRATCH/nc/README.md" bash tests/test_inspect.sh`: that test
 reads `ST_INSPECT_README`, not `ST_ROOT`.
@@ -73,7 +79,8 @@ find skills/st-hallmark -type f | wc -l
 
 Expected: no impeccable diff; the two counts match (178 at `7ec8682`). Each file but
 `SKILL.md` hashes the same as upstream (`git hash-object` against the tree's `sha`), and
-`SKILL.md` differs only in the `name:` line.
+`SKILL.md` differs only in the `name:` line and the added `disable-model-invocation: true` line
+(D22).
 
 ## 4. Live runs (lessons L32; record each in research.md before its task is ticked)
 
@@ -82,11 +89,12 @@ Expected: no impeccable diff; the two counts match (178 at `7ec8682`). Each file
 | L1 | SC-005 tool missing | before `npm i -g puppeteer-core`, run `/stratum:st-design a pricing page` in the scratch site | exactly the line `missing: puppeteer-core. Install: npm i -g puppeteer-core`, no file changed (`git status` empty) |
 | L2 | `st-status` names it | same state, `/stratum:st-status` | the same line under Tools |
 | L3 | SC-001 new look | in an empty scratch site, the brief "a booking page for a pottery studio in Porto", built once the old way with `/stratum:st-fast <brief>` in `$SCRATCH/old` (its `st-build` loads `st-ui-ux` at step 5; brief mode would stop at `agents/st-build.md:67`), once with `/stratum:st-design` in `$SCRATCH/site` | the grill asks one question per message, the theme branch shows 3 themes, `DESIGN.md` is shown for confirm before any screen; the gate shows screenshots and picks; the user picks the lane's version from the two sets of screenshots |
-| L4 | SC-002 autonomous | in L3's site after yes, `/stratum:st-design a class schedule page for adult beginners who book a class` | 0 questions; report has screenshots, 4 check results, fixed, open, assumed answers, tests; `.impeccable/config.local.json` has none of the added ids after the run |
+| L4 | SC-002 autonomous | in L3's site after yes, `/stratum:st-design a class schedule page for adult beginners who book a class` | 0 questions; report has screenshots, 4 check results, fixed, open, assumed answers, tests; `.impeccable/config.local.json` has none of the added ids after the run. Then answer "make the schedule denser" after the report: a new build, all four checks and a new report, and no commit before your OK (FR-014) |
 | L5 | SC-003 vague | same site, `/stratum:st-design another page` | exactly 1 message listing the missing job, visitor and main action; 0 messages after the answer until the report |
 | L6 | US3 code look | a scratch site with a styled `index.html` and no `DESIGN.md`, `/stratum:st-design a contact page` | grill answers start from the code's colors and fonts; confirm; then the page; a second request runs no grill |
 | L7 | dev server stop | a scratch Vite project with no server running, `/stratum:st-design a page` | the start-it line with `npm run dev`; no file changed |
 | L8 | changes at the gate | in L3, answer "make the header smaller" at the gate | a new build, all four checks again, the gate again |
+| L9 | FR-013 with a UI test runner | a scratch Vite project with `vitest` and `@testing-library/dom` in `devDependencies`; you start its dev server (`npm run dev`); then `/stratum:st-design a signup page for a pottery class newsletter` | component tests for the form's behavior are written, they pass, and the report lists them |
 
 For each live run, also check: no live server left (`curl -sf localhost:8400/health` fails), the
 commit holds only the reported paths (`git log -1 --name-only --format=`), and nothing under
