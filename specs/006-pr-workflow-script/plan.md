@@ -8,7 +8,7 @@ in [decisions.md](decisions.md), GitHub issue #22.
 ## Summary
 
 st-pr gets a path choice at the end of step 1. With Ultracode on and more than 30 commits or more
-than 40 changed files, it calls `Workflow({scriptPath: "<plugin root>/workflows/pr.js", args})`
+than 40 changed files, it calls `Workflow({name: "stratum:pr", args})` (D8; first built as `scriptPath`, D6)
 and waits for the run's task notification. Else steps 2 to 4 run as today. The new script
 `workflows/pr.js` runs six or more read-only facts agents side by side (tests, FR map, file
 areas, publish scan, test plan, one commit-subject agent per 25 commits), stops on a blocking
