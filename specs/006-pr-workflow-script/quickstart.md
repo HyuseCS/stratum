@@ -87,3 +87,12 @@ agents (Facts only), `blocked: true` with `blocking: <commit> config.env:1 secre
 commits, no gate, no `pr-body.md`, nothing pushed, the value in neither the result nor the journal,
 the snapshot the same before and after. Extra warning `unverified: facts:scan` (the scan read fewer
 than 221 commits).
+
+M3 run on 2026-10-24 from `/home/hyuse/Desktop/stratum`, branch `d8-workflow-by-name` at
+1fc255d, base `p1-lane-wording-test` (221 commits, 208 files): passed. Run `wf_04c0a780-608`,
+started by `Workflow({name: "stratum:pr"})` (the loaded script was byte-equal to
+`workflows/pr.js`), 20 agents (14 Facts, 1 Draft, 3 Verify, 2 fixers), `blocked: false`, the gate
+showed body, title, base, no existing PR and the warnings. Step 4 by hand: every named path exists
+at HEAD with its letter, the counts (110 A, 98 M, +15459 / -741) and the 17 FRs match; zero edits.
+The body flagged the stale M5 text in T004 (fixed in 692974b). Snapshot the same before and
+after. Answered Abort, nothing pushed.
