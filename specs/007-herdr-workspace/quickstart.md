@@ -57,8 +57,7 @@ After each: `herdr workspace list | jq '.result.workspaces | length'` is the sam
 
 ## 3. Remote live run (SC-002): needs a machine that answers
 
-Blocked on 2026-10-23: `herdr machine status laptop --json` gives `"status":"error"`,
-`ssh: connect to host 100.73.64.64 port 22: Connection timed out`.
+Blocked on 2026-10-23 (laptop ssh timed out). Passed on 2026-10-24 with `~/Desktop/RecipeBox`, see Live below.
 
 Run only when `herdr --machine laptop workspace list` exits 0:
 
@@ -76,6 +75,10 @@ Expected: the same six panes on the laptop, every cwd the remote absolute path, 
 running`, P2 `lazygit running`. Then `bash scripts/st-herdr-workspace.sh '~/no-such' --label ada --machine laptop`
 prints `Folder not found on laptop: ~/no-such` and makes nothing, even if that path exists here.
 The user closes both remote test workspaces by hand.
+
+Live 2026-10-24: workspaces `wY` and `wZ` (the `env -u ...` run) on the laptop, tabs Main, Dev Servers,
+VM, six panes with cwd `/home/hyuse/Desktop/RecipeBox`, P1 `claude running`, P2 `lazygit running`,
+both exit 0. `~/no-such` printed `Folder not found on laptop: ~/no-such`, exit 1, no workspace made.
 
 ## 4. Basic layout (US3)
 

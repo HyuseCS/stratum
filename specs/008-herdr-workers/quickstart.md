@@ -130,3 +130,9 @@ bash $S close T905 --machine laptop
 Expected: every line as in section 2, the brief and result on the laptop, `git log worker-t905`
 here after the fetch. If the laptop does not answer: `Machine laptop does not answer: ...`, one
 line, nothing made (US3 scenario 3).
+
+Live 2026-10-24 (laptop repo at 3275e07): `start` exit 0 in 10 s, `state working`; `wait` one
+`state finished` after 31 s; `result` printed the four lines and `fetched worker-t905 865aca5`;
+`git show worker-t905:demo/hello.txt` gives `hi` here; `close` printed `closed worker-t905` and
+`folder ... ready to remove`; agent, workspace and pgrep checks on the laptop all empty. The no-answer
+path was not run live.
