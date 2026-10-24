@@ -96,3 +96,10 @@ showed body, title, base, no existing PR and the warnings. Step 4 by hand: every
 at HEAD with its letter, the counts (110 A, 98 M, +15459 / -741) and the 17 FRs match; zero edits.
 The body flagged the stale M5 text in T004 (fixed in 692974b). Snapshot the same before and
 after. Answered Abort, nothing pushed.
+
+M5 run on 2026-10-24 from `/home/hyuse/Desktop/stratum-m5` (worktree branch `m5-demo-2` at
+04f5c7e; `m5-demo` was taken by the first build), `claude --plugin-dir /home/hyuse/Desktop/stratum`,
+base `p1-lane-wording-test` (223 commits, 208 files): passed. `Path: workflow.`, run
+`wf_2f9cec96-88b` started by `Workflow({name: "stratum:pr"})`, 20 agents, 0 errors,
+`blocked: false`, no current-path fallback line, the gate showed. Answered Abort: nothing pushed,
+the worktree clean, `workflows/pr.js` unchanged.
