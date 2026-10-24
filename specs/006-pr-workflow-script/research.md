@@ -154,6 +154,8 @@ GNU bash 5.3.20, git 2.56.0, gh 2.102.0. No package is added.
 
 ## R15. The `scriptPath` read rule, and the `script` fallback
 
+Superseded by D8: st-pr calls the workflow by name, so this rule no longer applies.
+
 - Decision (D6): st-pr calls `Workflow({scriptPath: "<plugin root>/workflows/pr.js", args})`
   first. If the tool refuses the `scriptPath`, st-pr reads the file and calls `Workflow` again
   with the same text in the `script` input and the same `args`. The file never changes (SC-005).

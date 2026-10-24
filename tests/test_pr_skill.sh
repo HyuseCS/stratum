@@ -14,8 +14,7 @@ while IFS=$'\t' read -r name phrase; do
 done <<'EOF'
 FR-002 commits	more than 30 commits
 FR-002 files	more than 40 changed files
-FR-002 script	<plugin root>/workflows/pr.js
-FR-001 script fallback	pass the file's text through the tool's `script` input
+FR-002 script	Call `Workflow({name: "stratum:pr", args})`.
 FR-002 ultracode	Ultracode is on when the latest system-reminder about Ultracode says so.
 FR-003 current	Else take the current path: steps 2 to 4.
 FR-004 message	Say the path in one line, with both counts and the Ultracode state

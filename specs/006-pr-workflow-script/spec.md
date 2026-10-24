@@ -182,6 +182,6 @@ from the script, run again, and watch the test go red.
 
 ## Deferred Gaps (Close, 2026-10-23, decision D7)
 
-- G1. Task T004 (manual demos M3, M4, M5; SC-001, SC-003, SC-005): deferred to the user's demo run.
-- G2. Task T005 (manual demos M1, M2; SC-002): deferred to the user's demo run.
-- G4. Open runtime checks: whether `scriptPath` is readable from the installed plugin cache (M5), whether `hooks/st-git-guard.py` fires inside workflow agents, and whether workflow agents can write to the session scratchpad (if not, the draft returns no `bodyPath` and the fallback runs). Deferred to the user's demo run.
+- G1. Task T004 (manual demos M3, M4, M5; SC-001, SC-003, SC-005): passed on 2026-10-24 (quickstart section 3).
+- G2. Task T005 (manual demos M1, M2; SC-002): passed on 2026-10-24 (quickstart section 3).
+- G4. Open runtime checks: whether `scriptPath` is readable from the installed plugin cache (M5), whether `hooks/st-git-guard.py` fires inside workflow agents, and whether workflow agents can write to the session scratchpad (if not, the draft returns no `bodyPath` and the fallback runs). On 2026-10-24: the `scriptPath` check is moot (D8, the name call ran from outside the plugin in M5); workflow agents write to the session scratchpad (M3 and M5 returned a `bodyPath` there); the git guard inside workflow agents is still unchecked.

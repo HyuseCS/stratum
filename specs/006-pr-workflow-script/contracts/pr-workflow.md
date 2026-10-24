@@ -7,7 +7,7 @@ test greps line by line (`grep -F`).
 
 ```text
 Workflow({
-  scriptPath: "<plugin root>/workflows/pr.js",
+  name: "stratum:pr",
   args: {
     projectRoot: "<absolute project root>",
     pluginRoot:  "<absolute plugin root>",
@@ -23,9 +23,8 @@ Workflow({
 - `args` is a JSON object, never a string.
 - `commits` is the output of `git log origin/<base>..HEAD --format='%h %s'`, one string per line,
   in that order.
-- If the tool refuses the `scriptPath` with its read rule (research R15), st-pr reads
-  `<plugin root>/workflows/pr.js` and calls `Workflow({script: <the file's text>, args})` with the
-  same `args`. The file never changes (D6).
+- The plugin registers `workflows/pr.js` under the name `stratum:pr` (meta name `pr`), so the call
+  needs no file path and no `script` fallback (D8).
 - The call returns a task ID at once. The result (section 3) comes in the task notification.
 
 ## 2. The script `workflows/pr.js`
@@ -165,15 +164,14 @@ Only when step 1 chose it. It replaces steps 2 to 4. Steps 5 and 6 run as writte
 1. Delete `<scratchpad>/pr-body.md` if it exists. Note the output of `git rev-parse HEAD`,
    `git status --porcelain --untracked-files=all`, `git diff HEAD | sha256sum`, and
    `sha256sum` of each `??` path in that status.
-2. Call `Workflow({scriptPath: "<plugin root>/workflows/pr.js", args})`. Pass `args` as a JSON object, not a string:
+2. Call `Workflow({name: "stratum:pr", args})`. Pass `args` as a JSON object, not a string:
    `projectRoot`, `pluginRoot` and `scratchpad` (absolute paths), `base`, `branch`, `featureDir`
    (the project root joined with the `feature_directory` from `.stratum/state.json`, or `""`), and `commits` (the lines
    of `git log origin/<base>..HEAD --format='%h %s'`, as an array of strings).
-   If the tool refuses the `scriptPath` ("a file you can already read"), read `<plugin root>/workflows/pr.js` and call `Workflow` again: pass the file's text through the tool's `script` input, with the same `args`.
 3. The workflow runs in the background: wait for its task notification. If the tool result already holds the result object, use it. Never start a second run while one runs.
 4. Run the commands from 1 again, except the delete. If an output differs, show the difference and stop before the gate.
 5. `blocked` is true: show the warnings and stop before the gate. Nothing is pushed.
-6. A refused `scriptPath` goes to the `script` call of 2 first. If the call cannot start, the run fails, or it returns no `bodyPath`, or the file at `bodyPath` is missing: say so in one line, then run steps 2 to 4 on the current path.
+6. If the call cannot start, the run fails, or it returns no `bodyPath`, or the file at `bodyPath` is missing: say so in one line, then run steps 2 to 4 on the current path.
 7. Else read the body at `bodyPath` and go to `## 5. Gate` with the returned `title` and `warnings`.
    Revise at the gate edits the body in this session and never runs the workflow again.
 ```
