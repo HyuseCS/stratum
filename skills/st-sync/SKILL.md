@@ -19,7 +19,8 @@ Run only in the Stratum repo itself: the project root must hold `vendor.lock` an
    content beyond the upstream change, and reports anything it could not port.
 4. graphify: compare the skill's upstream version with `graphify --version`. If the program is
    older than the skill, tell the user to upgrade it before taking the skill update.
-5. Show the user the combined diff, source by source. On their OK, update each ported entry's
+5. Design lane detector map: after an impeccable or hallmark port, compare the `ignore:` and `keep:` lines of `skills/st-design/engine.md` with `impeccable detect --list-rules`, or with the `id:` rows of `crates/foundation/src/registry.rs` at the new pin when it prints nothing. Map each new id, drop each removed one, and recheck each rule whose lint gate changed, before the sync commit.
+6. Show the user the combined diff, source by source. On their OK, update each ported entry's
    `commit` (and `version` where present) and set `synced` to today in `vendor.lock`, then commit
    one commit per source: `sync(<source>): <summary> (<old>..<new>)`.
-6. Run the tests in `tests/` and report the result. Push only on the user's "push".
+7. Run the tests in `tests/` and report the result. Push only on the user's "push".

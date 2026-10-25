@@ -65,6 +65,7 @@ The lane follows the highest impact area the change touches.
 | Impact area | Examples | Lane |
 |-------------|----------|------|
 | Privacy and access | access rules, data model, contracts, sign-in, personal data | Full |
+| New look, page or screen | a new look, or a page or screen the project does not have yet, when the screen is the whole task | Design |
 | New user story or feature | anything not in a current spec | Full |
 | Core runtime | background services, offline queue, workers, notices | Fast |
 | Screens | layout, components, navigation | Fast (Quick for a small fix in a few files) |
@@ -84,6 +85,8 @@ The lane follows the highest impact area the change touches.
 `st-review`, commit, drift fix and shortcut list, commit docs.
 
 **Quick lane:** one file, no gate, related tests, commit. A small fix across a few files goes to `st-build` in brief mode. It moves up a lane if it needs a change plan.
+
+**Design lane:** a new look or a new page or screen. New look: a grill for the design file, one reference screen, its checks, your yes. Autonomous: the page in the existing look, checked, then your OK.
 
 ### Skills
 

@@ -1,6 +1,6 @@
 ---
 name: st
-description: Stratum main entry. Takes a task in plain words, picks the lane (Full, Fast, Quick) by impact area, says which in one line, and runs it as the orchestrator.
+description: Stratum main entry. Takes a task in plain words, picks the lane (Full, Fast, Quick, Design) by impact area, says which in one line, and runs it as the orchestrator.
 ---
 
 # /stratum:st <task>
@@ -19,12 +19,13 @@ The highest area wins:
 | Impact area | Examples | Lowest lane |
 |-------------|----------|-------------|
 | Privacy and access | access rules, data model, contracts, sign-in, personal or minors' data | Full |
+| New look, page or screen | a new look, or a page or screen the project does not have yet, when the screen is the whole task | Design |
 | New user story or feature | anything not in a current spec | Full |
 | Core runtime | background services, offline queue, workers, notices | Fast |
 | Screens | layout, components, navigation | Fast (Quick for a small fix in a few files) |
 | Text and docs | labels, typos, wording | Quick |
 
-Say it in one line: `Lane: <lane> (<area>: <why>). Say "full", "fast" or "quick" to override.`
+Say it in one line: `Lane: <lane> (<area>: <why>). Say "full", "fast", "quick" or "design" to override.`
 Then run the lane. If the user overrides, use their lane.
 
 ## 2. Run the lane
@@ -36,6 +37,7 @@ Then run the lane. If the user overrides, use their lane.
   no plan, start the `stratum:st-build` agent with the brief, the plugin root and the project root,
   never `general-purpose`. Then verify, and the `stratum:st-git` agent commits the exact files.
   If the agent reports "Needs the Fast lane", run `/stratum:st-fast`.
+- **Design:** run `/stratum:st-design`.
 
 ## 3. Moving up a lane
 

@@ -114,6 +114,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 | Impact area | Examples | Lowest lane |
 |-------------|----------|-------------|
 | Privacy and access | access rules, data model, contracts, sign-in, personal or minors' data | Full |
+| New look, page or screen | a new look, or a page or screen the project does not have yet, when the screen is the whole task | Design |
 | New user story or feature | anything not in a current spec | Full |
 | Core runtime | background services, offline queue, workers, notices | Fast |
 | Screens | layout, components, navigation | Fast (Quick for a small fix in a few files) |

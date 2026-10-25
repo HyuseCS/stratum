@@ -22,8 +22,9 @@ block. Change nothing.
    (statusline), `herdr` and `jq` (optional, for `st-herdr-workspace` and `st-worker`), `graphify --version` (needs 0.9.74 or later for Dart), and whether the graphify
    post-commit hook is installed (`graphify hook status`). For graphify too old or missing, give
    `uv tool install --force graphifyy`; for no hook, give `graphify hook install`.
+   Design lane: run `bash <plugin root>/scripts/st-design-check.sh` from the project root and show its lines: node 18 or later, `puppeteer-core`, and Chrome or Chromium, each missing one with its install command.
 5. **Duplicates:** list Stratum skills that also exist outside the plugin and could run twice or
-   clash: `~/.claude/skills/{grill-me,grilling,impeccable,graphify,ui-ux-pro-max}`, the ponytail
+   clash: `~/.claude/skills/{grill-me,grilling,impeccable,graphify,ui-ux-pro-max,hallmark}`, the ponytail
    plugin in `~/.claude/settings.json` `enabledPlugins`, a token-weather plugin. Name them and say
    which to turn off for this project. For each global `ponytail@ponytail` or token-weather plugin
    that is on and not set to `false` in the project's `.claude/settings.json` `enabledPlugins`,

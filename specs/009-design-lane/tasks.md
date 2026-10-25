@@ -71,8 +71,8 @@ that must exist first.
 
 **Independent Test**: quickstart L1, L2, L7, and the routing runs in T018.
 
-- [ ] T016 [US4] Add to `tests/test_design_lane.sh` the FR-002 rows, the `skills/st-status/SKILL.md` FR-015 row, and the FR-017 `skills/st-sync/SKILL.md` row. Run: all red. `st-init`'s reuse of `st-status` step 4 is checked by `tests/test_model_files.sh:27`. FR-002, FR-015, FR-017
-- [ ] T017 [US4] Edit `skills/st/SKILL.md` (description, Design row, say line, run line), `skills/st-status/SKILL.md` (step 4 sentence, step 5 list) and `skills/st-sync/SKILL.md` (new step 5, then renumber), per contracts section 5. Add to `README.md` the Lanes row and the Design lane line. Add the D10 row to `DESIGN.md`. Then T016's rows and quickstart section 1 are green. Run negative controls N3, N4 and N7. FR-002, FR-015, FR-017 (lessons L2, L14)
+- [X] T016 [US4] Add to `tests/test_design_lane.sh` the FR-002 rows, the `skills/st-status/SKILL.md` FR-015 row, and the FR-017 `skills/st-sync/SKILL.md` row. Run: all red. `st-init`'s reuse of `st-status` step 4 is checked by `tests/test_model_files.sh:27`. FR-002, FR-015, FR-017
+- [X] T017 [US4] Edit `skills/st/SKILL.md` (description, Design row, say line, run line), `skills/st-status/SKILL.md` (step 4 sentence, step 5 list) and `skills/st-sync/SKILL.md` (new step 5, then renumber), per contracts section 5. Add to `README.md` the Lanes row and the Design lane line. Add the D10 row to `DESIGN.md`. Then T016's rows and quickstart section 1 are green. Run negative controls N3, N4 and N7. FR-002, FR-015, FR-017 (lessons L2, L14)
 - [ ] T018 [US4] Live runs. L1 and L2: first run `npm rm -g puppeteer-core` if it is installed, then `npm i -g puppeteer-core` after. L7. Routing: `/stratum:st add a pricing page` says `Lane: design (...)`, `/stratum:st fix the header spacing on the home page` says Fast or Quick, and "fast" overrides the first one. Record all in research.md R15. FR-002, FR-015, SC-005 (lessons L32)
 
 ## Phase 7: Polish

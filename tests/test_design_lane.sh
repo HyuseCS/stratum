@@ -57,6 +57,7 @@ n_git=$(grep -cF -- '(`stratum:st-git`)' "$root/skills/st-design/SKILL.md" 2>/de
 check "FR-001 one start each" '[ "$n_design" = 1 ] && [ "$n_git" = 1 ]'
 
 phrases <<'EOF'
+FR-017 st-sync	skills/st-sync/SKILL.md	Design lane detector map: after an impeccable or hallmark port
 FR-017 THIRD_PARTY_NOTICES.md	THIRD_PARTY_NOTICES.md	| `skills/st-hallmark` | `licenses/hallmark.MIT.txt` |
 EOF
 
@@ -74,6 +75,9 @@ FR-001 SKILL.md	skills/st-design/SKILL.md	Pick the mode and say it in one line.
 FR-001 SKILL.md	skills/st-design/SKILL.md	Else autonomous. Styled screens: a tracked file
 FR-001 SKILL.md	skills/st-design/SKILL.md	A design file is a root `DESIGN.md` with `.impeccable/design.json` beside it.
 FR-001 SKILL.md	skills/st-design/SKILL.md	is not a design file: say
+FR-002 st	skills/st/SKILL.md	| New look, page or screen | a new look, or a page or screen the project does not have yet, when the screen is the whole task | Design |
+FR-002 st	skills/st/SKILL.md	Say "full", "fast", "quick" or "design" to override.
+FR-002 st	skills/st/SKILL.md	- **Design:** run `/stratum:st-design`.
 FR-003 SKILL.md	skills/st-design/SKILL.md	one question per message, each with a recommended answer,
 FR-003 SKILL.md	skills/st-design/SKILL.md	First branches: audience, use, tone, material, theme, North Star,
 FR-003 SKILL.md	skills/st-design/SKILL.md	overview voice, color character, elevation, components, UX (density, how a user moves through
@@ -108,6 +112,7 @@ FR-014 SKILL.md	skills/st-design/SKILL.md	Only after the user's yes at the gate 
 FR-014 report	skills/st-design/SKILL.md	report again before any commit
 FR-015 SKILL.md	skills/st-design/SKILL.md	bash <plugin root>/scripts/st-design-check.sh
 FR-015 SKILL.md	skills/st-design/SKILL.md	Never start a dev server.
+FR-015 st-status	skills/st-status/SKILL.md	Design lane: run `bash <plugin root>/scripts/st-design-check.sh`
 FR-016 SKILL.md	skills/st-design/SKILL.md	Ask for an image key or turn on image generation.
 FR-018 SKILL.md	skills/st-design/SKILL.md	Edit a vendored file under `skills/st-impeccable/` or the engine's skill folder.
 FR-018 agent	agents/st-design.md	Edit a vendored file under `skills/st-impeccable/` or the engine's skill folder.
