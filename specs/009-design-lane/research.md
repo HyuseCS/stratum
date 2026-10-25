@@ -351,8 +351,8 @@ No control turned another row red, except N1 as named.
 
 | Id | Task | Fix rounds |
 |----|------|------------|
-| L1 | T018 | Not run, live run pending (user) |
-| L2 | T018 | Not run, live run pending (user) |
+| L1 | T018 | Stopped at the start check, no build (2026-10-25, PC) |
+| L2 | T018 | Reports only, no build (2026-10-25, PC) |
 | L3 | T009 | Not run, live run pending (user) |
 | L4 | T012 | Not run, live run pending (user) |
 | L5 | T012 | Not run, live run pending (user) |
@@ -361,5 +361,16 @@ No control turned another row red, except N1 as named.
 | L8 | T009 | Not run, live run pending (user) |
 | L9 | T020 | Not run, live run pending (user) |
 
+- L1 and L2 ran on 2026-10-25 at `5c08f54` on the PC, headless (`claude -p --plugin-dir <repo>`) in
+  an empty git scratch site, with `puppeteer-core` not installed and Chrome present:
+  - L1: `/stratum:st-design a pricing page` printed the line
+    `missing: puppeteer-core. Install: npm i -g puppeteer-core` and stopped. `git status` was
+    empty. The reply also had one sentence before the line and one after it. SC-005 holds: 0 work
+    and 1 install command.
+  - L2: `/stratum:st-status` listed under Tools: "The design lane needs `puppeteer-core`. Run
+    `npm i -g puppeteer-core`." FR-015 holds: the exact install command. The quickstart expects
+    the script line as printed. The agent wrote it in its own words. `git status` was empty.
+  - Then `npm i -g puppeteer-core` (25.16.0). `st-design-check.sh` prints `design tools: ok`,
+    exit 0.
 - FR-008 cap (open after 2 fix rounds, no loop): Not run, no live run yet; checked as text only.
 - T019 stays open until the live runs are recorded here.
