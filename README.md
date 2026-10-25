@@ -91,6 +91,7 @@ The lane follows the highest impact area the change touches.
 |-------|--------------|
 | `st <task>` | Main entry. Picks the lane and runs it. |
 | `st-full`, `st-fast`, `st-quick` | Force a lane. |
+| `st-design <task>` | Design lane: design file, reference screen or new page, checked before you see it. |
 | `st-define`, `st-plan`, `st-inspect`, `st-build`, `st-close` | Run or resume one Full-lane phase. |
 | `st-review`, `st-test`, `st-debug`, `st-git` | Run one Build-loop agent on demand. A missing feature comes from `.stratum/state.json`, a missing range is `main..HEAD`. |
 | `st-triage <issue#>...` | Check GitHub issues against the code and git history, read-only: verdict, what is built, blocker, next step. |
@@ -124,6 +125,7 @@ All skills are called as `/stratum:<name>`.
 | `st-test` | Sonnet | Writes each test and shows it fails first |
 | `st-review` | Opus | Reviews each finished story |
 | `st-debug` | Opus | Takes over after 2 failed tries |
+| `st-design` | Opus | Design-lane build: one screen, its component tests and the engine's checks |
 | `st-fast` | Sonnet | Fast-lane change plans |
 | `st-quick` | Sonnet | Quick-lane edits (one file) |
 | `st-close` | Sonnet | Drift fixes, gap report, lessons, shortcut list |
@@ -199,13 +201,13 @@ copy for that project only.
   whose branch goes to main opens its own PR.
 - **Model overrides.** `.stratum/models.json` maps an agent name to an optional `model` and
   `effort`, for example `{ "st-close": { "model": "haiku", "effort": "xhigh" } }`. Agents:
-  `st-build`, `st-close`, `st-debug`, `st-fast`, `st-git`, `st-impeccable`, `st-inspect`,
+  `st-build`, `st-close`, `st-debug`, `st-design`, `st-fast`, `st-git`, `st-impeccable`, `st-inspect`,
   `st-plan`, `st-ponytail-audit`, `st-ponytail-debt`, `st-quick`, `st-review`, `st-test`, `st-triage`. Models:
   `sonnet`, `opus`, `haiku`, `fable`. Efforts: `low`, `medium`, `high`, `xhigh`, `max`. `st-init` writes it from `templates/models.json`:
   `st-build`, `st-debug`, `st-quick`, `st-plan`, `st-fast` on opus with effort high, and
   `st-close`, `st-git`, `st-test` on haiku with effort xhigh.
   `st-inspect` and `st-review` have no entry and keep the plugin default.
-  `st-impeccable`, `st-ponytail-audit`, `st-ponytail-debt` and `st-triage` have no entry either. A hook applies
+  `st-design`, `st-impeccable`, `st-ponytail-audit`, `st-ponytail-debt` and `st-triage` have no entry either. A hook applies
   the file each time a Stratum agent starts, so the next start picks up an edit. A bad file blocks every
   Stratum agent start with a message that names the problem. Only Stratum agents are affected.
   `CLAUDE_CODE_EFFORT_LEVEL` beats the file's effort.

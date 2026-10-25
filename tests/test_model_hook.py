@@ -133,6 +133,12 @@ class ModelHookTest(unittest.TestCase):
         r = self.deny('{"st-nobody": {"model": "sonnet"}}', self.call(subagent_type="stratum:st-git"))
         self.assertIn("st-nobody", r)
 
+    def test_st_design_key_allowed(self):
+        self.write_models('{"st-design": {"model": "opus"}}')
+        out = self.rewrite(self.call(subagent_type="stratum:st-design"))
+        self.assertNotIn("permissionDecision", out)
+        self.assertEqual(out["updatedInput"]["model"], "opus")
+
     def test_deny_entry_not_object(self):
         r = self.deny('{"st-close": "haiku"}')
         self.assertIn("st-close", r)
@@ -210,7 +216,7 @@ class ModelHookTest(unittest.TestCase):
         spec = importlib.util.spec_from_file_location("st_models", HOOK)
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
-        self.assertEqual(mod.AGENTS, ["st-build", "st-close", "st-debug", "st-fast", "st-git", "st-impeccable",
+        self.assertEqual(mod.AGENTS, ["st-build", "st-close", "st-debug", "st-design", "st-fast", "st-git", "st-impeccable",
                                       "st-inspect", "st-plan", "st-ponytail-audit", "st-ponytail-debt", "st-quick",
                                       "st-review", "st-test", "st-triage"])
         self.assertEqual(mod.MODELS, ["sonnet", "opus", "haiku", "fable"])

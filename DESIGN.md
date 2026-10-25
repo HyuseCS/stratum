@@ -61,6 +61,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 | `st-test` | vc tester | Sonnet | Yes | Writes each test and shows it fails before the build. |
 | `st-review` | vc code-reviewer | Opus | No | Reviews each finished story. |
 | `st-debug` | vc debugger | Opus | Yes | Takes over after 2 failed tries. |
+| `st-design` | issue #49 | Opus | Yes | Design-lane build: one screen from the design file with hallmark, its component tests and hallmark's checks. |
 | `st-fast` | vc fast-mode | Sonnet | No | Fast-lane change plans. |
 | `st-quick` | vc quick-fix | Sonnet | Yes | Quick-lane edits. |
 | `st-close` | vc update-process + Spec Kit converge | Sonnet | Docs only | Drift fixes, gap report, lessons, shortcut list. |
@@ -76,12 +77,13 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 
 ## 3. Skills
 
-- **D9.** Twenty-four entry skills:
+- **D9.** Twenty-five entry skills:
 
 | Skill | Job |
 |-------|-----|
 | `st <task>` | Main entry. Picks the lane by impact area, states it in one line, runs it. |
 | `st-full`, `st-fast`, `st-quick` | Force a lane. |
+| `st-design <task>` | Design lane: the design file with the user, a reference screen or a new page, checked before the user sees it. |
 | `st-define`, `st-plan`, `st-inspect`, `st-build`, `st-close` | Run one Full-lane phase on the current feature, for resuming or redoing. |
 | `st-status` | Feature, phase, lane, tasks done, git guard options, next gate, missing tools, duplicate installs, days since the last upstream sync, model overrides. |
 | `st-shape arrow\|rounded\|slanted\|blocks\|flat` | Set the statusline shape. |

@@ -50,6 +50,11 @@ check "FR-017 copy" '[ -f "$root/skills/st-hallmark/SKILL.md" ] &&
   grep -qF "MIT License" "$root/licenses/hallmark.MIT.txt"'
 check "FR-010 one place" '[ "$(grep -rliE "hallmark|sloplint" "$root/skills/st-design" "$root/agents/st-design.md" "$root/scripts/st-design-check.sh")" = "$root/skills/st-design/engine.md" ]'
 check "FR-008 map" 'detector_map'
+check "FR-001 skill frontmatter" '[ -f "$root/skills/st-design/SKILL.md" ] && grep -qx "name: st-design" "$root/skills/st-design/SKILL.md"'
+check "FR-001 agent frontmatter" '[ -f "$root/agents/st-design.md" ] && grep -qx "name: st-design" "$root/agents/st-design.md" && grep -qx "tools: Read, Grep, Glob, Bash, Edit, Write" "$root/agents/st-design.md" && grep -qx "model: opus" "$root/agents/st-design.md"'
+n_design=$(grep -cF -- '(`stratum:st-design`)' "$root/skills/st-design/SKILL.md" 2>/dev/null)
+n_git=$(grep -cF -- '(`stratum:st-git`)' "$root/skills/st-design/SKILL.md" 2>/dev/null)
+check "FR-001 one start each" '[ "$n_design" = 1 ] && [ "$n_git" = 1 ]'
 
 phrases <<'EOF'
 FR-017 THIRD_PARTY_NOTICES.md	THIRD_PARTY_NOTICES.md	| `skills/st-hallmark` | `licenses/hallmark.MIT.txt` |
@@ -61,6 +66,46 @@ FR-008 engine.md	skills/st-design/engine.md	Do not run its Step 1 questions, its
 FR-008 engine.md	skills/st-design/engine.md	`summary.render` other than `ran` fails the render check.
 FR-016 engine.md	skills/st-design/engine.md	Never ask for, print or set the key.
 FR-016 engine.md	skills/st-design/engine.md	Test only `[ -n "${TOGETHER_API_KEY:-}" ]`.
+EOF
+
+phrases <<'EOF'
+FR-001 SKILL.md	skills/st-design/SKILL.md	# /stratum:st-design <task>
+FR-001 SKILL.md	skills/st-design/SKILL.md	Pick the mode and say it in one line.
+FR-001 SKILL.md	skills/st-design/SKILL.md	Else autonomous. Styled screens: a tracked file
+FR-001 SKILL.md	skills/st-design/SKILL.md	A design file is a root `DESIGN.md` with `.impeccable/design.json` beside it.
+FR-001 SKILL.md	skills/st-design/SKILL.md	is not a design file: say
+FR-003 SKILL.md	skills/st-design/SKILL.md	one question per message, each with a recommended answer,
+FR-003 SKILL.md	skills/st-design/SKILL.md	First branches: audience, use, tone, material, theme, North Star,
+FR-003 SKILL.md	skills/st-design/SKILL.md	overview voice, color character, elevation, components, UX (density, how a user moves through
+FR-003 SKILL.md	skills/st-design/SKILL.md	run the engine's deal command, show the 3 themes with their pictures
+FR-004 SKILL.md	skills/st-design/SKILL.md	run `document` in scan mode with the grill answers as
+FR-004 SKILL.md	skills/st-design/SKILL.md	build nothing until
+FR-004 SKILL.md	skills/st-design/SKILL.md	answer its refresh, overwrite
+FR-006 SKILL.md	skills/st-design/SKILL.md	The user is stopped exactly twice per direction
+FR-006 SKILL.md	skills/st-design/SKILL.md	A different direction: back to step 1 at
+FR-006 SKILL.md	skills/st-design/SKILL.md	Gate rounds do not count as fix rounds.
+FR-008 SKILL.md	skills/st-design/SKILL.md	dimensions 1 (Accessibility) and 2
+FR-008 SKILL.md	skills/st-design/SKILL.md	run `critique` on the screen in full
+FR-008 SKILL.md	skills/st-design/SKILL.md	ignores add-rule <id> --local
+FR-008 SKILL.md	skills/st-design/SKILL.md	ignores remove-rule <id> --local
+FR-008 SKILL.md	skills/st-design/SKILL.md	live-server stop
+FR-008 SKILL.md	skills/st-design/SKILL.md	so this form leaves
+FR-008 SKILL.md	skills/st-design/SKILL.md	Never a bare `stop`
+FR-008 SKILL.md	skills/st-design/SKILL.md	Run at most 2 fix rounds.
+FR-008 SKILL.md	skills/st-design/SKILL.md	goes in the report as an unmapped
+FR-009 SKILL.md	skills/st-design/SKILL.md	Screenshots, the picks, each check's result, what was fixed, what is open, every assumed answer,
+FR-009 agent	agents/st-design.md	Fixed, open, assumed answers.
+FR-011 agent	agents/st-design.md	layout, components, styles, copy, pictures, motion, UI state, client-side form
+FR-012 agent	agents/st-design.md	Do not build what is behind the screen: API calls, data fetch and save,
+FR-012 agent	agents/st-design.md	Put placeholder data of the same shape in one file
+FR-013 agent	agents/st-design.md	UI behavior not tested: no UI test runner.
+FR-013 agent	agents/st-design.md	and add no test tool.
+FR-014 SKILL.md	skills/st-design/SKILL.md	Only after the user's yes at the gate (new look) or OK (autonomous)
+FR-015 SKILL.md	skills/st-design/SKILL.md	bash <plugin root>/scripts/st-design-check.sh
+FR-015 SKILL.md	skills/st-design/SKILL.md	Never start a dev server.
+FR-016 SKILL.md	skills/st-design/SKILL.md	Ask for an image key or turn on image generation.
+FR-018 SKILL.md	skills/st-design/SKILL.md	Edit a vendored file under `skills/st-impeccable/` or the engine's skill folder.
+FR-018 agent	agents/st-design.md	Edit a vendored file under `skills/st-impeccable/` or the engine's skill folder.
 EOF
 
 exit $fail
