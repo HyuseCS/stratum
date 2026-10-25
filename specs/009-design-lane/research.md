@@ -357,7 +357,7 @@ No control turned another row red, except N1 as named.
 | L4 | T012 | 1; the follow-up change needed 0 |
 | L5 | T012 | 2 |
 | L6 | T015 | Not run, live run pending (user) |
-| L7 | T018 | Not run, live run pending (user) |
+| L7 | T018 | Stopped at the dev-server check, no build |
 | L8 | T009 | 0, a change at the gate, not a fix round |
 | L9 | T020 | Not run, live run pending (user) |
 
@@ -414,6 +414,23 @@ No control turned another row red, except N1 as named.
     no open P0 or P1, ignores removed, no commit). The report has a "Picks" line, which only the
     new-look mode should have (US2 review F2). It offered one commit for the uncommitted L4 and
     L5 work, or two.
+- L7 and the T018 routing runs, 2026-10-25 on the PC, headless:
+  - L7: `~/Desktop/design-runs/vite` (`package.json` with `vite`, `dev: vite`, nothing on 5173),
+    `/stratum:st-design a page`: "Vite project. The dev server on port 5173 gives no answer.
+    Start your dev server with `npm run dev`, then run /stratum:st-design again." `git status`
+    empty.
+  - Routing in `~/Desktop/design-runs/route` (one static `index.html` and a `.stratum/state.json`
+    of `{}`; without `.stratum/` every case stops and asks for `/stratum:st-init`). Each case ran
+    `claude -p "/stratum:st <task>" --max-turns 4`, the repo reset after each:
+    - `add a pricing page`: `Lane: Design (new page: ... It needs no API, data or sign-in). Say
+      "full", "fast", "quick" or "design" to override.`
+    - `add a settings page that saves to the API`: `Lane: Full (new page plus API work: ...)`.
+    - `fix the header spacing on the home page` (`--max-turns 12`): it went to the Quick lane
+      (`stratum:st-quick` agent, a one-line fix, verified at 360 and 1280px) but printed no
+      `Lane:` line. The commit stopped at the commit guard.
+    - `add a pricing page, fast`: it printed `Lane: Design`, then said the Fast lane cannot run
+      with no `specs/` (it would move up to Full) and recommended Design. The override was
+      heard but not used, because Fast needs a spec here.
 - FR-008 cap (open after 2 fix rounds, no loop): seen in L3 `site`. After round 2 it went to the
   gate with 4 P1 open and offered changes or yes.
 - T019 stays open until the live runs are recorded here.
