@@ -211,6 +211,11 @@ tool check and the lane).
   `cream-palette`, `flat-type-hierarchy`, `gradient-text`, `low-contrast`, `overused-font`,
   `skipped-heading`). `ignores add-rule` uses the same ids (`gradient-text` ignored, then gone
   from the output).
+- T006 run (2026-10-25, laptop, `impeccable-engine 0.1.16`, `detect --json --no-config` on a
+  scratch copy of `skills/st-hallmark/scripts/fixtures/`, 43 findings): the same 10 ids fire.
+  9 are on `ignore:`: `ai-color-palette`, `border-accent-on-rounded`, `bounce-easing`,
+  `cramped-padding`, `cream-palette`, `gradient-text`, `low-contrast`, `overused-font`,
+  `skipped-heading`. `flat-type-hierarchy` is on `keep:`. No id is unmapped.
 - `impeccable detect --list-rules` exists upstream (`crates/detect/src/list_rules.rs`) but the
   0.1.16 binary prints nothing for it. A later engine will answer it.
 - `ignores add-rule` accepts any string (`bogus-id-xyz` was added), so a wrong id fails silently.
