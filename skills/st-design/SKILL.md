@@ -64,8 +64,8 @@ The user is stopped exactly twice per direction: the design file confirm (step 4
 ## 4. Build and check
 
 1. Start the `st-design` agent (`stratum:st-design`) with the plugin root, the project root, the
-   task, the mode, the answers (job, visitor, main action, audience, use, tone, material, and the
-   theme in the new-look mode), every answer you assumed, the dev server URL if any, and in a fix
+   task, the mode, the answers (job, visitor, main action, and in the new-look mode audience, use,
+   tone, material and theme), every answer you assumed, the dev server URL if any, and in a fix
    round the findings to fix.
 2. Before the first critique, run `<impeccable> ignores list`, then
    `<impeccable> ignores add-rule <id> --all-values --local` for each id on the engine's
