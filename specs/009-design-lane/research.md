@@ -354,8 +354,8 @@ No control turned another row red, except N1 as named.
 | L1 | T018 | Stopped at the start check, no build (2026-10-25, PC) |
 | L2 | T018 | Reports only, no build (2026-10-25, PC) |
 | L3 | T009 | 2, cap reached, 4 P1 open at the gate (`site`); 1 (`old`, second lane run) |
-| L4 | T012 | Not run, live run pending (user) |
-| L5 | T012 | Not run, live run pending (user) |
+| L4 | T012 | 1; the follow-up change needed 0 |
+| L5 | T012 | 2 |
 | L6 | T015 | Not run, live run pending (user) |
 | L7 | T018 | Not run, live run pending (user) |
 | L8 | T009 | 0, a change at the gate, not a fix round |
@@ -398,6 +398,22 @@ No control turned another row red, except N1 as named.
     paths, nothing under `.hallmark/` or `.impeccable/critique/`, ignores empty.
   - Each run: `curl -sf localhost:8400/health` failed (exit 7).
   - SC-001 pick between `base` and `site` screenshots: pending (user).
+- L4 and L5 ran on 2026-10-25 on the PC, headless (`claude -p`, replies by `--resume`,
+  `--permission-mode bypassPermissions`), in `~/Desktop/design-runs/old` (the lane run that got
+  yes and commit `39f4677`, so it has a committed `DESIGN.md`):
+  - L4: `/stratum:st-design a class schedule page for adult beginners who book a class`. Mode
+    autonomous, 0 questions. Report: screenshot, lint, render, audit, critique, tests (20 pass),
+    fixed (2 critique P1 in round 1), open (P2), assumed answers, no picks line. The critique's
+    closing questions were answered by the lane. `config.local.json` ignores empty after. Nothing
+    committed; it asked for OK. Then `make the schedule denser`: a new build (6 sessions on the
+    first screen, was 3), all four checks and tests again, a new report, no commit (FR-014). It
+    named the conflict with `DESIGN.md` "Density is low" and did not edit it. It kept before
+    screenshots in `/tmp/sched-before/`, outside the project.
+  - L5: `/stratum:st-design another page`. Exactly 1 message: job, visitor and main action, with
+    a recommended answer. After `go`: 0 messages until the report (2 fix rounds, all checks pass,
+    no open P0 or P1, ignores removed, no commit). The report has a "Picks" line, which only the
+    new-look mode should have (US2 review F2). It offered one commit for the uncommitted L4 and
+    L5 work, or two.
 - FR-008 cap (open after 2 fix rounds, no loop): seen in L3 `site`. After round 2 it went to the
   gate with 4 P1 open and offered changes or yes.
 - T019 stays open until the live runs are recorded here.
