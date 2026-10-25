@@ -353,12 +353,12 @@ No control turned another row red, except N1 as named.
 |----|------|------------|
 | L1 | T018 | Stopped at the start check, no build (2026-10-25, PC) |
 | L2 | T018 | Reports only, no build (2026-10-25, PC) |
-| L3 | T009 | Not run, live run pending (user) |
+| L3 | T009 | 2, cap reached, 4 P1 open at the gate (`site`); 1 (`old`, second lane run) |
 | L4 | T012 | Not run, live run pending (user) |
 | L5 | T012 | Not run, live run pending (user) |
 | L6 | T015 | Not run, live run pending (user) |
 | L7 | T018 | Not run, live run pending (user) |
-| L8 | T009 | Not run, live run pending (user) |
+| L8 | T009 | 0, a change at the gate, not a fix round |
 | L9 | T020 | Not run, live run pending (user) |
 
 - L1 and L2 ran on 2026-10-25 at `5c08f54` on the PC, headless (`claude -p --plugin-dir <repo>`) in
@@ -372,5 +372,32 @@ No control turned another row red, except N1 as named.
     the script line as printed. The agent wrote it in its own words. `git status` was empty.
   - Then `npm i -g puppeteer-core` (25.16.0). `st-design-check.sh` prints `design tools: ok`,
     exit 0.
-- FR-008 cap (open after 2 fix rounds, no loop): Not run, no live run yet; checked as text only.
+- L3 and L8 ran on 2026-10-25 at `90e1869` on the PC, in empty git repos under
+  `~/Desktop/design-runs/`, with `--plugin-dir <repo>`:
+  - `site` (L3, user typed `/stratum:st-design <brief>`): new-look mode. 12 questions, one per
+    message, each with a recommended option. 3 themes dealt (Coral, Kiln, Vellum); the user's
+    own answer "Kiln, greyish like Coral" was taken as a light Kiln colourway. `DESIGN.md` and
+    `.impeccable/design.json` shown for confirm before any build (stop 1). Build, then lint,
+    render, audit and critique per round. Round 1: audit 1 P1, critique 27/36 with 2 P1. Round 2:
+    critique 26/36 with 1 P1. Final: audit 3 P1, critique 1 P1. After 2 fix rounds it stopped at
+    the gate with the 4 P1 open (FR-008 cap), screenshots, picks, the 4 checks, fixed, open and
+    assumed answers (stop 2). The 35 temporary ignores were removed. Nothing committed. A short
+    tool-approval outage stopped the audit agent once; the main session audited by reading the
+    code, and the final audit raised 3 of its P2 items to P1.
+  - L8: the session was forked headless (`claude -p --resume <id> --fork-session`) with
+    `make the header smaller`. It rebuilt (heading 36 to 60px from 44 to 84px, `DESIGN.md`
+    updated), ran lint, render, tests, detector, critique (26/36, 1 P1) and audit (2 P1), and
+    showed the gate again. Ignores removed again, nothing committed.
+  - Old way (`base`): `/stratum:st-ui-ux build <brief>, as a plain index.html`, headless. One
+    `index.html`, no questions, no checks, no gate. Screenshots by headless Chrome at 1440 and
+    375. The commit guard stopped its commit headless.
+  - `old`: `/stratum:st-fast <brief>` stopped (no spec in `specs/`) and offered
+    `/stratum:st-design`; the user picked it, so this is a second lane run, not the old way. Same
+    stops. Round 1 fixed 1 audit P1 and 1 critique P1; round 2 checks were the detector, tests and
+    screenshots, not a new full critique. Gate yes, commit `39f4677` held only the 8 reported
+    paths, nothing under `.hallmark/` or `.impeccable/critique/`, ignores empty.
+  - Each run: `curl -sf localhost:8400/health` failed (exit 7).
+  - SC-001 pick between `base` and `site` screenshots: pending (user).
+- FR-008 cap (open after 2 fix rounds, no loop): seen in L3 `site`. After round 2 it went to the
+  gate with 4 P1 open and offered changes or yes.
 - T019 stays open until the live runs are recorded here.
