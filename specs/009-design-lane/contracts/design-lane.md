@@ -31,7 +31,7 @@ conversation. Do not write them to a decisions file.
    lines and stop. Do no other work.
 2. A framework project (`package.json` names `next`, `astro`, `@sveltejs/kit` or `vite`): take
    the port from its `dev` script, else Next 3000, Vite and SvelteKit 5173, Astro 4321. Run
-   `curl -sf -o /dev/null http://localhost:<port>/`. No answer: say "Start your dev server with
+   `curl -s -o /dev/null http://localhost:<port>/`. No answer: say "Start your dev server with
    `npm run dev`, then run /stratum:st-design again." and stop. Never start a dev server.
 3. A design file is a root `DESIGN.md` with `.impeccable/design.json` beside it. A root
    `DESIGN.md` or `design.md` without it is not a design file: say "`DESIGN.md` is not a design
@@ -82,8 +82,8 @@ The user is stopped exactly twice per direction: the design file confirm (step 4
    theme in the new-look mode), every answer you assumed, the dev server URL if any, and in a fix
    round the findings to fix.
 2. Before the first critique, run `<impeccable> ignores list`, then
-   `<impeccable> ignores add-rule <id> --local` for each id on the engine's `ignore:` line that
-   is not listed yet. Remember the ids you added.
+   `<impeccable> ignores add-rule <id> --all-values --local` for each id on the engine's
+   `ignore:` line that is not listed yet. Remember the ids you added.
 3. Load `st-impeccable` and run `audit` on the screen, dimensions 1 (Accessibility) and 2
    (Performance) only. Then run `critique` on the screen in full. Answer its closing questions
    yourself: priority P0 and P1 first, scope blocking findings only. List both as assumed answers.
@@ -104,9 +104,9 @@ The user is stopped exactly twice per direction: the design file confirm (step 4
 ## 5. Commit
 
 Only after the user's yes at the gate (new look) or OK (autonomous), the `st-git` agent
-(`stratum:st-git`) commits the exact paths the agent reported as written, and `DESIGN.md` and
-`.impeccable/design.json` if they changed. Never commit the engine's screenshot folder or
-`.impeccable/critique/`.
+(`stratum:st-git`) commits the exact paths the agent reported as written, and `DESIGN.md`,
+`.impeccable/design.json` and the files on the engine's Files line if they changed. Never commit
+the engine's screenshot folder or `.impeccable/critique/`.
 
 ## Report
 
@@ -184,8 +184,6 @@ Start your report with `[st-design]` on its own line.
 You are the Design agent. You build one screen and check it. You never commit.
 
 <the [PONYTAIL] paragraph of agents/st-build.md, word for word>
-
-Add no explanatory comments. The why goes in the commit message.
 
 ## Inputs
 
@@ -304,7 +302,7 @@ FR-007	skills/st-design/SKILL.md	Find the page's job, its visitor and its main a
 FR-007	skills/st-design/SKILL.md	ask once, with all missing items in one message
 FR-008	skills/st-design/SKILL.md	dimensions 1 (Accessibility) and 2
 FR-008	skills/st-design/SKILL.md	run `critique` on the screen in full
-FR-008	skills/st-design/SKILL.md	ignores add-rule <id> --local
+FR-008	skills/st-design/SKILL.md	ignores add-rule <id> --all-values --local
 FR-008	skills/st-design/SKILL.md	ignores remove-rule <id> --local
 FR-008	skills/st-design/SKILL.md	live-server stop
 FR-008	skills/st-design/SKILL.md	so this form leaves

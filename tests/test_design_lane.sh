@@ -88,7 +88,7 @@ FR-007 SKILL.md	skills/st-design/SKILL.md	Find the page's job, its visitor and i
 FR-007 SKILL.md	skills/st-design/SKILL.md	ask once, with all missing items in one message
 FR-008 SKILL.md	skills/st-design/SKILL.md	dimensions 1 (Accessibility) and 2
 FR-008 SKILL.md	skills/st-design/SKILL.md	run `critique` on the screen in full
-FR-008 SKILL.md	skills/st-design/SKILL.md	ignores add-rule <id> --local
+FR-008 SKILL.md	skills/st-design/SKILL.md	ignores add-rule <id> --all-values --local
 FR-008 SKILL.md	skills/st-design/SKILL.md	ignores remove-rule <id> --local
 FR-008 SKILL.md	skills/st-design/SKILL.md	live-server stop
 FR-008 SKILL.md	skills/st-design/SKILL.md	so this form leaves
