@@ -449,6 +449,14 @@ No control turned another row red, except N1 as named.
     screenshots of `localhost:5173`. It wrote `signup.test.js` (5 tests with
     `@testing-library/dom`: labels, empty email, bad email, error clears, success and focus) and
     the report lists them. `npx vitest run`: 5 passed. 0 fix rounds, ignores removed, no commit.
+- Routing re-runs, 2026-10-25, in `route` with `specs/001-site/spec.md` and `.stratum/state.json`
+  naming it:
+  - `add a pricing page, fast`: `Lane: Fast (you said "fast". By the table this is Design: a new
+    page the site does not have yet). Say "design" to change it.`, then the `stratum:st-fast`
+    agent. The override works when a spec exists.
+  - `fix the header spacing on the home page`, run again: the `st-quick` skill and agent, and
+    again no `Lane:` line (2 of 2 runs). Open: the Quick route skips the say line that
+    `skills/st/SKILL.md` section 1 asks for.
 - FR-008 cap (open after 2 fix rounds, no loop): seen in L3 `site`. After round 2 it went to the
   gate with 4 P1 open and offered changes or yes.
 - T019 stays open until the live runs are recorded here.
