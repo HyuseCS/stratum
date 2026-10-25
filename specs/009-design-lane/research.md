@@ -300,3 +300,66 @@ tool check and the lane).
 - No PRODUCT.md is written. Seed mode, which would need it, does not run.
 - A different direction at the gate goes back to the theme branch: a new deal, a new scaffold, a
   new `DESIGN.md` confirm. That is the same two-stop loop again (FR-006 "the same gate again").
+
+## R15. Validation results (T019, SC-004)
+
+Run on 2026-10-25 at `c5bd851` (branch `009-design-lane`), from the repo root. Negative controls
+ran on scratch copies of the repo (`cp -r`), one fresh copy per control, outside the repo.
+
+- Tests (quickstart section 1), each exit 0 and every line `ok`:
+
+| Command | Result |
+|---------|--------|
+| `bash tests/test_design_check.sh` | 12 ok |
+| `bash tests/test_design_lane.sh` | 31 ok |
+| `bash tests/test_inspect.sh` | 65 ok |
+| `bash tests/test_on_demand.sh` | 170 ok |
+| `bash tests/test_session_hooks.sh` | 28 ok |
+| `bash tests/test_model_files.sh` | 26 ok |
+| `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest tests/test_model_hook.py` | 35 tests, `OK` |
+| `claude plugin validate .claude-plugin/plugin.json` | `Validation passed` |
+
+- Negative controls (quickstart section 2). Each row was `ok` on the unbroken copy with the same
+  command right before the break (exit 0), and `FAIL` after it (exit 1). N1 to N7 and N10 ran
+  `ST_ROOT=<copy> bash <copy>/tests/<test file>`. N8 and N9 ran
+  `ST_INSPECT_README=<copy>/README.md bash tests/test_inspect.sh`.
+
+| Id | Break | Before | After |
+|----|-------|--------|-------|
+| N1 | puppeteer check deleted from `scripts/st-design-check.sh` | `ok K2 no puppeteer` | `FAIL K2 no puppeteer: exit 0, want exit 1` (K5 and K10 also fail: their want has the puppeteer line) |
+| N2 | browser check moved before the node check | `ok K10 order` | `FAIL K10 order` (same exit, wrong line order) |
+| N3 | Design row deleted from `skills/st/SKILL.md` | `ok FR-002 st` | `FAIL FR-002 st` |
+| N4 | `hallmark` entry deleted from `vendor.lock` | `ok FR-017 lock` | `FAIL FR-017 lock` |
+| N5 | `hallmark` added to `agents/st-design.md` | `ok FR-010 one place` | `FAIL FR-010 one place` |
+| N6 | keep id `flat-type-hierarchy` added to the `ignore:` line | `ok FR-008 map` | `FAIL FR-008 map` |
+| N7 | step 4 Design lane sentence deleted from `skills/st-status/SKILL.md` | `ok FR-015 st-status` | `FAIL FR-015 st-status` |
+| N8 | README skills row `st-nothing` added | `ok README skills` | `FAIL README skills` |
+| N9 | README agent row `st-design` deleted | `ok README agents` | `FAIL README agents` |
+| N10 | `disable-model-invocation: true` deleted from `skills/st-hallmark/SKILL.md` | `ok FR-017 copy` | `FAIL FR-017 copy` |
+
+No control turned another row red, except N1 as named.
+
+- Vendored files (quickstart section 3, FR-018): `git diff --stat main -- skills/st-impeccable`
+  prints nothing. The upstream tree at `7ec8682` has 178 blobs under `skills/hallmark/`, and
+  `skills/st-hallmark` has 178 files. 177 files hash the same as upstream (`git hash-object`
+  against the tree's `sha`). `SKILL.md` differs only in `name: hallmark` to `name: st-hallmark`
+  and the added `disable-model-invocation: true` line (D22).
+- `git status --porcelain --untracked-files=all` before this R15 edit listed only the local
+  `.stratum/state.json` and `.stratum/commit-mode`. After it, it also lists
+  `specs/009-design-lane/research.md`. No other file (lessons L8).
+- Fix rounds of each live run (quickstart section 4):
+
+| Id | Task | Fix rounds |
+|----|------|------------|
+| L1 | T018 | Not run, live run pending (user) |
+| L2 | T018 | Not run, live run pending (user) |
+| L3 | T009 | Not run, live run pending (user) |
+| L4 | T012 | Not run, live run pending (user) |
+| L5 | T012 | Not run, live run pending (user) |
+| L6 | T015 | Not run, live run pending (user) |
+| L7 | T018 | Not run, live run pending (user) |
+| L8 | T009 | Not run, live run pending (user) |
+| L9 | T020 | Not run, live run pending (user) |
+
+- FR-008 cap (open after 2 fix rounds, no loop): Not run, no live run yet; checked as text only.
+- T019 stays open until the live runs are recorded here.
