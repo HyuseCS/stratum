@@ -78,6 +78,8 @@ FR-001 SKILL.md	skills/st-design/SKILL.md	is not a design file: say
 FR-002 st	skills/st/SKILL.md	| New look, page or screen | a new look, or a page or screen the project does not have yet, when the screen is the whole task | Design |
 FR-002 st	skills/st/SKILL.md	Say "full", "fast", "quick" or "design" to override.
 FR-002 st	skills/st/SKILL.md	- **Design:** run `/stratum:st-design`.
+FR-002 st	skills/st/SKILL.md	A new page that also needs API, data or sign-in work goes to Full.
+FR-002 st	skills/st/SKILL.md	picks the lane (Full, Fast, Quick, Design)
 FR-003 SKILL.md	skills/st-design/SKILL.md	one question per message, each with a recommended answer,
 FR-003 SKILL.md	skills/st-design/SKILL.md	First branches: audience, use, tone, material, theme, North Star,
 FR-003 SKILL.md	skills/st-design/SKILL.md	overview voice, color character, elevation, components, UX (density, how a user moves through

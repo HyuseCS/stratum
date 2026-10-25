@@ -259,7 +259,7 @@ Bash, no comments, builtins plus `node` and `npm` only. Run from the project roo
 
 | File | Edit |
 |------|------|
-| `skills/st/SKILL.md` | Description: `picks the lane (Full, Fast, Quick, Design)`. Table row after Privacy and access: `\| New look, page or screen \| a new look, or a page or screen the project does not have yet, when the screen is the whole task \| Design \|`. Say line: `Say "full", "fast", "quick" or "design" to override.` Run list, after Quick: `- **Design:** run \`/stratum:st-design\`.` |
+| `skills/st/SKILL.md` | Description: `picks the lane (Full, Fast, Quick, Design)`. Table row after Privacy and access: `\| New look, page or screen \| a new look, or a page or screen the project does not have yet, when the screen is the whole task \| Design \|`. Line under the table: `A new page that also needs API, data or sign-in work goes to Full.` Say line: `Say "full", "fast", "quick" or "design" to override.` Run list, after Quick: `- **Design:** run \`/stratum:st-design\`.` |
 | `skills/st-status/SKILL.md` | Step 4, last sentence: `Design lane: run \`bash <plugin root>/scripts/st-design-check.sh\` from the project root and show its lines: node 18 or later, \`puppeteer-core\`, and Chrome or Chromium, each missing one with its install command.` Step 5 list: `~/.claude/skills/{grill-me,grilling,impeccable,graphify,ui-ux-pro-max,hallmark}` |
 | `skills/st-sync/SKILL.md` | New step 5 (old 5 and 6 become 6 and 7): `5. Design lane detector map: after an impeccable or hallmark port, compare the \`ignore:\` and \`keep:\` lines of \`skills/st-design/engine.md\` with \`impeccable detect --list-rules\`, or with the \`id:\` rows of \`crates/foundation/src/registry.rs\` at the new pin when it prints nothing. Map each new id, drop each removed one, and recheck each rule whose lint gate changed, before the sync commit.` |
 | `skills/st-init/SKILL.md` | `Show a table of the 14 agents` to `Show a table of the 15 agents` |
@@ -286,6 +286,8 @@ FR-001	skills/st-design/SKILL.md	is not a design file: say
 FR-002	skills/st/SKILL.md	| New look, page or screen | a new look, or a page or screen the project does not have yet, when the screen is the whole task | Design |
 FR-002	skills/st/SKILL.md	Say "full", "fast", "quick" or "design" to override.
 FR-002	skills/st/SKILL.md	- **Design:** run `/stratum:st-design`.
+FR-002	skills/st/SKILL.md	A new page that also needs API, data or sign-in work goes to Full.
+FR-002	skills/st/SKILL.md	picks the lane (Full, Fast, Quick, Design)
 FR-003	skills/st-design/SKILL.md	one question per message, each with a recommended answer,
 FR-003	skills/st-design/SKILL.md	First branches: audience, use, tone, material, theme, North Star,
 FR-003	skills/st-design/SKILL.md	overview voice, color character, elevation, components, UX (density, how a user moves through

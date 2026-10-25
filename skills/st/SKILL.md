@@ -25,6 +25,8 @@ The highest area wins:
 | Screens | layout, components, navigation | Fast (Quick for a small fix in a few files) |
 | Text and docs | labels, typos, wording | Quick |
 
+A new page that also needs API, data or sign-in work goes to Full.
+
 Say it in one line: `Lane: <lane> (<area>: <why>). Say "full", "fast", "quick" or "design" to override.`
 Then run the lane. If the user overrides, use their lane.
 
