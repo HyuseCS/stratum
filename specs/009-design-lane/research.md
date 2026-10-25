@@ -356,10 +356,10 @@ No control turned another row red, except N1 as named.
 | L3 | T009 | 2, cap reached, 4 P1 open at the gate (`site`); 1 (`old`, second lane run) |
 | L4 | T012 | 1; the follow-up change needed 0 |
 | L5 | T012 | 2 |
-| L6 | T015 | Not run, live run pending (user) |
+| L6 | T015 | 0 (contact page); 1 (second request) |
 | L7 | T018 | Stopped at the dev-server check, no build |
 | L8 | T009 | 0, a change at the gate, not a fix round |
-| L9 | T020 | Not run, live run pending (user) |
+| L9 | T020 | 0 |
 
 - L1 and L2 ran on 2026-10-25 at `5c08f54` on the PC, headless (`claude -p --plugin-dir <repo>`) in
   an empty git scratch site, with `puppeteer-core` not installed and Chrome present:
@@ -431,6 +431,24 @@ No control turned another row red, except N1 as named.
     - `add a pricing page, fast`: it printed `Lane: Design`, then said the Fast lane cannot run
       with no `specs/` (it would move up to Full) and recommended Design. The override was
       heard but not used, because Fast needs a spec here.
+- L6 and L9, 2026-10-25 on the PC, headless; each grill question answered "yes" (the recommended
+  option) by `--resume`:
+  - L6: `~/Desktop/design-runs/code`, a committed `index.html` (navy `#14213d`, paper `#f4f1ea`,
+    orange `#e85d04`, Space Grotesk and IBM Plex Sans), no `DESIGN.md`.
+    `/stratum:st-design a contact page`: autonomous mode; the first message listed the code's
+    colors, fonts, flat surfaces and 4px corners, then Q1. 6 questions, one per message, each
+    starting from the code. The confirm message showed `DESIGN.md` and `.impeccable/design.json`
+    and also asked the main action and the contact facts, and proposed `#c2410c` for button
+    backgrounds (white on `#e85d04` is about 3.5:1). After yes: the page, all checks pass, 0 fix
+    rounds, ignores removed, no commit. Then `/stratum:st-design a services and prices page`: 0
+    questions, a report (1 critique P1 fixed in round 1), no commit.
+  - L9: `~/Desktop/design-runs/uitest`, `devDependencies` `vite`, `vitest`,
+    `@testing-library/dom`, `jsdom`; dev server started by the runner (`npm run dev`, port 5173)
+    and stopped after. `/stratum:st-design a signup page for a pottery class newsletter`: new-look
+    mode, 11 questions one per message, 3 themes, `DESIGN.md` confirm, then the gate with
+    screenshots of `localhost:5173`. It wrote `signup.test.js` (5 tests with
+    `@testing-library/dom`: labels, empty email, bad email, error clears, success and focus) and
+    the report lists them. `npx vitest run`: 5 passed. 0 fix rounds, ignores removed, no commit.
 - FR-008 cap (open after 2 fix rounds, no loop): seen in L3 `site`. After round 2 it went to the
   gate with 4 P1 open and offered changes or yes.
 - T019 stays open until the live runs are recorded here.
