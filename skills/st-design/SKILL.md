@@ -51,6 +51,10 @@ The user is stopped exactly twice per direction: the design file confirm (step 4
 
 ## 3. Autonomous
 
+1. No design file: read the look from the code (tokens, the global stylesheet, the main
+   components) as a draft. Grill as in section 2 step 1, without audience, use, tone, material and
+   theme, and start each recommended answer from the draft. Then run section 2 step 4. This
+   happens once per project.
 2. Find the page's job, its visitor and its main action in the task and `DESIGN.md`. If one is
    missing, ask once, with all missing items in one message. Then ask nothing more until the
    report.

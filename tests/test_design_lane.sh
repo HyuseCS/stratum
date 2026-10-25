@@ -81,6 +81,8 @@ FR-003 SKILL.md	skills/st-design/SKILL.md	run the engine's deal command, show th
 FR-004 SKILL.md	skills/st-design/SKILL.md	run `document` in scan mode with the grill answers as
 FR-004 SKILL.md	skills/st-design/SKILL.md	build nothing until
 FR-004 SKILL.md	skills/st-design/SKILL.md	answer its refresh, overwrite
+FR-005 SKILL.md	skills/st-design/SKILL.md	read the look from the code (tokens, the global stylesheet, the main
+FR-005 SKILL.md	skills/st-design/SKILL.md	start each recommended answer from the draft
 FR-006 SKILL.md	skills/st-design/SKILL.md	The user is stopped exactly twice per direction
 FR-006 SKILL.md	skills/st-design/SKILL.md	A different direction: back to step 1 at
 FR-006 SKILL.md	skills/st-design/SKILL.md	Gate rounds do not count as fix rounds.

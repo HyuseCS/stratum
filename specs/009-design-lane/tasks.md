@@ -61,8 +61,8 @@ that must exist first.
 
 **Independent Test**: quickstart L6.
 
-- [ ] T013 [US3] Add the FR-005 rows to `tests/test_design_lane.sh`. Run: those red. FR-005
-- [ ] T014 [US3] Add section 3 step 1 of contracts section 1 to `skills/st-design/SKILL.md`. Then T013's rows are green. FR-005, FR-004 (lessons L14)
+- [X] T013 [US3] Add the FR-005 rows to `tests/test_design_lane.sh`. Run: those red. FR-005
+- [X] T014 [US3] Add section 3 step 1 of contracts section 1 to `skills/st-design/SKILL.md`. Then T013's rows are green. FR-005, FR-004 (lessons L14)
 - [ ] T015 [US3] Live run L6. Record it in research.md R15, including that the second request runs no grill. FR-005 (lessons L32)
 
 ## Phase 6: User Story 4 - Getting into the lane, and its tools (Priority: P2)
