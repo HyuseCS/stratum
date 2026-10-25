@@ -40,6 +40,7 @@ project, offers to upgrade graphify, installs its post-commit hook, and checks y
 |------|----------|
 | `git`, `python3` | git guard, model overrides hook, phase hook, statusline, handoff facts, scripts |
 | `node` | ponytail hooks |
+| `puppeteer-core` (`npm i -g puppeteer-core`), Chrome or Chromium | the Design lane's render check |
 | `bunx` (Bun) | statusline bar (falls back to markers only) |
 | `graphify` 0.9.74 or later (`uv tool install graphifyy`) | code navigation graph, Dart support |
 | `gh` | optional, for `st-issues` and `st-pr` |
@@ -107,7 +108,7 @@ The lane follows the highest impact area the change touches.
 | `st-pr [base]` | Open a draft PR from git facts and the spec; ready when CI passes. |
 | `st-sync` | Maintainers: port upstream changes into Stratum's forks. |
 | `st-grill` | Grilling interview, one question at a time. |
-| `st-ui-ux`, `st-impeccable`, `st-frontend-design` | Design build rules, design review, visual direction. |
+| `st-ui-ux`, `st-impeccable`, `st-frontend-design`, `st-hallmark` | Design build rules, design review, visual direction, new-look engine. |
 | `st-graphify` | Build or query the code graph. |
 | `st-ponytail`, `st-ponytail-review`, `-audit`, `-debt`, `-gain`, `-help` | Minimal-code mode and its reviews. |
 
@@ -293,7 +294,7 @@ label uses the `model` colors unless you set it. Other color options from the
 
 ## Duplicate installs
 
-If ponytail, impeccable, ui-ux-pro-max, graphify's skill, or grilling are also installed globally,
+If ponytail, impeccable, ui-ux-pro-max, graphify's skill, grilling, or hallmark are also installed globally,
 their hooks or skills can run twice. `st-init` turns off a global ponytail or Token Weather plugin
 in the project's `.claude/settings.json`. `st-status` lists the rest. Turn the global ones off for
 projects that use Stratum.
@@ -311,6 +312,8 @@ python3 tests/test_git_guard.py
 python3 tests/test_model_hook.py
 python3 tests/test_phase_hook.py
 bash tests/test_advisor.sh
+bash tests/test_design_check.sh
+bash tests/test_design_lane.sh
 bash tests/test_model_files.sh
 bash tests/test_herdr_workspace.sh
 bash tests/test_inspect.sh

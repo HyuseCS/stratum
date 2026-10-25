@@ -98,7 +98,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 
   The Spec Kit commands are folded into the phase skills. `st-constitution` (amend rules) and
   `st-issues` (tasks to GitHub issues) stay callable alone, as do the forked tools (`st-grill`,
-  `st-impeccable`, `st-ui-ux`, `st-frontend-design`, `st-graphify`, ponytail's skills).
+  `st-impeccable`, `st-ui-ux`, `st-frontend-design`, `st-graphify`, `st-hallmark`, ponytail's skills).
   `st-sync` exists only in this repo.
 
   A skill called outside a lane skips that lane's gates but never the commit guard or the push

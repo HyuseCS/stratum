@@ -82,6 +82,9 @@ fixture HTML, outside the repo.
   contributors", MIT), a `THIRD_PARTY_NOTICES.md` row and a "Changes made" bullet, and a
   `vendor.lock` entry `"hallmark": { "repo": "nutlope/hallmark", "ref": "main", "commit": "<sha at
   vendoring>", "path": "skills/hallmark", "version": "2.0.0", "license": "MIT" }`.
+- Vendored (T004): commit `7ec868225c6caa040558c321ee0fefa0e73f83a8`, still `main` on 2026-10-25.
+  178 files copied. Each file but `SKILL.md` has the upstream blob hash, and `SKILL.md` differs
+  only in the two frontmatter lines (quickstart section 3).
 - Rationale: `st-sync` already loops over every `vendor.lock` entry and limits the log to `path`
   (`skills/st-sync/SKILL.md` step 1), so it lists hallmark's changes with no skill edit (US4
   scenario 5). The scripts use `<skill-dir>`-relative paths (`SKILL.md:35`, `:80`, `:95`), so no
