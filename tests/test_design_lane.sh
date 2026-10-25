@@ -84,6 +84,8 @@ FR-004 SKILL.md	skills/st-design/SKILL.md	answer its refresh, overwrite
 FR-006 SKILL.md	skills/st-design/SKILL.md	The user is stopped exactly twice per direction
 FR-006 SKILL.md	skills/st-design/SKILL.md	A different direction: back to step 1 at
 FR-006 SKILL.md	skills/st-design/SKILL.md	Gate rounds do not count as fix rounds.
+FR-007 SKILL.md	skills/st-design/SKILL.md	Find the page's job, its visitor and its main action
+FR-007 SKILL.md	skills/st-design/SKILL.md	ask once, with all missing items in one message
 FR-008 SKILL.md	skills/st-design/SKILL.md	dimensions 1 (Accessibility) and 2
 FR-008 SKILL.md	skills/st-design/SKILL.md	run `critique` on the screen in full
 FR-008 SKILL.md	skills/st-design/SKILL.md	ignores add-rule <id> --local
@@ -101,6 +103,7 @@ FR-012 agent	agents/st-design.md	Put placeholder data of the same shape in one f
 FR-013 agent	agents/st-design.md	UI behavior not tested: no UI test runner.
 FR-013 agent	agents/st-design.md	and add no test tool.
 FR-014 SKILL.md	skills/st-design/SKILL.md	Only after the user's yes at the gate (new look) or OK (autonomous)
+FR-014 report	skills/st-design/SKILL.md	report again before any commit
 FR-015 SKILL.md	skills/st-design/SKILL.md	bash <plugin root>/scripts/st-design-check.sh
 FR-015 SKILL.md	skills/st-design/SKILL.md	Never start a dev server.
 FR-016 SKILL.md	skills/st-design/SKILL.md	Ask for an image key or turn on image generation.

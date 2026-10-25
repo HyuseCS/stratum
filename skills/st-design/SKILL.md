@@ -49,6 +49,14 @@ The user is stopped exactly twice per direction: the design file confirm (step 4
    make them through section 4, then this gate again. A different direction: back to step 1 at
    the theme branch, then step 4 and this gate again. Gate rounds do not count as fix rounds.
 
+## 3. Autonomous
+
+2. Find the page's job, its visitor and its main action in the task and `DESIGN.md`. If one is
+   missing, ask once, with all missing items in one message. Then ask nothing more until the
+   report.
+3. Build and check (section 4), then report. On the user's OK, commit (section 5). Changes: make
+   them through section 4 and report again before any commit.
+
 ## 4. Build and check
 
 1. Start the `st-design` agent (`stratum:st-design`) with the plugin root, the project root, the

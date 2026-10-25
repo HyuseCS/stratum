@@ -49,8 +49,8 @@ that must exist first.
 
 **Independent Test**: quickstart L4 and L5.
 
-- [ ] T010 [US2] Add the FR-007 rows and the FR-014 row `report again before any commit` to `tests/test_design_lane.sh`. Run: those red. FR-007, FR-014
-- [ ] T011 [US2] Add section 3 steps 2 and 3 ("Autonomous") of contracts section 1 to `skills/st-design/SKILL.md`. Then T010's rows are green. FR-007, FR-009, FR-013, FR-014 (lessons L14)
+- [X] T010 [US2] Add the FR-007 rows and the FR-014 row `report again before any commit` to `tests/test_design_lane.sh`. Run: those red. FR-007, FR-014
+- [X] T011 [US2] Add section 3 steps 2 and 3 ("Autonomous") of contracts section 1 to `skills/st-design/SKILL.md`. Then T010's rows are green. FR-007, FR-009, FR-013, FR-014 (lessons L14)
 - [ ] T012 [US2] Live runs L4 (SC-002, with the change after the report, FR-014) and L5 (SC-003). Record them in research.md R15 with the message count, the report sections, and `.impeccable/config.local.json` before and after. SC-002, SC-003 (lessons L32)
 
 - [ ] T020 [US2] Live run L9 (quickstart section 4): a scratch Vite project with `vitest` and `@testing-library/dom`. The user starts its dev server. Record in research.md R15 the tests written, their result, and the report's test list. FR-013 (lessons L32)
