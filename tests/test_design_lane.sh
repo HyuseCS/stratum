@@ -110,6 +110,7 @@ FR-008 SKILL.md	skills/st-design/SKILL.md	goes in the report as an unmapped
 FR-008 SKILL.md	skills/st-design/SKILL.md	then run step 3 again: audit, and `critique` in full, not only its detector.
 FR-009 SKILL.md	skills/st-design/SKILL.md	Screenshots, the picks, each check's result, what was fixed, what is open, every assumed answer,
 FR-009 SKILL.md	skills/st-design/SKILL.md	The autonomous mode's report has no picks.
+FR-009 SKILL.md	skills/st-design/SKILL.md	A check whose tool did not run is marked `not run` in the report and does not pass.
 FR-009 agent	agents/st-design.md	Fixed, open, assumed answers.
 FR-009 agent	agents/st-design.md	- The picks, in the new-look mode only.
 FR-011 agent	agents/st-design.md	layout, components, styles, copy, pictures, motion, UI state, client-side form

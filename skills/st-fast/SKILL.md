@@ -34,6 +34,7 @@ to `/stratum:st-full`.
    commits the docs `st-close` changed, with exact paths: the doc files in its drift list, and
    `docs/lessons.md` if it wrote a lesson. If it changed no docs, skip this step. If the commit
    did not land, stop and tell the user.
-10. Push only on the user's "push".
+10. After the last commit lands (step 9, or step 6 when step 9 is skipped), set `phase` to `done` in `<project>/.stratum/state.json`. Keep the other keys.
+    Push only on the user's "push".
 
 If any agent reports the change needs a higher lane, stop and move up.

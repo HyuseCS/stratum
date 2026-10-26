@@ -114,6 +114,7 @@ the engine's screenshot folder or `.impeccable/critique/`.
 Screenshots, the picks, each check's result, what was fixed, what is open, every assumed answer,
 the component tests run, unmapped detector rules, the image key line, the ignores line, and the
 work behind the screen for Fast or Full. The autonomous mode's report has no picks.
+A check whose tool did not run is marked `not run` in the report and does not pass.
 
 ## Never
 
@@ -242,7 +243,7 @@ Bash, no comments, builtins plus `node` and `npm` only. Run from the project roo
 |-------|-----------|-------------------|
 | node | `node -p process.versions.node` gives a major of 18 or more | `missing: node 18 or later. Install: <node command>` |
 | puppeteer | `node_modules/puppeteer-core` or `node_modules/puppeteer` in the project folder or any folder above it (node's lookup, as `sloplint-render.mjs:79-93` uses it), or either under `$(npm root -g)` | `missing: puppeteer-core. Install: npm i -g puppeteer-core` |
-| browser | `$CHROME_PATH` is a file; or `command -v` finds `google-chrome`, `google-chrome-stable`, `chromium` or `chromium-browser`; or one of the macOS and Windows paths of `skills/st-hallmark/scripts/sloplint-render.mjs:7` is a file | `missing: Chrome or Chromium. Install: <browser command>` |
+| browser | `$CHROME_PATH` is an executable file; or `command -v` finds `google-chrome`, `google-chrome-stable`, `chromium` or `chromium-browser`; or one of the macOS and Windows paths of `skills/st-hallmark/scripts/sloplint-render.mjs:7` is an executable file | `missing: Chrome or Chromium. Install: <browser command>` |
 
 - Commands by the first package manager on PATH, in this order:
 
@@ -327,6 +328,7 @@ FR-008	skills/st-design/engine.md	Do not run its Step 1 questions, its hero revi
 FR-008	skills/st-design/engine.md	`summary.render` other than `ran` fails the render check.
 FR-009	skills/st-design/SKILL.md	Screenshots, the picks, each check's result, what was fixed, what is open, every assumed answer,
 FR-009	skills/st-design/SKILL.md	The autonomous mode's report has no picks.
+FR-009	skills/st-design/SKILL.md	A check whose tool did not run is marked `not run` in the report and does not pass.
 FR-009	agents/st-design.md	Fixed, open, assumed answers.
 FR-009	agents/st-design.md	- The picks, in the new-look mode only.
 FR-011	agents/st-design.md	layout, components, styles, copy, pictures, motion, UI state, client-side form

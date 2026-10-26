@@ -43,6 +43,7 @@ Plugin root (`<plugin root>`) is two levels up from this skill's base directory.
      across the whole repo.
 7. **Docs graph.** Run the `st-graphify` skill once to update the docs graph.
 8. `st-git` commits the changed docs with exact paths.
+   After the commit lands, set `phase` to `done` in `<project>/.stratum/state.json`. Keep the other keys.
 
 ## Gate
 

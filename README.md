@@ -234,7 +234,7 @@ copy for that project only.
   warning, then runs.
 - **Who is speaking.** Each reply starts with a label: `[Full lane | Plan]`, `[Fast lane]` or
   `[Quick lane]` while a lane runs, else `[Orchestrator]`. The phase hook adds the label from
-  `state.json`; the `st-close` agent (Full and Fast lanes) or the `st-quick` agent (Quick lane) sets `phase` to `done` at the end of its run. After you upgrade, a project whose
+  `state.json`; the `st-close` skill (Full Close) and the `st-fast` skill set `phase` to `done` after their last commit, and the `st-quick` agent (Quick lane) does it at the end of its run. After you upgrade, a project whose
   last feature is finished may still show its old phase: set `phase` to `done` once. Each Agent call is named with only its
   task, like `US1 review`, and each agent's report starts with its tag, like
   `[st-build]`.

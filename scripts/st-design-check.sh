@@ -45,7 +45,7 @@ for b in google-chrome google-chrome-stable chromium chromium-browser; do
 done
 for p in "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" "/Applications/Chromium.app/Contents/MacOS/Chromium" "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"; do
   [ "$found" = 1 ] && break
-  [ -f "$p" ] && found=1
+  [ -x "$p" ] && found=1
 done
 if [ "$found" = 0 ]; then
   echo "missing: Chrome or Chromium. Install: $browser_cmd"
