@@ -40,6 +40,7 @@ project, offers to upgrade graphify, installs its post-commit hook, and checks y
 |------|----------|
 | `git`, `python3` | git guard, model overrides hook, phase hook, statusline, handoff facts, scripts |
 | `node` | ponytail hooks |
+| `puppeteer-core` (`npm i -g puppeteer-core`), Chrome or Chromium | the Design lane's render check |
 | `bunx` (Bun) | statusline bar (falls back to markers only) |
 | `graphify` 0.9.74 or later (`uv tool install graphifyy`) | code navigation graph, Dart support |
 | `gh` | optional, for `st-issues` and `st-pr` |
@@ -64,6 +65,7 @@ The lane follows the highest impact area the change touches.
 | Impact area | Examples | Lane |
 |-------------|----------|------|
 | Privacy and access | access rules, data model, contracts, sign-in, personal data | Full |
+| New look, page or screen | a new look, or a page or screen the project does not have yet, when the screen is the whole task | Design |
 | New user story or feature | anything not in a current spec | Full |
 | Core runtime | background services, offline queue, workers, notices | Fast |
 | Screens | layout, components, navigation | Fast (Quick for a small fix in a few files) |
@@ -84,12 +86,15 @@ The lane follows the highest impact area the change touches.
 
 **Quick lane:** one file, no gate, related tests, commit. A small fix across a few files goes to `st-build` in brief mode. It moves up a lane if it needs a change plan.
 
+**Design lane:** a new look or a new page or screen. New look: a grill for the design file, one reference screen, its checks, your yes. Autonomous: the page in the existing look, checked, then your OK.
+
 ### Skills
 
 | Skill | What it does |
 |-------|--------------|
 | `st <task>` | Main entry. Picks the lane and runs it. |
 | `st-full`, `st-fast`, `st-quick` | Force a lane. |
+| `st-design <task>` | Design lane: design file, reference screen or new page, checked before you see it. |
 | `st-define`, `st-plan`, `st-inspect`, `st-build`, `st-close` | Run or resume one Full-lane phase. |
 | `st-review`, `st-test`, `st-debug`, `st-git` | Run one Build-loop agent on demand. A missing feature comes from `.stratum/state.json`, a missing range is `main..HEAD`. |
 | `st-triage <issue#>...` | Check GitHub issues against the code and git history, read-only: verdict, what is built, blocker, next step. |
@@ -107,7 +112,7 @@ The lane follows the highest impact area the change touches.
 | `st-pr [base]` | Open a draft PR from git facts and the spec; ready when CI passes. |
 | `st-sync` | Maintainers: port upstream changes into Stratum's forks. |
 | `st-grill` | Grilling interview, one question at a time. |
-| `st-ui-ux`, `st-impeccable`, `st-frontend-design` | Design build rules, design review, visual direction. |
+| `st-ui-ux`, `st-impeccable`, `st-frontend-design`, `st-hallmark` | Design build rules, design review, visual direction, new-look engine. |
 | `st-graphify` | Build or query the code graph. |
 | `st-ponytail`, `st-ponytail-review`, `-audit`, `-debt`, `-gain`, `-help` | Minimal-code mode and its reviews. |
 
@@ -123,6 +128,7 @@ All skills are called as `/stratum:<name>`.
 | `st-test` | Sonnet | Writes each test and shows it fails first |
 | `st-review` | Opus | Reviews each finished story |
 | `st-debug` | Opus | Takes over after 2 failed tries |
+| `st-design` | Opus | Design-lane build: one screen, its component tests and the engine's checks |
 | `st-fast` | Sonnet | Fast-lane change plans |
 | `st-quick` | Sonnet | Quick-lane edits (one file) |
 | `st-close` | Sonnet | Drift fixes, gap report, lessons, shortcut list |
@@ -198,13 +204,13 @@ copy for that project only.
   whose branch goes to main opens its own PR.
 - **Model overrides.** `.stratum/models.json` maps an agent name to an optional `model` and
   `effort`, for example `{ "st-close": { "model": "haiku", "effort": "xhigh" } }`. Agents:
-  `st-build`, `st-close`, `st-debug`, `st-fast`, `st-git`, `st-impeccable`, `st-inspect`,
+  `st-build`, `st-close`, `st-debug`, `st-design`, `st-fast`, `st-git`, `st-impeccable`, `st-inspect`,
   `st-plan`, `st-ponytail-audit`, `st-ponytail-debt`, `st-quick`, `st-review`, `st-test`, `st-triage`. Models:
   `sonnet`, `opus`, `haiku`, `fable`. Efforts: `low`, `medium`, `high`, `xhigh`, `max`. `st-init` writes it from `templates/models.json`:
   `st-build`, `st-debug`, `st-quick`, `st-plan`, `st-fast` on opus with effort high, and
   `st-close`, `st-git`, `st-test` on haiku with effort xhigh.
   `st-inspect` and `st-review` have no entry and keep the plugin default.
-  `st-impeccable`, `st-ponytail-audit`, `st-ponytail-debt` and `st-triage` have no entry either. A hook applies
+  `st-design`, `st-impeccable`, `st-ponytail-audit`, `st-ponytail-debt` and `st-triage` have no entry either. A hook applies
   the file each time a Stratum agent starts, so the next start picks up an edit. A bad file blocks every
   Stratum agent start with a message that names the problem. Only Stratum agents are affected.
   `CLAUDE_CODE_EFFORT_LEVEL` beats the file's effort.
@@ -293,7 +299,7 @@ label uses the `model` colors unless you set it. Other color options from the
 
 ## Duplicate installs
 
-If ponytail, impeccable, ui-ux-pro-max, graphify's skill, or grilling are also installed globally,
+If ponytail, impeccable, ui-ux-pro-max, graphify's skill, grilling, or hallmark are also installed globally,
 their hooks or skills can run twice. `st-init` turns off a global ponytail or Token Weather plugin
 in the project's `.claude/settings.json`. `st-status` lists the rest. Turn the global ones off for
 projects that use Stratum.
@@ -311,6 +317,8 @@ python3 tests/test_git_guard.py
 python3 tests/test_model_hook.py
 python3 tests/test_phase_hook.py
 bash tests/test_advisor.sh
+bash tests/test_design_check.sh
+bash tests/test_design_lane.sh
 bash tests/test_model_files.sh
 bash tests/test_herdr_workspace.sh
 bash tests/test_inspect.sh

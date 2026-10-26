@@ -1,0 +1,3 @@
+## plan | 2026-10-24T16:23:04Z | sha256 ca14e260f04544f1f4145c07ac0f8c77045a0661f7e919b6f801f80beb084338 | REVISE
+summary: Merge the autonomous-mode implementation tasks to reduce repeated edits and handoffs. Review limited to plan simplification.
+- [LOW] specs/009-design-lane/tasks.md:52: Merge US2 and US3 into one autonomous-mode implementation phase, retaining their separate live scenarios. Evidence: T011 adds steps 2 and 3 of the Autonomous section; T014 later adds step 1 to the same file. T010 and T013 likewise update the same test file. Combine T010/T013 into one test-first task and T011/T014 into one implementation task, then run L4–L6. This delivers the complete three-step flow together and removes repeated editing and task overhead.

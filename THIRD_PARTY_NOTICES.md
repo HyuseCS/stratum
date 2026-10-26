@@ -16,11 +16,13 @@ keeps its original license. Full license texts are in `licenses/`. Pinned upstre
 | graphify skill | Copyright 2026 Safi Shamsi and the Graphify contributors | Apache-2.0 (earlier parts MIT) | `skills/st-graphify` (`graphify/skill.md` -> `skills/st-graphify/SKILL.md`; `graphify/skills/claude/references/*.md` -> `skills/st-graphify/references/`) | `licenses/graphify.Apache-2.0.txt`, `licenses/graphify.NOTICE.txt`, `licenses/graphify.MIT.txt` |
 | Token Weather | anthropics/claude-code-playground authors | Apache-2.0 | `hooks/token-weather.mjs`, `statusline/st-statusline.sh` (third line) | `licenses/claude-code-playground.Apache-2.0.txt` |
 | claude-powerline theme colors | Copyright (c) 2025 Owloops | MIT | `statusline/themes.json` | `licenses/claude-powerline.MIT.txt` |
+| hallmark | Copyright (c) 2026 Hallmark contributors | MIT | `skills/st-hallmark` | `licenses/hallmark.MIT.txt` |
 
 ## Changes made by Stratum (Apache-2.0 section 4(b))
 
 - **impeccable, frontend-design, ui-ux-pro-max, graphify skill:** renamed to `st-*` skill names and
   given Stratum's navigation and reporting rules. The design guidance itself is unchanged.
+- **hallmark:** renamed to `st-hallmark` and given `disable-model-invocation: true`. Nothing else changed.
 - **Token Weather:** the mod no longer draws. It writes the auto-compact threshold and mean growth
   to `.stratum/weather.json`, and the statusline draws the forecast as its third line, in the
   statusline theme, with a fill bar instead of the turn chart and an estimate of turns left.

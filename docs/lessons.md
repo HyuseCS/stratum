@@ -280,3 +280,35 @@
 
 - What happened: Team rule 2 said "merge its branch" and rule 4 said "Never merge". In live T012 worker-t913 read rule 2 as the teammate case and merged without asking. 823708e reworded rule 4 to "Never merge into the base branch and never push." The same run showed the brief had no plugin root. The contract had the old rule 4 text.
 - Rule: A rule in the brief that forbids an action names the target it forbids, test S1 asserts the whole rule 4 text, and a change to a brief line changes contracts/script.md section 3 in the same commit.
+
+## 2026-10-26: 009-design-lane
+
+### L38. A routing line with no place in the sequence was skipped for Quick
+
+- What happened: `skills/st/SKILL.md` said "Say it in one line" and did not say when. In 2 of 2 live runs of `fix the header spacing on the home page`, the Quick lane ran with no `Lane:` line (research R15). Change 001 (`42d7b06`) moved the line to before the first lane skill or agent.
+- Rule: A routing rule that prints a line states where in the sequence the line comes, and a phrase check asserts that sentence in the skill.
+
+### L39. A skill that described a script's output let the agent reword it
+
+- What happened: `skills/st-status/SKILL.md` said "show its lines", so the live run wrote its own sentence about `puppeteer-core` instead of the script's line (research R15, L2). Change 001 (`42d7b06`) changed the step to "print its lines word for word".
+- Rule: A skill step that shows a script's output says "word for word", and a phrase check asserts those words.
+
+### L40. A repeated check step that said "again" lost its scope
+
+- What happened: The fix-round step of `skills/st-design/SKILL.md` said "run audit and critique again", but step 3 said "critique in full". Round 2 of the `old` run ran only the detector, tests and screenshots (research R15). Change 001 (`42d7b06`) points the step back to step 3 and says "in full".
+- Rule: A step that repeats a check names the full scope of that check again, and a phrase check asserts the words "in full" in that step.
+
+### L41. A report line that applies to one mode named no mode
+
+- What happened: Both report lists said "the picks" with no mode. The autonomous run (L5) printed a Picks line, but the picks belong to the new-look mode only (research R15). Change 001 (`42d7b06`) added the mode to the picks line and a sentence that the autonomous report has no picks.
+- Rule: A report line that applies to one mode names that mode in the same line, and a phrase check asserts the words.
+
+### L42. An agent kept its before screenshots in /tmp
+
+- What happened: The `st-design` agent copied the old screenshots to `/tmp/sched-before/` before a rebuild (research R15, L4). `agents/st-design.md` named no folder for files that outlive a build. Change 001 (`42d7b06`) made the engine's Before step keep them in `.hallmark/before/`.
+- Rule: An agent text names the folder for every file it keeps between runs, and a phrase check asserts that rule.
+
+### L43. A vendored skill's description let other lanes load it
+
+- What happened: The upstream `st-hallmark` description says "Use when the user asks to build or design something new", so Fast, Full, Quick or `st-build` could load it by itself. Plan validation (F7) found it. D22 set `disable-model-invocation: true` in the copy, and the copy check asserts that line (negative control N10).
+- Rule: A vendored skill copy that another lane could load by description has `disable-model-invocation: true` in its frontmatter, and a copy check asserts that line.

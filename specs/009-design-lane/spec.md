@@ -6,7 +6,7 @@
 
 **Status**: Draft
 
-**Input**: User description: "GitHub issue #49 on HyuseCS/stratum: a Design lane, a creative, non-generic design step for screen work. Today `st-build` loads `st-ui-ux` before a screen task, and the output is generic: a keyword search gives the same category default each time, and nothing checks the result. The lane makes the project's design file with the user, builds screens from it with hallmark as the new-look engine, and checks them before the user sees them." Decisions D1 to D19 are in `decisions.md` (the Q and O codes start at Q5 and O3, after the codes in #49). Wiring Fast and Full to call the lane is in #51 (D10). Browser tools for page checks and e2e tests are in #52.
+**Input**: User description: "GitHub issue #49 on HyuseCS/stratum: a Design lane, a creative, non-generic design step for screen work. Today `st-build` loads `st-ui-ux` before a screen task, and the output is generic: a keyword search gives the same category default each time, and nothing checks the result. The lane makes the project's design file with the user, builds screens from it with hallmark as the new-look engine, and checks them before the user sees them." Decisions D1 to D28 are in `decisions.md` (the Q and O codes start at Q5 and O3, after the codes in #49). Wiring Fast and Full to call the lane is in #51 (D10). Browser tools for page checks and e2e tests are in #52.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -15,8 +15,8 @@
 The user asks for a new look, or for a new page or screen in a project with no look yet. The
 orchestrator grills the user, one question at a time with a recommended answer, until the design
 tree is empty. The first branches are the North Star, the overview voice, color character,
-elevation, components, UX (density, how a user moves through the screens), and the audience, use
-and tone (D12, D13). The answers become the project's design file, and the user confirms it.
+elevation, components, UX (density, how a user moves through the screens), and the audience, use,
+tone, material and theme (D12, D13, D20, D23). The answers become the project's design file, and the user confirms it.
 Then the lane builds one reference screen from the file, runs the checks and fixes (FR-008), and
 shows the user the screenshots and its picks (theme, type, palette, structure). The user says
 yes, gives changes, or asks for a different direction. On yes, the design file and the screen are
@@ -37,8 +37,10 @@ passed. Say yes and see the file and the screen committed.
 2. **Given** a confirmed design file, **When** the lane builds the reference screen, **Then** the
    screen follows the file, passes the checks of FR-008 or lists what is still open after 2 fix
    rounds, and the user sees screenshots and the picks.
-3. **Given** the gate after the build, **When** the user asks for changes or a different
-   direction, **Then** the lane makes them, runs the checks again, and shows the gate again.
+3. **Given** the gate after the build, **When** the user asks for changes, **Then** the lane
+   makes them, runs the checks again, and shows the gate again. **When** the user asks for a
+   different direction, **Then** the lane goes back to the theme branch and the design file
+   confirm, then builds, checks and shows the gate again (D24).
 4. **Given** the user says yes at the gate, **When** the lane ends, **Then** the design file and
    the reference screen are committed, and nothing behind the screen (FR-012) was built.
 
@@ -83,7 +85,7 @@ items before the build.
 
 The user asks for a new page in the existing look, but the project has no design file. The lane
 reads the current look from the code as a draft, then grills the user as in User Story 1, and the
-user confirms the file (D11). Then it builds the page as in User Story 2. This happens once per
+user confirms the file (D11, D12, D25). Then it builds the page as in User Story 2. This happens once per
 project: the next request finds the file.
 
 **Why this priority**: Many existing projects have a look in their code but no file. The design
@@ -139,8 +141,12 @@ stop at the start with the install command, and `st-status` name it.
   report; it does not loop.
 - The request needs work behind the screen (data, API, sign-in): the lane builds the screen with
   placeholder data of the same shape and names the work behind it for Fast or Full (FR-012).
+- From `/stratum:st`, a new page that also needs API, data or sign-in work goes to Full, not to the lane (D26).
 - The user has set `TOGETHER_API_KEY`: hallmark may generate images, and the report says so. With
   no key, the lane never asks for one (FR-016).
+- A framework project (a dev server renders the page) with no dev server answering on its port:
+  the lane stops before any work, like a missing tool, and tells the user to start it with the
+  exact command. The lane never starts a dev server; the user does.
 - A new screen inside a bigger Full or Fast feature: this feature does not route it to the lane;
   the user calls `/stratum:st-design` (D10, #51).
 - An existing design file that the user wants to change: out of scope here; it is a new-look
@@ -153,23 +159,26 @@ stop at the start with the install command, and `st-status` name it.
 - **FR-001**: The Design lane MUST be its own lane, callable as `/stratum:st-design`, with two
   modes: new look (User Story 1) and autonomous (User Stories 2 and 3).
 - **FR-002**: `/stratum:st` MUST send a new look, or a new page or screen, to the Design lane,
-  say so in one line, and accept the user's override. A new page or screen is one the project
-  does not have yet. A change to a screen that exists, including a new component on it, MUST keep
-  its current lane (Fast, or Quick for a small fix).
+  and accept the user's override. Every lane, Quick included, MUST say the lane in one line before
+  its first skill or agent starts. A new page or screen is one the project does not have yet, and the screen is the whole task. A
+  change to a screen that exists, including a new component on it, MUST keep its current lane
+  (Fast, or Quick for a small fix).
 - **FR-003**: The lane MUST make a missing design file with the user through the `st-grill`
   method: one question at a time, each with a recommended answer, until the frontier is empty.
   The first branches MUST be North Star, overview voice, color character, elevation, components
-  and UX; in the new-look mode also audience, use and tone.
+  and UX; in the new-look mode also audience, use, tone, material and theme (the user picks one of 3 themes
+  hallmark deals, D20).
 - **FR-004**: The design file MUST be written by `st-impeccable document` from the grill's
   answers. The lane MUST give it those answers, so it does not ask its own questions again. The
   user MUST read and confirm the file before any screen is built.
-- **FR-005**: With styled screens and no design file, the lane MUST start the grill from the look
+- **FR-005**: With styled screens (a tracked file sets a color or a font) and no design file, the lane MUST start the grill from the look
   it reads in the code.
-- **FR-006**: The new-look mode MUST stop for the user exactly twice: once to confirm the design
-  file (FR-004), and once at the gate after the reference screen is built and checked (FR-008).
-  At the gate the user sees screenshots and the picks and can answer yes, changes, or a different
-  direction. Changes or a different direction MUST lead to a new build, new checks and the same
-  gate again. Only yes ends the mode.
+- **FR-006**: The new-look mode MUST stop for the user at two kinds of stop per direction: once
+  to confirm the design file (FR-004), and at the gate after each build and check of the
+  reference screen (FR-008). At the gate the user sees screenshots and the picks and can answer yes,
+  changes, or a different direction. Changes MUST lead to a new build, new checks and the same
+  gate again. A different direction MUST go back to the theme branch and the design file confirm,
+  then to a new build, new checks and the gate (D24). Only yes ends the mode.
 - **FR-007**: The autonomous mode MUST ask nothing when the request and the design file give all
   three of: the page's job (what the page is for), its visitor (who uses it), and its main action
   (the one thing the visitor must do there). When one is missing, it MUST ask once, before the
@@ -178,8 +187,10 @@ stop at the start with the install command, and `st-status` name it.
 - **FR-008**: Before the lane shows a screen to the user, the screen MUST go through these checks,
   each owning one concern: hallmark's lint (generic patterns in the code), hallmark's render check
   (layout at each width), `st-impeccable audit` (accessibility and speed), `st-impeccable
-  critique` (UX). The duplicates (`impeccable detect`, hallmark's own reviewer, the responsive part
-  of the audit) MUST NOT run. A check passes when it reports no finding at its two highest severity levels; lower
+  critique` (UX). Critique runs in full, with its own detector, split by rule: for each rule that
+  hallmark's lint also checks (the same or partly the same), hallmark's lint owns it and the
+  detector MUST ignore it; the detector owns only the rules hallmark's lint lacks (D21). Hallmark's
+  own reviewer and the responsive part of the audit MUST NOT run. A check passes when it reports no finding at its two highest severity levels; lower
   findings go in the report. One fix round is: fix the findings that block a pass, then run all
   four checks again. The lane MUST run at most 2 fix rounds and then report what still blocks a
   pass as open.
@@ -202,13 +213,14 @@ stop at the start with the install command, and `st-status` name it.
   again, and report again before it commits.
 - **FR-015**: The lane MUST check node, `puppeteer-core` and a Chrome or Chromium browser at the
   start, and stop before any work with the exact install command when one is missing. `st-status`
-  (and so `st-init`) MUST check the same tools.
+  (and so `st-init`) MUST check the same tools and print the script's lines word for word.
 - **FR-016**: The lane MUST NOT ask for `TOGETHER_API_KEY` or turn image generation on. It MUST
   say in the report when hallmark used a key the user set.
 - **FR-017**: Hallmark MUST be vendored like impeccable: a pinned entry in `vendor.lock`, its
   license kept, and upstream changes listed by `st-sync`.
 - **FR-018**: `st-impeccable` MUST stay as it is (D1). The lane MUST NOT edit vendored impeccable
-  or hallmark files.
+  or hallmark files. The vendored hallmark copy changes only its frontmatter: the `st-hallmark`
+  name and `disable-model-invocation: true` (D22).
 
 ### Key Entities
 
