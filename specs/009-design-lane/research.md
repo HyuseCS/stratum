@@ -397,7 +397,8 @@ No control turned another row red, except N1 as named.
     screenshots, not a new full critique. Gate yes, commit `39f4677` held only the 8 reported
     paths, nothing under `.hallmark/` or `.impeccable/critique/`, ignores empty.
   - Each run: `curl -sf localhost:8400/health` failed (exit 7).
-  - SC-001 pick between `base` and `site` screenshots: pending (user).
+  - SC-001 pick between `base` and `site` screenshots, 2026-10-26: the user picked `site`
+    (`site/.hallmark/shots/index-1440-full.png`), the lane's version. SC-001 passes.
 - L4 and L5 ran on 2026-10-25 on the PC, headless (`claude -p`, replies by `--resume`,
   `--permission-mode bypassPermissions`), in `~/Desktop/design-runs/old` (the lane run that got
   yes and commit `39f4677`, so it has a committed `DESIGN.md`):
