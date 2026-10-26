@@ -87,9 +87,9 @@ Expected: no impeccable diff; the two counts match (178 at `7ec8682`). Each file
 | Id | Scenario | Steps | Expected |
 |----|----------|-------|----------|
 | L1 | SC-005 tool missing | before `npm i -g puppeteer-core`, run `/stratum:st-design a pricing page` in the scratch site | exactly the line `missing: puppeteer-core. Install: npm i -g puppeteer-core`, no file changed (`git status` empty) |
-| L2 | `st-status` names it | same state, `/stratum:st-status` | the same line under Tools |
+| L2 | `st-status` names it | same state, `/stratum:st-status` | the line `missing: puppeteer-core. Install: npm i -g puppeteer-core`, word for word, under Tools |
 | L3 | SC-001 new look | in an empty scratch site, the brief "a booking page for a pottery studio in Porto", built once the old way with `/stratum:st-ui-ux build <brief>, as a plain index.html` in `$SCRATCH/base` (the skill `st-build` loads at step 5, `agents/st-build.md:44`; `st-fast` stops in an empty repo, because it needs a spec in `specs/`), once with `/stratum:st-design` in `$SCRATCH/site` | the grill asks one question per message, the theme branch shows 3 themes, `DESIGN.md` is shown for confirm before any screen; the gate shows screenshots and picks; the user picks the lane's version from the two sets of screenshots |
-| L4 | SC-002 autonomous | in L3's site after yes, `/stratum:st-design a class schedule page for adult beginners who book a class` | 0 questions; report has screenshots, 4 check results, fixed, open, assumed answers, tests; `.impeccable/config.local.json` has none of the added ids after the run. Then answer "make the schedule denser" after the report: a new build, all four checks and a new report, and no commit before your OK (FR-014) |
+| L4 | SC-002 autonomous | in L3's site after yes, `/stratum:st-design a class schedule page for adult beginners who book a class` | 0 questions; report has screenshots, 4 check results, fixed, open, assumed answers, tests, no Picks line; `.impeccable/config.local.json` has none of the added ids after the run. Then answer "make the schedule denser" after the report: a new build, all four checks and a new report, and no commit before your OK (FR-014) |
 | L5 | SC-003 vague | same site, `/stratum:st-design another page` | exactly 1 message listing the missing job, visitor and main action; 0 messages after the answer until the report |
 | L6 | US3 code look | a scratch site with a styled, committed `index.html` and no `DESIGN.md`, `/stratum:st-design a contact page` | grill answers start from the code's colors and fonts; confirm; then the page; a second request runs no grill |
 | L7 | dev server stop | a scratch Vite project with no server running, `/stratum:st-design a page` | the start-it line with `npm run dev`; no file changed |
@@ -98,4 +98,4 @@ Expected: no impeccable diff; the two counts match (178 at `7ec8682`). Each file
 
 For each live run, also check: no live server left (`curl -sf localhost:8400/health` fails), the
 commit holds only the reported paths (`git log -1 --name-only --format=`), and nothing under
-`.hallmark/` or `.impeccable/critique/` is committed.
+`.hallmark/` or `.impeccable/critique/` is committed, and no screenshot is under `/tmp`.

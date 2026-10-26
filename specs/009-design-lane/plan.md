@@ -40,8 +40,8 @@ Vendored hallmark 2.0.0 (`nutlope/hallmark@7ec8682`, MIT). Its render tier needs
 (D1). No new package in Stratum.
 
 **Storage**: Files in the user's project: `DESIGN.md`, `.impeccable/design.json`, the screen,
-`tokens.css`, `base.css`, component tests. Untracked: `.hallmark/`, `.impeccable/critique/`
-(research R9).
+`tokens.css`, `base.css`, component tests. Untracked: `.hallmark/` (its `shots/` and, after a
+change to a built screen, `before/` folders), `.impeccable/critique/` (research R9).
 
 **Testing**: `bash tests/test_design_check.sh` (new, the script's 12 cases; K3, K8, K9 and K10 run
 on Linux only, because on macOS or Windows the fixed browser paths find an installed Chrome),

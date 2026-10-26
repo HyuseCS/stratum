@@ -177,7 +177,8 @@ fixture HTML, outside the repo.
   `capture.mjs <url>` (`imagery.md:56`, `SKILL.md:135`) only when the agent reports them as
   written.
 - Not committed: `.hallmark/` (screenshots, `log.json`, `preflight.json`; hallmark writes
-  `.hallmark/.gitignore` for `shots/`, `sloplint-render.mjs:61-64`), `.impeccable/critique/`.
+  `.hallmark/.gitignore` for `shots/`, `before/`, `before.json`, `before.txt` and `compare.html`,
+  `sloplint-render.mjs:61-64`, `sloplint.mjs:4398`), `.impeccable/critique/`.
 - The engine's artifact names (`.hallmark/`, `tokens.css`, `base.css`, the screenshot folder) are
   written only in `skills/st-design/engine.md`. The skill and the agent say "the engine's
   generated files and screenshot folder (engine.md)", so the FR-010 count stays at one file.
@@ -266,8 +267,8 @@ tool check and the lane).
   already has the orchestrator run the `st-impeccable` skill on changed screens. Both checks are
   read-only, so the orchestrator still does not implement.
 - Fix round: the skill collects the blocking findings from the agent's report and its own two
-  checks, starts `st-design` again with them, then runs audit and critique again. The skill keeps
-  the round count (at most 2).
+  checks, starts `st-design` again with them, then runs step 3 again: audit, and `critique` in full,
+  not only its detector. The skill keeps the round count (at most 2).
 - Live server: critique's overlay step starts `impeccable live-server --background` when a browser
   can be driven (`critique.md:79`), each round, and injects the overlay through the browser.
   `live-server stop` takes no port (`impeccable live-server --help`). A bare `stop` also runs
@@ -457,7 +458,15 @@ No control turned another row red, except N1 as named.
     agent. The override works when a spec exists.
   - `fix the header spacing on the home page`, run again: the `st-quick` skill and agent, and
     again no `Lane:` line (2 of 2 runs). Open: the Quick route skips the say line that
-    `skills/st/SKILL.md` section 1 asks for.
+    `skills/st/SKILL.md` section 1 asks for. Change 001 (`42d7b06`) fixed the wording after this
+    run: the say line now comes before the first lane skill or agent, Quick too. The live behavior
+    is not re-run.
+- Change 001 (`42d7b06`, `specs/009-design-lane/changes/001-live-run-gaps.md`) also fixes four
+  small gaps from the live runs above: the L2 check line (`st-status` prints the script's lines
+  word for word), the L5 picks line (the autonomous report has no picks), the old run's round 2
+  critique (a fix round runs `critique` in full) and the L4 `/tmp` before-shots (the engine's
+  Before step keeps them in `.hallmark/before/`). None is re-run live. At `42d7b06`,
+  `tests/test_design_lane.sh` prints 33 ok and exits 0.
 - FR-008 cap (open after 2 fix rounds, no loop): seen in L3 `site`. After round 2 it went to the
   gate with 4 P1 open and offered changes or yes.
 - T019 stays open until the live runs are recorded here.

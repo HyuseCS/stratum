@@ -62,7 +62,7 @@ The lane stores no data of its own. These are the files and messages it reads an
 
 ## Lane report
 
-Closed list (FR-009 plus FR-012, FR-013, FR-016, D21): screenshots (paths), the picks, each
-check's result, fixed, open, assumed answers, component tests run (or "UI behavior not tested: no
-UI test runner"), unmapped detector rules, the key line, where the detector ignores were and that
-they are gone, the work behind the screen for Fast or Full.
+Closed list (FR-009 plus FR-012, FR-013, FR-016, D21): screenshots (paths), the picks (new-look
+mode only), each check's result, fixed, open, assumed answers, component tests run (or "UI
+behavior not tested: no UI test runner"), unmapped detector rules, the key line, where the detector
+ignores were and that they are gone, the work behind the screen for Fast or Full.

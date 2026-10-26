@@ -31,3 +31,8 @@ Inspect (2026-10-25). The user said "once it is good you can build" and was away
 - D23 (inspect F11): FR-003 gains "material" as a first branch of the new-look grill: hallmark asks for material, audience, use and tone (research R7). Rejected: leaving material out of the spec.
 - D24 (inspect F12): At the new-look gate, "a different direction" goes back to the theme branch and the DESIGN.md confirm, then to a new build and the gate. "Changes" goes straight to a new build and the gate. Each stop is still one of D14's two kinds. Rejected: a new direction with no new confirm.
 - D25 (inspect F16): D12 replaces the question part of D11 (document's 2 rounds of 3). D11 keeps only "draft from the code, then the user confirms".
+
+Change 001 and review (2026-10-26). The user decided these:
+- D26 (accepted by the user 2026-10-26): routing guard in `skills/st/SKILL.md`: "A new page that also needs API, data or sign-in work goes to Full."
+- D27 (change 001 G4, user O1, 2026-10-26): before screenshots are kept in the engine's before folder, `.hallmark/before/`, not deleted. Rejected: deleting them after the report.
+- D28 (accepted by the user 2026-10-26): the user reviewed and accepted D22 to D25. D22 confirmed: autonomous mode reads the engine skill as a file through `engine.md`, so `disable-model-invocation` does not affect it.

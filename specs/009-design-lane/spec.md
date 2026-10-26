@@ -158,9 +158,10 @@ stop at the start with the install command, and `st-status` name it.
 - **FR-001**: The Design lane MUST be its own lane, callable as `/stratum:st-design`, with two
   modes: new look (User Story 1) and autonomous (User Stories 2 and 3).
 - **FR-002**: `/stratum:st` MUST send a new look, or a new page or screen, to the Design lane,
-  say so in one line, and accept the user's override. A new page or screen is one the project
-  does not have yet. A change to a screen that exists, including a new component on it, MUST keep
-  its current lane (Fast, or Quick for a small fix).
+  and accept the user's override. Every lane, Quick included, MUST say the lane in one line before
+  its first skill or agent starts. A new page or screen is one the project does not have yet. A
+  change to a screen that exists, including a new component on it, MUST keep its current lane
+  (Fast, or Quick for a small fix).
 - **FR-003**: The lane MUST make a missing design file with the user through the `st-grill`
   method: one question at a time, each with a recommended answer, until the frontier is empty.
   The first branches MUST be North Star, overview voice, color character, elevation, components
@@ -211,7 +212,7 @@ stop at the start with the install command, and `st-status` name it.
   again, and report again before it commits.
 - **FR-015**: The lane MUST check node, `puppeteer-core` and a Chrome or Chromium browser at the
   start, and stop before any work with the exact install command when one is missing. `st-status`
-  (and so `st-init`) MUST check the same tools.
+  (and so `st-init`) MUST check the same tools and print the script's lines word for word.
 - **FR-016**: The lane MUST NOT ask for `TOGETHER_API_KEY` or turn image generation on. It MUST
   say in the report when hallmark used a key the user set.
 - **FR-017**: Hallmark MUST be vendored like impeccable: a pinned entry in `vendor.lock`, its
