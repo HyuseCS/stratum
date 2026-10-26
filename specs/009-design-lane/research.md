@@ -480,4 +480,14 @@ No control turned another row red, except N1 as named.
   `tests/test_design_lane.sh` prints 33 ok and exits 0.
 - FR-008 cap (open after 2 fix rounds, no loop): seen in L3 `site`. After round 2 it went to the
   gate with 4 P1 open and offered changes or yes.
+- Live routing checks after change 001, 2026-10-26 at `66ca435` on the PC, headless
+  (`claude -p --plugin-dir <repo> --permission-mode plan`, read-only; the bypass mode was
+  blocked), each in a fresh copy of `route`:
+  - `fix the header spacing on the home page`: `Lane: Quick (Screens: one-file visual fix in
+    index.html)...` printed after 2 read-only Bash calls and before any lane skill or agent.
+    The Quick say-line gap is fixed (was 0 of 2).
+  - `add a settings page that saves to the API`: `Lane: Full (new feature with API and data
+    work...)`, not Design. D26 holds. It stopped before `st-define` with one question, since the
+    site spec FR-002 says static HTML and CSS.
+  - Plan mode stops each run at a plan, so no lane skill or agent ran. G1 to G4 are not re-run.
 - All live runs are recorded here, and the 2026-10-26 rerun passed. T019 is done.
