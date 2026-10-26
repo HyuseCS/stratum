@@ -30,8 +30,8 @@ conversation. Do not write them to a decisions file.
 
 ## 2. New look
 
-The user is stopped exactly twice per direction: the design file confirm (step 4) and the gate
-(step 6).
+The user is stopped at two kinds of stop per direction: the design file confirm (step 4), once,
+and the gate (step 6) after each build.
 
 1. Grill with the `st-grill` method: one question per message, each with a recommended answer,
    until the frontier is empty. First branches: audience, use, tone, material, theme, North Star,

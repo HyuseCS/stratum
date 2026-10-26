@@ -27,8 +27,9 @@ vendored skill, its `vendor.lock` entry, its `licenses/` file and `THIRD_PARTY_N
   `command -v google-chrome google-chrome-stable chromium chromium-browser` prints. Then
   `node <engine>/scripts/sloplint.mjs <files> --render --json`, with
   `--url <dev server route>` in a framework project and `--scope app` or `--scope component`
-  where the skill's scope rules say. Lint: findings whose evidence does not start with
-  `[<width>px]`. Render check: findings whose evidence does. Each passes with 0 `FAIL` and 0
+  where the skill's scope rules say.
+  Render check: findings whose evidence starts with `[<width>px]` or whose `gate` is `render`.
+  Lint: every other finding. Each passes with 0 `FAIL` and 0
   `REFLEX`. A `REFLEX` waived by the skill's waiver rules passes and goes in the report.
   `summary.render` other than `ran` fails the render check.
 - **Before.** For a change to a built screen, run the Check command once before the rebuild,

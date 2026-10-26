@@ -24,8 +24,8 @@ fixture HTML, outside the repo.
 
 | Check | Real command | Concern | Pass rule (two highest levels) |
 |-------|--------------|---------|--------------------------------|
-| Lint | `node <st-hallmark>/scripts/sloplint.mjs <files> --render --json [--url <dev server route>]`, findings whose evidence has no `[<width>px]` prefix | generic patterns in the code | 0 `FAIL` and 0 `REFLEX` |
-| Render check | the same run, findings whose evidence starts with `[<width>px]` (`scripts/sloplint-render.mjs:156-201`), widths 320 to 1920 (`:6`) | layout at each width | 0 `FAIL` and 0 `REFLEX`, and `summary.render` is `ran` |
+| Lint | `node <st-hallmark>/scripts/sloplint.mjs <files> --render --json [--url <dev server route>]`, every finding not in the render check | generic patterns in the code | 0 `FAIL` and 0 `REFLEX` |
+| Render check | the same run, findings whose evidence starts with `[<width>px]` (`scripts/sloplint-render.mjs:156-201`) or whose `gate` is `render` (`scripts/sloplint.mjs:4162`, `scripts/sloplint-render.mjs:231-232`), widths 320 to 1920 (`:6`) | layout at each width | 0 `FAIL` and 0 `REFLEX`, and `summary.render` is `ran` |
 | Audit | `st-impeccable audit`, dimensions 1 (Accessibility) and 2 (Performance) only (`reference/audit.md:11`, `:24`) | accessibility and speed | 0 `P0` and 0 `P1` (`audit.md:92-96`) |
 | Critique | `st-impeccable critique` in full, run by the skill in the main session (R13), with the detector's sloplint-owned rules ignored (R12) | UX | 0 `P0` and 0 `P1` in Priority Issues (`critique.md:154`, `:627-636`) |
 
@@ -35,7 +35,7 @@ fixture HTML, outside the repo.
   waived in the stamp with hallmark's rules (`gates.md` section 2) counts as a pass; the report
   lists each waiver.
 - Lint and render check are one run. Running sloplint twice (with and without `--render`) would
-  run the static gates twice. The lane splits the one run by the `[<width>px]` evidence prefix.
+  run the static gates twice. The lane splits the one run by the `[<width>px]` evidence prefix and the `render` gate.
 - `render tier not run: <reason>` (`sloplint.mjs:4383`, `summary.render: "not run: ..."`) is a
   failed render check, never a pass. The start check (R5) makes this rare.
 - Audit dimensions 3 (Theming), 4 (Responsive) and 5 (Implementation Integrity) are not run.

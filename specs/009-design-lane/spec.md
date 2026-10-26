@@ -173,9 +173,9 @@ stop at the start with the install command, and `st-status` name it.
   user MUST read and confirm the file before any screen is built.
 - **FR-005**: With styled screens (a tracked file sets a color or a font) and no design file, the lane MUST start the grill from the look
   it reads in the code.
-- **FR-006**: The new-look mode MUST stop for the user exactly twice per direction: once to
-  confirm the design file (FR-004), and once at the gate after the reference screen is built and
-  checked (FR-008). At the gate the user sees screenshots and the picks and can answer yes,
+- **FR-006**: The new-look mode MUST stop for the user at two kinds of stop per direction: once
+  to confirm the design file (FR-004), and at the gate after each build and check of the
+  reference screen (FR-008). At the gate the user sees screenshots and the picks and can answer yes,
   changes, or a different direction. Changes MUST lead to a new build, new checks and the same
   gate again. A different direction MUST go back to the theme branch and the design file confirm,
   then to a new build, new checks and the gate (D24). Only yes ends the mode.

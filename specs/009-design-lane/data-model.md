@@ -43,8 +43,8 @@ The lane stores no data of its own. These are the files and messages it reads an
 
 | Check | Run by | Pass |
 |-------|--------|------|
-| Lint | agent, the engine's check | 0 `FAIL` and 0 `REFLEX` in findings without a `[<width>px]` prefix |
-| Render check | agent, same run | 0 `FAIL` and 0 `REFLEX` in findings with the prefix, and the render tier ran |
+| Lint | agent, the engine's check | 0 `FAIL` and 0 `REFLEX` in findings outside the render check |
+| Render check | agent, same run | 0 `FAIL` and 0 `REFLEX` in findings with a `[<width>px]` prefix or the `render` gate, and the render tier ran |
 | Audit (dimensions 1 and 2) | skill | 0 `P0` and 0 `P1` |
 | Critique (full) | skill | 0 `P0` and 0 `P1` in Priority Issues |
 

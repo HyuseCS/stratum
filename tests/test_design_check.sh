@@ -6,7 +6,7 @@ trap 'rm -rf "$tmp"' EXIT
 fail=0
 script="$root/scripts/st-design-check.sh"
 git_before=$(git -C "$root" status --porcelain)
-chrome_ok="$tmp/chrome"; : > "$chrome_ok"
+chrome_ok="$tmp/chrome"; : > "$chrome_ok"; chmod +x "$chrome_ok"
 check() { if eval "$2"; then echo "ok   $1"; else echo "FAIL $1"; fail=1; fi; }
 linux_only() { [ "$(uname -s)" = Linux ] || { echo "skip $1 (Linux only)"; return 1; }; }
 mk() { c="$tmp/$1"; bin="$c/bin"; proj="$c/proj"; glob="$c/global"; mkdir -p "$bin" "$proj" "$glob"; }
@@ -62,6 +62,9 @@ linux_only "K10 order" && kcase "K10 order" 1 $'missing: node 18 or later. Insta
 
 mk K12; fake_node 20.11.1; fake_npm; mkdir -p "$c/node_modules/puppeteer-core"
 kcase "K12 parent puppeteer" 0 "design tools: ok" "$proj" "$bin" "$chrome_ok"
+
+mk K13; fake_node 20.11.1; fake_npm; mkdir -p "$glob/puppeteer-core"; tool pacman; : > "$c/chrome"
+linux_only "K13 CHROME_PATH not executable" && kcase "K13 CHROME_PATH not executable" 1 "missing: Chrome or Chromium. Install: sudo pacman -S chromium" "$proj" "$bin" "$c/chrome"
 
 git_after=$(git -C "$root" status --porcelain)
 check "K11 no writes" '[ "$git_before" = "$git_after" ] && [ "$k1" = 0 ]'

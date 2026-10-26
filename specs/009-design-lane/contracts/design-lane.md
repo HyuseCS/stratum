@@ -44,8 +44,8 @@ conversation. Do not write them to a decisions file.
 
 ## 2. New look
 
-The user is stopped exactly twice per direction: the design file confirm (step 4) and the gate
-(step 6).
+The user is stopped at two kinds of stop per direction: the design file confirm (step 4), once,
+and the gate (step 6) after each build.
 
 1. Grill with the `st-grill` method: one question per message, each with a recommended answer,
    until the frontier is empty. First branches: audience, use, tone, material, theme, North Star,
@@ -154,8 +154,9 @@ vendored skill, its `vendor.lock` entry, its `licenses/` file and `THIRD_PARTY_N
   `command -v google-chrome google-chrome-stable chromium chromium-browser` prints. Then
   `node <engine>/scripts/sloplint.mjs <files> --render --json`, with
   `--url <dev server route>` in a framework project and `--scope app` or `--scope component`
-  where the skill's scope rules say. Lint: findings whose evidence does not start with
-  `[<width>px]`. Render check: findings whose evidence does. Each passes with 0 `FAIL` and 0
+  where the skill's scope rules say.
+  Render check: findings whose evidence starts with `[<width>px]` or whose `gate` is `render`.
+  Lint: every other finding. Each passes with 0 `FAIL` and 0
   `REFLEX`. A `REFLEX` waived by the skill's waiver rules passes and goes in the report.
   `summary.render` other than `ran` fails the render check.
 - **Before.** For a change to a built screen, run the Check command once before the rebuild,
@@ -304,7 +305,7 @@ FR-004	skills/st-design/SKILL.md	build nothing until
 FR-004	skills/st-design/SKILL.md	answer its refresh, overwrite
 FR-005	skills/st-design/SKILL.md	read the look from the code (tokens, the global stylesheet, the main
 FR-005	skills/st-design/SKILL.md	start each recommended answer from the draft
-FR-006	skills/st-design/SKILL.md	The user is stopped exactly twice per direction
+FR-006	skills/st-design/SKILL.md	The user is stopped at two kinds of stop per direction: the design file confirm (step 4), once,
 FR-006	skills/st-design/SKILL.md	A different direction: back to step 1 at
 FR-006	skills/st-design/SKILL.md	Gate rounds do not count as fix rounds.
 FR-007	skills/st-design/SKILL.md	Find the page's job, its visitor and its main action
@@ -320,6 +321,8 @@ FR-008	skills/st-design/SKILL.md	Run at most 2 fix rounds.
 FR-008	skills/st-design/SKILL.md	goes in the report as an unmapped
 FR-008	skills/st-design/SKILL.md	then run step 3 again: audit, and `critique` in full, not only its detector.
 FR-008	skills/st-design/engine.md	Each passes with 0 `FAIL` and 0
+FR-008	skills/st-design/engine.md	Render check: findings whose evidence starts with `[<width>px]` or whose `gate` is `render`.
+FR-008	skills/st-design/engine.md	Lint: every other finding.
 FR-008	skills/st-design/engine.md	Do not run its Step 1 questions, its hero review, its finish review,
 FR-008	skills/st-design/engine.md	`summary.render` other than `ran` fails the render check.
 FR-009	skills/st-design/SKILL.md	Screenshots, the picks, each check's result, what was fixed, what is open, every assumed answer,
@@ -366,7 +369,7 @@ Checks beside the phrases:
 Each case runs `"$BASH" <root>/scripts/st-design-check.sh` in a `mktemp -d` project with
 `PATH=<stub dir>` only, so `/usr/bin/chromium` and the real `node` are out of sight. Stub `node`
 prints a version for `-p`. Stub `npm` prints a temp folder for `root -g`. Stub package managers
-are empty executables. Each case asserts the exit code and the whole output. K3, K8, K9 and K10 run on Linux only: on
+are empty executables. Each case asserts the exit code and the whole output. K3, K8, K9, K10 and K13 run on Linux only: on
 macOS or Windows the fixed browser paths find an installed Chrome.
 
 | Case | Setup | Exit | Output |
@@ -382,4 +385,5 @@ macOS or Windows the fixed browser paths find an installed Chrome.
 | K9 dead CHROME_PATH | K1 with `CHROME_PATH` to a missing file, stub `dnf` | 1 | `missing: Chrome or Chromium. Install: sudo dnf install chromium` |
 | K10 order | no `node`, no `npm`, no browser, stub `winget` | 1 | three lines in order node, puppeteer, browser, with the winget commands |
 | K12 parent puppeteer | K2 plus `node_modules/puppeteer-core` in the project's parent folder | 0 | `design tools: ok` |
+| K13 CHROME_PATH not executable | K3 with `CHROME_PATH` to a file without the execute bit | 1 | the K3 line |
 | K11 no writes | after all cases | - | `git -C <root> status --porcelain` is the same as before |

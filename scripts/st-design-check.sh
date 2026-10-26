@@ -38,7 +38,7 @@ if [ "$found" = 0 ]; then
 fi
 
 found=0
-[ -n "${CHROME_PATH:-}" ] && [ -f "$CHROME_PATH" ] && found=1
+[ -n "${CHROME_PATH:-}" ] && [ -x "$CHROME_PATH" ] && found=1
 for b in google-chrome google-chrome-stable chromium chromium-browser; do
   [ "$found" = 1 ] && break
   command -v "$b" >/dev/null 2>&1 && found=1

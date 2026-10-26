@@ -63,6 +63,8 @@ EOF
 
 phrases <<'EOF'
 FR-008 engine.md	skills/st-design/engine.md	Each passes with 0 `FAIL` and 0
+FR-008 engine.md	skills/st-design/engine.md	Render check: findings whose evidence starts with `[<width>px]` or whose `gate` is `render`.
+FR-008 engine.md	skills/st-design/engine.md	Lint: every other finding.
 FR-008 engine.md	skills/st-design/engine.md	Do not run its Step 1 questions, its hero review, its finish review,
 FR-008 engine.md	skills/st-design/engine.md	`summary.render` other than `ran` fails the render check.
 FR-016 engine.md	skills/st-design/engine.md	Never ask for, print or set the key.
@@ -91,7 +93,7 @@ FR-004 SKILL.md	skills/st-design/SKILL.md	build nothing until
 FR-004 SKILL.md	skills/st-design/SKILL.md	answer its refresh, overwrite
 FR-005 SKILL.md	skills/st-design/SKILL.md	read the look from the code (tokens, the global stylesheet, the main
 FR-005 SKILL.md	skills/st-design/SKILL.md	start each recommended answer from the draft
-FR-006 SKILL.md	skills/st-design/SKILL.md	The user is stopped exactly twice per direction
+FR-006 SKILL.md	skills/st-design/SKILL.md	The user is stopped at two kinds of stop per direction: the design file confirm (step 4), once,
 FR-006 SKILL.md	skills/st-design/SKILL.md	A different direction: back to step 1 at
 FR-006 SKILL.md	skills/st-design/SKILL.md	Gate rounds do not count as fix rounds.
 FR-007 SKILL.md	skills/st-design/SKILL.md	Find the page's job, its visitor and its main action
