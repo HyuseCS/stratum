@@ -242,7 +242,7 @@ Bash, no comments, builtins plus `node` and `npm` only. Run from the project roo
 |-------|-----------|-------------------|
 | node | `node -p process.versions.node` gives a major of 18 or more | `missing: node 18 or later. Install: <node command>` |
 | puppeteer | `node_modules/puppeteer-core` or `node_modules/puppeteer` in the project folder or any folder above it (node's lookup, as `sloplint-render.mjs:79-93` uses it), or either under `$(npm root -g)` | `missing: puppeteer-core. Install: npm i -g puppeteer-core` |
-| browser | `$CHROME_PATH` is a file; or `command -v` finds `google-chrome`, `google-chrome-stable`, `chromium` or `chromium-browser`; or one of the macOS and Windows paths of `skills/st-hallmark/scripts/sloplint-render.mjs:7` is a file | `missing: Chrome or Chromium. Install: <browser command>` |
+| browser | `$CHROME_PATH` is an executable file; or `command -v` finds `google-chrome`, `google-chrome-stable`, `chromium` or `chromium-browser`; or one of the macOS and Windows paths of `skills/st-hallmark/scripts/sloplint-render.mjs:7` is an executable file | `missing: Chrome or Chromium. Install: <browser command>` |
 
 - Commands by the first package manager on PATH, in this order:
 
