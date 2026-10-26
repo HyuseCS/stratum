@@ -116,7 +116,7 @@ FR-012 agent	agents/st-design.md	Put placeholder data of the same shape in one f
 FR-013 agent	agents/st-design.md	UI behavior not tested: no UI test runner.
 FR-013 agent	agents/st-design.md	and add no test tool.
 FR-014 agent shots	agents/st-design.md	Save a screenshot outside the screenshot folders `engine.md` names.
-FR-014 agent shots	agents/st-design.md	For a change to a built screen, run the engine's Before step before the rebuild.
+FR-014 agent shots	agents/st-design.md	For a change to a built screen, first run the engine's Before step, before any edit.
 FR-014 SKILL.md	skills/st-design/SKILL.md	Only after the user's yes at the gate (new look) or OK (autonomous)
 FR-014 report	skills/st-design/SKILL.md	report again before any commit
 FR-015 SKILL.md	skills/st-design/SKILL.md	bash <plugin root>/scripts/st-design-check.sh

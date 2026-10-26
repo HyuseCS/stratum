@@ -58,8 +58,8 @@ Impact area: core runtime
   on one line.
 - agents/st-design.md `## Never` (G4) - add the last bullet
   `- Save a screenshot outside the screenshot folders `engine.md` names.`
-- agents/st-design.md:34 step 4 (G4) - add, on one line, the sentence
-  `For a change to a built screen, run the engine's Before step before the rebuild.`
+- agents/st-design.md `## Steps` (G4) - add, on one line before step 1, the sentence
+  `For a change to a built screen, first run the engine's Before step, before any edit.`
   Both agent texts leave out the engine name and its `.hallmark/` folder, so the FR-010
   one-place test stays green.
 
@@ -84,7 +84,7 @@ line and changes the count. Command for all: `bash tests/test_design_lane.sh`.
   - each fix round runs the full critique.
 - G4 - a new group after the `FR-013 agent` rows (before `FR-014 SKILL.md`):
   `FR-014 agent shots	agents/st-design.md	Save a screenshot outside the screenshot folders `engine.md` names.`
-  `FR-014 agent shots	agents/st-design.md	For a change to a built screen, run the engine's Before step before the rebuild.`
+  `FR-014 agent shots	agents/st-design.md	For a change to a built screen, first run the engine's Before step, before any edit.`
   and a new group after the `FR-016 engine.md` rows:
   `FR-014 engine.md	skills/st-design/engine.md	with `--before`. It keeps the old screenshots in `.hallmark/before/`, which is never committed.`
   - no screenshot goes outside the project, and the before screenshots use the engine's own step.

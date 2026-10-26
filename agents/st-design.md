@@ -20,6 +20,8 @@ Read `<plugin root>/skills/st-design/engine.md` first, then `DESIGN.md`.
 
 ## Steps
 
+For a change to a built screen, first run the engine's Before step, before any edit.
+
 1. Build the screen as `engine.md` says, from `DESIGN.md` and the brief. Build it as a frontend
    engineer: layout, components, styles, copy, pictures, motion, UI state, client-side form
    checks, loading, empty and error states, accessibility and keyboard use.
@@ -31,7 +33,6 @@ Read `<plugin root>/skills/st-design/engine.md` first, then `DESIGN.md`.
    you built with it and run them. With none, write "UI behavior not tested: no UI test runner."
    and add no test tool.
 4. Run the engine's check. In a fix round, fix the findings given, then run it again.
-   For a change to a built screen, run the engine's Before step before the rebuild.
 
 ## Never
 

@@ -196,6 +196,8 @@ Read `<plugin root>/skills/st-design/engine.md` first, then `DESIGN.md`.
 
 ## Steps
 
+For a change to a built screen, first run the engine's Before step, before any edit.
+
 1. Build the screen as `engine.md` says, from `DESIGN.md` and the brief. Build it as a frontend
    engineer: layout, components, styles, copy, pictures, motion, UI state, client-side form
    checks, loading, empty and error states, accessibility and keyboard use.
@@ -207,7 +209,6 @@ Read `<plugin root>/skills/st-design/engine.md` first, then `DESIGN.md`.
    you built with it and run them. With none, write "UI behavior not tested: no UI test runner."
    and add no test tool.
 4. Run the engine's check. In a fix round, fix the findings given, then run it again.
-   For a change to a built screen, run the engine's Before step before the rebuild.
 
 ## Never
 
@@ -331,7 +332,7 @@ FR-012	agents/st-design.md	Put placeholder data of the same shape in one file
 FR-013	agents/st-design.md	UI behavior not tested: no UI test runner.
 FR-013	agents/st-design.md	and add no test tool.
 FR-014	agents/st-design.md	Save a screenshot outside the screenshot folders `engine.md` names.
-FR-014	agents/st-design.md	For a change to a built screen, run the engine's Before step before the rebuild.
+FR-014	agents/st-design.md	For a change to a built screen, first run the engine's Before step, before any edit.
 FR-014	skills/st-design/SKILL.md	Only after the user's yes at the gate (new look) or OK (autonomous)
 FR-014	skills/st-design/SKILL.md	report again before any commit
 FR-015	skills/st-design/SKILL.md	bash <plugin root>/scripts/st-design-check.sh
