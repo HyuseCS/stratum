@@ -246,8 +246,9 @@ dependency.
     `st-quick` and `st-full` write. The other phases do nothing.
 - **D21. Reply label.** On each prompt, `st-phase` reads `phase` and adds one line: start the
   reply with `[Full lane | <Phase>]`, `[Fast lane]` or `[Quick lane]`. The hook sets `phase` to
-  `fast` or `quick` when st-fast or st-quick starts. The `st-close` agent (Full Close and the
-  Fast-lane drift step) and the `st-quick` agent set `phase` to `done` at the end of their run.
+  `fast` or `quick` when st-fast or st-quick starts.
+  The `st-close` skill (Full Close) and the `st-fast` skill set `phase` to `done` after their last commit.
+  The `st-quick` agent does it at the end of its run.
   With no lane running the hook adds nothing, and the session-start line says to
   start with `[Orchestrator]`.
 - **D22. Verify script (`scripts/st-verify.sh`).** The orchestrator's check after a build: run

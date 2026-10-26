@@ -172,10 +172,15 @@ class PhaseHookTest(unittest.TestCase):
                 text = f.read()
             for stale in ("Write `lane`", "Set `lane`", "Set `phase`"):
                 self.assertNotIn(stale, text, name)
-        for name in ("st-close", "st-quick"):
-            with open(os.path.join(ROOT, "agents", name + ".md")) as f:
-                text = f.read()
-            self.assertIn("set `phase` to `done` in `<project>/.stratum/state.json`", text, name)
+        phrase = "set `phase` to `done` in `<project>/.stratum/state.json`"
+        with open(os.path.join(ROOT, "agents", "st-quick.md")) as f:
+            self.assertIn(phrase, f.read())
+        with open(os.path.join(ROOT, "agents", "st-close.md")) as f:
+            self.assertNotIn(phrase, f.read())
+        with open(os.path.join(ROOT, "skills", "st-close", "SKILL.md")) as f:
+            self.assertIn(phrase, f.read())
+        with open(os.path.join(ROOT, "skills", "st-fast", "SKILL.md")) as f:
+            self.assertIn(phrase, f.read())
 
     def test_write_replaces_file_atomically(self):
         self.write_state(feature_directory="specs/001-x", phase="define", lane="full")

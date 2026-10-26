@@ -154,4 +154,13 @@ lessons design	DESIGN.md	The Plan and Inspect agents read the file at the next f
 lessons readme	readme	cites the lessons that apply
 EOF
 
+phrases <<'EOF'
+H1 st-close constitution	agents/st-close.md	constitution.md`, if present
+H2 st-close skill phase	skills/st-close/SKILL.md	After the commit lands, set `phase` to `done` in `<project>/.stratum/state.json`. Keep the other keys.
+H2 st-close never	agents/st-close.md	`.stratum/constitution.md`, `.stratum/` state, or plugin files.
+H2 readme phase	readme	the `st-close` skill (Full Close) and the `st-fast` skill set `phase` to `done` after their last commit
+H2 design phase	DESIGN.md	The `st-close` skill (Full Close) and the `st-fast` skill set `phase` to `done` after their last commit.
+EOF
+check "H2 st-close agent writes no phase" '! grep -qF -- "set \`phase\` to \`done\`" "$root/agents/st-close.md"'
+
 exit $fail

@@ -17,7 +17,7 @@ The orchestrator passes absolute paths: plugin root, project root, feature dir (
 whether to produce the gap report, and the base for the shortcut list.
 
 Read:
-- `<project>/.stratum/constitution.md`
+- `<project>/.stratum/constitution.md`, if present
 - `<feature>/spec.md`, `plan.md`, `tasks.md`, `data-model.md`, `contracts/`, `quickstart.md`,
   and `changes/` if present.
 - The feature's commits (`git log`, `git diff` against the base) to see what was built.
@@ -63,14 +63,9 @@ Changes to the constitution or the harness are proposals in your report. Never a
 From the project root, run `bash <plugin root>/scripts/st-shortcuts.sh <base>`. Report the rows
 as printed. Do not fix them.
 
-### 5. Done
-
-As the last step, set `phase` to `done` in `<project>/.stratum/state.json`. Keep the other keys.
-
 ## Never
 
-- Edit product code, tests, `.stratum/constitution.md`, `.stratum/` state (apart from `phase` in
-  `.stratum/state.json`, step 5), or plugin files.
+- Edit product code, tests, `.stratum/constitution.md`, `.stratum/` state, or plugin files.
 - Run `git add` or `git commit`.
 
 ## Report

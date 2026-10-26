@@ -114,6 +114,7 @@ the engine's screenshot folder or `.impeccable/critique/`.
 Screenshots, the picks, each check's result, what was fixed, what is open, every assumed answer,
 the component tests run, unmapped detector rules, the image key line, the ignores line, and the
 work behind the screen for Fast or Full. The autonomous mode's report has no picks.
+A check whose tool did not run is marked `not run` in the report and does not pass.
 
 ## Never
 
@@ -327,6 +328,7 @@ FR-008	skills/st-design/engine.md	Do not run its Step 1 questions, its hero revi
 FR-008	skills/st-design/engine.md	`summary.render` other than `ran` fails the render check.
 FR-009	skills/st-design/SKILL.md	Screenshots, the picks, each check's result, what was fixed, what is open, every assumed answer,
 FR-009	skills/st-design/SKILL.md	The autonomous mode's report has no picks.
+FR-009	skills/st-design/SKILL.md	A check whose tool did not run is marked `not run` in the report and does not pass.
 FR-009	agents/st-design.md	Fixed, open, assumed answers.
 FR-009	agents/st-design.md	- The picks, in the new-look mode only.
 FR-011	agents/st-design.md	layout, components, styles, copy, pictures, motion, UI state, client-side form

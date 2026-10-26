@@ -100,6 +100,7 @@ the engine's screenshot folder or `.impeccable/critique/`.
 Screenshots, the picks, each check's result, what was fixed, what is open, every assumed answer,
 the component tests run, unmapped detector rules, the image key line, the ignores line, and the
 work behind the screen for Fast or Full. The autonomous mode's report has no picks.
+A check whose tool did not run is marked `not run` in the report and does not pass.
 
 ## Never
 
