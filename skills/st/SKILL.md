@@ -27,7 +27,7 @@ The highest area wins:
 
 A new page that also needs API, data or sign-in work goes to Full.
 
-Say it in one line: `Lane: <lane> (<area>: <why>). Say "full", "fast", "quick" or "design" to override.`
+Before the first lane skill or agent starts, Quick too, say it in one line: `Lane: <lane> (<area>: <why>). Say "full", "fast", "quick" or "design" to override.`
 Then run the lane. If the user overrides, use their lane.
 
 ## 2. Run the lane

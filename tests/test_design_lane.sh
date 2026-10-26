@@ -67,6 +67,7 @@ FR-008 engine.md	skills/st-design/engine.md	Do not run its Step 1 questions, its
 FR-008 engine.md	skills/st-design/engine.md	`summary.render` other than `ran` fails the render check.
 FR-016 engine.md	skills/st-design/engine.md	Never ask for, print or set the key.
 FR-016 engine.md	skills/st-design/engine.md	Test only `[ -n "${TOGETHER_API_KEY:-}" ]`.
+FR-014 engine.md	skills/st-design/engine.md	with `--before`. It keeps the old screenshots in `.hallmark/before/`, which is never committed.
 EOF
 
 phrases <<'EOF'
@@ -77,6 +78,7 @@ FR-001 SKILL.md	skills/st-design/SKILL.md	A design file is a root `DESIGN.md` wi
 FR-001 SKILL.md	skills/st-design/SKILL.md	is not a design file: say
 FR-002 st	skills/st/SKILL.md	| New look, page or screen | a new look, or a page or screen the project does not have yet, when the screen is the whole task | Design |
 FR-002 st	skills/st/SKILL.md	Say "full", "fast", "quick" or "design" to override.
+FR-002 st	skills/st/SKILL.md	Before the first lane skill or agent starts, Quick too, say it in one line:
 FR-002 st	skills/st/SKILL.md	- **Design:** run `/stratum:st-design`.
 FR-002 st	skills/st/SKILL.md	A new page that also needs API, data or sign-in work goes to Full.
 FR-002 st	skills/st/SKILL.md	picks the lane (Full, Fast, Quick, Design)
@@ -103,18 +105,24 @@ FR-008 SKILL.md	skills/st-design/SKILL.md	so this form leaves
 FR-008 SKILL.md	skills/st-design/SKILL.md	Never a bare `stop`
 FR-008 SKILL.md	skills/st-design/SKILL.md	Run at most 2 fix rounds.
 FR-008 SKILL.md	skills/st-design/SKILL.md	goes in the report as an unmapped
+FR-008 SKILL.md	skills/st-design/SKILL.md	then run step 3 again: audit, and `critique` in full, not only its detector.
 FR-009 SKILL.md	skills/st-design/SKILL.md	Screenshots, the picks, each check's result, what was fixed, what is open, every assumed answer,
+FR-009 SKILL.md	skills/st-design/SKILL.md	The autonomous mode's report has no picks.
 FR-009 agent	agents/st-design.md	Fixed, open, assumed answers.
+FR-009 agent	agents/st-design.md	- The picks, in the new-look mode only.
 FR-011 agent	agents/st-design.md	layout, components, styles, copy, pictures, motion, UI state, client-side form
 FR-012 agent	agents/st-design.md	Do not build what is behind the screen: API calls, data fetch and save,
 FR-012 agent	agents/st-design.md	Put placeholder data of the same shape in one file
 FR-013 agent	agents/st-design.md	UI behavior not tested: no UI test runner.
 FR-013 agent	agents/st-design.md	and add no test tool.
+FR-014 agent shots	agents/st-design.md	Save a screenshot outside the screenshot folders `engine.md` names.
+FR-014 agent shots	agents/st-design.md	For a change to a built screen, run the engine's Before step before the rebuild.
 FR-014 SKILL.md	skills/st-design/SKILL.md	Only after the user's yes at the gate (new look) or OK (autonomous)
 FR-014 report	skills/st-design/SKILL.md	report again before any commit
 FR-015 SKILL.md	skills/st-design/SKILL.md	bash <plugin root>/scripts/st-design-check.sh
 FR-015 SKILL.md	skills/st-design/SKILL.md	Never start a dev server.
 FR-015 st-status	skills/st-status/SKILL.md	Design lane: run `bash <plugin root>/scripts/st-design-check.sh`
+FR-015 st-status	skills/st-status/SKILL.md	from the project root and print its lines word for word:
 FR-016 SKILL.md	skills/st-design/SKILL.md	Ask for an image key or turn on image generation.
 FR-018 SKILL.md	skills/st-design/SKILL.md	Edit a vendored file under `skills/st-impeccable/` or the engine's skill folder.
 FR-018 agent	agents/st-design.md	Edit a vendored file under `skills/st-impeccable/` or the engine's skill folder.

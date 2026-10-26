@@ -82,8 +82,9 @@ The user is stopped exactly twice per direction: the design file confirm (step 4
    critique, the engine's two highest grades for the agent's two checks. A detector id in the
    critique's output that is on neither map line of `engine.md` goes in the report as an unmapped
    rule.
-6. One fix round: start the agent again with every finding that blocks a pass, then run audit and
-   critique again. Run at most 2 fix rounds. Then report what still blocks a pass as open.
+6. One fix round: start the agent again with every finding that blocks a pass,
+   then run step 3 again: audit, and `critique` in full, not only its detector.
+   Run at most 2 fix rounds. Then report what still blocks a pass as open.
 7. After the last round, run `<impeccable> ignores remove-rule <id> --local` for each id you
    added. The report says the ignores were in `.impeccable/config.local.json` and are removed.
 
@@ -98,7 +99,7 @@ the engine's screenshot folder or `.impeccable/critique/`.
 
 Screenshots, the picks, each check's result, what was fixed, what is open, every assumed answer,
 the component tests run, unmapped detector rules, the image key line, the ignores line, and the
-work behind the screen for Fast or Full.
+work behind the screen for Fast or Full. The autonomous mode's report has no picks.
 
 ## Never
 

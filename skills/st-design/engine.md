@@ -31,6 +31,8 @@ vendored skill, its `vendor.lock` entry, its `licenses/` file and `THIRD_PARTY_N
   `[<width>px]`. Render check: findings whose evidence does. Each passes with 0 `FAIL` and 0
   `REFLEX`. A `REFLEX` waived by the skill's waiver rules passes and goes in the report.
   `summary.render` other than `ran` fails the render check.
+- **Before.** For a change to a built screen, run the Check command once before the rebuild,
+  with `--before`. It keeps the old screenshots in `.hallmark/before/`, which is never committed.
 - **Picks.** The skill's Picks block.
 - **Files.** `tokens.css` and `base.css` are committed if they changed. The screenshots in
   `.hallmark/shots/` and the rest of `.hallmark/` are never committed.
