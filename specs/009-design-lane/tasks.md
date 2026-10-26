@@ -77,7 +77,7 @@ that must exist first.
 
 ## Phase 7: Polish
 
-- [ ] T019 Run quickstart sections 1, 2 (N1 to N10; before each break, the real file is green on the same copy) and 3. Record the results in research.md R15, with the fix-round count of each live run. If no live run reached fix round 2, write `Not run, no check failed after round 1` for the FR-008 cap and say it is checked as text only (lessons L24). Check `git status --porcelain --untracked-files=all` lists only this feature's files. SC-004 (lessons L2, L20, L25, L8)
+- [X] T019 Run quickstart sections 1, 2 (N1 to N10; before each break, the real file is green on the same copy) and 3. Record the results in research.md R15, with the fix-round count of each live run. If no live run reached fix round 2, write `Not run, no check failed after round 1` for the FR-008 cap and say it is checked as text only (lessons L24). Check `git status --porcelain --untracked-files=all` lists only this feature's files. SC-004 (lessons L2, L20, L25, L8)
 
 ## Dependencies
 

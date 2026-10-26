@@ -348,6 +348,17 @@ No control turned another row red, except N1 as named.
 - `git status --porcelain --untracked-files=all` before this R15 edit listed only the local
   `.stratum/state.json` and `.stratum/commit-mode`. After it, it also lists
   `specs/009-design-lane/research.md`. No other file (lessons L8).
+- Rerun on 2026-10-26 at `07c1166` on the PC, after change 001 and the live runs:
+  - Section 1: the same commands, each exit 0 and every line `ok`. `tests/test_design_lane.sh`
+    now prints 33 ok; the other counts are as in the table. The unittest prints `OK`, and
+    `claude plugin validate` prints `Validation passed`. `git status` listed only the local
+    `.stratum/commit-mode` and `brag-output/` files.
+  - Section 2: N1 to N10 each green on a fresh unbroken copy (0 `FAIL`), then red on the named
+    row after the break. N1 also turns K5 and K10 red, as before. This N2 moved the node check to
+    the end, after the puppeteer check too, so K5 also turns red.
+  - Section 3: no impeccable diff. 178 upstream blobs and 178 files. Every file but `SKILL.md`
+    hashes the same as upstream, and `SKILL.md` differs only in the `name:` line and the added
+    `disable-model-invocation: true` line.
 - Fix rounds of each live run (quickstart section 4):
 
 | Id | Task | Fix rounds |
@@ -469,4 +480,4 @@ No control turned another row red, except N1 as named.
   `tests/test_design_lane.sh` prints 33 ok and exits 0.
 - FR-008 cap (open after 2 fix rounds, no loop): seen in L3 `site`. After round 2 it went to the
   gate with 4 P1 open and offered changes or yes.
-- T019 stays open until the live runs are recorded here.
+- All live runs are recorded here, and the 2026-10-26 rerun passed. T019 is done.
