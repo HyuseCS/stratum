@@ -9,8 +9,8 @@ Run from the repo root. Texts and cases are in [contracts/design-lane.md](contra
 - The impeccable engine binary. The laptop has none. Run
   `skills/st-impeccable/scripts/impeccable engine-probe` once with network: the launcher downloads
   it from GitHub releases. T006 and L3 to L9 need it.
-- `puppeteer-core` is not installed on this machine. Section 4 L1 runs before it is installed;
-  then run `npm i -g puppeteer-core` for L2 to L6.
+- `puppeteer-core` must be missing for L1 and L2. Run them first, then run
+  `npm i -g puppeteer-core` for L3 to L9.
 - A scratch web project for the live runs, outside this repo:
   `mkdir -p "$SCRATCH/site" && cd "$SCRATCH/site" && git init -q`, where `$SCRATCH` is the
   session scratchpad.

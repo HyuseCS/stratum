@@ -34,7 +34,7 @@ The lane stores no data of its own. These are the files and messages it reads an
 | mode | yes | `new look` or `autonomous` |
 | job, visitor, main action | yes | from the task or `DESIGN.md`, or the one vague-request message (FR-007) |
 | audience, use, tone, material | yes | grill answers (new look) or `DESIGN.md` and the task; a missing one is assumed and listed |
-| theme | new look only | the picked slug and its deal seed |
+| theme | new look only | the picked theme's slug |
 | assumed answers | yes, may be empty | every answer the skill assumed |
 | dev server URL | framework projects only | found by the probe (research R6) |
 | findings to fix | fix rounds only | every finding that blocks a pass, from all four checks |

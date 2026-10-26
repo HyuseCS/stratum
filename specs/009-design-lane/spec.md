@@ -6,7 +6,7 @@
 
 **Status**: Draft
 
-**Input**: User description: "GitHub issue #49 on HyuseCS/stratum: a Design lane, a creative, non-generic design step for screen work. Today `st-build` loads `st-ui-ux` before a screen task, and the output is generic: a keyword search gives the same category default each time, and nothing checks the result. The lane makes the project's design file with the user, builds screens from it with hallmark as the new-look engine, and checks them before the user sees them." Decisions D1 to D19 are in `decisions.md` (the Q and O codes start at Q5 and O3, after the codes in #49). Wiring Fast and Full to call the lane is in #51 (D10). Browser tools for page checks and e2e tests are in #52.
+**Input**: User description: "GitHub issue #49 on HyuseCS/stratum: a Design lane, a creative, non-generic design step for screen work. Today `st-build` loads `st-ui-ux` before a screen task, and the output is generic: a keyword search gives the same category default each time, and nothing checks the result. The lane makes the project's design file with the user, builds screens from it with hallmark as the new-look engine, and checks them before the user sees them." Decisions D1 to D28 are in `decisions.md` (the Q and O codes start at Q5 and O3, after the codes in #49). Wiring Fast and Full to call the lane is in #51 (D10). Browser tools for page checks and e2e tests are in #52.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -141,6 +141,7 @@ stop at the start with the install command, and `st-status` name it.
   report; it does not loop.
 - The request needs work behind the screen (data, API, sign-in): the lane builds the screen with
   placeholder data of the same shape and names the work behind it for Fast or Full (FR-012).
+- From `/stratum:st`, a new page that also needs API, data or sign-in work goes to Full, not to the lane (D26).
 - The user has set `TOGETHER_API_KEY`: hallmark may generate images, and the report says so. With
   no key, the lane never asks for one (FR-016).
 - A framework project (a dev server renders the page) with no dev server answering on its port:
@@ -159,7 +160,7 @@ stop at the start with the install command, and `st-status` name it.
   modes: new look (User Story 1) and autonomous (User Stories 2 and 3).
 - **FR-002**: `/stratum:st` MUST send a new look, or a new page or screen, to the Design lane,
   and accept the user's override. Every lane, Quick included, MUST say the lane in one line before
-  its first skill or agent starts. A new page or screen is one the project does not have yet. A
+  its first skill or agent starts. A new page or screen is one the project does not have yet, and the screen is the whole task. A
   change to a screen that exists, including a new component on it, MUST keep its current lane
   (Fast, or Quick for a small fix).
 - **FR-003**: The lane MUST make a missing design file with the user through the `st-grill`

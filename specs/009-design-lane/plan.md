@@ -2,7 +2,7 @@
 
 **Branch**: `009-design-lane` | **Date**: 2026-10-24 | **Spec**: [spec.md](spec.md)
 
-**Input**: Feature specification from `/specs/009-design-lane/spec.md`, decisions D1 to D25 in
+**Input**: Feature specification from `/specs/009-design-lane/spec.md`, decisions D1 to D28 in
 [decisions.md](decisions.md), GitHub issue #49.
 
 **Status**: D20 (O35) and D21 (O39) decided 2026-10-24. The detector map is final (research R12).
@@ -25,7 +25,10 @@ and the render check (one engine run, research R2), and reports.
 Hallmark is vendored as `skills/st-hallmark/` and pinned in `vendor.lock`. The lane names it in
 one file only, `skills/st-design/engine.md` (FR-010). One script, `scripts/st-design-check.sh`,
 checks node, `puppeteer-core` and Chrome or Chromium for the lane and for `st-status`. `/stratum:st`
-gets a Design row. One stub test, `tests/test_design_lane.sh`, covers SC-004 and SC-005.
+gets a Design row. Two stub tests: `tests/test_design_check.sh` covers the tool check (SC-005), and
+`tests/test_design_lane.sh` covers the phrases, the detector map and the vendor entry (SC-004).
+Severity: lint and render check fail on `FAIL` or `REFLEX`, audit and critique on `P0` or `P1`
+(research R2). No `PRODUCT.md` is written: the grill covers it (research R14).
 
 
 ## Technical Context
@@ -136,8 +139,9 @@ Post-design re-check: all gates pass. No violations, so Complexity Tracking stay
 
 - None for stored data or existing files.
 - The agent count in docs and tests goes from 14 to 15.
-- `/stratum:st` sends a new page or screen to the Design lane instead of Fast. The user can
-  override with "fast".
+- `/stratum:st` sends a new page or screen to the Design lane instead of Fast. A new page that
+  also needs API, data or sign-in work goes to Full (D26). The user can override with "fast", but
+  the Fast lane cannot run without a spec in `specs/` (research R15).
 - Rollback: revert the feature's commits.
 
 ## Project Structure
