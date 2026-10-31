@@ -13,7 +13,7 @@ subagent absolute paths: plugin root, project root, feature dir, and its task ID
 
 1. Read `<project>/.stratum/state.json`. If there is no `feature_directory`, stop and tell the
    user to run `/stratum:st-define`.
-2. Read `<feature>/tasks.md`. Work on unticked tasks in order, phase by phase.
+2. Read `<feature>/tasks.md`. Work on unticked tasks in order, phase by phase, except stories that tasks.md says share no files (see Parallel tasks).
 
 ## Per task
 
@@ -24,9 +24,9 @@ subagent absolute paths: plugin root, project root, feature dir, and its task ID
    On a `lock:` timeout line from an agent, tell the user the line and the test that waits, in short words.
 3. **Verify.** From the project root, run
    `bash <plugin root>/scripts/st-verify.sh '<test command>' <files the task touched>`.
-   A test marked `[lock]` runs only through the test lock: `bash <plugin root>/scripts/st-lock.sh -- <test command>`.
    It re-runs the test, greps the diff for added comment lines, and prints one line. Send any
    `FAIL` back to `st-build`.
+   A test marked `[lock]` runs only through the test lock: `bash <plugin root>/scripts/st-lock.sh -- <test command>`.
 4. **Two tries.** If the test is still red after 2 `st-build` tries, run the advisor (see Advisor): save the task text and both failure outputs to files in your scratchpad, then run
    `bash <plugin root>/scripts/st-advisor.sh test <feature dir> <task file> <test path> <failure 1 file> <failure 2 file>`: root cause or rabbit hole?
    For a `[P]` task in a worktree, run it in the main session after the subagent reports both failures, with the working directory at that worktree's root and `<feature dir>` as the main checkout's absolute path, so the record lands in the main checkout. Start `st-debug` from the main session too, with the worktree path; it diagnoses, fixes and verifies in that worktree.
@@ -37,6 +37,8 @@ A task marked `[screen: <mode>]` goes to `/stratum:st-design` (Skill tool) in th
 If the Design lane cannot start (its tool check fails, or no dev server answers), pause only that task. Tell the user what is missing in short, simple words, and go on with the other tasks. On the user's "go", run the screen again from `/stratum:st-design` step 1.
 Never move a `[screen]` task to `st-build` and `st-ui-ux` without telling the user.
 If `/stratum:st-design` ends with no report, the screen task stays open: tell the user.
+After the user's OK and the st-design commit, tick the `[screen]` task and have `st-git` commit tasks.md.
+A task that is both `[P]` and `[screen]` goes to `/stratum:st-design` in the main session, not to a worktree subagent.
 
 ## Parallel tasks `[P]`
 
@@ -50,7 +52,7 @@ Never delete a remote branch: the user does that. If the project is another repo
 ## Per story (after its last task)
 
 1. The `stratum:st-review` agent on the story's diff.
-2. For screen work, run the `st-impeccable` skill on the changed screens.
+2. For screen work not done by the Design lane, run the `st-impeccable` skill on the changed screens.
 3. Check each finding against the source first (see `/stratum:st`). Send the real, small ones to
    `st-build`; verify and commit them like a task. Big ones go to the user. Drop the false ones.
 4. Run the story's steps from `<feature>/quickstart.md`. Give the user exact steps for any

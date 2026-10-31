@@ -26,7 +26,9 @@ conversation. Do not write them to a decisions file.
    design file, or the project has no design file and no styled screens. Autonomous: the task asks
    for a new page or screen in the existing look. Else autonomous. Styled screens: a tracked file
    (`git ls-files`) sets a color or a font: a `color:`, `font-family:`, `--color-` or `--font-`
-   declaration, or a Tailwind config.
+   declaration, or a Tailwind config. When the task line has `[screen: <mode>]`, use that mode.
+5. When `/stratum:st-build` calls this skill for a `[screen]` task, "stop" stops only that screen
+   task.
 
 ## 2. New look
 

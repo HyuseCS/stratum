@@ -13,7 +13,7 @@ description: "Task list template for feature implementation"
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
 
-## Format: `[ID] [P?] [Story] Description`
+## Format: `- [ ] T### [P?] [Story] What. Owns: <files, [P] only>. Test: <cmd>.`
 
 - **[P]**: Can run in parallel: no shared file in the phase and no other task's result; the task ends with `Owns:`
 - **[lock]**: Test that cannot run at the same time as another; it runs through the test lock
@@ -53,7 +53,7 @@ description: "Task list template for feature implementation"
 
 - [ ] T001 Create project structure per implementation plan
 - [ ] T002 Initialize [language] project with [framework] dependencies
-- [ ] T003 [P] Configure linting and formatting tools
+- [ ] T003 [P] Configure linting and formatting tools. Owns: [lint config files]. Test: [lint command].
 
 ---
 
@@ -66,8 +66,8 @@ description: "Task list template for feature implementation"
 Examples of foundational tasks (adjust based on your project):
 
 - [ ] T004 Setup database schema and migrations framework
-- [ ] T005 [P] Implement authentication/authorization framework
-- [ ] T006 [P] Setup API routing and middleware structure
+- [ ] T005 [P] Implement authentication/authorization framework. Owns: src/auth/. Test: [auth test command].
+- [ ] T006 [P] Setup API routing and middleware structure. Owns: src/api/. Test: [routing test command].
 - [ ] T007 Create base models/entities that all stories depend on
 - [ ] T008 Configure error handling and logging infrastructure
 - [ ] T009 Setup environment configuration management
@@ -86,13 +86,13 @@ Examples of foundational tasks (adjust based on your project):
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T010 [P] [US1] Contract test for [endpoint] in tests/contract/test_[name].py
-- [ ] T011 [P] [US1] Integration test for [user journey] in tests/integration/test_[name].py
+- [ ] T010 [P] [US1] Contract test for [endpoint] in tests/contract/test_[name].py. Owns: tests/contract/test_[name].py. Test: pytest tests/contract/test_[name].py.
+- [ ] T011 [P] [US1] Integration test for [user journey] in tests/integration/test_[name].py. Owns: tests/integration/test_[name].py. Test: pytest tests/integration/test_[name].py.
 
 ### Implementation for User Story 1
 
-- [ ] T012 [P] [US1] Create [Entity1] model in src/models/[entity1].py
-- [ ] T013 [P] [US1] Create [Entity2] model in src/models/[entity2].py
+- [ ] T012 [P] [US1] Create [Entity1] model in src/models/[entity1].py. Owns: src/models/[entity1].py. Test: pytest tests/unit/test_[entity1].py.
+- [ ] T013 [P] [US1] Create [Entity2] model in src/models/[entity2].py. Owns: src/models/[entity2].py. Test: pytest tests/unit/test_[entity2].py.
 - [ ] T014 [US1] Implement [Service] in src/services/[service].py (depends on T012, T013)
 - [ ] T015 [US1] Implement [endpoint/feature] in src/[location]/[file].py
 - [ ] T016 [US1] Add validation and error handling
@@ -110,12 +110,12 @@ Examples of foundational tasks (adjust based on your project):
 
 ### Tests for User Story 2 (OPTIONAL - only if tests requested) ⚠️
 
-- [ ] T018 [P] [US2] Contract test for [endpoint] in tests/contract/test_[name].py
-- [ ] T019 [P] [US2] Integration test for [user journey] in tests/integration/test_[name].py
+- [ ] T018 [P] [US2] Contract test for [endpoint] in tests/contract/test_[name].py. Owns: tests/contract/test_[name].py. Test: pytest tests/contract/test_[name].py.
+- [ ] T019 [P] [US2] Integration test for [user journey] in tests/integration/test_[name].py. Owns: tests/integration/test_[name].py. Test: pytest tests/integration/test_[name].py.
 
 ### Implementation for User Story 2
 
-- [ ] T020 [P] [US2] Create [Entity] model in src/models/[entity].py
+- [ ] T020 [P] [US2] Create [Entity] model in src/models/[entity].py. Owns: src/models/[entity].py. Test: pytest tests/unit/test_[entity].py.
 - [ ] T021 [US2] Implement [Service] in src/services/[service].py
 - [ ] T022 [US2] Implement [endpoint/feature] in src/[location]/[file].py
 - [ ] T023 [US2] Integrate with User Story 1 components (if needed)
@@ -132,12 +132,12 @@ Examples of foundational tasks (adjust based on your project):
 
 ### Tests for User Story 3 (OPTIONAL - only if tests requested) ⚠️
 
-- [ ] T024 [P] [US3] Contract test for [endpoint] in tests/contract/test_[name].py
-- [ ] T025 [P] [US3] Integration test for [user journey] in tests/integration/test_[name].py
+- [ ] T024 [P] [US3] Contract test for [endpoint] in tests/contract/test_[name].py. Owns: tests/contract/test_[name].py. Test: pytest tests/contract/test_[name].py.
+- [ ] T025 [P] [US3] Integration test for [user journey] in tests/integration/test_[name].py. Owns: tests/integration/test_[name].py. Test: pytest tests/integration/test_[name].py.
 
 ### Implementation for User Story 3
 
-- [ ] T026 [P] [US3] Create [Entity] model in src/models/[entity].py
+- [ ] T026 [P] [US3] Create [Entity] model in src/models/[entity].py. Owns: src/models/[entity].py. Test: pytest tests/unit/test_[entity].py.
 - [ ] T027 [US3] Implement [Service] in src/services/[service].py
 - [ ] T028 [US3] Implement [endpoint/feature] in src/[location]/[file].py
 
@@ -153,10 +153,10 @@ Examples of foundational tasks (adjust based on your project):
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] TXXX [P] Documentation updates in docs/
+- [ ] TXXX [P] Documentation updates in docs/. Owns: docs/. Test: [docs check command].
 - [ ] TXXX Code cleanup and refactoring
 - [ ] TXXX Performance optimization across all stories
-- [ ] TXXX [P] Additional unit tests (if requested) in tests/unit/
+- [ ] TXXX [P] Additional unit tests (if requested) in tests/unit/. Owns: tests/unit/. Test: pytest tests/unit/.
 - [ ] TXXX Security hardening
 - [ ] TXXX Run quickstart.md validation
 
