@@ -106,20 +106,20 @@ scoped tests.
 
 ### Build
 
-- [ ] T005 [P] [US1] In `scripts/st-advisor.sh` add `waive plan`, `note`, `count` and `diff`
+- [X] T005 [P] [US1] In `scripts/st-advisor.sh` add `waive plan`, `note`, `count` and `diff`
   (the no-change skip and the mode `codex`, `both`, `off` lines only; Codex at `diff` comes in
   T023), make `check plan` read only the last `^## plan \| [^|]* \| sha256 ` header, and name
   every form in the usage line (contracts/scripts.md sections 1.1, 1.2, the `diff` row of 1.3,
   and the mode `codex` and `both` rules of 1.4 for `diff`). Owns: `scripts/st-advisor.sh`. Test:
   `bash tests/test_advisor_waive.sh && bash tests/test_advisor.sh`. (FR-002, FR-003, FR-004,
   lessons L16, L18)
-- [ ] T006 [P] [US1] Write A1 to A4 and A7 to A13 in `skills/st-build/SKILL.md` (Advisor section
+- [X] T006 [P] [US1] Write A1 to A4 and A7 to A13 in `skills/st-build/SKILL.md` (Advisor section
   and the end-of-Build paragraph) and A5, A6 in `skills/st-inspect/SKILL.md` (Gate), and remove
   `Then run the same point once more on the changed input.` Keep every other row that
   `tests/test_on_demand.sh` asserts for these files. Owns: `skills/st-build/SKILL.md`,
   `skills/st-inspect/SKILL.md`. Test: `bash tests/test_advisor_rules.sh && bash tests/test_on_demand.sh && bash tests/test_verify.sh && ! bash tests/test_inspect.sh | grep '^FAIL' | grep -vxF 'FAIL README tests'`.
   (FR-001 to FR-004, lessons L18, L39)
-- [ ] T007 [P] [US1] Write S1 and S2 in `agents/st-build.md` (step 4, in place of `Then run the
+- [X] T007 [P] [US1] Write S1 and S2 in `agents/st-build.md` (step 4, in place of `Then run the
   other tests that cover the files you touched.`) and `agents/st-debug.md` (step 5, in place of
   `then the other tests that cover the touched files.`), S3 in `skills/st/SKILL.md` (Always), S4
   in `agents/st-plan.md` (Rules), S5 in `procedures/tasks.md` (Checklist Format), S6 as step 7
@@ -188,14 +188,14 @@ at the same time.
 
 ### Build
 
-- [ ] T013 [P] [US2] Build the fallback in `hooks/st-git-guard.py` (contracts/scripts.md section
+- [X] T013 [P] [US2] Build the fallback in `hooks/st-git-guard.py` (contracts/scripts.md section
   6): move the segment loop body into a function that both the whole command and one line use.
   Then the negative control: `git show 6fe9d60:hooks/st-git-guard.py > <scratchpad>/old-guard.py`
   and run `ST_GIT_GUARD=<scratchpad>/old-guard.py PYTHONDONTWRITEBYTECODE=1 python3 tests/test_git_guard.py`
   right after a green run of the new guard: cases (a), (b) and (h) must fail on the old guard.
   Report each result. Owns: `hooks/st-git-guard.py`. Test:
   `PYTHONDONTWRITEBYTECODE=1 python3 tests/test_git_guard.py`. (FR-008, lessons L2, L20, L25)
-- [ ] T014 [P] [US2] Write `scripts/st-lock.sh` (contracts/scripts.md section 3, data-model
+- [X] T014 [P] [US2] Write `scripts/st-lock.sh` (contracts/scripts.md section 3, data-model
   section 4), with the `ponytail:` line for the two-waiter race (research R-D). Owns:
   `scripts/st-lock.sh`. Test: `bash tests/test_lock.sh`. (FR-009, lessons L29)
 - [ ] T015 [P] [US2] Write L1 and L2 in `agents/st-test.md` (Steps), `agents/st-build.md` and
@@ -203,7 +203,7 @@ at the same time.
   `agents/st-test.md`, `agents/st-build.md`, `agents/st-debug.md`, `skills/st-build/SKILL.md`.
   Test: `bash tests/test_lock_rules.sh && bash tests/test_test_scope.sh && bash tests/test_advisor_rules.sh && bash tests/test_on_demand.sh`.
   (FR-010)
-- [ ] T016 [P] [US2] Add B1 to the brief's Facts in `scripts/st-worker.sh` (after the Test
+- [X] T016 [P] [US2] Add B1 to the brief's Facts in `scripts/st-worker.sh` (after the Test
   command line) and the same line to section 3 of `specs/008-herdr-workers/contracts/script.md`.
   Owns: `scripts/st-worker.sh`, `specs/008-herdr-workers/contracts/script.md`. Test:
   `bash tests/test_st_worker.sh`. (FR-010, lessons L37)
@@ -532,7 +532,7 @@ prompts through the hook; normal mode never answers them.
   `scripts/st-worker.sh`, `specs/008-herdr-workers/contracts/script.md`. Test:
   `bash tests/test_st_worker.sh`. (FR-017, FR-018, FR-019, FR-021, security notes S3, S5,
   lessons L26, L27, L30, L33, L34, L37)
-- [ ] T032 [P] [US4] Add the `autonomous` segment to `statusline/st-statusline.sh`
+- [X] T032 [P] [US4] Add the `autonomous` segment to `statusline/st-statusline.sh`
   (contracts/scripts.md section 7). Owns: `statusline/st-statusline.sh`. Test:
   `bash tests/test_statusline.sh && ! bash tests/test_inspect.sh | grep '^FAIL' | grep -vxF 'FAIL README tests'`. (FR-018)
 - [ ] T033 [P] [US4] Write W1 to W7, W11, W14, W16 and W17 in `skills/st-worker/SKILL.md` (step 6 and the
@@ -639,7 +639,7 @@ new screens to the Design lane and runs file-disjoint stories together.
   `skills/st-full/SKILL.md`. Test:
   `bash tests/test_triage_rules.sh && bash tests/test_risk_rules.sh && bash tests/test_worker_rules.sh && bash tests/test_test_scope.sh && bash tests/test_plan_rules.sh && bash tests/test_design_lane.sh && bash tests/test_on_demand.sh && ! bash tests/test_inspect.sh | grep '^FAIL' | grep -vxF 'FAIL README tests'`.
   (FR-028, FR-029)
-- [ ] T044 [P] [US6] Remove `st-frontend-design`: delete `skills/st-frontend-design/` and
+- [X] T044 [P] [US6] Remove `st-frontend-design`: delete `skills/st-frontend-design/` and
   `licenses/frontend-design.Apache-2.0.txt`; remove the `frontend-design` entry from
   `vendor.lock`, its row (line 15) and its name in line 23 of `THIRD_PARTY_NOTICES.md`, its name
   in `README.md` lines 115 and 340, and the `DESIGN.md` mentions at lines 44 and 103; change

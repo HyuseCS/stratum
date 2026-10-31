@@ -5,7 +5,6 @@
   "mattpocock-skills": { "repo": "mattpocock/skills", "ref": "main", "commit": "5beb35b040e3de97e54fa9e386d7e42d15c295c2", "license": "MIT" },
   "ui-ux-pro-max": { "repo": "nextlevelbuilder/ui-ux-pro-max-skill", "ref": "main", "commit": "076a2b3a31394ad788afaa71f55d0bf789e7b3ec", "license": "MIT" },
   "impeccable": { "repo": "pbakaus/impeccable", "ref": "main", "commit": "c4cfe525de176bd4c8b3291e91082a253e1bc0d7", "license": "Apache-2.0" },
-  "frontend-design": { "repo": "anthropics/claude-plugins-official", "ref": "main", "commit": "d182ca456ca09d31d139f7d3818d1d333b103cce", "path": "plugins/frontend-design", "license": "Apache-2.0" },
   "graphify": { "repo": "Graphify-Labs/graphify", "ref": "v8", "commit": "c588b72d936927790a87ad009955078ed40562a3", "path": ["graphify/skill.md", "graphify/skills/claude/references/"], "program": "graphifyy 0.9.94", "license": "Apache-2.0" },
   "token-weather": { "repo": "anthropics/claude-code-playground", "ref": "main", "commit": "569c5283d9a0a7ee7938df85bb32e4f48cbb8c86", "path": "claude-code/mods/token-weather", "license": "Apache-2.0" },
   "hallmark": { "repo": "nutlope/hallmark", "ref": "main", "commit": "7ec868225c6caa040558c321ee0fefa0e73f83a8", "path": "skills/hallmark", "version": "2.0.0", "license": "MIT" },
