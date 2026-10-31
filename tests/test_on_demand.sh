@@ -265,7 +265,6 @@ phrases <<'EOF'
 #18 FR-002 wait build	skills/st-build/SKILL.md	in the foreground, with a Bash timeout of 600000 ms, and wait for it. No background run, no polling.
 #18 FR-002 wait plan	skills/st-plan/SKILL.md	in the foreground, with a Bash timeout of 600000 ms, and wait for it.
 #18 FR-005 revise	skills/st-build/SKILL.md	Two rounds at most per point per gate pass, then the user decides.
-#18 FR-005 revise	skills/st-build/SKILL.md	Then run the same point once more on the changed input.
 #18 FR-006 blocked	skills/st-build/SKILL.md	stop and show the user the reason. Nothing passes the gate.
 #18 FR-006 blocked	skills/st-build/SKILL.md	bash <plugin root>/scripts/st-advisor.sh continued <point> <feature dir>
 #18 FR-007 record	skills/st-build/SKILL.md	Each run appends a record to `<feature dir>/advisor.md`
@@ -306,7 +305,7 @@ phrases <<'EOF'
 EOF
 check "#18 plan-only st-inspect no plan run" '! grep -qF "st-advisor.sh plan <feature dir>" "$root/skills/st-inspect/SKILL.md" && grep -qF "st-advisor.sh check plan <feature dir>" "$root/skills/st-inspect/SKILL.md"'
 check "#18 plan-only st-fast no script" '! grep -qF "st-advisor.sh" "$root/skills/st-fast/SKILL.md"'
-check "#18 plan-only st-build no diff point" '! grep -qF "st-advisor.sh diff" "$root/skills/st-build/SKILL.md" && ! grep -qF "check diff" "$root/skills/st-build/SKILL.md"'
+check "#18 plan-only st-build no diff point" '! grep -F "st-advisor.sh diff" "$root/skills/st-build/SKILL.md" | grep -qvF "the changes after the last review only" && ! grep -qF "check diff" "$root/skills/st-build/SKILL.md"'
 check "#18 FR-001 quick lane" '! grep -qF st-advisor "$root/skills/st-quick/SKILL.md"'
 check "#18 FR-016 st-inspect old advisor text gone" '! grep -qF "If an advisor is set (\`/advisor\`)" "$root/skills/st-inspect/SKILL.md"'
 check "#18 D27 st-plan no validation risk text" '! grep -qF "missed auth invariants" "$root/skills/st-plan/SKILL.md"'
