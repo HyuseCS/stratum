@@ -16,7 +16,9 @@ No other key. Any other value is `bad advisor.json` (unchanged). No file: the
 
 ## 2. Risk level (`.stratum/state.json` key `risk`, not committed by this feature)
 
-`high`, `normal`, `low` or `none`, written by the orchestrator with the lane (FR-011).
+`high`, `normal`, `low` or `none`, written by the orchestrator with the lane (FR-011), in the
+main checkout's `.stratum/state.json`. `st-advisor.sh` reads it there, through
+`git rev-parse --git-common-dir`, also when it runs in a linked worktree.
 `st-phase.py` keeps the key (research R-E). Missing or other value: `st-advisor.sh` uses `normal`
 and prints `risk not set: normal`.
 
@@ -58,7 +60,11 @@ all its worktrees.
 
 One line: the orchestrator's `$CLAUDE_CODE_SESSION_ID`. On only while that line equals the
 current session's id. Made on the user's words, removed at the end of the run or on
-"stop autonomous" (FR-018).
+"stop autonomous" (FR-018). Read by the approval hook through the git common dir, so a worker's
+worktree copy never counts (D27). On a saved machine the same file sits in that machine's main
+checkout (`--repo`): `start --autonomous --machine` writes or replaces it, `autonomous-off`
+removes it at the end of the run or on "stop autonomous" (D28). A stale copy left by a crashed
+session holds an id no live session has, so it matches no `session` file and approves nothing.
 
 ## 6. Approval channel (`<worktree>/.stratum/approve/`, never committed)
 
@@ -66,10 +72,14 @@ Made by `st-worker.sh start --autonomous`, removed by `close`.
 
 | File | Writer | Content |
 |------|--------|---------|
+| `session` | `st-worker.sh start --autonomous` | one line: the orchestrator's `$CLAUDE_CODE_SESSION_ID`; the hook acts only while it equals the main checkout's `.stratum/autonomous` (D27) |
 | `owns` | `st-worker.sh start --autonomous` | one path per line, from the task's `Owns:` line (D23) |
 | `<rid>.req` | worker hook `hooks/st-approve.py` | JSON `{"tool_name", "tool_input", "time"}`, and for a commit `"branch"` and `"staged"` (list) |
 | `<rid>.ok` | `st-worker.sh approve` | empty: allow one time |
 | `<rid>.user` | `st-worker.sh pass` | empty: leave the dialog to the user |
+
+Roster (scratchpad, D28): a remote worker's row may have a fifth TAB field, the `--repo` main
+checkout, so `autonomous-off` can find that machine's flag. The brief shows only the first four.
 
 `<rid>`: `^[0-9]+-[0-9]+$` (`time_ns`-`pid`). The hook removes its own three files when it ends.
 States: pending (`.req` only) to approved (`.ok`), passed (`.user`) or timed out (300 s, no answer).
@@ -86,3 +96,13 @@ the repo because a prompt can hold a secret (spec Assumptions).
 `[screen: autonomous]` or `[screen: new look]` (new-screen task and its Design lane mode,
 FR-023). A `[P]` task ends with `Owns:` (its files) and every task with `Test:` (its exact
 command, FR-005).
+
+## 9. Stratum Codex home (`${XDG_STATE_HOME:-$HOME/.local/state}/stratum/codex-home/`, outside every repo)
+
+| Part | Rule |
+|------|------|
+| folder | mode 700, made only by `st-advisor.sh codex-home` when the user opts in to a Codex advisor (D25) |
+| `auth.json` | a symlink to `${CODEX_HOME:-$HOME/.codex}/auth.json`, the user's Codex login |
+| anything else | written by Codex itself while the tab runs (sessions, logs); never read from the user's `~/.codex` |
+
+Used as `CODEX_HOME` for the herdr Codex tab only. `codex exec` keeps `--ignore-user-config`.

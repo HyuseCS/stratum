@@ -18,6 +18,7 @@ st-advisor.sh waive plan <feature dir> <reason>               (new, US1)
 st-advisor.sh note <point> <feature dir> <summary>            (new, US1)
 st-advisor.sh talk <point> <feature dir> <file>               (new, US3)
 st-advisor.sh count <feature dir>                             (new, US1)
+st-advisor.sh codex-home                                       (new, US3, D25)
 ```
 
 `<point>` is `plan`, `test`, `diff` or `decisions`. The usage line names every form. Any other
@@ -30,13 +31,26 @@ CR and LF are replaced: `usage: ...` on stdout, exit 2, nothing recorded, nothin
 | Command | Output (stdout) | Exit | Record |
 |---------|-----------------|------|--------|
 | `waive plan` | `WAIVED sha256 <h>` / `reason: <r>` / `record: <f>/advisor.md` | 0 | waive entry, `<h>` = today's plan input hash |
+| `waive plan`, refused | `nothing to waive: the last plan record is <verdict>` (`<verdict>` = `none` when there is no record) | 1 | none |
 | `note` | `noted: <point> /advisor` | 0 | note entry |
 | `talk` | `talk recorded: <point>, <n> rounds` | 0 | talk entry |
 | `count` | `advisor calls: codex <a>, waived <b>, /advisor <c>` | 0 | none |
 | `check plan` after `waive` | `WAIVED sha256 <h>` | 0 | none |
+| `codex-home` | `codex home: <dir>` | 0 | none |
 
+- `waive` runs only when the last `^## plan \| [^|]* \| sha256 ` record is `APPROVED`, `WAIVED`,
+  or `REVISE` whose finding lines (`- [<SEV>] ...`) are all `MEDIUM` or `LOW` (FR-001). Any other
+  last record (`BLOCKED`, `BLOCKED, user continued`, a `REVISE` with a `CRITICAL` or `HIGH`
+  finding) or no record: refused, exit 1, nothing written.
 - `waive` needs no `.stratum/advisor.json` and no `codex`. It hashes the plan input with the same
   pipeline as `plan`. A hash failure is `cannot hash inputs`, exit 2, nothing written (L16).
+- `codex-home` (D25) makes the Stratum Codex home `<dir>` =
+  `${XDG_STATE_HOME:-$HOME/.local/state}/stratum/codex-home` (mode 700) holding only
+  `auth.json`, a symlink to `${CODEX_HOME:-$HOME/.codex}/auth.json`. A missing login file:
+  `no codex login: run codex login, then run this again`, exit 1, nothing made. Run again: same
+  line, nothing changed. Only this command makes the folder. The skills run it only when the
+  user opts in to a Codex advisor (st-init setup, or a request to add one or set a mode that
+  uses Codex).
 - `talk`'s file must hold one line each starting `rounds: ` (1 to 3), `agreed: `,
   `compromises: `, `to user: ` and `calls: ` (digits). Missing or bad: usage, exit 2.
 - `count` counts headers: codex = run and round entries (`| APPROVED`, `| REVISE`, `| BLOCKED` at
@@ -62,7 +76,9 @@ CR and LF are replaced: `usage: ...` on stdout, exit 2, nothing recorded, nothin
 
 ### 1.4 Mode and matrix (US3)
 
-`mode` missing from the file = `auto`. Risk comes from `.stratum/state.json` `risk`. Missing or
+`mode` missing from the file = `auto` (D24). Risk comes from `risk` in the main checkout's
+`.stratum/state.json`: `$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/.stratum/state.json`,
+not the copy in a linked worktree; outside git, `./.stratum/state.json`. Missing or
 other value: first print `risk not set: normal`, then use `normal`.
 
 | Point | high | normal | low | none |
@@ -89,9 +105,11 @@ other value: first print `risk not set: normal`, then use `normal`.
 - Budget: lock wait up to 50 s, then `st-codex-agent.sh` keeps its own start and review under
   480 s (section 2 step 5), so a slow step ends with its own `ERROR:` line, not the outer
   `timed out`.
-- In herdr (`HERDR_ENV` is `1`, `HERDR_WORKSPACE_ID` is set, `herdr` is on PATH):
-  `timeout -k 10 540 bash <scripts>/st-lock.sh --name codex-<workspace id> --timeout 50 -- bash <scripts>/st-codex-agent.sh <feature dir> <prompt file> <answer file> [-m <model>] [-c model_reasoning_effort="<effort>"]`.
-- Else: today's `codex exec -s read-only --ignore-user-config ... --ephemeral --output-schema ... -o ...`.
+- In herdr (`HERDR_ENV` is `1`, `HERDR_WORKSPACE_ID` is set, `herdr` is on PATH) and with the
+  Stratum Codex home in place (`<dir>/auth.json` is a symlink):
+  `timeout -k 10 540 bash <scripts>/st-lock.sh --name codex-<workspace id> --timeout 50 -- bash <scripts>/st-codex-agent.sh <feature dir> <prompt file> <answer file> <dir> [-m <model>] [-c model_reasoning_effort="<effort>"]`.
+- Else (not in herdr, or no Stratum Codex home, or T050 failed and the tab path was not built):
+  today's `codex exec -s read-only --ignore-user-config ... --ephemeral --output-schema ... -o ...`.
 - Both write the answer file. The same validator reads it. Exit 75 from the lock:
   `BLOCKED: Codex agent busy with another review`. Other non-zero: today's
   `BLOCKED: codex exited <rc>` with the last `ERROR:` line.
@@ -100,18 +118,22 @@ other value: first print `risk not set: normal`, then use `normal`.
 ## 2. `scripts/st-codex-agent.sh` (new, US3)
 
 ```text
-st-codex-agent.sh <feature dir> <prompt file> <answer file> [-m <model>] [-c <key=value>]
+st-codex-agent.sh <feature dir> <prompt file> <answer file> <codex home> [-m <model>] [-c <key=value>]
 ```
 
 1. Agent name `st-codex-<NNN>`, `<NNN>` the leading 3 digits of the feature dir's name. None:
    `ERROR: feature dir must start with three digits` on stderr, exit 2.
 2. `herdr agent list`. Agents in `$HERDR_WORKSPACE_ID` whose name starts with `st-codex-`: the one
    with this exact name is used. Each other one gets `herdr tab close <its tab_id>` first.
-3. None left: `herdr tab create --workspace <ws> --cwd <pwd> --label Codex --no-focus`, then
+3. None left: `herdr tab create --workspace <ws> --cwd <pwd> --label Codex --env CODEX_HOME=<codex home> --no-focus`, then
    `herdr agent start <name> --kind codex --pane <root pane> --timeout 120000 -- -s read-only -a never --no-alt-screen [-m ..] [-c ..]`.
    `agent_pane_busy`: retry, 10 tries, 1 s apart (L30). `agent_not_ready`:
    `ERROR: Codex waits for an answer at start in its Codex tab. Answer it there, then run the point again.`,
-   exit 1. Ids are read from herdr's answers, never built (L26).
+   exit 1. Ids are read from herdr's answers, never built (L26). `<codex home>/auth.json` not a
+   symlink: `ERROR: no Stratum Codex home`, exit 2, before any herdr call. An existing
+   `st-codex-<NNN>` agent from before D25 is reused only if its tab was made by this script
+   (label `Codex`); `ponytail:` the script cannot read a running pane's `CODEX_HOME`, so a tab
+   the user made by hand with that name would be reused.
 4. Nonce: 12 hex characters from `/dev/urandom`. The script appends to the prompt file:
    `The project root is <pwd>. Read every path above relative to it.`, the JSON shape line, and
    `Print the line ST-ADVISOR-BEGIN-<nonce> alone, then the JSON object on one line, then the line ST-ADVISOR-END-<nonce> alone. Print nothing after the end line.`
@@ -149,20 +171,43 @@ st-lock.sh [--name <name>] [--timeout <seconds>] -- <command> [args...]
 |--------|-------|------|
 | brief Facts | US2 | adds the test lock line from `phrases.md` (B1) |
 | brief Team rule 1 | US4 | new text from `phrases.md` (B2); `specs/008-herdr-workers/contracts/script.md` section 3 changes in the same task (L37) |
-| `start --autonomous` | US4 | a flag with no value. Refused unless `<top>/.stratum/autonomous`'s first line equals a non-empty `$CLAUDE_CODE_SESSION_ID`: `Autonomous build mode is off for this session.`, exit 1, before any herdr call. Makes `<worktree>/.stratum/approve/` (local `mkdir`, remote in the same `rsh` write as the brief), with the symlink checks the other files have, and writes `<worktree>/.stratum/approve/owns`: one path per line, the backticked paths of the task file's `Owns:` line, in order; no `Owns:` line gives an empty file (D23). |
+| `start --autonomous` | US4 | a flag with no value. Refused unless `<top>/.stratum/autonomous`'s first line equals a non-empty `$CLAUDE_CODE_SESSION_ID`: `Autonomous build mode is off for this session.`, exit 1, before any herdr call. Makes `<worktree>/.stratum/approve/` (local `mkdir`, remote in the same `rsh` write as the brief), with the symlink checks the other files have, and writes `<worktree>/.stratum/approve/owns`: one path per line, the backticked paths of the task file's `Owns:` line, in order; no `Owns:` line gives an empty file (D23), and `<worktree>/.stratum/approve/session` with the
+  `$CLAUDE_CODE_SESSION_ID` line (D27). With `--machine <m>` (D28): first, before `worktree create`, one `rsh` call writes that line to `<repo>/.stratum/autonomous` on `<m>` (`<repo>` = the `--repo` main checkout), with the symlink checks the other remote writes have (`<repo>/.stratum` and the file must not be symlinks), and replaces any file already there (a stale id from a crashed session). A failed write: `cannot write .stratum/autonomous on <m>: <first error line>`, exit 1, no herdr call that makes anything, no worker. A roster line may have a fifth TAB field, the `<repo>` of a worker on a saved machine (the skill writes it); the brief's roster table still shows the first four fields, and the error line for a bad roster line is unchanged. With `--autonomous --machine`, its own row must have that field equal to `--repo`, else `Roster row for <name> needs the repo path as a fifth field.`, exit 1, before any call. Which machine runs the orchestrator is never assumed: `local` in the roster is the machine this script runs on. |
+| `autonomous-off --roster <file>` | US4 | new (D28). For each distinct machine in the roster: `local` removes `<top>/.stratum/autonomous`; another machine removes `<repo>/.stratum/autonomous` over `rsh`, `<repo>` from the fifth roster field (same symlink checks). It removes a file only when its first line equals `$CLAUDE_CODE_SESSION_ID`, so it never removes another live session's flag. Prints `autonomous off\t<machine>` per machine, or `autonomous off failed\t<machine>\t<first error line>` and goes on with the others; exit 1 if any failed, else 0. |
 | `start` layout | US4 | after `worktree create`, before `agent start`: `tab rename <tab> Main`, `pane split <root pane> --direction right --cwd <wt> --no-focus`, `pane run <new pane> lazygit`, then for `Dev Servers` and `VM`: `tab create --workspace <ws> --cwd <wt> --label <name> --no-focus` and `pane split <its root pane> --direction right --cwd <wt> --no-focus`. Same calls as `st-herdr-workspace.sh:75-94`. The agent starts in the root pane. |
-| `wait` | US4 | on `blocked`, first look for `<wt>/.stratum/approve/*.req` (remote: `rsh`). Oldest by name: print `state\tapproval\t<name>\t<pane>`, `request\t<rid>`, `tab\tworkspace <name>, tab Main`, `input\t<tool_name>: <tool_input as one-line JSON, cut at 2000 chars>`, and for a commit request also `branch\t<the .req branch>` and `staged\t<the .req staged paths, split by spaces>`, exit 6. None: today's `blocked`, exit 4. |
-| `approve <id> --request <rid> --record <file> [--machine <m>]` | US4 | the autonomous check as `start`; `<rid>` must match `^[0-9]+-[0-9]+$`; `<rid>.req` must exist (`No request <rid> for <name>.`, exit 1); writes `<rid>.ok`; appends one record line (data-model section 7); then `agent wait <name> --until working --timeout 5000` (L34); prints `approved\t<name>\t<rid>`. |
+| `wait` | US4 | on `blocked`, first look for `<wt>/.stratum/approve/*.req` (remote: `rsh`). Oldest by name: print `state\tapproval\t<name>\t<pane>`, `request\t<rid>`, `tab\tworkspace <name>, tab Main`, `input\t<tool_name>: <tool_input as one-line JSON>` (the full text, never cut), and for a commit request also `branch\t<the .req branch>` and `staged\t<the .req staged paths, split by spaces>`, exit 6. None: today's `blocked`, exit 4. |
+| `approve <id> --request <rid> --input <text> --record <file> [--machine <m>]` | US4 | the autonomous check as `start`; `<rid>` must match `^[0-9]+-[0-9]+$`; `<rid>.req` must exist (`No request <rid> for <name>.`, exit 1); `<text>` must equal the `.req`'s `input` text as `wait` prints it, byte for byte (else `The input does not match request <rid>. Approve nothing.`, exit 1, nothing written), so the orchestrator's permission check sees the whole command it approves; an input over 4000 characters is refused (`Request <rid> is too long to approve. Pass it to the user.`, exit 1); writes `<rid>.ok`; appends one record line (data-model section 7); then `agent wait <name> --until working --timeout 5000` (L34); prints `approved\t<name>\t<rid>`. |
 | `pass <id> --request <rid> [--machine <m>]` | US4 | `<rid>` and `.req` checks as `approve`; writes `<rid>.user`; prints `passed\t<name>\t<rid>`. |
-| `answer` | US4 | before any key, `agent read <name> --source recent-unwrapped --lines 40`. A read failure or a pane that shows `Do you want to proceed?`: `This is a permission prompt. Tell the user the workspace, the tab and the prompt; do not answer it.`, exit 1, nothing sent. |
+| `answer` | US4 | before any key, `agent read <name> --source recent-unwrapped --lines 40`. A read failure, a pane line that starts with `Do you want to` (`proceed?`, `make this edit to`, `create`), or a numbered permission option line (`1. Yes`, with or without a `❯` in front): `This is a permission prompt. Tell the user the workspace, the tab and the prompt; do not answer it.`, exit 1, nothing sent. |
 | `close` | US4 | also removes `<wt>/.stratum/approve/` (local `rm -rf`, remote `rsh`), with the `.stratum` symlink check. |
 
 ## 5. `hooks/st-approve.py` (new, US4) and `hooks/commands.json`
 
-- Registered as `"PermissionRequest": [{"hooks": [{"type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/st-approve.py\"", "timeout": 310}]}]`.
+- Registered twice in `hooks/commands.json`: as `"PermissionRequest": [{"hooks": [{"type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/st-approve.py\"", "timeout": 310}]}]`,
+  and as a `PreToolUse` entry with matcher `Bash|Edit|Write|MultiEdit|NotebookEdit`, the same
+  command and `"timeout": 10`. The script branches on `hook_event_name`.
 - Reads stdin as bytes (L3). Walks up from `cwd` to the first folder with `.stratum` or `.git`.
-  No real folder `<root>/.stratum/approve` (missing, a file or a symlink): exit 0, no output.
-  This is the normal-mode path and every non-worker session.
+
+### 5.1 PreToolUse: the write lock (D27 lock 2)
+
+- In every session: a Bash command whose text, with `\`, `'` and `"` removed, matches
+  `\.stratum/+approve(/|\b)`, or an Edit, Write, MultiEdit or NotebookEdit whose path resolves
+  inside `<root>/.stratum/approve/` (or any `.stratum/approve/` folder), gets
+  `permissionDecision: "deny"` with the reason
+  `.stratum/approve/ is written only by st-worker.sh approve and pass.` Anything else: no output.
+- `st-worker.sh approve`, `pass` and `close` write there from inside the script, so their
+  command text does not match.
+- `ponytail:` a text match. A command that builds the path at run time (`cd .stratum && touch
+  approve/x`, a variable) gets through; README states that risk (W15).
+
+### 5.2 PermissionRequest: the approval channel (D27 lock 1)
+
+- No output, nothing written, unless all of these hold: `<root>/.stratum/approve` is a real folder
+  (not a file, not a symlink); the main checkout's `.stratum/autonomous`
+  (`$(dirname "$(git -C <root> rev-parse --path-format=absolute --git-common-dir)")/.stratum/autonomous`)
+  has a non-empty first line; and that line equals the first line of
+  `<root>/.stratum/approve/session`. So normal mode, a stale `.stratum/approve/` and the time
+  after "stop autonomous" all leave every prompt for the user.
 - Never sent to the orchestrator (exit 0, no output, nothing written):
   - a tool other than `Bash`, `Edit`, `Write`, `MultiEdit`, `NotebookEdit`;
   - an edit whose path (`file_path` or `notebook_path`) is missing, resolves outside `<root>`,
@@ -174,18 +219,34 @@ st-lock.sh [--name <name>] [--timeout <seconds>] -- <command> [args...]
   - a Bash command with a `/` or `~` path word (other than `/dev/null`) or a `..` word that
     resolves outside `<root>`, or that matches a push, a branch
     delete, `worktree remove` or `prune`, `reset --hard`, a secret name, a package install or add
-    (`npm`, `pnpm`, `yarn`, `bun`, `npx`, `bunx`, `pip`, `uv`, `poetry`, `cargo`, `go get`,
-    `go install`, `gem`, `brew`, `apt`, `apt-get`, `dnf`, `yum`, `pacman`, `apk`), a network tool
+    (`npm`, `pnpm`, `yarn` or `bun` with `i`, `install`, `add`, `ci`, `update` or `upgrade`;
+    `pip install`, `pip3 install`; `uv add`, `uv pip`, `uv tool`, `uv sync`; `poetry add`;
+    `cargo add`, `cargo install`; `go get`, `go install`; `gem install`; `brew install`; `apt`,
+    `apt-get`, `dnf`, `yum`, `pacman`, `apk`), a network tool
     (`curl`, `wget`, `ssh`, `scp`, `sftp`, `rsync`, `nc`, `ncat`, `telnet`, `ftp`, `gh`, a URL,
     `git clone`, `fetch`, `pull`, `ls-remote`, `remote add`), `.stratum`, `sudo` or `eval`;
   - a Bash command with a git commit (a `git` word followed by `commit`) unless all D23 rules
-    hold: no `--amend`, no `--no-verify`, no `-n`, no `-a`, `--all`, `-i`, `--include`, no
-    `-C`, `--git-dir` or `--work-tree`; `git -C <root> symbolic-ref --short HEAD` equals the
-    `branch` of `<root>/.stratum/git-guard.json`; and every staged path is a line of
-    `<root>/.stratum/approve/owns`. Staged paths = `git -C <root> diff --cached --name-only`, plus
-    the path words after `git add` and after `--` in `git commit` in the same command, each
-    taken relative to `<root>`. An empty, missing or unreadable `owns`, `git-guard.json` or git
-    answer counts as a failed rule.
+    hold:
+    - no `GIT_INDEX_FILE=`, `GIT_DIR=` or `GIT_WORK_TREE=` anywhere in the command;
+    - no option between `git` and `commit` or `add` (so no `-C`, `-c`, `--git-dir`,
+      `--work-tree`);
+    - `commit` options only from `-m`, `--message`, `-F`, `--file`, `--author`, `--date`, `-t`,
+      `--template`, `--cleanup` (each takes the next word, or `=value`), `-s`, `--signoff`, `-q`,
+      `--quiet`, `-v`, `--verbose`, `-e`, `--edit`, `--no-edit` and `--`; any other option
+      (`--amend`, `--no-verify`, `-n`, `-a`, `--all`, `-i`, `--include`, `-o`, `--only`,
+      `--pathspec-from-file`, ...) refuses;
+    - `git add` options only from `-v`, `--verbose` and `--`; any other (`-u`, `--update`, `-A`,
+      `--all`, `-p`, `-f`, `--pathspec-from-file`, ...) refuses;
+    - `git -C <root> symbolic-ref --short HEAD` equals the `branch` of
+      `<root>/.stratum/git-guard.json`;
+    - every staged path is a line of `<root>/.stratum/approve/owns`. Staged paths =
+      `git -C <root> diff --cached --name-only`, plus every non-option word after `git add` and
+      every non-option word after `commit` that is not an option's value (a pathspec, with or
+      without `--`), each taken relative to `<root>`. An empty, missing or unreadable `owns`,
+      `git-guard.json` or git answer counts as a failed rule.
+  - Test runners are sent like any other command, for example `npm test`, `npm run test`,
+    `npx vitest run`, `cargo test`, `go test ./...`, `pytest`, `uv run pytest`. `ponytail:` `npx`
+    and `uv run` can fetch a package they do not find; the orchestrator's judgement covers that.
 - Words come from a split on white space (`re.findall(r"\S+", command)`), with leading
   `<>|&;()'"` and trailing `'";)` characters removed. The hook never fails on quoting: a
   command the git guard cannot split (a heredoc with `it's`) is still sent, because that is the
@@ -197,16 +258,18 @@ st-lock.sh [--name <name>] [--timeout <seconds>] -- <command> [args...]
   `{"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"allow"}}}`;
   `<rid>.user` or the limit prints nothing. It removes its `.req`, `.ok` and `.user` files at the
   end. It never prints `deny` and never sets a mode or a rule (one time only).
-- `ponytail:` the never list matches text. The orchestrator's rule (approve only a test, a lint
-  or an edit inside the worktree) is the main check, and the list is the backstop.
+- `ponytail:` the never list matches text. The orchestrator's rule (approve only a test, a lint,
+  an edit inside the worktree or a D23 commit) is the main check, and the list is the backstop.
 
 ## 6. `hooks/st-git-guard.py` (changed, US2)
 
 In the `except ValueError` path only:
 
-1. No line has a git word: no decision. A git word is `git`, or a path ending in `/git`, with a
-   line edge, white space, `;&|()` or a quote or backtick on each side.
-2. For each line with a git word: split that line with `segments`. It does not split: ask with
+1. Remove every `\`, `'` and `"` from a copy of each line, so `\git`, `g''it` and `gi\t` read as
+   `git`. No copy has a git word: no decision. A git word is `git`, or a path ending in `/git`,
+   with a line edge, white space, `;&|()` or a backtick on each side.
+2. For each line whose copy has a git word: split the original line with `segments` (shlex
+   removes the quoting, so `g''it push` is a git segment). It does not split: ask with
    `The git guard could not parse the command.`. No segment starts with git (after the prefix
    words today's loop skips): ask with `The git guard could not read a git command on this line.`.
    Else judge each git segment with today's `judge`, folder unknown (`elsewhere=True`), and keep

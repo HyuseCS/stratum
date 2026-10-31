@@ -20,6 +20,12 @@ after. Test tasks go to `st-test`, build tasks to `st-build`.
   a wave run at the same time, and no two tasks in one wave own the same file. Phases only group
   tasks by story.
 - **Owns**: the only files the task may write.
+- **Inspect check**: `! bash tests/test_inspect.sh | grep '^FAIL' | grep -vxF 'FAIL README tests'` passes when every `tests/test_inspect.sh`
+  row is green except `README tests`, which stays red until T008 and again until T046 (README
+  lists the new test files only then). Each task that changes a file `tests/test_inspect.sh`
+  reads (README, DESIGN, `skills/st/SKILL.md`, `skills/st-inspect/SKILL.md`,
+  `skills/st-plan/SKILL.md`, `skills/st-full/SKILL.md`, `agents/st-plan.md`, the status line) runs
+  it.
 - **Test**: the exact command. No task runs every test in `tests/`.
 - **[lock]**: none in this plan. Every test file uses its own temp folder and can run beside the
   others.
@@ -56,15 +62,20 @@ scoped tests.
 
 - [ ] T002 [P] [US1] Write `tests/test_advisor_waive.sh` for `scripts/st-advisor.sh`. Copy the
   setup of `tests/test_advisor.sh:1-56` (stub `codex` and `timeout`, temp project) and add
-  `unset HERDR_ENV HERDR_WORKSPACE_ID`. Cases from contracts/scripts.md sections 1.1 and 1.2:
-  (a) `waive plan <f> "fix-only"` prints `WAIVED sha256 <h>` with `<h>` from the plan hash
+  `unset HERDR_ENV HERDR_WORKSPACE_ID`. In `tests/test_advisor.sh`, move `"diff specs/001-demo $first"` and
+  `"continued diff specs/001-demo"` out of `badargs` (line 198; `check diff` stays), because
+  contract 1.1 makes both valid. Cases from contracts/scripts.md sections 1.1 and 1.2:
+  (a) after an APPROVED `plan` run, `waive plan <f> "fix-only"` prints `WAIVED sha256 <h>` with `<h>` from the plan hash
   pipeline, then `reason: fix-only`, exit 0, and the stub `codex` wrote no argv file;
   (b) the record header matches `^## plan \| <ts> \| sha256 <h> \| WAIVED$` and the next line is
   `reason: fix-only`; (c) `check plan` after it prints `WAIVED sha256 <h>`, exit 0;
   (d) after a change to `tasks.md`, `check plan` prints `advisor approval is stale`, exit 1;
   (e) a reason that is empty, or only CR and LF, gives `usage:` and exit 2 with no record; a
-  reason with an LF is recorded on one line; (f) `waive` works with `{"mode": "off"}` and with
-  no `advisor.json`; (g) a `sha256sum` stub that prints nothing gives `cannot hash inputs`,
+  reason with an LF is recorded on one line; (f) after an APPROVED run, `waive` works with `{"mode": "off"}` and with
+  no `advisor.json`; (f2) `waive` is refused with `nothing to waive: the last plan record is <verdict>`,
+  exit 1, no record: with no record (`none`), after a `BLOCKED` record, after
+  `BLOCKED, user continued`, and after a `REVISE` with one `HIGH` finding; it is allowed after a
+  `REVISE` with only `MEDIUM` and `LOW` findings and after an earlier `WAIVED` (FR-001); (g) a `sha256sum` stub that prints nothing gives `cannot hash inputs`,
   exit 2, no record (lessons L16); (h) `note plan <f> "one line"` prints `noted: plan /advisor`,
   writes `## plan | <ts> | /advisor` and `summary: one line`, and `check plan` still passes on
   the earlier record; (i) after one APPROVED run, one waive and one note, `count <f>` prints
@@ -74,7 +85,7 @@ scoped tests.
   record, no codex call; (k) `diff <f> <sha>` after a commit, in mode `codex` and in mode `both`,
   prints `advisors: /advisor (mode codex)` (or `both`), exit 0, no record; mode `off` prints
   `no advisor: mode off`; (l) `diff <f> nosuchref` gives `usage:`, exit 2. Run it: red. Owns:
-  `tests/test_advisor_waive.sh`. Test: `bash tests/test_advisor_waive.sh`. (FR-002, FR-003,
+  `tests/test_advisor_waive.sh`, `tests/test_advisor.sh`. Test: `bash tests/test_advisor_waive.sh`. (FR-001, FR-002, FR-003,
   FR-004, lessons L1, L16)
 - [ ] T003 [P] [US1] Write `tests/test_advisor_rules.sh`: assert A1 to A13 in their files, and
   that `Then run the same point once more on the changed input.` is gone from
@@ -103,7 +114,7 @@ scoped tests.
   and the end-of-Build paragraph) and A5, A6 in `skills/st-inspect/SKILL.md` (Gate), and remove
   `Then run the same point once more on the changed input.` Keep every other row that
   `tests/test_on_demand.sh` asserts for these files. Owns: `skills/st-build/SKILL.md`,
-  `skills/st-inspect/SKILL.md`. Test: `bash tests/test_advisor_rules.sh && bash tests/test_on_demand.sh && bash tests/test_verify.sh`.
+  `skills/st-inspect/SKILL.md`. Test: `bash tests/test_advisor_rules.sh && bash tests/test_on_demand.sh && bash tests/test_verify.sh && ! bash tests/test_inspect.sh | grep '^FAIL' | grep -vxF 'FAIL README tests'`.
   (FR-001 to FR-004, lessons L18, L39)
 - [ ] T007 [P] [US1] Write S1 and S2 in `agents/st-build.md` (step 4, in place of `Then run the
   other tests that cover the files you touched.`) and `agents/st-debug.md` (step 5, in place of
@@ -111,12 +122,12 @@ scoped tests.
   in `agents/st-plan.md` (Rules), S5 in `procedures/tasks.md` (Checklist Format), S6 as step 7
   of `skills/st-sync/SKILL.md`. Owns: `agents/st-build.md`, `agents/st-debug.md`,
   `skills/st/SKILL.md`, `agents/st-plan.md`, `procedures/tasks.md`, `skills/st-sync/SKILL.md`.
-  Test: `bash tests/test_test_scope.sh && bash tests/test_on_demand.sh && bash tests/test_design_lane.sh`.
+  Test: `bash tests/test_test_scope.sh && bash tests/test_on_demand.sh && bash tests/test_design_lane.sh && ! bash tests/test_inspect.sh | grep '^FAIL' | grep -vxF 'FAIL README tests'`.
   (FR-005, FR-006, FR-007)
 - [ ] T008 [US1] README task 1 of 2. Add to the Tests block of `README.md` every test file that
   exists at the end of wave 3: `bash tests/test_lane_steps.sh`, `bash tests/test_advisor_waive.sh`,
   `bash tests/test_advisor_rules.sh`, `bash tests/test_test_scope.sh`, `bash tests/test_lock.sh`,
-  `bash tests/test_lock_rules.sh`, `bash tests/test_codex_agent.sh`,
+  `bash tests/test_lock_rules.sh`, `bash tests/test_codex_agent.sh` (only if T050 passed),
   `bash tests/test_advisor_matrix.sh`, `python3 tests/test_approve_hook.py` (the style of
   `README.md:316`), `bash tests/test_plan_rules.sh`, `bash tests/test_screen_rules.sh`,
   `bash tests/test_triage_rules.sh`, `bash tests/test_no_frontend_design.sh`. Add one sentence
@@ -144,7 +155,9 @@ at the same time.
   `subprocess.run(["git", "commit", "-m", "x"])` and whose comment line is `# it's a test`: `ask`
   with `The git guard could not read a git command on this line.`; (g) `echo "run git status"`
   with a stray-quote line: `ask`; (h) a heredoc line `hooks/st-git-guard.py it's`: no decision;
-  (i) the existing `test_parse_error_asks` stays. Run it: red. Owns: `tests/test_git_guard.py`.
+  (i) the existing `test_parse_error_asks` stays; (j) escaped git words, each on a line after a
+  stray-quote line: `\git push --force`, `g''it push --force` and `gi\t push --force` ask;
+  `\git status`, `g''it status` and `gi\t status` give no decision. Run it: red. Owns: `tests/test_git_guard.py`.
   Test: `PYTHONDONTWRITEBYTECODE=1 python3 tests/test_git_guard.py`. (FR-008, lessons L1, L3)
 - [ ] T010 [P] [US2] Write `tests/test_lock.sh` for `scripts/st-lock.sh` (contracts/scripts.md
   section 3). Make a temp git repo with one commit and a linked worktree (`git worktree add`).
@@ -203,10 +216,29 @@ the High talk.
 
 ### Tests (write first, must fail)
 
+- [ ] T050 [US3] Live probe of the Stratum Codex home (research R-J, D25). Runs in wave 1, before
+  any Codex adapter task. In a herdr pane: make `<scratchpad>/cxhome/` holding only
+  `auth.json -> ~/.codex/auth.json`; make `<scratchpad>/cxproj/` (`git init`) with
+  `.codex/config.toml` holding a canary `notify = ["sh", "-c", "touch <scratchpad>/canary-notify"]`
+  and a canary `[mcp_servers.canary]` whose command touches `<scratchpad>/canary-mcp`; run
+  `herdr tab create --workspace "$HERDR_WORKSPACE_ID" --cwd <scratchpad>/cxproj --label cx-probe --env CODEX_HOME=<scratchpad>/cxhome --no-focus`
+  and `herdr agent start cx-probe --kind codex --pane <its pane> --timeout 120000 -- -s read-only -a never --no-alt-screen`;
+  answer a trust dialog, if one shows, with its "do not trust" option and note it; send
+  `herdr agent prompt cx-probe "Say OK." --wait --until done --until idle --timeout 120000`.
+  Pass when all hold: the agent answers with no login screen; the footer model is not
+  `GPT-6-Astra xhigh`; neither canary file exists; `test -L <scratchpad>/cxhome/auth.json` holds
+  after the run; `codex login status` in a normal shell still prints `Logged in using ChatGPT`.
+  Close the tab. Record every result in research.md R-J. If it fails: T019, T021 and T024 are
+  ticked `Not run, T050 failed: <first failed check>` (lessons L24), T018 drops case (k) and
+  (n), T023 builds no herdr path and no `codex-home`, and T020 and T022 use the "T050 fails"
+  lines of contracts/phrases.md. Owns: `specs/010-workflow-overhaul/research.md`. Test: the
+  commands above. (FR-013, D25, security note S2, lessons L32)
 - [ ] T018 [P] [US3] Write `tests/test_advisor_matrix.sh` (setup as T002, plus a
   `.stratum/state.json` with `risk`). In `tests/test_advisor.sh` add
   `unset HERDR_ENV HERDR_WORKSPACE_ID` at the top and change the expected `mode not set` lines at
-  lines 315 and 379 to R18's message. Cases from contracts/scripts.md sections 1.3 to 1.5: (a)
+  lines 315 and 379 to R18's message, and in `badjson` (line 339) drop `{"model": "gpt-test-1"}`
+  (11 cases left) and add a check that this file runs as `auto` (first line
+  `advisors: codex (plan, risk normal)`), per D24. Cases from contracts/scripts.md sections 1.3 to 1.5: (a)
   mode `auto` from `{"mode": "auto"}`, from `{}` and from `{"model": "m1"}`; (b) for each of
   `plan`, `test`, `decisions`, `diff` and each risk `high`, `normal`, `low`, `none`: first line
   `advisors: <set> (<point>, risk <level>)` with the set from the matrix, and the stub `codex` is
@@ -225,18 +257,29 @@ the High talk.
   lines prints `talk recorded: plan, 3 rounds` and writes the header `## plan talk | <ts> | 3 rounds`
   and the lines; a file with no `calls:` line, or `rounds: 4`, gives `usage:`, exit 2, no record;
   (j) `count` counts round records as codex; (k) herdr path: `HERDR_ENV=1`,
-  `HERDR_WORKSPACE_ID=ws<random>` and a stub `herdr` that answers `agent list` (empty),
+  `HERDR_WORKSPACE_ID=ws<random>`, `XDG_STATE_HOME=<tmp>/state` with a Stratum Codex home made by
+  `codex-home`, and a stub `herdr` that answers `agent list` (empty),
   `tab create`, `agent start`, `agent prompt` (`done`) and `agent read` (plain text with the
   markers and an APPROVED answer, using the nonce it reads from the prompt file named in the
   prompt text): `plan` prints `APPROVED sha256 <h>`, the stub `codex` saw no `exec`, and the
-  herdr log has `agent start st-codex-001 --kind codex`; (l) the no-file line is R18's message.
+  herdr log has `agent start st-codex-001 --kind codex` and `tab create ... --env CODEX_HOME=<tmp>/state/stratum/codex-home`;
+  (k2) the same with no Stratum Codex home: the stub `codex` saw `exec` and the stub `herdr` was
+  not called (the fallback, D25); (l) the no-file line is R18's message; (m) run from a linked worktree whose
+  `.stratum/state.json` says `risk: low` while the main checkout's says `high`: the first line
+  names `risk high` (contract 1.4); (n) `codex-home` with `CODEX_HOME=<tmp>/user` holding
+  `auth.json`: prints `codex home: <tmp>/state/stratum/codex-home`, the folder has mode 700 and
+  only `auth.json`, a symlink to `<tmp>/user/auth.json`; a second run changes nothing; with no
+  `<tmp>/user/auth.json`: `no codex login: run codex login, then run this again`, exit 1, no
+  folder; no other command makes the folder (after (a) to (m), it exists only if (n) made it).
   Run it: red. Owns: `tests/test_advisor_matrix.sh`, `tests/test_advisor.sh`. Test:
   `bash tests/test_advisor_matrix.sh`. (FR-011, FR-012, FR-013, FR-014, FR-015, FR-016,
-  lessons L14, L16, L17, L26, L31)
-- [ ] T019 [P] [US3] Write `tests/test_codex_agent.sh` for `scripts/st-codex-agent.sh` with a
+  D24, D25, lessons L14, L16, L17, L26, L31)
+- [ ] T019 [P] [US3] Wave 2, after T050 passed. Write `tests/test_codex_agent.sh` for `scripts/st-codex-agent.sh` with a
   stub `herdr` whose ids have a random part (lessons L26) and whose `agent read` prints plain
   text (lessons L31), from a temp project with `specs/010-demo/`. Cases from contracts/scripts.md
-  section 2: (a) no agent: `tab create --workspace <ws> --cwd <pwd> --label Codex --no-focus`,
+  section 2, each run with a temp `<codex home>` whose `auth.json` is a symlink: (a0) a
+  `<codex home>` with no `auth.json` link: `ERROR: no Stratum Codex home`, exit 2, no herdr call;
+  (a) no agent: `tab create --workspace <ws> --cwd <pwd> --label Codex --env CODEX_HOME=<codex home> --no-focus`,
   then `agent start st-codex-010 --kind codex --pane <pane from the stub> --timeout 120000 -- -s read-only -a never --no-alt-screen`
   (TAB-split argv from the stub log); `-m m1 -c model_reasoning_effort="high"` come after
   `--no-alt-screen`; (b) `st-codex-010` in this workspace: no `tab create`, no `agent start`;
@@ -265,7 +308,7 @@ the High talk.
 
 ### Build
 
-- [ ] T021 [P] [US3] Write `scripts/st-codex-agent.sh` (contracts/scripts.md section 2). Owns:
+- [ ] T021 [P] [US3] Wave 3, after T050 passed and T019. Write `scripts/st-codex-agent.sh` (contracts/scripts.md section 2). Owns:
   `scripts/st-codex-agent.sh`. Test: `bash tests/test_codex_agent.sh`. (FR-013, lessons L26,
   L30, L31, L33)
 - [ ] T022 [P] [US3] Write R1 to R3 and R12 in `skills/st/SKILL.md` (R1 replaces the lane line,
@@ -273,19 +316,22 @@ the High talk.
   (Advisor section: R4 replaces the mode line, R5 goes after the kept `mode both` line, the
   matrix table with the R6 row and the other three rows from contracts/scripts.md section 1.4
   replaces the "It runs at two points" sentence; R13 in Per story); R14 in `skills/st-fast/SKILL.md`; R15 in
-  `skills/st-init/SKILL.md` step 11; R16 to R18 in the advisor part of `README.md`. Owns:
+  `skills/st-init/SKILL.md` step 11; R19 in `skills/st-init/SKILL.md` step 11; R20 in the Advisor section of
+  `skills/st-build/SKILL.md`; R16 to R18 in the advisor part of `README.md` (with T050's
+  result: R7 and R17 as written, or their "T050 fails" lines and no R19, R20). Owns:
   `skills/st/SKILL.md`, `skills/st-build/SKILL.md`, `skills/st-fast/SKILL.md`,
   `skills/st-init/SKILL.md`, `README.md`. Test:
-  `bash tests/test_risk_rules.sh && bash tests/test_on_demand.sh && bash tests/test_design_lane.sh && bash tests/test_advisor_rules.sh && bash tests/test_lock_rules.sh && bash tests/test_test_scope.sh && bash tests/test_shortcuts.sh && bash tests/test_screen_rules.sh`.
-  (FR-011 to FR-016, security note S1, S2)
+  `bash tests/test_risk_rules.sh && bash tests/test_on_demand.sh && bash tests/test_design_lane.sh && bash tests/test_advisor_rules.sh && bash tests/test_lock_rules.sh && bash tests/test_test_scope.sh && bash tests/test_shortcuts.sh && bash tests/test_screen_rules.sh && bash tests/test_model_files.sh && ! bash tests/test_inspect.sh | grep '^FAIL' | grep -vxF 'FAIL README tests'`.
+  (FR-011 to FR-016, D25, security note S1, S2)
 - [ ] T023 [US3] In `scripts/st-advisor.sh` add mode `auto` (missing `mode` = `auto`), the risk
   read, the matrix and the `advisors:` line, Codex at `diff` with the checked hash, `decisions`,
-  `round`, `talk`, the herdr path with `st-lock.sh` and `st-codex-agent.sh`, exit 75 as
+  `round`, `talk`, `codex-home`, the herdr path with `st-lock.sh` and `st-codex-agent.sh` (only
+  with the Stratum Codex home; both only if T050 passed), exit 75 as
   `BLOCKED: Codex agent busy with another review`, and the new no-file line (contracts/scripts.md
   sections 1.3 to 1.5). Depends on T021. Owns: `scripts/st-advisor.sh`. Test:
   `bash tests/test_advisor_matrix.sh && bash tests/test_advisor.sh && bash tests/test_advisor_waive.sh`.
   (FR-012 to FR-016, security note S1, lessons L14, L16, L17)
-- [ ] T024 [US3] Live run of quickstart section 3L in a scratch clone in herdr. Record in
+- [ ] T024 [US3] Only if T050 passed. Live run of quickstart section 3L in a scratch clone in herdr. Record in
   research.md R-H: the time, the lines read, whether the JSON parsed, the tab and agent names,
   and steps 2 to 4. A failure goes back to T021 or T023 with its first error line. Depends on
   T021 to T023. Owns: `specs/010-workflow-overhaul/research.md`. Test: the commands of
@@ -304,8 +350,21 @@ prompts through the hook; normal mode never answers them.
 
 - [ ] T026 [P] [US4] Write `tests/test_approve_hook.py` (unittest) for `hooks/st-approve.py`
   (contracts/scripts.md section 5). Run the hook by subprocess with JSON on stdin and `cwd` in a
-  temp folder with `.stratum/approve/`. Cases: (a) no `.stratum/approve`: no output, exit 0,
-  nothing written; (b) `.stratum/approve` is a symlink: no output; (c) Bash `bash tests/x.sh`:
+  temp git repo (the main checkout) with `.stratum/approve/`. "Autonomous on" means the main
+  checkout's `.stratum/autonomous` and `.stratum/approve/session` both hold `S1`; every
+  `PermissionRequest` case below runs with it on unless it says otherwise. D27 lock 1 cases, each
+  with no output and no `.req`: (a1) a stale `.stratum/approve/` and no `.stratum/autonomous`
+  (normal mode); (a2) `.stratum/autonomous` holds `S1`, `session` holds `S2`; (a3) after a
+  first `.req` round, `.stratum/autonomous` is removed ("stop autonomous") and a new prompt
+  comes; (a4) a linked worktree as `cwd` whose own `.stratum/autonomous` and `session` hold `S1`
+  while the main checkout has no `.stratum/autonomous`; (a5) an empty first line in both. D27
+  lock 2 cases (`PreToolUse`): `echo x > .stratum/approve/1-1.ok`,
+  `touch .stratum/'approve'/1-1.ok`, `touch .stra\tum/approve/1-1.ok` and
+  `ls .stratum/approve` each get `permissionDecision` `deny` with the reason
+  `.stratum/approve/ is written only by st-worker.sh approve and pass.`; Edit, Write,
+  MultiEdit and NotebookEdit of `<root>/.stratum/approve/1-1.ok` are denied the same way; Edit
+  `src/a.py` and Bash `bash tests/x.sh` give no output. Then: (a) no `.stratum/approve`: no
+  output, exit 0, nothing written; (b) `.stratum/approve` is a symlink: no output; (c) Bash `bash tests/x.sh`:
   a `<rid>.req` with `tool_name` and `tool_input` appears; the test then writes `<rid>.ok`; stdout
   is exactly the allow JSON; the three files are gone; (d) `.user`: no output, files gone; (e)
   `ST_APPROVE_WAIT=1` and no answer: no output, `.req` gone; (f) each of these gives no output
@@ -322,12 +381,23 @@ prompts through the hook; normal mode never answers them.
   and `staged` is `["src/a.py"]`; no `.req` for each of: `git commit --amend -m x`,
   `git commit --no-verify -m x`, `git commit -n -m x`, `git commit -a -m x`, the same own-files
   commit after `git checkout -b other`, `git add src/b.py && git commit -m x` (not owned), a
-  commit with `src/b.py` already staged (`git diff --cached`), `git -C ../x commit -m x`, and an
-  own-files commit with `owns` missing or empty; (i) stdin that is not JSON: no output, exit 0; (j) `hooks/commands.json` has
+  commit with `src/b.py` already staged (`git diff --cached`), `git -C ../x commit -m x`, an
+  own-files commit with `owns` missing or empty, `git commit -m x src/b.py` (pathspec, no `--`),
+  `git commit -o -m x src/a.py`, `git commit --only -m x src/a.py`,
+  `git commit --pathspec-from-file=f -m x`, `git add -u && git commit -m x`,
+  `git add -A && git commit -m x`, `GIT_INDEX_FILE=idx git commit -m x`,
+  `GIT_DIR=.git git commit -m x`, `GIT_WORK_TREE=. git commit -m x` and
+  `git -c user.name=x commit -m x`; `git commit -m x -- src/a.py` gives a `.req` with `staged`
+  `["src/a.py"]`; (h3) test runners give a `.req`: `npm test`, `npm run test`, `npx vitest run`,
+  `cargo test`, `go test ./...`, `pytest`, `uv run pytest`; install words give none:
+  `npm install x`, `npm i x`, `pnpm add x`, `yarn add x`, `bun add x`, `pip install x`,
+  `uv add x`, `uv pip install x`, `cargo add x`, `go get x`; (i) stdin that is not JSON: no output, exit 0; (j) `hooks/commands.json` has
   one `PermissionRequest` entry with command `python3 "${CLAUDE_PLUGIN_ROOT}/hooks/st-approve.py"`
-  and timeout 310; (k) the hook file has no `"deny"` text. Run it: red. Owns:
+  and timeout 310, and one `PreToolUse` entry with matcher `Bash|Edit|Write|MultiEdit|NotebookEdit`,
+  the same command and timeout 10; (k) no `PermissionRequest` case prints `deny`, and the hook
+  file has no `"behavior": "deny"` text. Run it: red. Owns:
   `tests/test_approve_hook.py`. Test: `PYTHONDONTWRITEBYTECODE=1 python3 tests/test_approve_hook.py`.
-  (FR-019, D23, security notes S3, S4, lessons L3, L5)
+  (FR-019, D23, D27, security notes S3, S4, lessons L3, L5)
 - [ ] T027 [P] [US4] Extend `tests/test_st_worker.sh` (contracts/scripts.md section 4). Teach the
   stub `herdr` `tab rename`, `pane split`, `pane run` and `tab create` with random ids, and an
   `agent read` text taken from a file the case writes. Cases: (a) `start` makes, in this order
@@ -336,18 +406,35 @@ prompts through the hook; normal mode never answers them.
   `pane split` of its root pane, ids read from the stub log; the same calls carry `--machine`
   for a saved machine; (b) `start --autonomous` with no `.stratum/autonomous`, and with a file
   whose line is not `$CLAUDE_CODE_SESSION_ID`: `Autonomous build mode is off for this session.`,
-  exit 1, no herdr call; with a match: `<wt>/.stratum/approve/` exists and `owns` lists the backticked paths of the task file's `Owns:`
+  exit 1, no herdr call; (b2) `start --autonomous --machine laptop --repo <path>` (D28): one `ssh`
+  call writes the `$CLAUDE_CODE_SESSION_ID` line to `<path>/.stratum/autonomous` before
+  `worktree create`, the remote `session` file holds the same line; a roster with a fifth `<path>` field still gives
+  the four-column brief row; a remote row with no fifth field, or a different one, gives
+  `Roster row for worker-t004 needs the repo path as a fifth field.`, exit 1, no call; a stale `<path>/.stratum/autonomous` with an old id is replaced; a
+  symlinked `<path>/.stratum` or file is refused; `STUB_SSH_RC=255` on that write gives
+  `cannot write .stratum/autonomous on laptop: <line>`, exit 1, and no `worktree create` or
+  `agent start` call; (b3) `autonomous-off --roster <file>` with one local and one laptop row:
+  removes the local `<top>/.stratum/autonomous` and, over `ssh`, the laptop one, printing
+  `autonomous off\tlocal` and `autonomous off\tlaptop`; a file whose line is another id is
+  kept; a failed `ssh` prints `autonomous off failed\tlaptop\t<line>`, still removes the local
+  one, and exits 1; with a match: `<wt>/.stratum/approve/` exists, `session` holds the
+  `$CLAUDE_CODE_SESSION_ID` line, and `owns` lists the backticked paths of the task file's `Owns:`
   line, one per line (a task with no `Owns:` line: an empty `owns`); (c) `wait` on `blocked`
   with a `<rid>.req`: the lines `state\tapproval\t...`, `request\t<rid>`,
   `tab\tworkspace worker-t004, tab Main`, `input\tBash: {...}`, exit 6; a commit `.req` adds
   `branch\tworker-t004` and `staged\tsrc/a.py src/b.py`; with no `.req`: today's
-  exit 4; (d) `approve <id> --request <rid> --record <file>`: writes `<rid>.ok`, appends one
+  exit 4; (d) `approve <id> --request <rid> --input <the input line's text> --record <file>`: writes `<rid>.ok`, appends one
   TAB-split record line, calls `agent wait worker-t004 --until working --timeout 5000` before it
   prints `approved\tworker-t004\t<rid>`; refused when autonomous mode is off, for `--request ../x`,
-  and for a missing `.req`; (e) `pass`: writes `<rid>.user`, prints `passed\t...`; (f) `answer`
-  when the pane text holds `Do you want to proceed?`, and when `agent read` fails: the exact
+  for a missing `.req`, for an `--input` that differs from the `.req` by one character
+  (`The input does not match request <rid>. Approve nothing.`, no `.ok`), and for an input over
+  4000 characters; (e) `pass`: writes `<rid>.user`, prints `passed\t...`; (f) `answer`
+  when the pane text has a line `Do you want to proceed?`, `Do you want to make this edit to a.py?`,
+  `Do you want to create b.py?` or `❯ 1. Yes`, and when `agent read` fails: the exact
   refusal line, exit 1, no `send-keys` call; (g) `close` removes `.stratum/approve/`; (h) the
-  brief's Team rule 1 is the whole B2 line. Update each existing case whose call order or count
+  brief's Team rule 1 is the whole B2 line: update the expected rule 1 text at
+  `tests/test_st_worker.sh:174` and the check at `:231` (rule 1 now ends in
+  `never write in .stratum/approve/.`). Update each existing case whose call order or count
   the layout changes, and name each one in the report. Run it: red. Owns:
   `tests/test_st_worker.sh`. Test: `bash tests/test_st_worker.sh`. (FR-017, FR-018, FR-019,
   FR-021, D23, lessons L26, L27, L34, L37)
@@ -355,7 +442,7 @@ prompts through the hook; normal mode never answers them.
   `.stratum/autonomous` holding `S1`: line 2 has ` autonomous `; the file holds `S2`: no
   `autonomous`; no file: no `autonomous`. Run it: red. Owns: `tests/test_statusline.sh`. Test:
   `bash tests/test_statusline.sh`. (FR-018)
-- [ ] T029 [P] [US4] Write `tests/test_worker_rules.sh`: assert W1 to W16 in their files and the
+- [ ] T029 [P] [US4] Write `tests/test_worker_rules.sh`: assert W1 to W17 in their files and the
   three "Gone" lines of the US4 table. In `tests/test_on_demand.sh` delete rows `#17 one-time yes`
   and `#17 FR-014 build`, and change the check `#17 FR-014 build skill` to: `/stratum:st-worker`
   appears in `skills/st-build/SKILL.md` on one line only, the W10 line. Run it: red. Owns:
@@ -364,12 +451,15 @@ prompts through the hook; normal mode never answers them.
 
 ### Build
 
-- [ ] T030 [P] [US4] Write `hooks/st-approve.py` and add its `PermissionRequest` entry to
-  `hooks/commands.json` (contracts/scripts.md section 5), with the `ponytail:` line for the text
-  never list, and the D23 commit rules. Owns: `hooks/st-approve.py`, `hooks/commands.json`. Test:
+- [ ] T030 [P] [US4] Write `hooks/st-approve.py` with both branches (contracts/scripts.md sections
+  5.1 and 5.2) and add its `PermissionRequest` and `PreToolUse` entries to
+  `hooks/commands.json`, with the `ponytail:` lines for the text never list and the text write
+  lock, the D23 commit rules and the D27 session check. Owns: `hooks/st-approve.py`, `hooks/commands.json`. Test:
   `PYTHONDONTWRITEBYTECODE=1 python3 tests/test_approve_hook.py && PYTHONDONTWRITEBYTECODE=1 python3 tests/test_phase_hook.py && PYTHONDONTWRITEBYTECODE=1 python3 tests/test_model_hook.py`.
-  (FR-019, security notes S3, S4, S5, lessons L3, L5)
-- [ ] T031 [P] [US4] In `scripts/st-worker.sh` add `start --autonomous` (with the `owns` file), the layout, the `wait`
+  (FR-019, D23, D27, security notes S3, S4, S5, lessons L3, L5)
+- [ ] T031 [P] [US4] In `scripts/st-worker.sh` add `start --autonomous` (with the `owns` and
+  `session` files, and the remote `.stratum/autonomous` write for `--machine`, D28),
+  `autonomous-off`, the layout, the `wait`
   approval state, `approve`, `pass`, the `answer` refusal, the `close` cleanup and B2 (Team rule
   1); update the usage line; change rule 1 in section 3 of
   `specs/008-herdr-workers/contracts/script.md` to B2 (contracts/scripts.md section 4). Owns:
@@ -378,17 +468,28 @@ prompts through the hook; normal mode never answers them.
   lessons L26, L27, L30, L33, L34, L37)
 - [ ] T032 [P] [US4] Add the `autonomous` segment to `statusline/st-statusline.sh`
   (contracts/scripts.md section 7). Owns: `statusline/st-statusline.sh`. Test:
-  `bash tests/test_statusline.sh`. (FR-018)
-- [ ] T033 [P] [US4] Write W1 to W7, W11, W14 and W16 in `skills/st-worker/SKILL.md` (step 6 and the
+  `bash tests/test_statusline.sh && ! bash tests/test_inspect.sh | grep '^FAIL' | grep -vxF 'FAIL README tests'`. (FR-018)
+- [ ] T033 [P] [US4] Write W1 to W7, W11, W14, W16 and W17 in `skills/st-worker/SKILL.md` (step 6 and the
   last line; remove the three "Gone" lines), W8, W9 and W12 in `skills/st/SKILL.md` (Always), W10
   in `skills/st-build/SKILL.md` (Parallel tasks), W13 in `skills/st-herdr-workspace/SKILL.md`,
   and W15 in `README.md` (beside the worker section). Owns: `skills/st-worker/SKILL.md`,
   `skills/st/SKILL.md`, `skills/st-build/SKILL.md`, `skills/st-herdr-workspace/SKILL.md`,
   `README.md`. Test:
-  `bash tests/test_worker_rules.sh && bash tests/test_on_demand.sh && bash tests/test_risk_rules.sh && bash tests/test_lock_rules.sh && bash tests/test_advisor_rules.sh && bash tests/test_test_scope.sh && bash tests/test_screen_rules.sh`.
+  `bash tests/test_worker_rules.sh && bash tests/test_on_demand.sh && bash tests/test_risk_rules.sh && bash tests/test_lock_rules.sh && bash tests/test_advisor_rules.sh && bash tests/test_test_scope.sh && bash tests/test_screen_rules.sh && ! bash tests/test_inspect.sh | grep '^FAIL' | grep -vxF 'FAIL README tests'`.
   (FR-017 to FR-022, D23, security note S4)
 - [ ] T034 [US4] Live run of quickstart section 4L on a scratch branch in herdr. Record each
   step's output in research.md R-H, including whether the hook answers after more than 120 s.
+  D28 step, on a saved machine (whichever machine is not the one running the orchestrator):
+  `start t992 ... --machine <m> --repo <path> --autonomous`, one approval there, then
+  `autonomous-off --roster <roster>`; record that `<path>/.stratum/autonomous` on `<m>` was
+  written, then removed.
+  D27 steps: with autonomous mode on, ask the worker to run `echo x > .stratum/approve/1-1.ok`
+  and to Edit that path, and record both denials; then `rm -f .stratum/autonomous`, make the
+  worker hit a dialog, and record that no `.req` appears and the dialog stays.
+  Extra step (F9): give the worker a command its classifier blocks that is not on the hook's
+  never list (for example `rm -rf demo` after a task that does not ask for it), and record
+  whether a dialog and a `.req` appear. If they do, the W3 rule (a request for an action the
+  classifier blocked goes to the user) is the only guard: bring that result to the user.
   If the hook from `hooks/commands.json` never fires (no `.req` while the dialog shows), the
   contingency is that `start --autonomous` passes `--settings <generated file>` with the same
   hook command to `agent start`; bring it to the user before building it. A failure goes back
@@ -408,26 +509,26 @@ new screens to the Design lane and runs file-disjoint stories together.
 
 ### Tests (write first, must fail)
 
-- [ ] T036 [P] [US5] Write `tests/test_plan_rules.sh`: assert D1 to D10 and D18 in their files and
+- [ ] T036 [P] [US5] Write `tests/test_plan_rules.sh`: assert DL1 to DL10 and DL18 in their files and
   the "Gone" lines for `agents/st-plan.md`, `procedures/tasks.md` and `templates/tasks.md`. Run
   it: red. Owns: `tests/test_plan_rules.sh`. Test: `bash tests/test_plan_rules.sh`. (FR-023,
   FR-026, lessons L1, L41)
-- [ ] T037 [P] [US5] Write `tests/test_screen_rules.sh`: assert D11 to D17 and that `design brief`
+- [ ] T037 [P] [US5] Write `tests/test_screen_rules.sh`: assert DL11 to DL17 and that `design brief`
   is gone from `agents/st-build.md` and ``merge it into `main` `` from `skills/st-build/SKILL.md`.
   Run it: red. Owns: `tests/test_screen_rules.sh`. Test: `bash tests/test_screen_rules.sh`.
   (FR-024, FR-025, FR-026, lessons L1, L11, L12, L40)
 
 ### Build
 
-- [ ] T038 [P] [US5] Write D1 and D2 in `agents/st-plan.md` (Rules; D2 replaces
-  `Mark tasks that touch no common file \`[P]\`.`), D3 to D5 in `procedures/tasks.md` (Format
-  Components; D3 replaces the old `[P] marker` item), D6 to D8 and D18 in `templates/tasks.md`
-  (Format list and Notes), D9 and D10 in `skills/st-plan/SKILL.md` (steps 3 and 2). Owns:
+- [ ] T038 [P] [US5] Write DL1 and DL2 in `agents/st-plan.md` (Rules; DL2 replaces
+  `Mark tasks that touch no common file \`[P]\`.`), DL3 to DL5 in `procedures/tasks.md` (Format
+  Components; DL3 replaces the old `[P] marker` item), DL6 to DL8 and DL18 in `templates/tasks.md`
+  (Format list and Notes), DL9 and DL10 in `skills/st-plan/SKILL.md` (steps 3 and 2). Owns:
   `agents/st-plan.md`, `procedures/tasks.md`, `templates/tasks.md`, `skills/st-plan/SKILL.md`.
-  Test: `bash tests/test_plan_rules.sh && bash tests/test_test_scope.sh && bash tests/test_on_demand.sh`.
+  Test: `bash tests/test_plan_rules.sh && bash tests/test_test_scope.sh && bash tests/test_on_demand.sh && ! bash tests/test_inspect.sh | grep '^FAIL' | grep -vxF 'FAIL README tests'`.
   (FR-023, FR-026)
-- [ ] T039 [P] [US5] Write D11 to D16 in `skills/st-build/SKILL.md` (D11 to D14 in Per task, D15
-  and D16 in Parallel tasks; D16 replaces ``merge it into `main` ``) and D17 as step 5 of
+- [ ] T039 [P] [US5] Write DL11 to DL16 in `skills/st-build/SKILL.md` (DL11 to DL14 in Per task, DL15
+  and DL16 in Parallel tasks; DL16 replaces ``merge it into `main` ``) and DL17 as step 5 of
   `agents/st-build.md`. Owns: `skills/st-build/SKILL.md`, `agents/st-build.md`. Test:
   `bash tests/test_screen_rules.sh && bash tests/test_advisor_rules.sh && bash tests/test_lock_rules.sh && bash tests/test_test_scope.sh`.
   (FR-024, FR-025, FR-026)
@@ -442,7 +543,7 @@ new screens to the Design lane and runs file-disjoint stories together.
 
 ### Tests (write first, must fail)
 
-- [ ] T041 [P] [US6] Write `tests/test_triage_rules.sh`: assert T1 to T4 and the US6 "Gone" lines
+- [ ] T041 [P] [US6] Write `tests/test_triage_rules.sh`: assert TP1 to TP4 and the US6 "Gone" lines
   (`Make GitHub issues from the tasks?` in no `skills/*/SKILL.md`), and that
   `Next phase: \`/stratum:st-inspect\`.` stays in `skills/st-plan/SKILL.md`. Run it: red. Owns:
   `tests/test_triage_rules.sh`. Test: `bash tests/test_triage_rules.sh`. (FR-028, FR-029,
@@ -457,20 +558,21 @@ new screens to the Design lane and runs file-disjoint stories together.
 
 ### Build
 
-- [ ] T043 [P] [US6] Write T1 at the start of section 1 of `skills/st/SKILL.md` and T2 in place of
-  its issue rule (keep `Do not end a reply with an offer to file issues`), T3 as the description
-  and remove the issue question from the Gate of `skills/st-plan/SKILL.md`, T4 as line 2 of
+- [ ] T043 [P] [US6] Write TP1 at the start of section 1 of `skills/st/SKILL.md` and TP2 in place of
+  its issue rule (keep `Do not end a reply with an offer to file issues`), TP3 as the description
+  and remove the issue question from the Gate of `skills/st-plan/SKILL.md`, TP4 as line 2 of
   `skills/st-full/SKILL.md`. Owns: `skills/st/SKILL.md`, `skills/st-plan/SKILL.md`,
   `skills/st-full/SKILL.md`. Test:
-  `bash tests/test_triage_rules.sh && bash tests/test_risk_rules.sh && bash tests/test_worker_rules.sh && bash tests/test_test_scope.sh && bash tests/test_plan_rules.sh && bash tests/test_design_lane.sh && bash tests/test_on_demand.sh`.
+  `bash tests/test_triage_rules.sh && bash tests/test_risk_rules.sh && bash tests/test_worker_rules.sh && bash tests/test_test_scope.sh && bash tests/test_plan_rules.sh && bash tests/test_design_lane.sh && bash tests/test_on_demand.sh && ! bash tests/test_inspect.sh | grep '^FAIL' | grep -vxF 'FAIL README tests'`.
   (FR-028, FR-029)
 - [ ] T044 [P] [US6] Remove `st-frontend-design`: delete `skills/st-frontend-design/` and
   `licenses/frontend-design.Apache-2.0.txt`; remove the `frontend-design` entry from
   `vendor.lock`, its row (line 15) and its name in line 23 of `THIRD_PARTY_NOTICES.md`, its name
   in `README.md` lines 115 and 340, and the `DESIGN.md` mentions at lines 44 and 103; change
-  `DESIGN.md:171` to say the skill was removed in 010 (D6). Owns: `skills/st-frontend-design/`,
+  `DESIGN.md:171` to say the visual-direction skill was removed in 010 (D6), with no
+  `frontend-design` text in the new line. Owns: `skills/st-frontend-design/`,
   `licenses/frontend-design.Apache-2.0.txt`, `vendor.lock`, `THIRD_PARTY_NOTICES.md`,
-  `README.md`, `DESIGN.md`. Test: `bash tests/test_no_frontend_design.sh && bash tests/test_design_lane.sh`.
+  `README.md`, `DESIGN.md`. Test: `bash tests/test_no_frontend_design.sh && bash tests/test_design_lane.sh && ! bash tests/test_inspect.sh | grep '^FAIL' | grep -vxF 'FAIL README tests'`.
   (FR-030, lessons L7)
 
 **Checkpoint**: quickstart section 6 passes.
@@ -484,16 +586,19 @@ new screens to the Design lane and runs file-disjoint stories together.
   `bash tests/test_lane_steps.sh && bash tests/test_inspect.sh`. (FR-027, FR-031, lessons L7)
 - [ ] T047 FR-031 negative controls. Make a worktree of `6fe9d60` in the scratchpad
   (`git worktree add <scratchpad>/old 6fe9d60`), copy each new test file and each changed test
-  file into it, and run each one there right after its green run here (lessons L25). Every new
-  file and every new case must be red there. Record one line per file in research.md as "R-I
+  file into it, and run each one there right after its green run here (lessons L25). Count only the
+  cases whose behavior this feature changes: each must be red there, and each new file must
+  have at least one red case. Cases for kept behavior (old phrases that stay, "no output"
+  paths the old code also gives, guard asks the old guard already gives, as T013 names) are
+  listed as `same on old` and not counted. Record one line per file in research.md as "R-I
   negative controls". Remove nothing: tell the user the scratch worktree path. Owns:
   `specs/010-workflow-overhaul/research.md`. Test: the commands of T048, run in the old
   worktree. (FR-031, lessons L2, L20, L25)
 - [ ] T048 Scoped regression of every test file this feature adds or whose files it changes, one
   command at a time:
-  `bash tests/test_lane_steps.sh && bash tests/test_advisor.sh && bash tests/test_advisor_waive.sh && bash tests/test_advisor_rules.sh && bash tests/test_test_scope.sh && bash tests/test_lock.sh && bash tests/test_lock_rules.sh && bash tests/test_advisor_matrix.sh && bash tests/test_codex_agent.sh && bash tests/test_risk_rules.sh && bash tests/test_st_worker.sh && bash tests/test_statusline.sh && bash tests/test_worker_rules.sh && bash tests/test_plan_rules.sh && bash tests/test_screen_rules.sh && bash tests/test_triage_rules.sh && bash tests/test_no_frontend_design.sh && bash tests/test_on_demand.sh && bash tests/test_design_lane.sh && bash tests/test_inspect.sh && bash tests/test_verify.sh && bash tests/test_shortcuts.sh && PYTHONDONTWRITEBYTECODE=1 python3 tests/test_git_guard.py && PYTHONDONTWRITEBYTECODE=1 python3 tests/test_approve_hook.py && PYTHONDONTWRITEBYTECODE=1 python3 tests/test_phase_hook.py && PYTHONDONTWRITEBYTECODE=1 python3 tests/test_model_hook.py`.
+  `bash tests/test_lane_steps.sh && bash tests/test_advisor.sh && bash tests/test_advisor_waive.sh && bash tests/test_advisor_rules.sh && bash tests/test_test_scope.sh && bash tests/test_lock.sh && bash tests/test_lock_rules.sh && bash tests/test_advisor_matrix.sh && bash tests/test_codex_agent.sh && bash tests/test_risk_rules.sh && bash tests/test_st_worker.sh && bash tests/test_statusline.sh && bash tests/test_worker_rules.sh && bash tests/test_plan_rules.sh && bash tests/test_screen_rules.sh && bash tests/test_triage_rules.sh && bash tests/test_no_frontend_design.sh && bash tests/test_on_demand.sh && bash tests/test_design_lane.sh && bash tests/test_inspect.sh && bash tests/test_verify.sh && bash tests/test_shortcuts.sh && bash tests/test_model_files.sh && PYTHONDONTWRITEBYTECODE=1 python3 tests/test_git_guard.py && PYTHONDONTWRITEBYTECODE=1 python3 tests/test_approve_hook.py && PYTHONDONTWRITEBYTECODE=1 python3 tests/test_phase_hook.py && PYTHONDONTWRITEBYTECODE=1 python3 tests/test_model_hook.py`.
   Not in the list because no file they check changes: `test_design_check.sh`,
-  `test_herdr_workspace.sh`, `test_model_files.sh`, `test_pr_skill.sh`, `test_session_hooks.sh`,
+  `test_herdr_workspace.sh`, `test_pr_skill.sh`, `test_session_hooks.sh`,
   `test_pr_workflow.mjs`, `test_token_weather.mjs`. Owns: nothing. Test: the command above.
 - [ ] T049 Run the hand checks of quickstart sections 1, 2 and 6 and record the outputs in
   research.md R-H. Owns: `specs/010-workflow-overhaul/research.md`. Test: the commands in those
@@ -508,9 +613,9 @@ Test reads a file it changes. Test tasks still come before their build tasks.
 
 | Wave | Tasks | Waits for |
 |------|-------|-----------|
-| 1 | T001, T002, T003, T004, T009, T010, T011, T012, T019, T026, T028, T036, T037, T041, T042 | nothing: each writes its own test file (T003 also `tests/test_on_demand.sh`) |
-| 2 | T005, T006, T007, T013, T014, T016, T021, T030, T032, T044 | the wave 1 test of each |
-| 3 | T015, T018, T027, T038, then T008 last | T015: T006, T007 (shared `skills/st-build/SKILL.md`, agents). T018: T005 (`tests/test_advisor.sh` is T005's Test). T027: T016 (`tests/test_st_worker.sh`). T038: T007 (`agents/st-plan.md`, `procedures/tasks.md`). T008: T044 (`README.md`) and every test file it lists, so after T018 |
+| 1 | T001, T002, T003, T004, T009, T010, T011, T012, T026, T028, T036, T037, T041, T042, T050 | nothing: each writes its own test file, T050 writes `research.md` (T002 also `tests/test_advisor.sh`, T003 also `tests/test_on_demand.sh`) |
+| 2 | T005, T006, T007, T013, T014, T016, T019, T030, T032, T044 | the wave 1 test of each; T019: T050 passed |
+| 3 | T015, T018, T021, T027, T038, then T008 last | T015: T006, T007 (shared `skills/st-build/SKILL.md`, agents). T018: T005 (`tests/test_advisor.sh` is T005's Test). T027: T016 (`tests/test_st_worker.sh`). T038: T007 (`agents/st-plan.md`, `procedures/tasks.md`). T021: T019, T050. T008: T044 (`README.md`) and every test file it lists, so after T018 |
 | 4 | T020, T023, T031, T039 | T020: T003, T006, T007, T015 (their Tests read `tests/test_on_demand.sh`). T023: T018, T021, T014. T031: T027. T039: T015 |
 | 5 | T022, T024 | T022: T020, T039, T008 (`skills/st-build/SKILL.md`, `skills/st/SKILL.md`, `README.md`). T024: T023 |
 | 6 | T029, T034 | T029: T022 (its Test reads `tests/test_on_demand.sh`). T034: T030, T031, T032, T024 (`research.md`) |
@@ -521,7 +626,7 @@ Test reads a file it changes. Test tasks still come before their build tasks.
 
 - US1 MVP checkpoint: end of wave 3 (T002 to T008 done, quickstart section 1 passes).
 - The code tasks run early, beside US1: git guard (T009, T013), lock (T010, T014), Codex adapter
-  (T019, T021), approval hook (T026, T030), status line (T028, T032), the brief line (T012, T016),
+  (T050 first, then T019, T021), approval hook (T026, T030), status line (T028, T032), the brief line (T012, T016),
   and the `st-frontend-design` removal (T042, T044).
 - The text tasks form one chain, because they share `skills/st-build/SKILL.md`,
   `skills/st/SKILL.md`, `tests/test_on_demand.sh` and `README.md`: T006 and T007, then T015 and
@@ -536,7 +641,7 @@ Test reads a file it changes. Test tasks still come before their build tasks.
 
 ```text
 T005 (st-advisor.sh), T006 (st-build, st-inspect skills), T007 (6 agent and skill files),
-T013 (git guard), T014 (st-lock.sh), T016 (st-worker.sh, 008 contract), T021 (st-codex-agent.sh),
+T013 (git guard), T014 (st-lock.sh), T016 (st-worker.sh, 008 contract), T019 (test_codex_agent.sh),
 T030 (st-approve.py, commands.json), T032 (statusline), T044 (st-frontend-design removal, README, DESIGN, vendor.lock, notices)
 ```
 
@@ -550,5 +655,5 @@ T030 (st-approve.py, commands.json), T032 (statusline), T044 (st-frontend-design
 
 ## Counts
 
-44 tasks: Setup 1, US1 7, US2 8, US3 7, US4 9, US5 4, US6 4, Polish 4. Live-run tasks: T024,
+45 tasks: Setup 1, US1 7, US2 8, US3 8, US4 9, US5 4, US6 4, Polish 4. Live-run tasks: T050, T024,
 T034.

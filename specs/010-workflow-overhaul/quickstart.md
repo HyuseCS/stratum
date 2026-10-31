@@ -22,7 +22,8 @@ bash tests/test_on_demand.sh
 Expected: every line `ok`, exit 0. Hand check in a scratch clone with a feature dir that has
 `spec.md`, `plan.md`, `tasks.md`:
 
-1. `bash scripts/st-advisor.sh waive plan specs/<f> "fix-only change"` prints `WAIVED sha256 <h>`
+1. After an APPROVED `bash scripts/st-advisor.sh plan specs/<f>`, run
+   `bash scripts/st-advisor.sh waive plan specs/<f> "fix-only change"`. It prints `WAIVED sha256 <h>`
    and `reason: fix-only change`. `codex` was not called.
 2. `bash scripts/st-advisor.sh check plan specs/<f>` prints `WAIVED sha256 <h>`, exit 0.
 3. Change `tasks.md`, run step 2 again: `advisor approval is stale`, exit 1.
@@ -60,17 +61,29 @@ bash tests/test_design_lane.sh
 bash tests/test_on_demand.sh
 ```
 
+### 3P. Codex home probe (T050, runs first)
+
+The steps and the pass rule are in tasks.md T050 and research.md R-J. Pass: logged in, not the
+user's model, no canary file, `auth.json` still a link, `codex login status` still logged in.
+Fail: Codex runs in the background in herdr too, and section 3L is skipped.
+
 ### 3L. Live Codex tab review (T024)
 
 In a herdr pane, in a scratch clone with `.stratum/advisor.json` = `{"mode": "auto"}` and
 `.stratum/state.json` `risk` = `normal`:
 
+0. `bash scripts/st-advisor.sh codex-home`. Expect `codex home: ~/.local/state/stratum/codex-home`
+   (expanded), a folder with only the `auth.json` link. Skip section 3L if T050 failed.
 1. `bash scripts/st-advisor.sh plan specs/<f>`. Expect: first line
    `advisors: codex (plan, risk normal)`, a new tab `Codex` in this workspace with agent
    `st-codex-<NNN>`, a verdict line, a record in `specs/<f>/advisor.md`.
 2. Run it again: no second tab, the same agent.
 3. Close the `Codex` tab by hand and run it again: a new tab and agent.
 4. Set `risk` to `low`: `advisors: none (plan, risk low)`, no Codex call.
+5. In the `Codex` tab the footer model is the one in `.stratum/advisor.json` (or Codex's own
+   default), not your `~/.codex/config.toml` model.
+6. Move the Codex home away (`mv ~/.local/state/stratum/codex-home <scratch>/`) and run step 1
+   again: no tab is used and Codex runs in the background (the fallback). Move it back.
 
 Record in research.md: the time, the number of answer lines read, and whether the JSON parsed.
 
@@ -106,13 +119,22 @@ In a herdr pane in this repo, on a scratch branch, with a one-line task file:
    ```
 3. `bash scripts/st-worker.sh wait t990` prints `state approval`, a `request` id, the tab line,
    the input, `branch\tworker-t990` and `staged\tdemo/n.txt` (D23: own branch, owned file).
-4. `bash scripts/st-worker.sh approve t990 --request <rid> --record <scratch>/approvals.txt`:
+4. `bash scripts/st-worker.sh approve t990 --request <rid> --input "<the input line's text>" --record <scratch>/approvals.txt`:
    the dialog closes, the worker goes on, the record has one line.
 5. Start a second worker the same way (`t991`) and `pass` its request: the dialog stays for
    you in its Main tab, and `t990` keeps running.
 6. Wait more than 120 s before one `approve` and note whether the hook still answers.
-7. `rm -f .stratum/autonomous`, then `approve` again: `Autonomous build mode is off for this session.`
-8. `close t990`: `.stratum/approve/` is gone.
+7. Ask the worker in its tab to run `echo x > .stratum/approve/1-1.ok`: the command is denied
+   with `.stratum/approve/ is written only by st-worker.sh approve and pass.` An Edit of that path
+   is denied the same way.
+8. `rm -f .stratum/autonomous`, make the worker hit a dialog: no `.req` appears and the dialog
+   stays for you. `approve` again: `Autonomous build mode is off for this session.`
+9. `close t990`: `.stratum/approve/` is gone.
+10. On a saved machine `<m>` (whichever one is not running this session): start `t992` with
+    `--machine <m> --repo <path> --autonomous`. `ssh <m> cat <path>/.stratum/autonomous` shows
+    this session's id. Approve one request with `approve t992 ... --machine <m>`. Then
+    `bash scripts/st-worker.sh autonomous-off --roster <roster>` prints `autonomous off\tlocal` and
+    `autonomous off\t<m>`, and the file on `<m>` is gone.
 
 Record each step's output in research.md (L32).
 

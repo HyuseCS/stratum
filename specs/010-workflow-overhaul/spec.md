@@ -6,7 +6,7 @@
 
 **Status**: Draft
 
-**Input**: User description: "GitHub issues #51, #48 and #55 on HyuseCS/stratum as one feature. #51: bring the newer skills into the lanes and look again at the lane steps. #48: fewer advisor calls, and no full test suite unless a human asks. #55: worker sessions stop on permission prompts the orchestrator cannot answer, and the test wait loop matches itself." Decisions D1 to D22 are in `decisions.md`. #51 stays open after this feature for a later skill-by-skill workflow review (D22).
+**Input**: User description: "GitHub issues #51, #48 and #55 on HyuseCS/stratum as one feature. #51: bring the newer skills into the lanes and look again at the lane steps. #48: fewer advisor calls, and no full test suite unless a human asks. #55: worker sessions stop on permission prompts the orchestrator cannot answer, and the test wait loop matches itself." Decisions D1 to D24 are in `decisions.md`. #51 stays open after this feature for a later skill-by-skill workflow review (D22).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -58,7 +58,7 @@ the same time take turns through one Stratum lock, with a time limit, and never 
 **Why this priority**: #55 shows workers stopped for 8 and 23 minutes on these two problems, and
 the user had to go to each tab or run `kill`.
 
-**Independent Test**: Feed the git guard the four commands of FR-016 and see each decision. Start
+**Independent Test**: Feed the git guard the four commands of FR-008 and see each decision. Start
 two test runs through the lock at the same time and see the second wait, then run; start one with
 a held lock and a short limit and see it stop and report.
 
@@ -275,7 +275,8 @@ line. Run the Plan phase and see no issue question. Search the plugin and see no
 - **FR-009**: Stratum MUST give one lock script for test runs that cannot run at the same time:
   one run per project at a time, the others wait, a time limit (default 10 minutes) after which a
   waiting run stops, runs nothing and reports; a lock whose owner process is gone MUST be freed.
-  It MUST work on Linux, macOS and Windows (Git Bash) and use no `pgrep` or `flock` (D20).
+  It MUST use only POSIX shell tools (no `pgrep`, no `flock`) so it runs on Linux, macOS and
+  Windows (Git Bash); it is tested on Linux (D20).
 - **FR-010**: `st-test`, `st-build`, `st-debug` and the worker brief MUST say to use the lock for
   marked tests and never to write a wait loop of their own (D20).
 
@@ -311,13 +312,15 @@ line. Run the Plan phase and see no issue question. Search the plugin and see no
   autonomous", and a new session MUST NOT start in it (D21).
 - **FR-019**: In autonomous build mode each worker MUST start with a Stratum permission hook that
   sends its prompts to the orchestrator. The orchestrator MUST approve small, safe prompts (a
-  test, a lint, an edit in the worker's own worktree) one time only, and MUST send all others to
+  test, a lint, an edit in the worker's own worktree, or a commit in the worker's own worktree,
+  on its own branch, that stages only files its task owns and has no `--amend` and no
+  `--no-verify`) one time only, and MUST send all others to
   the user with the tab name in short, simple words. It MUST never approve: push, force-push,
   deleting a branch or worktree, `reset --hard`, anything outside the worker's worktree, secrets
   or `.env`, new dependencies, network calls to new hosts. When the classifier blocks an approval,
   it MUST try no other way. Every approval MUST be recorded and listed at the end of the run. If
   the hook cannot do this, autonomous mode MUST fall back to permissions the user grants at worker
-  start (D1).
+  start (D1, D23).
 - **FR-020**: Build MUST send a phase's `[P]` tasks to `st-worker` when the user says so ("build
   with workers", "on the laptop"); otherwise it MUST use subagents as today (D2).
 - **FR-021**: `st-worker` MUST open each worker workspace with the user's full template layout, the

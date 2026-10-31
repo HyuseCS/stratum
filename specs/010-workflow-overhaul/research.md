@@ -50,11 +50,12 @@ closed after the probe. Scratch files: `<scratchpad>/ra/` (R-A) and `<scratchpad
 
 ## R-B. How does the orchestrator send its answer so the classifier sees it?
 
-- Decision: The orchestrator runs `bash <plugin root>/scripts/st-worker.sh approve <id> --request <rid> --record <file>`
+- Decision: The orchestrator runs `bash <plugin root>/scripts/st-worker.sh approve <id> --request <rid> --input "<input text>" --record <file>`
   in its own Bash tool. That call writes `<worktree>/.stratum/approve/<rid>.ok`. The worker's
   hook reads the file and answers `allow` one time. The orchestrator's permission check (its
-  classifier in auto mode, or the user in default mode) sees the call, its name and the request
-  id in plain text. If that check blocks the call, nothing is written, the hook times out with
+  classifier in auto mode, or the user in default mode) sees the call, its name, the request
+  id and the full command it approves (`--input`, checked against the `.req`) in plain text.
+  `st-worker.sh` must never be on a permission allow list, or no check is left. If that check blocks the call, nothing is written, the hook times out with
   no decision, and the dialog stays for the user. That is D1's "tries no other way" by
   construction. The hook never answers `deny`.
 - Rationale: one visible command per approval, no send-keys into the dialog (rejected O4), and a
@@ -64,6 +65,16 @@ closed after the probe. Scratch files: `<scratchpad>/ra/` (R-A) and `<scratchpad
   `CLAUDE_CODE_SESSION_ID=a5645c15-5e7e-448a-bb3c-12b611437958`, the same id as the session's
   scratchpad folder. This variable is not in the public docs. If a later Claude Code drops it,
   `approve` refuses and every prompt goes to the user (safe side).
+- D27 adds two locks against a worker approving itself. (1) The `PermissionRequest` branch acts
+  only while the main checkout's `.stratum/autonomous` (found with `git rev-parse --git-common-dir`)
+  holds the same session id as the worktree's `.stratum/approve/session`, which `start
+  --autonomous` writes. A worker cannot change the main checkout's file through a path in its
+  own tree, and normal mode, a stale folder or "stop autonomous" leave every prompt for the user.
+  (2) A `PreToolUse` branch of the same hook denies a Bash command, Edit or Write that touches
+  `.stratum/approve/`. Remote workers (D28): `start --autonomous --machine` writes the session id into that
+  machine's main checkout `.stratum/autonomous` over the existing `rsh` path, and
+  `autonomous-off` removes it at the end of the run, so the hook on that machine checks the same
+  rule.
 - Alternatives considered: `herdr agent send-keys` on the dialog (rejected by D1, O4); a hook
   `deny` with a message (it would stop the worker's tool call instead of leaving it to the user).
 
@@ -74,6 +85,8 @@ closed after the probe. Scratch files: `<scratchpad>/ra/` (R-A) and `<scratchpad
   in a new tab labelled `Codex`. Send each review as a short prompt that names a prompt file.
   Read the answer with `herdr agent read <name> --source recent-unwrapped --lines 400`, take
   the last pair of exact marker lines, and join the lines between them with one space.
+- D25 changes the config part below: the tab gets its own `CODEX_HOME` (R-J), so the user's
+  config is not read there.
 - Evidence, flags (`codex --help`): `-s, --sandbox <SANDBOX_MODE> [possible values: read-only, workspace-write, danger-full-access]`,
   `-a, --ask-for-approval … never: Never ask for user approval`, `--no-alt-screen … preserving terminal scrollback history`.
   The TUI has no `--ignore-user-config`, no `--ephemeral` and no `--output-schema`: those are
@@ -121,6 +134,36 @@ closed after the probe. Scratch files: `<scratchpad>/ra/` (R-A) and `<scratchpad
   for codex (`"agent_session":null`), and the newest-file guess fails with two Codex sessions);
   `codex exec` in the tab (rejected O25).
 
+## R-J. A Stratum-owned Codex home for the tab (D25)
+
+- Decision: the tab runs with `CODEX_HOME=${XDG_STATE_HOME:-$HOME/.local/state}/stratum/codex-home`,
+  set with `herdr tab create --env CODEX_HOME=<dir>` (an option `herdr tab create --help` lists:
+  `--env <KEY=VALUE> Set an environment variable for the launched process`). The folder holds
+  only `auth.json`, a symlink to the user's `~/.codex/auth.json`. `st-advisor.sh codex-home`
+  makes it, and only when the user opts in to a Codex advisor.
+- Why there: it is outside every repo, so no `.gitignore` entry is needed and it can never be
+  committed. It is not inside the project tree, which here is synced (`.stfolder` and
+  `.stignore` at the repo root): a symlink to the login inside the project would travel to other
+  machines. One folder per user means one login link for every project. `$HOME` exists in Git
+  Bash too.
+- Rejected: `<project>/.stratum/codex-home/` (inside the tree, synced, needs a git-ignore rule
+  in every project); a temp folder per run (a new Codex session folder each time, and the tab
+  outlives one run).
+- Not verified yet, so T050 probes it live before any adapter build:
+  1. the TUI starts with that `CODEX_HOME` and is logged in (no login screen, a prompt gets an
+     answer);
+  2. it loads no user setting: the footer model is not the user's `GPT-6-Astra xhigh`
+     (`~/.codex/config.toml`: `model = "gpt-6-astra"`, `model_reasoning_effort = "xhigh"`);
+  3. a scratch project's `.codex/config.toml` with a canary `notify` command and a canary MCP
+     server (each touches a file) does not fire;
+  4. whether a trust dialog shows for the project, and what answering "do not trust" does;
+  5. after the run, `auth.json` is still a symlink (Codex may replace it with a copy when it
+     refreshes the token, which would leave the user's own login stale), and
+     `codex login status` in a normal shell still says `Logged in using ChatGPT`.
+- If any step fails: the tab path is not built. Codex runs in the background through
+  `codex exec --ignore-user-config` as today, at every point, in herdr too. tasks.md names the
+  tasks this skips.
+
 ## R-D. A portable test lock
 
 - Decision: `scripts/st-lock.sh`. It uses `mkdir` as the atomic step, writes its own `$$` to
@@ -157,7 +200,10 @@ closed after the probe. Scratch files: `<scratchpad>/ra/` (R-A) and `<scratchpad
 
 ## R-F. Git guard on a command it cannot split (FR-008)
 
-- Decision: In the `except ValueError` path, read each line of the command that has a git word.
+- Decision: In the `except ValueError` path, read each line of the command that has a git word,
+  after removing `\`, `'` and `"` from a copy of the line, so `\git`, `g''it` and `gi\t` count
+  (today's guard asks on `\git push --force` and `g''it push --force`, because shlex removes the
+  quoting).
   A git word is `git` as a whole word, or a path that ends in `/git`, with a shell separator,
   quote or line edge on each side (`st-git-guard.py` does not match). Split that line alone with
   the same `segments`. Judge each segment whose first word is git with today's `judge`, with the
@@ -187,6 +233,6 @@ sentence. `tests/test_inspect.sh:111-127` checks README skill rows both ways and
 
 ## R-H. Live runs still to record
 
-T024 (Codex plan review through herdr, real answer length), T034 (worker with full layout,
+T050 (Stratum Codex home probe, R-J, runs first), T024 (Codex plan review through herdr, real answer length), T034 (worker with full layout,
 autonomous approval through the plugin hook, `pass`, a hook wait past 120 s). Each one is
 recorded here when it runs, or ticked with `Not run, <first error line>` (L32).
