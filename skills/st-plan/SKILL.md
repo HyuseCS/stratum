@@ -1,6 +1,6 @@
 ---
 name: st-plan
-description: Full-lane Plan phase. Start the st-plan subagent for plan and tasks, grill the user on its open decisions, then offer GitHub issues.
+description: Full-lane Plan phase. Start the st-plan subagent for plan and tasks, and grill the user on its open decisions.
 ---
 
 # /stratum:st-plan
@@ -35,7 +35,6 @@ Plugin root (`<plugin root>`) is two levels up from this skill's base directory.
 
 ## Gate
 
-Ask: "Make GitHub issues from the tasks?" Run `/stratum:st-issues` only on yes.
 Next phase: `/stratum:st-inspect`.
 
 ## Always

@@ -632,7 +632,7 @@ new screens to the Design lane and runs file-disjoint stories together.
 
 ### Build
 
-- [ ] T043 [P] [US6] Write TP1 at the start of section 1 of `skills/st/SKILL.md` and TP2 in place of
+- [X] T043 [P] [US6] Write TP1 at the start of section 1 of `skills/st/SKILL.md` and TP2 in place of
   its issue rule (keep `Do not end a reply with an offer to file issues`), TP3 as the description
   and remove the issue question from the Gate of `skills/st-plan/SKILL.md`, TP4 as line 2 of
   `skills/st-full/SKILL.md`. Owns: `skills/st/SKILL.md`, `skills/st-plan/SKILL.md`,

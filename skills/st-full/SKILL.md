@@ -8,7 +8,7 @@ description: Run a task through Stratum's Full lane (Define, Plan, Inspect, Buil
 Run, in order, stopping at each gate:
 
 1. `/stratum:st-define` (gate: user agrees the spec)
-2. `/stratum:st-plan` (asks: make GitHub issues?)
+2. `/stratum:st-plan` (gate: the user answers its open decisions)
 3. `/stratum:st-inspect` (gate: user OKs the build)
 4. `/stratum:st-build`
 5. `/stratum:st-close` (push only on the user's "push")

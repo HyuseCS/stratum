@@ -13,6 +13,8 @@ If `<project>/.stratum/` does not exist, stop and tell the user to run `/stratum
 
 ## 1. Pick the lane
 
+When the task names GitHub issue numbers (`#51` or an issue URL), run `/stratum:st-triage` on them first (Skill tool), show its short verdict per issue, then pick the lane.
+
 Find the impact areas the task touches (graph first: `graphify-out/GRAPH_REPORT.md`, then search).
 The highest area wins:
 
@@ -70,7 +72,7 @@ tell the user in one line, and restart at the higher lane with what was learned.
 - Every merge into main goes through its GitHub PR (`gh pr merge --merge`), never a local merge
   into main. Never merge a PR before the user says they tested it. A session that works a branch
   toward main opens the PR itself with `/stratum:st-pr` and stays open until the PR is merged.
-- Make GitHub issues only when the user asks, or at the `st-plan` question. Do not end a reply
+- Make a GitHub issue only when the user asks in their own words. Do not end a reply
   with an offer to file issues for the items in a list. Keep the list in the conversation and
   the handoff.
 - Leave every branch and worktree alone, even one that is merged, done, or looks useless.
