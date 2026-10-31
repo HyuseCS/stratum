@@ -343,10 +343,16 @@ class ApproveHookTest(unittest.TestCase):
         with self.subTest("edit inside the root"):
             req = self.assertSent(self.ask("Edit", {"file_path": "src/a.py", "old_string": "1", "new_string": "2"}))
             self.assertEqual(req["tool_input"]["file_path"], "src/a.py")
+        command = "cat > notes.txt <<'EOF'\nit's a note\nEOF\ngit commit -m x"
+        with self.subTest("heredoc with it's and a git commit last, default setup"):
+            self.assertSilent(self.bash(command))
         with self.subTest("heredoc with it's and a git commit last"):
-            command = "cat > notes.txt <<'EOF'\nit's a note\nEOF\ngit commit -m x"
+            self.commit_setup()
+            write(os.path.join(self.root, "src", "a.py"), "x = 2\n")
+            git("add", "src/a.py", cwd=self.root)
             req = self.assertSent(self.bash(command))
             self.assertEqual(req["tool_input"], {"command": command})
+            self.assertEqual(req.get("staged"), ["src/a.py"])
 
     def test_non_ascii_command_is_sent_under_cp1252(self):
         command = "echo café > notes.txt"
