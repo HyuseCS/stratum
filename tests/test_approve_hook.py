@@ -3,6 +3,7 @@ import json
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -34,6 +35,8 @@ NEVER_BASH = [
     "gh pr list",
     "echo x > .stratum/approve/1-1.ok",
     "sudo ls",
+    "git clean -fd",
+    "git update-ref -d refs/heads/main",
 ]
 
 REFUSED_COMMITS = [
@@ -65,6 +68,17 @@ REFUSED_COMMITS = [
     'bash -c "git add src/b.py" && git commit -m x',
     "git commit -F - <<'EOF'\nfix the thing\nEOF",
     "git commit --file=- -m x",
+    'git add src/a.py && git commit -m "$(git add src/b.py; echo m)"',
+    'git add src/a.py && git commit -m "$(git stash; echo m)"',
+    'git add src/a.py && git commit -m "$(git reset --soft HEAD~1; echo m)"',
+    'git add src/a.py && git commit -m "`git add src/b.py`"',
+    "\n".join(['git add src/a.py && git commit -m "$(cat <<\'EOF\'', "m", "EOF", "git add src/b.py", ')"']),
+    "\n".join(['git add src/a.py && git commit -m "$(cat <<\'EOF\'', "m", "EOF", "git stash", "EOF", ')"']),
+    "\n".join(['git add src/a.py && git commit -m "$(cat <<EOF', "$(git stash)", "EOF", ')"']),
+    "\n".join(['git add "$(cat <<\'EOF\'', "src/b.py", "EOF", ')" && git commit -m x']),
+    "git add src/a.py && git commit -F <(git stash; echo m)",
+    'git add src/a.py && git commit -m "${ git stash; echo m; }"',
+    'git add src/a.py && git commit -m "${| git add src/b.py; REPLY=m; }"',
 ]
 
 OWN_COMMITS = [
@@ -415,6 +429,42 @@ class ApproveHookTest(unittest.TestCase):
                         "echo {} > .mcp.json"]:
             with self.subTest(command=command):
                 self.assertSilent(self.bash(command))
+
+    def test_test_lock_from_the_plugin_root_is_judged_by_its_rest(self):
+        scripts = os.path.join(os.path.realpath(PLUGIN), "scripts")
+        lock = os.path.join(scripts, "st-lock.sh")
+        for command in [f"bash {lock} -- bash tests/x.sh", f"{lock} -- pytest"]:
+            with self.subTest(command=command):
+                self.assertSent(self.bash(command))
+        for command in [f"bash {lock} -- cat ../other/f", f"bash {lock} -- git push", f"echo x > {lock}",
+                        f"bash {os.path.join(scripts, 'st-worker.sh')} pass x",
+                        f"bash tests/x.sh && bash {lock} -- pytest"]:
+            with self.subTest(command=command):
+                self.assertSilent(self.bash(command))
+
+    def test_sigterm_and_sighup_remove_the_req(self):
+        stdin_path = os.path.join(self.tmp, "stdin")
+        with open(stdin_path, "wb") as f:
+            f.write(self.payload("PermissionRequest", "Bash", {"command": "bash tests/x.sh"}, self.root))
+        env = {k: v for k, v in os.environ.items() if k != "CLAUDE_PROJECT_DIR"}
+        env["ST_APPROVE_WAIT"] = "60"
+        for name in ("SIGTERM", "SIGHUP"):
+            if not hasattr(signal, name):
+                continue
+            with self.subTest(name), open(stdin_path, "rb") as stdin:
+                proc = subprocess.Popen([sys.executable, HOOK], cwd=self.root, env=env, stdin=stdin,
+                                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                deadline = time.monotonic() + 20
+                while not any(n.endswith(".req") for n in listing(self.approve)):
+                    if proc.poll() is not None or time.monotonic() > deadline:
+                        proc.kill()
+                        proc.communicate()
+                        self.fail("the hook wrote no .req")
+                    time.sleep(0.01)
+                proc.send_signal(getattr(signal, name))
+                out, _ = proc.communicate(timeout=10)
+                self.assertEqual(out, b"")
+                self.assertEqual(sorted(n for n in listing(self.approve) if RID_FILE.fullmatch(n)), [])
 
     def test_render_is_one_sorted_ascii_line(self):
         first = os.path.join(self.tmp, "first.req")

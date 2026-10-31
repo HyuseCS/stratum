@@ -151,7 +151,7 @@ These tasks touch access rules, an external service, or text that can hold secre
   `.stratum/autonomous` or runs `st-worker.sh` with those subcommands (W5). The limit, stated plainly: workers run as the same
   OS user, so lock 2 is a guard against mistakes and simple injection, not a wall. A worker that
   builds a path at run time on purpose is not stopped; a write outside its worktree still
-  prompts, reaches the orchestrator, and is refused. README states this (W15).
+  prompts and goes to the user. README states this (W15).
 - **S4b. Commits that never prompt (D23).** A worker commit on its own branch runs with no
   prompt, because `start` writes `commit: auto` for the worker branch
   (`scripts/st-worker.sh:176`). D23 covers only commits that do prompt (for example the guard's

@@ -5,6 +5,7 @@ import os
 import posixpath
 import re
 import shlex
+import signal
 import subprocess
 import sys
 import time
@@ -25,7 +26,7 @@ G = r"\bgit\b[^;&|\n]*"
 # ponytail: the never list matches text, the orchestrator's approve rule is the main check; move to a full shell parser if a bypass shows up in use
 NEVER = re.compile("|".join([
     G + r"\bpush\b", G + r"\bbranch\b[^;&|\n]*\s(?:-[a-zA-Z]*[dD]|--delete)", G + r"\bworktree\b[^;&|\n]*\b(?:remove|prune)\b",
-    G + r"\bprune\b", r"\breset\b[^;&|\n]*--hard\b",
+    G + r"\bprune\b", G + r"\b(?:clean|update-ref)\b", r"\breset\b[^;&|\n]*--hard\b",
     r"\.env", r"\.pem\b", r"\.key\b", r"\bid_rsa", r"\bid_ed25519", r"\.npmrc\b", r"\.netrc\b", r"(?i:secret|credential)",
     r"\b(?:npm|pnpm|yarn|bun)\b[^;&|\n]*\s(?:i|install|add|ci|update|upgrade)\b", r"\bpip3?\s+install\b",
     r"\buv\s+(?:add|pip|tool|sync)\b", r"\bpoetry\s+add\b", r"\bcargo\s+(?:add|install)\b", r"\bgo\s+(?:get|install)\b",
@@ -36,6 +37,9 @@ NEVER = re.compile("|".join([
     r"\bsudo\b", r"\beval\b",
 ]))
 COMMIT_NEVER = re.compile(r"\b(?:sh|bash|zsh)\s+-c\b|\beval\b|\bGIT_[A-Z0-9_]*=|\b(?:cd|pushd)\b")
+HEREDOC_MESSAGE = re.compile(r"\$\(cat <<(['\"])(\w+)\1\n(?:(?!\2\n)[^\n]*\n)*\2\n\s*\)")
+SUBSTITUTION = re.compile(r"`|\$\(|\$\{[\s|]|[<>]\(")
+LOCK = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "scripts", "st-lock.sh")
 
 
 def git(args, cwd):
@@ -76,7 +80,7 @@ def up(folder):
 
 def worker_session(cwd):
     folders = [cwd] + ([os.environ["CLAUDE_PROJECT_DIR"]] if os.environ.get("CLAUDE_PROJECT_DIR") else [])
-    chain = [d for f in folders for d in up(os.path.realpath(f))]
+    chain = list(dict.fromkeys(d for f in folders for d in up(os.path.realpath(f))))
     if any(os.path.lexists(os.path.join(d, ".stratum", "approve")) for d in chain):
         return True
     return any((git(["symbolic-ref", "--short", "HEAD"], d) or "").startswith("worker-")
@@ -134,6 +138,9 @@ def edit_ok(root, cwd, path):
 
 
 def bash_ok(root, cwd, command):
+    lead = re.match(r"\s*(?:bash\s+)?(\S+)\s", command)
+    if lead and os.path.realpath(os.path.join(cwd, os.path.expanduser(lead.group(1).strip("'\"")))) == LOCK:
+        command = command[lead.end():]
     if NEVER.search(command) or NEVER.search(strip_quotes(command)):
         return False
     for word in re.findall(r"\S+", command):
@@ -184,7 +191,8 @@ def is_git(word):
 
 
 def commit_check(root, cwd, command, commands):
-    if COMMIT_NEVER.search(command) or COMMIT_NEVER.search(strip_quotes(command)):
+    if COMMIT_NEVER.search(command) or COMMIT_NEVER.search(strip_quotes(command)) \
+            or SUBSTITUTION.search(HEREDOC_MESSAGE.sub("", command)):
         return None
     paths = []
     for words, heredoc in commands:
@@ -301,6 +309,9 @@ def render(path):
 
 
 def main():
+    for name in ("SIGTERM", "SIGHUP"):
+        if hasattr(signal, name):
+            signal.signal(getattr(signal, name), lambda *_: sys.exit(1))
     if sys.argv[1:2] == ["--render"]:
         render(sys.argv[2] if len(sys.argv) > 2 else "")
         return
