@@ -44,6 +44,17 @@ try:
 except OSError:
     level = ""
 level = level or "off"
+try:
+    common = subprocess.run(["git", "-C", data.get("cwd") or cwd, "rev-parse", "--path-format=absolute", "--git-common-dir"],
+                            capture_output=True, text=True).stdout.strip()
+except OSError:
+    common = ""
+flag = f"{os.path.dirname(common)}/.stratum/autonomous" if common else f"{proj}/.stratum/autonomous"
+try:
+    first = open(flag).readline().strip()
+except OSError:
+    first = ""
+autonomous = bool(first) and first == data.get("session_id")
 
 
 
@@ -106,6 +117,9 @@ if folder:
     segs["dir"] = {"bg": rgb(palette["directory"]["bg"]), "fg": rgb(palette["directory"]["fg"]), "text": path, "short": folder}
 segs["ponytail"] = {"bg": rgb(pt["bg"]), "fg": rgb(pt["fg"]), "text": "Ponytail" if level == "full" else f"Ponytail {level}",
                     "short": "PT" if level == "full" else f"PT {level}"}
+if autonomous:
+    warn = palette["contextWarning"]
+    segs["autonomous"] = {"bg": rgb(warn["bg"]), "fg": rgb(warn["fg"]), "text": "autonomous", "short": "auto"}
 effort = (data.get("effort") or {}).get("level")
 enabled = (data.get("thinking") or {}).get("enabled")
 think = "off" if enabled is False else effort or ("on" if enabled else None)
@@ -159,9 +173,9 @@ try:
     limit = int(os.environ["ST_WIDTH"]) - int(reserve)
 except ValueError:
     limit = 0
-steps = [("dir", "short"), ("commit", "short"), ("ponytail", "short"), ("time", "drop"), ("model", "drop"),
+steps = [("dir", "short"), ("commit", "short"), ("ponytail", "short"), ("autonomous", "short"), ("time", "drop"), ("model", "drop"),
          ("stratum", "short"), ("stratum", "drop"), ("dir", "drop"), ("ponytail", "drop")]
-for lkinds, rkinds in ((["stratum", "dir", "time"], ["git"]), (["model", "ponytail"], ["commit"])):
+for lkinds, rkinds in ((["stratum", "dir", "time"], ["git"]), (["model", "ponytail", "autonomous"], ["commit"])):
     left = [k for k in lkinds if k in segs]
     right = [k for k in rkinds if k in segs]
     for kind, action in steps:
