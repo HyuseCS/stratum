@@ -105,6 +105,7 @@ You are worker <N>, started by the Stratum orchestrator. Read this file first an
 ## Facts
 
 - Test command: `<test>`
+- Test lock: if your task is marked [lock], run its test command as `bash <plugin root>/scripts/st-lock.sh -- <test command>`, with the plugin root of the Stratum plugin. Never write a wait loop of your own.
 - Lane: <lane>. If it names a skill, start it with the Skill tool. Run only task <id>; skip every other task, ticked or not.
 - Branch: <N>
 - Model: <model or default>
