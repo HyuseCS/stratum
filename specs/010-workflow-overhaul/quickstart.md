@@ -22,8 +22,9 @@ use (F9). `~/.claude/plugins/installed_plugins.json` lists `stratum@stratum` fro
    be denied with `.stratum/approve/ and .stratum/autonomous are written only by the orchestrator.`
    If it runs instead, the session uses an old copy of the plugin. Reload step: update
    `stratum@stratum` from its directory marketplace (`/plugin`, then update the plugin, with this
-   branch checked out in that directory) or start the worker's claude with
-   `--plugin-dir <this checkout>`; close the worker and run step 3 again. Record which one worked.
+   branch checked out in that directory), close the worker and run step 3 again. There is no
+   `--plugin-dir` route, because `st-worker.sh start` passes fixed arguments to `claude`. If the
+   update does not help, T034 is ticked `Not run, <the probe's result>`.
 
 ## 1. US1: fewer advisor runs, scoped tests
 
@@ -119,7 +120,7 @@ PYTHONDONTWRITEBYTECODE=1 python3 tests/test_model_hook.py
 
 In a herdr pane in this repo, on a scratch branch, with a one-line task file:
 
-1. `printf '%s\n' "$CLAUDE_CODE_SESSION_ID" > .stratum/autonomous`.
+1. `printf '%s\n' "$CLAUDE_CODE_SESSION_ID" > "$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/.stratum/autonomous"` (the main checkout's flag).
 2. `bash scripts/st-worker.sh start t990 --task <file> --test "grep -qx ok demo/ok.txt && echo PASS" --lane "plain edit, no lane" --roster <roster> --autonomous`.
    Expect: workspace `worker-t990` with tabs Main (agent and lazygit), Dev Servers, VM, and the
    folder `<worktree>/.stratum/approve/`.
@@ -147,10 +148,11 @@ In a herdr pane in this repo, on a scratch branch, with a one-line task file:
 5. Start a second worker the same way (`t991`) and `pass` its request: the dialog stays for
    you in its Main tab, and `t990` keeps running.
 6. Wait more than 120 s before one `approve` and note whether the hook still answers.
-7. Ask the worker in its tab to run `echo x > .stratum/approve/1-1.ok`: the command is denied
+7. Ask the worker in its tab to run `echo x > .stratum/approve/1-1.ok`, then
+   `touch .stratum/././approve/2-2.ok` and `touch .stratum/x/../approve/3-3.ok`: each command is denied
    with `.stratum/approve/ and .stratum/autonomous are written only by the orchestrator.` An Edit of that path
    is denied the same way.
-8. `rm -f .stratum/autonomous`, make the worker hit a dialog: no `.req` appears and the dialog
+8. `rm -f "$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/.stratum/autonomous"`, make the worker hit a dialog: no `.req` appears and the dialog
    stays for you. `approve` again: `Autonomous build mode is off for this session.`
 9. `close t990`: `.stratum/approve/` is gone.
 10. On a saved machine `<m>` (whichever one is not running this session): start `t992` with

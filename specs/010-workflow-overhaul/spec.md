@@ -318,7 +318,7 @@ line. Run the Plan phase and see no issue question. Search the plugin and see no
   `--no-verify`) one time only, and MUST send all others to
   the user with the tab name in short, simple words. It MUST never approve: push, force-push,
   deleting a branch or worktree, `reset --hard`, anything outside the worker's worktree, secrets
-  or `.env`, new dependencies, network calls to new hosts. When the classifier blocks an approval,
+  or `.env`, `.claude/` or `.mcp.json`, new dependencies, network calls to new hosts. When the classifier blocks an approval,
   it MUST try no other way. Every approval MUST be recorded and listed at the end of the run. The
   hook MUST act only while the main checkout's `.stratum/autonomous` holds the orchestrator's
   session id and the worker's session file matches it, and in a worker session every Bash
@@ -399,7 +399,8 @@ line. Run the Plan phase and see no issue question. Search the plugin and see no
 - This feature changes `st-build`, but its own build runs under today's rules. The new rules apply
   from the next feature.
 - The Claude Code permission hook in worker sessions can send a prompt to the orchestrator and
-  wait for its answer; the Plan phase checks this, and FR-019 has the fallback.
+  wait for its answer; the Plan phase checked this (research R-A). FR-019 has no fallback to
+  permissions the user grants (D29).
 - herdr 0.9.4 supports `--kind codex`; Codex runs with `-s read-only -a never`.
 - The approval record lives in the run's scratch space and is not committed, because a prompt can
   hold a secret value.

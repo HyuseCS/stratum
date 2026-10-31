@@ -68,7 +68,8 @@ closed after the probe. Scratch files: `<scratchpad>/ra/` (R-A) and `<scratchpad
   construction. The hook never answers `deny`.
 - Rationale: one visible command per approval, no send-keys into the dialog (rejected O4), and a
   file channel that `rsh` already reaches on a saved machine.
-- Guard: `approve` refuses unless `<project>/.stratum/autonomous` holds the caller's
+- Guard: `approve` refuses unless the main checkout's `.stratum/autonomous` (found through the git
+  common dir) holds the caller's
   `$CLAUDE_CODE_SESSION_ID`. Evidence: `env` in this session shows
   `CLAUDE_CODE_SESSION_ID=a5645c15-5e7e-448a-bb3c-12b611437958`, the same id as the session's
   scratchpad folder. This variable is not in the public docs. If a later Claude Code drops it,

@@ -56,15 +56,19 @@ States: free (no folder), held (folder and live pid), stale (folder and `kill -0
 removed by the next waiter). The owner removes the folder on exit. One lock per repo, shared by
 all its worktrees.
 
-## 5. Autonomous flag (`<project>/.stratum/autonomous`, never committed)
+## 5. Autonomous flag (`<main checkout>/.stratum/autonomous`, never committed)
 
-One line: the orchestrator's `$CLAUDE_CODE_SESSION_ID`. On only while that line equals the
+The main checkout is the parent of `git rev-parse --path-format=absolute --git-common-dir`.
+Every writer, remover and reader (W8, W9, `st-worker.sh`, the hook, the status line) uses that
+path, also from a linked worktree. One line: the orchestrator's `$CLAUDE_CODE_SESSION_ID`. On only while that line equals the
 current session's id. Made on the user's words, removed at the end of the run or on
 "stop autonomous" (FR-018). Read by the approval hook through the git common dir, so a worker's
 worktree copy never counts (D27). On a saved machine the same file sits in that machine's main
 checkout (`--repo`): `start --autonomous --machine` writes or replaces it, `autonomous-off`
 removes it at the end of the run or on "stop autonomous" (D28). A stale copy left by a crashed
-session holds an id no live session has, so it matches no `session` file and approves nothing.
+session still matches the `session` file of that session's workers, so their hook sends the
+request and waits up to 300 s with the dialog showing; no live orchestrator holds that id, so
+`approve` refuses and nothing is approved.
 
 ## 6. Approval channel (`<worktree>/.stratum/approve/`, never committed)
 

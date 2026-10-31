@@ -93,7 +93,8 @@ scoped tests.
   `#18 FR-005 revise ... Then run the same point once more on the changed input.` (the row with
   `Two rounds at most` stays), and change the check `#18 plan-only st-build no diff point`
   (`tests/test_on_demand.sh:309`) to: `st-advisor.sh diff` appears in `skills/st-build/SKILL.md`
-  only on the A9 line, and `check diff` does not appear. Run it: red. Owns: `tests/test_advisor_rules.sh`,
+  only on the A9 line (zero matching lines also pass, so the check is green before T006 and after
+  it), and `check diff` does not appear. Run it: red. Owns: `tests/test_advisor_rules.sh`,
   `tests/test_on_demand.sh`. Test: `bash tests/test_advisor_rules.sh`. (FR-001 to FR-004,
   lessons L1, L39)
 - [ ] T004 [P] [US1] Write `tests/test_test_scope.sh`: assert S1 to S6 in their files, the three
@@ -370,10 +371,18 @@ prompts through the hook; normal mode never answers them.
   `touch .stra\tum/approve/1-1.ok`, `touch .stratum/./approve/1-1.ok`,
   `touch .stratum//approve/1-1.ok`, `ls .stratum/approve`, `echo S9 > .stratum/autonomous`,
   `bash scripts/st-worker.sh approve worker-t1 --request 1-1 --input-stdin --record r`,
-  `st-worker.sh pass worker-t1 --request 1-1` and `st-worker.sh autonomous-off --roster r` each
+  `st-worker.sh pass worker-t1 --request 1-1`, `st-worker.sh autonomous-off --roster r`,
+  `touch .stratum/././approve/1-1.ok`, `touch .stratum///approve/1-1.ok`,
+  `touch .stratum/x/../approve/1-1.ok`, `bash scripts/st-worker.sh $'approve' worker-t1`,
+  `ls scripts/st-worker.sh`, `cd <main> && bash scripts/st-worker.sh pass worker-t1` (cwd the
+  worktree, `CLAUDE_PROJECT_DIR` the worktree), and `git init sub && cd sub && st-worker.sh pass x`
+  (cwd `sub`, a folder above it has `.stratum/approve/`) each
   get `permissionDecision` `deny` with the reason `.stratum/approve/ and .stratum/autonomous are written only by the orchestrator.`; Edit, Write,
   MultiEdit and NotebookEdit of `<root>/.stratum/approve/1-1.ok`, `<root>/.stratum/./approve/x`
-  and `<root>/.stratum/autonomous` are denied the same way; Edit `src/a.py` and Bash
+  and `<root>/.stratum/autonomous` are denied the same way, and so are Read of
+  `<root>/.stratum/approve/session`, Read of `<root>/.stratum/autonomous`, Grep with `path`
+  `<root>/.stratum/approve` and Glob with `pattern` `.stratum/approve/*`; (F7) a worker session
+  found only by its branch (`worker-t1`, no `.stratum/approve/`) denies `echo x > .stratum/autonomous`; Edit `src/a.py` and Bash
   `bash tests/x.sh` give no output; in a non-worker session (no `.stratum/approve/`, branch
   `010-demo`), `st-worker.sh approve ...` and `printf S1 > .stratum/autonomous` give no output. Then: (a) no `.stratum/approve`: no
   output, exit 0, nothing written; (b) `.stratum/approve` is a symlink: no output; (c) Bash `bash tests/x.sh`:
@@ -402,16 +411,21 @@ prompts through the hook; normal mode never answers them.
   `git -c user.name=x commit -m x`, and (F4) `git checkout other && git add src/a.py && git commit -m x`,
   `git rm src/b.py && git commit -m x`, `git mv src/a.py src/c.py && git commit -m x`,
   `git restore --staged src/b.py && git commit -m x`, `git apply --cached p.diff && git commit -m x`,
-  `git stash pop && git commit -m x`; `git commit -m x -- src/a.py` gives a `.req` with `staged`
+  `git stash pop && git commit -m x`, `\git checkout other # it's x` followed by an own-files commit,
+  `sh -c "git checkout other" && git add src/a.py && git commit -m x` and
+  `bash -c "git add src/b.py" && git commit -m x`; `git commit -m x -- src/a.py` gives a `.req` with `staged`
   `["src/a.py"]`, and (F6) `git add src/a.py && git commit -m "demo heredoc"` gives a `.req`
-  with `staged` `["src/a.py"]` (the two-word message is not a pathspec); (h3) test runners give a `.req`: `npm test`, `npm run test`, `npx vitest run`,
+  with `staged` `["src/a.py"]` (the two-word message is not a pathspec), and (F10)
+  `git add src/a.py && git commit -m "$(cat <<'EOF'` / `a message` / `EOF` / `)"` gives a `.req`
+  with `staged` `["src/a.py"]`, and `git commit -m x > log.txt` treats `log.txt` as a redirect
+  target, not a pathspec; (h3) test runners give a `.req`: `npm test`, `npm run test`, `npx vitest run`,
   `cargo test`, `go test ./...`, `pytest`, `uv run pytest`; install words give none:
   `npm install x`, `npm i x`, `pnpm add x`, `yarn add x`, `bun add x`, `pip install x`,
   `uv add x`, `uv pip install x`, `cargo add x`, `go get x`; (h4) F3: no `.req` for an Edit of
   `.claude/settings.json`, `.mcp.json`, `CLAUDE.md`, `AGENTS.md`, `.githooks/pre-commit` or
   `.husky/pre-commit`, nor for `echo x > .claude/settings.json` or `echo {} > .mcp.json`; (i) stdin that is not JSON: no output, exit 0; (j) `hooks/commands.json` has
   one `PermissionRequest` entry with command `python3 "${CLAUDE_PLUGIN_ROOT}/hooks/st-approve.py"`
-  and timeout 310, and one `PreToolUse` entry with matcher `Bash|Edit|Write|MultiEdit|NotebookEdit`,
+  and timeout 310, and one `PreToolUse` entry with matcher `Bash|Edit|Write|MultiEdit|NotebookEdit|Read|Grep|Glob`,
   the same command and timeout 10; (k) no `PermissionRequest` case prints `deny`, and the hook
   file has no `"behavior": "deny"` text. Run it: red. Owns:
   `tests/test_approve_hook.py`. Test: `PYTHONDONTWRITEBYTECODE=1 python3 tests/test_approve_hook.py`.
@@ -432,7 +446,7 @@ prompts through the hook; normal mode never answers them.
   symlinked `<path>/.stratum` or file is refused; `STUB_SSH_RC=255` on that write gives
   `cannot write .stratum/autonomous on laptop: <line>`, exit 1, and no `worktree create` or
   `agent start` call; (b3) `autonomous-off --roster <file>` with one local and one laptop row:
-  removes the local `<top>/.stratum/autonomous` and, over `ssh`, the laptop one, printing
+  removes the local main checkout's `.stratum/autonomous` (also when run from a linked worktree) and, over `ssh`, the laptop one, printing
   `autonomous off\tlocal` and `autonomous off\tlaptop`; a file whose line is another id is
   kept; a failed `ssh` prints `autonomous off failed\tlaptop\t<line>`, still removes the local
   one, and exits 1; with a match: `<wt>/.stratum/approve/` exists, `session` holds the
@@ -446,11 +460,15 @@ prompts through the hook; normal mode never answers them.
   line's text: writes `<rid>.ok`, appends one
   TAB-split record line, calls `agent wait worker-t004 --until working --timeout 5000` before it
   prints `approved\tworker-t004\t<rid>`; refused when autonomous mode is off, for `--request ../x`,
-  for a missing `.req`, for an `--input` that differs from the `.req` by one character
+  for a missing `.req`, for stdin text that differs from the `.req` by one character
   (`The input does not match request <rid>. Approve nothing.`, no `.ok`), for an input over
   4000 characters, and when the worker's `session` file differs from the flag (`Worker worker-t004 is not in this autonomous run.`);
   the text read from the heredoc keeps `$(touch pwned)` and backticks literal (no `pwned` file),
-  and its one trailing newline is dropped; (d2) F2: `approve`, `pass`, `start --autonomous` and
+  its one trailing newline is dropped, and `<rid>.ok` is written; (d1) F4: the same `$(touch pwned)`
+  approval with `--machine laptop`: the `.req` is read with `ssh ... cat`, the ssh log has no
+  `pwned` text, no `pwned` file exists, and only the `<rid>.ok` write goes over ssh; `wait`'s
+  `input` line and `approve`'s compare use the same rendering (a key order change in the `.req`
+  JSON still matches); (d2) F2: `approve`, `pass`, `start --autonomous` and
   `autonomous-off` run from a feature's linked worktree read the main checkout's
   `.stratum/autonomous` (a different line in the linked worktree's own copy is ignored); run
   from a worker worktree (a `.stratum/approve/` folder, or branch `worker-t9`) each prints
@@ -467,12 +485,16 @@ prompts through the hook; normal mode never answers them.
   FR-021, D23, lessons L26, L27, L34, L37)
 - [ ] T028 [P] [US4] In `tests/test_statusline.sh` add: input with `"session_id":"S1"` and
   `.stratum/autonomous` holding `S1`: line 2 has ` autonomous `; the file holds `S2`: no
-  `autonomous`; no file: no `autonomous`. Run it: red. Owns: `tests/test_statusline.sh`. Test:
+  `autonomous`; no file: no `autonomous`; (F2) input `cwd` a linked worktree whose own
+  `.stratum/autonomous` holds `S1` while the main checkout's holds `S2`: no `autonomous`, and the
+  reverse shows it. Run it: red. Owns: `tests/test_statusline.sh`. Test:
   `bash tests/test_statusline.sh`. (FR-018)
 - [ ] T029 [P] [US4] Write `tests/test_worker_rules.sh`: assert W1 to W17 in their files and the
   three "Gone" lines of the US4 table. In `tests/test_on_demand.sh` delete rows `#17 one-time yes`
   and `#17 FR-014 build`, and change the check `#17 FR-014 build skill` to: `/stratum:st-worker`
-  appears in `skills/st-build/SKILL.md` on one line only, the W10 line. Run it: red. Owns:
+  appears in `skills/st-build/SKILL.md` on one line only, the W10 line; (F2) W8 and W9 name the
+  main checkout path `\"$(dirname \"$(git rev-parse --path-format=absolute --git-common-dir)\")/.stratum/autonomous\"`, and no line of `skills/st/SKILL.md` writes or
+  removes a bare `.stratum/autonomous`. Run it: red. Owns:
   `tests/test_worker_rules.sh`, `tests/test_on_demand.sh`. Test: `bash tests/test_worker_rules.sh`.
   (FR-017, FR-018, FR-019, FR-020, FR-021, FR-022, lessons L1, L39)
 
@@ -497,8 +519,10 @@ prompts through the hook; normal mode never answers them.
   (contracts/scripts.md section 7). Owns: `statusline/st-statusline.sh`. Test:
   `bash tests/test_statusline.sh && ! bash tests/test_inspect.sh | grep '^FAIL' | grep -vxF 'FAIL README tests'`. (FR-018)
 - [ ] T033 [P] [US4] Write W1 to W7, W11, W14, W16 and W17 in `skills/st-worker/SKILL.md` (step 6 and the
-  last line; remove the three "Gone" phrases from the sentence at `skills/st-worker/SKILL.md:21`
-  and keep the rest of that line), W8, W9 and W12 in `skills/st/SKILL.md` (Always), W10
+  last line; remove two "Gone" phrases, `pick the one-time yes` and
+  `a tool permission for the task's own command`, from the sentence at
+  `skills/st-worker/SKILL.md:21` and keep the rest of that line, and replace the whole line
+  `skills/st-worker/SKILL.md:39` (`The build loop ... does not use workers.`) with W11), W8, W9 and W12 in `skills/st/SKILL.md` (Always), W10
   in `skills/st-build/SKILL.md` (Parallel tasks), W13 in `skills/st-herdr-workspace/SKILL.md`,
   and W15 in `README.md` (beside the worker section). Owns: `skills/st-worker/SKILL.md`,
   `skills/st/SKILL.md`, `skills/st-build/SKILL.md`, `skills/st-herdr-workspace/SKILL.md`,
@@ -506,14 +530,16 @@ prompts through the hook; normal mode never answers them.
   `bash tests/test_worker_rules.sh && bash tests/test_on_demand.sh && bash tests/test_risk_rules.sh && bash tests/test_lock_rules.sh && bash tests/test_advisor_rules.sh && bash tests/test_test_scope.sh && bash tests/test_screen_rules.sh && ! bash tests/test_inspect.sh | grep '^FAIL' | grep -vxF 'FAIL README tests'`.
   (FR-017 to FR-022, D23, security note S4)
 - [ ] T034 [US4] First run quickstart section 0 step 3 (the hook in use is this branch's) on each
-  machine used; no live result counts before it passes. Then the live run of quickstart section
+  machine used; no live result counts before it passes. If the `/plugin` update route does not
+  make it pass, tick T034 `Not run, <the probe's result>`. Then the live run of quickstart section
   4L on a scratch branch in herdr. Record each step's output in research.md R-H, including whether the hook answers after more than 120 s.
   D28 step, on a saved machine (whichever machine is not the one running the orchestrator):
   `start t992 ... --machine <m> --repo <path> --autonomous`, one approval there, then
   `autonomous-off --roster <roster>`; record that `<path>/.stratum/autonomous` on `<m>` was
   written, then removed.
-  D27 steps (deny reason `.stratum/approve/ and .stratum/autonomous are written only by the orchestrator.`): with autonomous mode on, ask the worker to run `echo x > .stratum/approve/1-1.ok`
-  and to Edit that path, and record both denials; then `rm -f .stratum/autonomous`, make the
+  D27 steps (deny reason `.stratum/approve/ and .stratum/autonomous are written only by the orchestrator.`): with autonomous mode on, ask the worker to run `echo x > .stratum/approve/1-1.ok`,
+  `touch .stratum/././approve/2-2.ok` and `touch .stratum/x/../approve/3-3.ok`, and to Edit and
+  Read `.stratum/approve/session`, and record each denial; then `rm -f "$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/.stratum/autonomous"`, make the
   worker hit a dialog, and record that no `.req` appears and the dialog stays.
   Extra step (F9): give the worker a command its classifier blocks that is not on the hook's
   never list (for example `rm -rf demo` after a task that does not ask for it), and record
