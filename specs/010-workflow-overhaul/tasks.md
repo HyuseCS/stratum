@@ -356,7 +356,7 @@ prompts through the hook; normal mode never answers them.
 
 ### Tests (write first, must fail)
 
-- [ ] T026 [P] [US4] Write `tests/test_approve_hook.py` (unittest) for `hooks/st-approve.py`
+- [X] T026 [P] [US4] Write `tests/test_approve_hook.py` (unittest) for `hooks/st-approve.py`
   (contracts/scripts.md section 5). Run the hook by subprocess with JSON on stdin and `cwd` in a
   temp git repo (the main checkout) with `.stratum/approve/`. "Autonomous on" means the main
   checkout's `.stratum/autonomous` and `.stratum/approve/session` both hold `S1`; every
