@@ -445,7 +445,7 @@ prompts through the hook; normal mode never answers them.
   file has no `"behavior": "deny"` text. Run it: red. Owns:
   `tests/test_approve_hook.py`. Test: `PYTHONDONTWRITEBYTECODE=1 python3 tests/test_approve_hook.py`.
   (FR-019, D23, D27, D30, security notes S3, S4, lessons L3, L5)
-- [ ] T027 [P] [US4] Extend `tests/test_st_worker.sh` (contracts/scripts.md section 4). Teach the
+- [X] T027 [P] [US4] Extend `tests/test_st_worker.sh` (contracts/scripts.md section 4). Teach the
   stub `herdr` `tab rename`, `pane split`, `pane run` and `tab create` with random ids, and an
   `agent read` text taken from a file the case writes. Cases: (a) `start` makes, in this order
   after `worktree create` and before `agent start`: `tab rename <tab> Main`, `pane split <root pane> --direction right --cwd <wt> --no-focus`,
