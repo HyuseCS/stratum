@@ -327,7 +327,35 @@ In the `except ValueError` path only:
    words today's loop skips): ask with `The git guard could not read a git command on this line.`.
    Else judge each git segment with today's `judge`, folder unknown (`elsewhere=True`), and keep
    the strongest decision.
-3. The command outside the fallback is judged as today.
+3. Heredocs. Each line outside a heredoc body is split into words, operators (`;`, `&&`, `|`,
+   ...), redirections (`<<`, `<<-`, `>`, `>>`, `2>`, `&>`, ...) and parens, with quotes and `\`
+   read as the shell reads them. A word that starts with `#` ends the line, so an opener in a
+   comment opens nothing. Each `<<` or `<<-` redirection opens a heredoc whose tag is the word
+   after it; its body is the lines after the opener line, up to the first line that is exactly
+   the tag (leading tabs allowed for `<<-`), and a second heredoc on the line starts after the
+   first one's tag line. While a body is open, its lines are never read for new openers. A body
+   is skipped (no git-word check, no ask), with its tag line, only when all hold:
+   (a) the tag is quoted as a whole (`<<'TAG'`, `<<"TAG"`, `<<-'TAG'`);
+   (b) in the segment that holds the redirection, after the redirections and their targets are
+   removed and the prefix words of step 2 are skipped, the command word's basename is `cat` or
+   `tee`, and each other word is `-a`, `--append`, `-` or a file name that does not start
+   with `-`;
+   (c) the operator after that segment has no `|`;
+   (d) a tag line follows;
+   (e) no line outside a body is unreadable (an unreadable line opens no heredoc, and no line
+   after it is read for openers). A line is unreadable when its quotes do
+   not close, it ends in `\`, it has a paren, a backtick, `${` or `$'`, a redirection without a
+   word after it, a tag quoted only in part, or a word in `{`, `if`, `then`, `else`, `elif`,
+   `do`, `while`, `until`, `for`, `case`, `select`, `function`, `coproc`;
+   (f) on every line outside a body, each segment's command word (after the prefix words of
+   step 2) is exactly one of `cat`, `tee`, `cd`, `echo`, `printf`, `ls`, `mkdir`, `true`, `:`,
+   `wc`, `pwd` (a path such as `/bin/cat` or `./f.sh` is not), no segment has a `NAME=value`
+   word in command position (as a prefix or on its own), and no unquoted body line has `$(` or
+   a backtick.
+   Every other body line (an unquoted heredoc, any other reader, `cat <<'TAG' | sh`) is judged
+   as in steps 1 and 2. An unquoted body ends at its own tag line; a line in it that ends in `\`
+   makes the rest of the command its body. The opener line is judged as in steps 1 and 2.
+4. The command outside the fallback is judged as today.
 
 ## 7. `statusline/st-statusline.sh` (changed, US4)
 

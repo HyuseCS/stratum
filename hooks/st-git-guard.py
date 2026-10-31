@@ -12,6 +12,12 @@ GIT_OPTS_WITH_VALUE = {"-C", "-c", "--git-dir", "--work-tree", "--namespace", "-
 RANK = {None: 0, "ask": 1, "deny": 2}
 GIT_WORD = re.compile(r"(?<![^\s;&|()\[\],`/$=])git(?![^\s;&|()\[\],`<>])")
 UNQUOTE = str.maketrans("", "", "\\'\"")
+PREFIX = ("command", "builtin", "exec")
+TOKEN = re.compile(r"""[ \t]*(?:(\d*(?:<<-|<<<|<>|>\||[<>][<>&]?)|&>>?)|([;&|]+)|([()])"""
+                   r"""|((?:[^\s;&|()<>'"\\]|\\.|'[^']*'|"(?:[^"\\]|\\.)*")+))""")
+COMPOUND = {"{", "if", "then", "else", "elif", "do", "while", "until", "for", "case", "select", "function",
+            "coproc"}
+INERT = {"cat", "tee", "cd", "echo", "printf", "ls", "mkdir", "true", ":", "wc", "pwd"}
 
 
 def segments(command):
@@ -193,6 +199,57 @@ def judge(sub, args, gitdir, elsewhere=False, conf=()):
     return None, ""
 
 
+def heredocs(line):
+    toks, pos, stop = [], 0, len(line.rstrip(" \t"))
+    while pos < stop:
+        m = TOKEN.match(line, pos)
+        if not m or m[3] or m[4] and any(s in m[4] for s in ("`", "${", "$'")):
+            return None
+        if m[4] and m[4][0] == "#":
+            break
+        toks.append(m)
+        pos = m.end()
+    docs, seg, runs = [], [], False
+    for m in toks + [None]:
+        if m and not m[2]:
+            seg.append(m)
+            continue
+        words, tags, it = [], [], iter(seg)
+        for t in it:
+            if t[1]:
+                target = next(it, None)
+                if not target or not target[4]:
+                    return None
+                if t[1].lstrip("0123456789") in ("<<", "<<-"):
+                    tags.append((target[4], t[1].endswith("-")))
+            else:
+                words.append(t[4])
+        if any(w in COMPOUND for w in words):
+            return None
+        i = 0
+        while i < len(words) and (words[i] in PREFIX or "=" in words[i] and not words[i].startswith("-")):
+            i += 1
+        runs = runs or i < len(words) and words[i] not in INERT or any("=" in w for w in words[:i])
+        reader = words[i:] and os.path.basename(words[i]) in ("cat", "tee") and not (m and "|" in m[2]) \
+            and all(w in ("-a", "--append", "-") or not w.startswith("-") for w in words[i + 1:])
+        for word, dash in tags:
+            quoted = re.fullmatch(r"'[^']*'|\"[^\"\\]*\"", word)
+            if not quoted and any(c in word for c in "'\"\\"):
+                return None
+            docs.append((word[1:-1] if quoted else word, dash, bool(quoted), bool(reader and quoted)))
+        seg = []
+    return docs, runs
+
+
+def body_end(lines, start, tag, dash, quoted):
+    for j in range(start, len(lines)):
+        if lines[j] == tag or dash and lines[j].lstrip("\t") == tag:
+            return j
+        if not quoted and lines[j].endswith("\\"):
+            break
+    return len(lines)
+
+
 def main():
     try:
         data = json.load(sys.stdin)
@@ -222,7 +279,7 @@ def main():
     def check(seg, unknown=False):
         nonlocal here, left
         i = 0
-        while i < len(seg) and (seg[i] in ("command", "builtin", "exec")
+        while i < len(seg) and (seg[i] in PREFIX
                                 or "=" in seg[i] and not seg[i].startswith("-")):
             i += 1
         env = any(w.startswith(("GIT_DIR=", "GIT_WORK_TREE=")) for w in seg[:i])
@@ -249,7 +306,31 @@ def main():
             check(seg)
     except ValueError:
         decision, reasons, here, left = None, [], cwd, False
-        for line in command.split("\n"):
+        lines, bodies, clean, runs, quiet = command.split("\n"), [], True, False, set()
+        for n, line in enumerate(lines):
+            if bodies:
+                end, reader, quoted = bodies[0]
+                if reader:
+                    quiet.add(n)
+                elif not quoted and ("$(" in line or "`" in line):
+                    runs = True
+                if n == end:
+                    bodies.pop(0)
+            elif clean:
+                found = heredocs(line)
+                clean = found is not None
+                docs, more = found or ((), False)
+                runs = runs or more
+                start = n + 1
+                for tag, dash, quoted, reader in docs:
+                    end = body_end(lines, start, tag, dash, quoted)
+                    bodies.append((end, reader and end < len(lines), quoted))
+                    start = end + 1
+        if runs or not clean:
+            quiet = set()
+        for n, line in enumerate(lines):
+            if n in quiet:
+                continue
             if not GIT_WORD.search(line.translate(UNQUOTE)):
                 continue
             try:
