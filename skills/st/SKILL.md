@@ -27,7 +27,9 @@ The highest area wins:
 
 A new page that also needs API, data or sign-in work goes to Full.
 
-Before the first lane skill or agent starts, Quick too, say it in one line: `Lane: <lane> (<area>: <why>). Say "full", "fast", "quick" or "design" to override.`
+Before the first lane skill or agent starts, Quick too, say it in one line: `Lane: <lane>, risk <level> (<area>: <why>). Say "full", "fast", "quick" or "design" to override. Say "risk high", "risk normal" or "risk low" to change the risk.`
+Risk level: High for privacy and access, the data model, contracts, secrets, money, or work that cannot be undone. Normal for other Full work. Low for Fast. None for Quick and Design.
+Write the risk as `risk` (`high`, `normal`, `low` or `none`) in `<project>/.stratum/state.json` and keep the other keys. On the user's "risk <level>", write the new level.
 Then run the lane. If the user overrides, use their lane.
 
 ## 2. Run the lane
@@ -54,6 +56,7 @@ tell the user in one line, and restart at the higher lane with what was learned.
 - Small decisions you make yourself: problems found on the way, naming, placement, a fix inside
   the files the work already touches. Do not stop for them. When the run is done, list each one:
   what you found, what you did.
+  Write each small decision in a list as you make it. At each story review, and at the end of a Fast change, the list goes to the advisors the matrix names. A decision an advisor sends to the user is undone if the user says no.
 - Findings from any agent or review are hypotheses. Before acting, check each one against the
   source: the defect exists at that `file:line`, and the stated cause is the real one. Drop the
   false ones. A real finding is a decision like any other: small ones get fixed, big ones go to

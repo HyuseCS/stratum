@@ -18,6 +18,7 @@ to `/stratum:st-full`.
    first if one is set (`/advisor`): root cause or rabbit hole?
 4. Verify with `bash <plugin root>/scripts/st-verify.sh '<test command>' <files touched>` (see `/stratum:st`). If an
    advisor is set, consult it on the diff: hidden regressions? Handle its notes like findings.
+   At the end of the change, send the small-decision list to `/advisor` if one is set. A decision it sends to the user is undone if the user says no.
 5. Start the `stratum:st-review` agent with the change plan path and the change's uncommitted diff
    (`git diff HEAD` plus new files, since step 6 commits after the review). Check each finding
    against the source (see `/stratum:st`). Send the real, small ones to `stratum:st-build`; big

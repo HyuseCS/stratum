@@ -151,7 +151,7 @@ search, then read. Code-writing agents carry the ponytail rule and add no explan
 .stratum/
 ├── constitution.md      project rules (committed)
 ├── state.json           current feature, phase, lane (committed)
-├── advisor.json         advisor mode (codex, both, off), optional Codex model and effort (committed)
+├── advisor.json         advisor mode (auto, codex, both, off), optional Codex model and effort (committed)
 ├── templates/           optional overrides of plugin templates (committed)
 ├── handoff.md           session handoff (git-ignored)
 ├── powerline.json       statusline theme, shape, colors (git-ignored, per machine)
@@ -167,19 +167,20 @@ copy for that project only. `scripts/st-lock.sh` runs tests marked `[lock]` one 
 
 ## Built in
 
-- **Advisor.** Codex (OpenAI's `codex` CLI), a model from another vendor, runs at two points in the Full lane. At the end of the Plan phase, before its gate, it only advises on a simpler or better approach and does not validate the plan (`st-inspect` does that). It also reviews a test still red after two tries. The full diff before the build is called done and the whole Fast lane use `/advisor` if you set one. The Quick lane has no advisor.
+- **Advisor.** Codex (OpenAI's `codex` CLI), a model from another vendor, and `/advisor` if you set one, review four points in the Full lane: the plan before the Plan gate, a test still red after two tries, each story's small decisions, and the diff at the end of Build. At the plan point Codex only advises on a simpler or better approach and does not validate the plan (`st-inspect` does that). In mode `auto` the risk level picks Codex, `/advisor`, both or none at each point. The whole Fast lane uses `/advisor` if you set one. The Quick lane has no advisor.
   The orchestrator runs `scripts/st-advisor.sh` in the foreground and waits for the answer. Codex runs in the read-only sandbox and only reviews: it never builds or fixes.
-  It answers `APPROVED`, `REVISE` (findings, checked against the source like any finding, then one more run, two rounds at most), or `BLOCKED` (the orchestrator stops and asks you).
+  It answers `APPROVED`, `REVISE` (findings, checked against the source like any finding; one more run only when a CRITICAL or HIGH fix changed the plan, two rounds at most), or `BLOCKED` (the orchestrator stops and asks you).
   A failed, empty, malformed or late answer (540 seconds) is `BLOCKED`, never approval.
   Each run appends the point, a SHA256 of the input, the verdict and the findings to `specs/<feature>/advisor.md`. An approval of a plan that changed since then is stale.
   What leaves the machine: each call sends the prompt and the files Codex reads to OpenAI, on your Codex login and quota (about 37,000 tokens per plan review). At the plan point the prompt names the plan files and Codex reads them; at the test point it holds the task text, the test path and both failure outputs.
   The prompt tells Codex to stay inside the named inputs, never open env or secret files, and never quote a secret value. The sandbox does not block reads.
   Whether Codex's own shell sees your environment variables is not checked.
-  `.stratum/advisor.json` sets the mode: `{"mode": "codex"}`, `{"mode": "both"}` (Codex, then `/advisor` if you set one), or `{"mode": "off"}`. `"mode": "off"` is the off switch: nothing goes to OpenAI.
-  With no file the advisor is off and prints `no advisor: mode not set. Write .stratum/advisor.json with "mode": "codex", "both" or "off".` `st-init` writes the file for new projects. A project set up before this feature has no file, so the advisor stays off until you write it.
+  `.stratum/advisor.json` sets the mode. `{"mode": "auto"}` (the default when the file has no `mode`): the risk level picks the advisors at each point. The others are `{"mode": "codex"}`, `{"mode": "both"}` (Codex, then `/advisor` if you set one), or `{"mode": "off"}`. `"mode": "off"` is the off switch: nothing goes to OpenAI.
+  With no file the advisor is off and prints `no advisor: mode not set. Write .stratum/advisor.json with "mode": "auto", "codex", "both" or "off".` `st-init` writes the file for new projects. A project set up before this feature has no file, so the advisor stays off until you write it.
   With no `codex` on PATH you get one line, `no advisor: codex not found`, and the flow runs as before, with `/advisor` if you set one.
   Optional `model` and `effort` keys in the same file pick the Codex model and reasoning effort, for example `{"mode": "codex", "model": "gpt-6-astra", "effort": "high"}`. Without them Codex uses its own default.
-  The call runs with `--ignore-user-config`: neither `~/.codex/config.toml` nor a project `.codex/config.toml` is read, so no MCP server, hook or notify command from them runs during a review, and the model and effort come only from this file. Your Codex login works as before.
+  Codex runs in the background, also inside herdr, with `--ignore-user-config`.
+  Outside herdr, the call runs with `--ignore-user-config`: neither `~/.codex/config.toml` nor a project `.codex/config.toml` is read, so no MCP server, hook or notify command from them runs during a review, and the model and effort come only from this file. Your Codex login works as before.
 - **Git guard.** One mode per command: `commit`, `worktree_remove`, `worktree_prune`,
   `branch_delete`, `reset_hard`, `clean` (`clean -f`), `discard` (`checkout .`, `restore .`), and
   `force_push`. Each is `auto` (runs), `ask`, or `deny` (blocked). The guard reads the repo's

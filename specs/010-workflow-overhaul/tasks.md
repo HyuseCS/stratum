@@ -317,7 +317,7 @@ the High talk.
 - [X] T021 Not run, T050 failed: check 1, the agent gave no answer. [P] [US3] Wave 3, after T050 passed and T019. Write `scripts/st-codex-agent.sh` (contracts/scripts.md section 2). Owns:
   `scripts/st-codex-agent.sh`. Test: `bash tests/test_codex_agent.sh`. (FR-013, lessons L26,
   L30, L31, L33)
-- [ ] T022 [P] [US3] Write R1 to R3 and R12 in `skills/st/SKILL.md` (R1 replaces the lane line,
+- [X] T022 [P] [US3] Write R1 to R3 and R12 in `skills/st/SKILL.md` (R1 replaces the lane line,
   R12 joins the small-decision bullet); R4 to R11 and R13 in `skills/st-build/SKILL.md`
   (Advisor section: R4 replaces the mode line, R5 goes after the kept `mode both` line, the
   matrix table with the R6 row and the other three rows from contracts/scripts.md section 1.4

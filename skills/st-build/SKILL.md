@@ -52,6 +52,7 @@ Never delete a remote branch: the user does that. If the project is another repo
 ## Per story (after its last task)
 
 1. The `stratum:st-review` agent on the story's diff.
+   Send the story's small-decision list to the advisors: `bash <plugin root>/scripts/st-advisor.sh decisions <feature dir> <list file>`.
 2. For screen work not done by the Design lane, run the `st-impeccable` skill on the changed screens.
 3. Check each finding against the source first (see `/stratum:st`). Send the real, small ones to
    `st-build`; verify and commit them like a task. Big ones go to the user. Drop the false ones.
@@ -75,12 +76,26 @@ the next phase: `/stratum:st-close`.
 
 ## Advisor
 
-The advisor is Codex (the `codex` CLI), a model from another vendor. It runs at two points: the plan before the Plan gate (`st-plan` step 4, stale-checked at the build gate by `st-inspect`) and a test still red after 2 tries. The full diff before the build is called done and every Fast-lane point use `/advisor`. The Quick lane has no advisor.
+The advisor is Codex (the `codex` CLI), a model from another vendor. In mode `auto` the risk level picks the advisors at each point:
+
+| Point | high | normal | low | none |
+|-------|------|--------|-----|------|
+| plan before the Plan gate (`st-plan` step 4, stale-checked at the build gate by `st-inspect`) | both | Codex | none | none |
+| test red after 2 tries | Codex, then both if still red | Codex | `/advisor` | none |
+| story small decisions | both | Codex | `/advisor` | none |
+| diff at the end of Build | both | Codex | `/advisor` | none |
+
+Every Fast-lane point uses `/advisor`. The Quick lane has no advisor.
 
 - Run `bash <plugin root>/scripts/st-advisor.sh <point> ...` from the project root in the foreground, with a Bash timeout of 600000 ms, and wait for it. No background run, no polling.
-- Codex only reviews, in the read-only sandbox. Never run `codex` to build or fix.
+- Codex only reviews, in the read-only sandbox. Never run `codex` to build or fix. Codex runs in the background as before, also in herdr.
 - `no advisor: codex not found`, `no advisor: mode not set` (show the user its line) or `no advisor: mode off`: go on as before; consult `/advisor` only if the user set one.
 - First line `mode both: also consult /advisor if one is set`: after Codex, consult `/advisor` on the same input if one is set.
+- `advisors: codex`: Codex runs. `advisors: both`: Codex runs, then consult `/advisor` on the same input, then hold the talk. `advisors: /advisor`: consult `/advisor` only. `advisors: none`: no advisor at this point, and skip `check plan`.
+- At a High point both advisors first answer alone. Then hold the talk: at most 3 rounds of `bash <plugin root>/scripts/st-advisor.sh round <point> <feature dir> <n> <views file>`, each with `/advisor`'s answer to the same views.
+  In round 3 each advisor proposes a compromise for every open point. A compromise both accept is a combined finding. A point with no compromise both accept goes to the user with both views, in short, simple words.
+  If one advisor has no answer (`no advisor`, mode off), the point runs with the one left, and the talk record says so.
+  After the talk, record it: `bash <plugin root>/scripts/st-advisor.sh talk <point> <feature dir> <file>` with the rounds, the agreed points, the compromises, the points sent to the user and the calls.
 - `APPROVED`: go on.
 - `WAIVED sha256 <hash>`: the plan changed only by fixes, and `check plan` passes until the input changes again.
 - `REVISE`: handle each finding like a review finding: check it against the source, fix the real small ones, bring big ones to the user, drop the false ones.
@@ -91,7 +106,7 @@ The advisor is Codex (the `codex` CLI), a model from another vendor. It runs at 
 - `no change since <base>: skip`: nothing changed after the last review, so the pass is skipped.
 - After each `/advisor` call, run `bash <plugin root>/scripts/st-advisor.sh note <point> <feature dir> "<one-line summary>"`.
 - `BLOCKED: <reason>`: stop and show the user the reason. Nothing passes the gate. If the user says to continue, run `bash <plugin root>/scripts/st-advisor.sh continued <point> <feature dir>` and skip the point. Do not retry it in this gate pass.
-- Each run appends a record to `<feature dir>/advisor.md`: the point, the time, the SHA256 of the input, the verdict and the findings. The mode comes from `.stratum/advisor.json` (`codex`, `both` or `off`). No file means off, with the `mode not set` line.
+- Each run appends a record to `<feature dir>/advisor.md`: the point, the time, the SHA256 of the input, the verdict and the findings. The mode comes from `.stratum/advisor.json`: `auto` (the default when the file has no `mode`), `codex`, `both` or `off`. No file means off, with the `mode not set` line.
 - At the build gate, `check plan` compares the latest plan record with the current input. `advisor approval is stale` or `no record` counts as no approval: run the plan point once more, as a round. Skip the check after a `no advisor` line.
 - Exit 2 with a `usage:` line or `cannot hash inputs`: the script could not read or hash its inputs. Nothing was recorded and nothing was sent. Fix the input or the tool and run the point again.
 
