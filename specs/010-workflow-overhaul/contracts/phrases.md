@@ -93,7 +93,7 @@ Gone: `It runs at two points` and
 (skills/st-init/SKILL.md). Kept: ``First line `mode both: also consult /advisor if one is set` ``
 (skills/st-build/SKILL.md, row `#18 FR-010 modes`).
 
-If T050 fails (no tab path): R7 becomes `Codex runs in the background as before, also in herdr.` and R17 becomes `Codex runs in the background, also inside herdr, with \`--ignore-user-config\`.`; R19 and R20 are dropped. T020 and T022 use those lines.
+If T050 fails (no tab path): R7 becomes `Codex runs in the background as before, also in herdr.` and R17 becomes `Codex runs in the background, also inside herdr, with \`--ignore-user-config\`.`; R19 and R20 are dropped; R21 starts `The call runs with` in place of `Outside herdr, the call runs with`. T020 and T022 use those lines.
 
 R6 is the one matrix row the test pins; the other rows are in the same table (contracts/scripts.md
 section 1.4 is the source). `skills/st-fast/SKILL.md` keeps no `st-advisor.sh` call (existing

@@ -25,7 +25,7 @@ R15|skills/st-init/SKILL.md|advisor mode `auto` (recommended: the risk level pic
 R16|README.md|`{"mode": "auto"}` (the default when the file has no `mode`): the risk level picks the advisors at each point.
 R17|README.md|Codex runs in the background, also inside herdr, with `--ignore-user-config`.
 R18|README.md|With no file the advisor is off and prints `no advisor: mode not set. Write .stratum/advisor.json with "mode": "auto", "codex", "both" or "off".`
-R21|README.md|Outside herdr, the call runs with `--ignore-user-config`: neither `~/.codex/config.toml` nor a project `.codex/config.toml` is read
+R21|README.md|The call runs with `--ignore-user-config`: neither `~/.codex/config.toml` nor a project `.codex/config.toml` is read
 K1|skills/st-build/SKILL.md|First line `mode both: also consult /advisor if one is set`
 TABLE
 
