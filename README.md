@@ -55,8 +55,10 @@ Describe the work. Stratum picks the lane:
 /stratum:st add a parent notice when the bus is 10 minutes away
 ```
 
-It answers with one line, for example `Lane: full (privacy and access: new notice to parents).`
-Say `full`, `fast`, or `quick` to override.
+It answers with one line, for example `Lane: full, risk high (privacy and access: new notice to parents).`
+Say `full`, `fast`, `quick` or `design` to override.
+The line also names the risk level, which picks the advisors. Say `risk high`, `risk normal`, `risk low` or `risk none` to change it.
+When the task names GitHub issues (`#51` or an issue URL), `/stratum:st` runs `st-triage` on them first. If an issue is done or not valid, it tells you and waits for your word before it picks the lane.
 
 ### Lanes
 
@@ -87,6 +89,15 @@ The lane follows the highest impact area the change touches.
 **Quick lane:** one file, no gate, related tests, commit. A small fix across a few files goes to `st-build` in brief mode. It moves up a lane if it needs a change plan.
 
 **Design lane:** a new look or a new page or screen. New look: a grill for the design file, one reference screen, its checks, your yes. Autonomous: the page in the existing look, checked, then your OK.
+In the Full lane, a task that makes a new screen goes to the Design lane (`st-design`) in the mode you pick at Plan: autonomous or new look.
+
+**Build with workers:** say `build with workers`, or name a machine ("US2 on the laptop"). Build sends each phase's `[P]` tasks to `st-worker`, one worker per task.
+
+**Autonomous mode:** say `autonomous mode` to turn on autonomous build mode for this run only, and `stop autonomous` to turn it off. The statusline shows `autonomous` while it is on.
+In normal mode the orchestrator never approves a worker's permission prompt: it tells you the worker's workspace, tab and what the prompt asks.
+
+**Test scope:** agents run the tests of the changed files and of the files that import them. The full suite runs only when you ask.
+When a change touches shared config, test setup, a schema or migration, middleware, or a file more than 20 files import, the orchestrator asks you first: a named list of tests or the full suite.
 
 ### Skills
 
