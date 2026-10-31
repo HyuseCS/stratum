@@ -504,7 +504,7 @@ prompts through the hook; normal mode never answers them.
   `.stratum/autonomous` holds `S1` while the main checkout's holds `S2`: no `autonomous`, and the
   reverse shows it. Run it: red. Owns: `tests/test_statusline.sh`. Test:
   `bash tests/test_statusline.sh`. (FR-018)
-- [ ] T029 [P] [US4] Write `tests/test_worker_rules.sh`: assert W1 to W17 in their files and the
+- [X] T029 [P] [US4] Write `tests/test_worker_rules.sh`: assert W1 to W17 in their files and the
   three "Gone" lines of the US4 table. In `tests/test_on_demand.sh` delete rows `#17 one-time yes`
   and `#17 FR-014 build`, and change the check `#17 FR-014 build skill` to: `/stratum:st-worker`
   appears in `skills/st-build/SKILL.md` on one line only, the W10 line; (F2) W8 and W9 name the
