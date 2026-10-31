@@ -360,6 +360,37 @@ class GitGuardTest(unittest.TestCase):
             with self.subTest(cmd=cmd):
                 self.assertEqual(self.run_guard(f"echo it's\n{cmd}")[0], "ask", cmd)
 
+    def test_quoted_heredoc_cat_body_no_decision(self):
+        self.assertEqual(self.run_guard(
+            "cat > f.md <<'EOF'\nthe git guard can't read this\ngit push --force\nEOF"), (None, ""))
+
+    def test_quoted_heredoc_python_text_no_decision(self):
+        self.assertEqual(self.run_guard(
+            "python3 - <<'PY'\ns=\"it's git push text\"\nopen('a','w').write(s)\n# it's\nPY"), (None, ""))
+
+    def test_quoted_heredoc_python_subprocess_asks(self):
+        cmd = ("python3 - <<'PY'\nimport subprocess\nsubprocess.run(['git','push','--force'])\n"
+               "# it's\nPY")
+        self.assertEqual(self.run_guard(cmd)[0], "ask")
+
+    def test_quoted_heredoc_ruby_popen_asks(self):
+        cmd = "ruby - <<'RB'\nIO.popen(\"git push --force\")\n# it's\nRB"
+        self.assertEqual(self.run_guard(cmd)[0], "ask")
+
+    def test_quoted_heredoc_shell_reader_judged(self):
+        d, reason = self.run_guard("bash <<'EOF'\ngit push --force\necho it's\nEOF")
+        self.assertEqual(d, "ask")
+        self.assertIn("force push", reason)
+
+    def test_unquoted_heredoc_body_judged(self):
+        self.assertEqual(self.run_guard("cat <<EOF\n$(git push --force)\nit's\nEOF")[0], "ask")
+
+    def test_quoted_heredoc_commit_opener_judged(self):
+        self.set_mode("ask")
+        d, reason = self.run_guard("git commit -F - <<'EOF'\nmsg it's\nEOF")
+        self.assertEqual(d, "ask")
+        self.assertIn("git commit (commit: ask)", reason)
+
 
 if __name__ == "__main__":
     unittest.main()

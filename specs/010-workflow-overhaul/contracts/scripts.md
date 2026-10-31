@@ -327,7 +327,18 @@ In the `except ValueError` path only:
    words today's loop skips): ask with `The git guard could not read a git command on this line.`.
    Else judge each git segment with today's `judge`, folder unknown (`elsewhere=True`), and keep
    the strongest decision.
-3. The command outside the fallback is judged as today.
+3. A line whose first `<<` (not `<<<`) opens a quoted heredoc (`<<'TAG'`, `<<"TAG"`, `<<-'TAG'`;
+   `segments` gives `<<` then the tag as tokens) is judged as in steps 1 and 2. The lines after
+   it, up to the first line that is exactly TAG (leading tabs allowed for `<<-`), are its body.
+   The body and the TAG line are skipped (no git-word check, no ask) when both hold: (a) no
+   segment of the opener line runs a shell or runner: the basenames of its prefix words and its
+   first word are not `sh`, `bash`, `zsh`, `dash`, `ksh`, `fish`, `eval`, `xargs`, `env`, `sudo`,
+   `exec`, `source` or `.`; (b) the body has none of `subprocess`, `os.system`, `popen`,
+   `Popen`, `os.exec`, `spawn`, `child_process`, `execSync`, `Runtime.exec`, `system(`,
+   `shell_exec`. Else, or
+   when the opener line does not split or no TAG line follows, the body lines are judged as in
+   steps 1 and 2. Unquoted heredocs (`<<EOF`) are never skipped.
+4. The command outside the fallback is judged as today.
 
 ## 7. `statusline/st-statusline.sh` (changed, US4)
 

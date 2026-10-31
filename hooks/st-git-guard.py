@@ -12,6 +12,11 @@ GIT_OPTS_WITH_VALUE = {"-C", "-c", "--git-dir", "--work-tree", "--namespace", "-
 RANK = {None: 0, "ask": 1, "deny": 2}
 GIT_WORD = re.compile(r"(?<![^\s;&|()\[\],`/$=])git(?![^\s;&|()\[\],`<>])")
 UNQUOTE = str.maketrans("", "", "\\'\"")
+PREFIX = ("command", "builtin", "exec")
+RUNNERS = {"sh", "bash", "zsh", "dash", "ksh", "fish", "eval", "xargs", "env", "sudo", "exec", "source", "."}
+PROCESS_CALLS = ("subprocess", "os.system", "popen", "Popen", "os.exec", "spawn", "child_process",
+                 "execSync", "Runtime.exec", "system(", "shell_exec")
+HEREDOC = re.compile(r"(?<!<)<<(?!<)(-?)\s*(?:(['\"])([^'\"\s]+)\2)?")
 
 
 def segments(command):
@@ -193,6 +198,29 @@ def judge(sub, args, gitdir, elsewhere=False, conf=()):
     return None, ""
 
 
+def quoted_body(line, rest):
+    m = HEREDOC.search(line)
+    if not m or not m.group(3):
+        return 0
+    dash, tag = m.group(1), m.group(3)
+    try:
+        segs = list(segments(line))
+    except ValueError:
+        return 0
+    if not any(a == "<<" and b == dash + tag for s in segs for a, b in zip(s, s[1:])):
+        return 0
+    for seg in segs:
+        i = 0
+        while i < len(seg) - 1 and (seg[i] in PREFIX or "=" in seg[i] and not seg[i].startswith("-")):
+            i += 1
+        if any(os.path.basename(w) in RUNNERS for w in seg[:i + 1]):
+            return 0
+    for n, body in enumerate(rest):
+        if body == tag or dash and body.lstrip("\t") == tag:
+            return 0 if any(p in "\n".join(rest[:n]) for p in PROCESS_CALLS) else n + 1
+    return 0
+
+
 def main():
     try:
         data = json.load(sys.stdin)
@@ -222,7 +250,7 @@ def main():
     def check(seg, unknown=False):
         nonlocal here, left
         i = 0
-        while i < len(seg) and (seg[i] in ("command", "builtin", "exec")
+        while i < len(seg) and (seg[i] in PREFIX
                                 or "=" in seg[i] and not seg[i].startswith("-")):
             i += 1
         env = any(w.startswith(("GIT_DIR=", "GIT_WORK_TREE=")) for w in seg[:i])
@@ -249,7 +277,12 @@ def main():
             check(seg)
     except ValueError:
         decision, reasons, here, left = None, [], cwd, False
-        for line in command.split("\n"):
+        lines, skip = command.split("\n"), 0
+        for n, line in enumerate(lines):
+            if skip:
+                skip -= 1
+                continue
+            skip = quoted_body(line, lines[n + 1:])
             if not GIT_WORD.search(line.translate(UNQUOTE)):
                 continue
             try:
