@@ -990,6 +990,10 @@ check "B4 owns holds the backticked Owns paths, one per line" '[ "$(cat "$lw/.st
 fresh; autoset "$sid"
 CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" start T004 --task "$tmp/task-none.md" --test "$testcmd" --lane "$lane" --roster "$roster" --autonomous
 check "B5 no Owns line: exit 0, owns is an empty file" '[ $rc = 0 ] && [ -f "$lw/.stratum/approve/owns" ] && [ ! -s "$lw/.stratum/approve/owns" ]'
+printf 'TASK BODY\nOwns: `a.sh`,\n  `b.sh`. Test: x\n' > "$tmp/task-wrap.md"
+fresh; autoset "$sid"
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" start T004 --task "$tmp/task-wrap.md" --test "$testcmd" --lane "$lane" --roster "$roster" --autonomous
+check "B6 Owns list wraps onto the next line: exit 0, owns holds both paths" '[ $rc = 0 ] && [ "$(cat "$lw/.stratum/approve/owns")" = "$(printf "a.sh\nb.sh")" ]'
 autoclr
 
 wk="$tmp/wk"; rm -rf "$wk"; mkdir -p "$wk/.stratum/approve"; git -C "$wk" init -q; git -C "$wk" -c user.name=t -c user.email=t@t commit -q --allow-empty -m first; printf '%s\n' "$sid" > "$wk/.stratum/autonomous"
@@ -1101,7 +1105,7 @@ apx; mkreq "$rid" 'echo hi'; printf '{}\n' > "$lw/.stratum/x.req"
 CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" approve T004 --request ../x --input-stdin --record "$rec" <<'ST_INPUT_END'
 Bash: {"command":"echo hi"}
 ST_INPUT_END
-check "AP3 --request ../x: exit 1, no .ok anywhere, no agent wait" '[ $rc = 1 ] && [ -z "$(find "$tmp" -name "*.ok")" ] && [ "$(cnt "^agent\twait\t")" = 0 ]'
+check "AP3 --request ../x: exit 1, no .ok in the worker folder, no agent wait" '[ $rc = 1 ] && [ -z "$(find "$lw" -name "*.ok")" ] && [ "$(cnt "^agent\twait\t")" = 0 ]'
 apx
 apv <<'ST_INPUT_END'
 Bash: {"command":"echo hi"}
@@ -1114,7 +1118,7 @@ ST_INPUT_END
 check "AP5 one character differs: exit 1, the mismatch line, no .ok" '[ $rc = 1 ] && [ "$out" = "The input does not match request $rid. Approve nothing." ] && [ ! -e "$lw/.stratum/approve/$rid.ok" ]'
 long=$(head -c 4100 /dev/zero | tr '\0' x)
 apx; mkreq "$rid" "$long"
-printf 'Bash: {"command":"%s"}\n' "$long" | apv
+apv < <(printf 'Bash: {"command":"%s"}\n' "$long")
 check "AP6 input over 4000 characters: exit 1, the too-long line, no .ok" '[ $rc = 1 ] && [ "$out" = "Request $rid is too long to approve. Pass it to the user." ] && [ ! -e "$lw/.stratum/approve/$rid.ok" ]'
 apx; mkreq "$rid" 'echo hi'; printf '%s\n' other-session > "$lw/.stratum/approve/session"
 apv <<'ST_INPUT_END'
