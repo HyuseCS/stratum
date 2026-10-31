@@ -303,7 +303,7 @@ the High talk.
   `specs/demo`: `ERROR: feature dir must start with three digits`, exit 2. Run it: red. Owns:
   `tests/test_codex_agent.sh`. Test: `bash tests/test_codex_agent.sh`. (FR-013, lessons L26,
   L30, L31)
-- [ ] T020 [P] [US3] Write `tests/test_risk_rules.sh`: assert R1 to R18 and R21 in their files, the US3
+- [X] T020 [P] [US3] Write `tests/test_risk_rules.sh`: assert R1 to R18 and R21 in their files, the US3
   "Gone" lines, and the kept `mode both` line. In
   `tests/test_on_demand.sh` change row `#18 FR-010 modes` (the `(\`codex\`, \`both\` or \`off\`).`
   row) to R4, the README row of `#18 FR-010 no file` to R18, and `#18 FR-015 init`
