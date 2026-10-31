@@ -21,8 +21,10 @@ subagent absolute paths: plugin root, project root, feature dir, and its task ID
    Check the failing output yourself. A test that passes before the build is wrong.
 2. The build tasks that follow go to the `st-build` agent (`stratum:st-build`). It builds until that test
    passes and ticks the task `[X]` in tasks.md. Setup tasks with no test go straight to `st-build`.
+   On a `lock:` timeout line from an agent, tell the user the line and the test that waits, in short words.
 3. **Verify.** From the project root, run
    `bash <plugin root>/scripts/st-verify.sh '<test command>' <files the task touched>`.
+   A test marked `[lock]` runs only through the test lock: `bash <plugin root>/scripts/st-lock.sh -- <test command>`.
    It re-runs the test, greps the diff for added comment lines, and prints one line. Send any
    `FAIL` back to `st-build`.
 4. **Two tries.** If the test is still red after 2 `st-build` tries, run the advisor (see Advisor): save the task text and both failure outputs to files in your scratchpad, then run

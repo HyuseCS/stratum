@@ -36,6 +36,8 @@ Read:
 2. Write the smallest test that checks that behavior through its real interface.
 3. Run it. It must fail, and fail for the right reason (missing behavior, not a typo, import
    error or broken setup). Quote the failing line.
+   A test marked `[lock]` runs only through the test lock: `bash <plugin root>/scripts/st-lock.sh -- <test command>`.
+   Never write a wait loop of your own. On a `lock:` timeout line, stop and report the line.
 4. If it passes before the build, the test is wrong. Fix the test.
 
 ## A test that can fail
