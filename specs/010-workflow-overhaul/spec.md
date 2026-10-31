@@ -6,7 +6,7 @@
 
 **Status**: Draft
 
-**Input**: User description: "GitHub issues #51, #48 and #55 on HyuseCS/stratum as one feature. #51: bring the newer skills into the lanes and look again at the lane steps. #48: fewer advisor calls, and no full test suite unless a human asks. #55: worker sessions stop on permission prompts the orchestrator cannot answer, and the test wait loop matches itself." Decisions D1 to D24 are in `decisions.md`. #51 stays open after this feature for a later skill-by-skill workflow review (D22).
+**Input**: User description: "GitHub issues #51, #48 and #55 on HyuseCS/stratum as one feature. #51: bring the newer skills into the lanes and look again at the lane steps. #48: fewer advisor calls, and no full test suite unless a human asks. #55: worker sessions stop on permission prompts the orchestrator cannot answer, and the test wait loop matches itself." Decisions D1 to D29 are in `decisions.md`. #51 stays open after this feature for a later skill-by-skill workflow review (D22).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -291,8 +291,9 @@ line. Run the Plan phase and see no issue question. Search the plugin and see no
 - **FR-013**: In herdr, Codex MUST run as a herdr agent in its own tab of the orchestrator's
   workspace, read-only and never asking; at most one Codex agent MUST exist per workspace; it MUST
   start a new conversation per feature; its answer MUST be read between two marker lines and
-  checked against the verdict format, and a bad answer MUST count as BLOCKED. Outside herdr,
-  Codex MUST run in the background as today (D12).
+  checked against the verdict format, and a bad answer MUST count as BLOCKED. The tab MUST run only
+  with the Stratum Codex home the user opted in to, and only after the live probe T050 passed;
+  otherwise, and outside herdr, Codex MUST run in the background as today (D12, D25).
 - **FR-014**: At a High point the two advisors MUST first answer alone, then talk at most 3 rounds;
   in the last round each MUST propose a compromise for every open point; a point with no
   compromise both accept MUST go to the user with both views in short, simple words (D16, D17).
@@ -318,9 +319,15 @@ line. Run the Plan phase and see no issue question. Search the plugin and see no
   the user with the tab name in short, simple words. It MUST never approve: push, force-push,
   deleting a branch or worktree, `reset --hard`, anything outside the worker's worktree, secrets
   or `.env`, new dependencies, network calls to new hosts. When the classifier blocks an approval,
-  it MUST try no other way. Every approval MUST be recorded and listed at the end of the run. If
-  the hook cannot do this, autonomous mode MUST fall back to permissions the user grants at worker
-  start (D1, D23).
+  it MUST try no other way. Every approval MUST be recorded and listed at the end of the run. The
+  hook MUST act only while the main checkout's `.stratum/autonomous` holds the orchestrator's
+  session id and the worker's session file matches it, and in a worker session every Bash
+  command, Edit or Write that touches `.stratum/approve/` or `.stratum/autonomous`, or runs
+  `st-worker.sh approve`, `pass` or `autonomous-off`, MUST be denied (D27). On a saved machine,
+  `start --autonomous` MUST write that machine's flag and the run's end or "stop autonomous" MUST
+  remove it (D28). There is no fallback to standing permissions: if the plugin hook does not
+  fire, `start --autonomous` loads the same hook with `--settings` once the user OKs it; if that
+  fails too, autonomous mode stays off and every prompt goes to the user (D1, D23, D29).
 - **FR-020**: Build MUST send a phase's `[P]` tasks to `st-worker` when the user says so ("build
   with workers", "on the laptop"); otherwise it MUST use subagents as today (D2).
 - **FR-021**: `st-worker` MUST open each worker workspace with the user's full template layout, the

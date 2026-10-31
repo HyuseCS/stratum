@@ -91,7 +91,9 @@ scoped tests.
   that `Then run the same point once more on the changed input.` is gone from
   `skills/st-build/SKILL.md`. In `tests/test_on_demand.sh`, delete only the row
   `#18 FR-005 revise ... Then run the same point once more on the changed input.` (the row with
-  `Two rounds at most` stays). Run it: red. Owns: `tests/test_advisor_rules.sh`,
+  `Two rounds at most` stays), and change the check `#18 plan-only st-build no diff point`
+  (`tests/test_on_demand.sh:309`) to: `st-advisor.sh diff` appears in `skills/st-build/SKILL.md`
+  only on the A9 line, and `check diff` does not appear. Run it: red. Owns: `tests/test_advisor_rules.sh`,
   `tests/test_on_demand.sh`. Test: `bash tests/test_advisor_rules.sh`. (FR-001 to FR-004,
   lessons L1, L39)
 - [ ] T004 [P] [US1] Write `tests/test_test_scope.sh`: assert S1 to S6 in their files, the three
@@ -286,7 +288,9 @@ the High talk.
   (c) `st-codex-009` in this workspace: `tab close <its tab_id>` before the new start; (d)
   `st-codex-010` in another workspace: ignored, a new start here; (e) `agent_pane_busy` twice
   then ok: 3 start calls; busy every time: exactly 10 start calls, then `ERROR:` and exit 1
-  (lessons L30); (f) `agent_not_ready`: the exact `ERROR: Codex waits for an answer at start in its Codex tab. Answer it there, then run the point again.`, exit 1;
+  (lessons L30); (f) `agent_not_ready`: the exact `ERROR: Codex waits for an answer at start in its Codex tab. If it asks whether to trust the folder, pick the option that does not trust it (trusting loads the project's .codex/config.toml), then run the point again.`, exit 1;
+  (f2) the stub `agent prompt` replaces `<codex home>/auth.json` with a file: the exact
+  `ERROR: Codex replaced the login link ...` line, exit 1, no answer file;
   (g) the prompt file ends with the three lines of step 4 and a 12-hex nonce; the prompt call
   argv ends `--wait --until done --until idle --until blocked --timeout <ms>` with `<ms>` at
   most 480000, and smaller when the stub's `agent start` takes 2 s; (h) prompt state
@@ -298,11 +302,12 @@ the High talk.
   `specs/demo`: `ERROR: feature dir must start with three digits`, exit 2. Run it: red. Owns:
   `tests/test_codex_agent.sh`. Test: `bash tests/test_codex_agent.sh`. (FR-013, lessons L26,
   L30, L31)
-- [ ] T020 [P] [US3] Write `tests/test_risk_rules.sh`: assert R1 to R18 in their files, the US3
+- [ ] T020 [P] [US3] Write `tests/test_risk_rules.sh`: assert R1 to R18 and R21 in their files, the US3
   "Gone" lines, and the kept `mode both` line. In
   `tests/test_on_demand.sh` change row `#18 FR-010 modes` (the `(\`codex\`, \`both\` or \`off\`).`
   row) to R4, the README row of `#18 FR-010 no file` to R18, and `#18 FR-015 init`
-  (``advisor mode `codex` (recommended``) to R15. Run it: red. Owns:
+  (``advisor mode `codex` (recommended``) to R15, and row `#18 D23 readme`
+  (`tests/test_on_demand.sh:295`) to R21. Run it: red. Owns:
   `tests/test_risk_rules.sh`, `tests/test_on_demand.sh`. Test: `bash tests/test_risk_rules.sh`.
   (FR-011 to FR-016, lessons L1, L38)
 
@@ -317,7 +322,7 @@ the High talk.
   matrix table with the R6 row and the other three rows from contracts/scripts.md section 1.4
   replaces the "It runs at two points" sentence; R13 in Per story); R14 in `skills/st-fast/SKILL.md`; R15 in
   `skills/st-init/SKILL.md` step 11; R19 in `skills/st-init/SKILL.md` step 11; R20 in the Advisor section of
-  `skills/st-build/SKILL.md`; R16 to R18 in the advisor part of `README.md` (with T050's
+  `skills/st-build/SKILL.md`; R16 to R18 and R21 (replaces the `--ignore-user-config` sentence at `README.md:182`) in the advisor part of `README.md` (with T050's
   result: R7 and R17 as written, or their "T050 fails" lines and no R19, R20). Owns:
   `skills/st/SKILL.md`, `skills/st-build/SKILL.md`, `skills/st-fast/SKILL.md`,
   `skills/st-init/SKILL.md`, `README.md`. Test:
@@ -331,9 +336,11 @@ the High talk.
   sections 1.3 to 1.5). Depends on T021. Owns: `scripts/st-advisor.sh`. Test:
   `bash tests/test_advisor_matrix.sh && bash tests/test_advisor.sh && bash tests/test_advisor_waive.sh`.
   (FR-012 to FR-016, security note S1, lessons L14, L16, L17)
-- [ ] T024 [US3] Only if T050 passed. Live run of quickstart section 3L in a scratch clone in herdr. Record in
-  research.md R-H: the time, the lines read, whether the JSON parsed, the tab and agent names,
-  and steps 2 to 4. A failure goes back to T021 or T023 with its first error line. Depends on
+- [ ] T024 [US3] Only if T050 passed. First run quickstart section 0 step 2 (the scripts in use are
+  this branch's); no live result counts before it passes. Then the live run of quickstart section
+  3L in a scratch clone in herdr. Record in research.md R-H: the time, the lines read, whether the
+  JSON parsed, the tab and agent names, steps 2 to 4, and `test -L ~/.local/state/stratum/codex-home/auth.json`
+  after the longest review (F10). A failure goes back to T021 or T023 with its first error line. Depends on
   T021 to T023. Owns: `specs/010-workflow-overhaul/research.md`. Test: the commands of
   quickstart section 3L. (FR-013, lessons L32)
 
@@ -358,12 +365,17 @@ prompts through the hook; normal mode never answers them.
   first `.req` round, `.stratum/autonomous` is removed ("stop autonomous") and a new prompt
   comes; (a4) a linked worktree as `cwd` whose own `.stratum/autonomous` and `session` hold `S1`
   while the main checkout has no `.stratum/autonomous`; (a5) an empty first line in both. D27
-  lock 2 cases (`PreToolUse`): `echo x > .stratum/approve/1-1.ok`,
-  `touch .stratum/'approve'/1-1.ok`, `touch .stra\tum/approve/1-1.ok` and
-  `ls .stratum/approve` each get `permissionDecision` `deny` with the reason
-  `.stratum/approve/ is written only by st-worker.sh approve and pass.`; Edit, Write,
-  MultiEdit and NotebookEdit of `<root>/.stratum/approve/1-1.ok` are denied the same way; Edit
-  `src/a.py` and Bash `bash tests/x.sh` give no output. Then: (a) no `.stratum/approve`: no
+  lock 2 cases (`PreToolUse`, in a worker session: the root has `.stratum/approve/`):
+  `echo x > .stratum/approve/1-1.ok`, `touch .stratum/'approve'/1-1.ok`,
+  `touch .stra\tum/approve/1-1.ok`, `touch .stratum/./approve/1-1.ok`,
+  `touch .stratum//approve/1-1.ok`, `ls .stratum/approve`, `echo S9 > .stratum/autonomous`,
+  `bash scripts/st-worker.sh approve worker-t1 --request 1-1 --input-stdin --record r`,
+  `st-worker.sh pass worker-t1 --request 1-1` and `st-worker.sh autonomous-off --roster r` each
+  get `permissionDecision` `deny` with the reason `.stratum/approve/ and .stratum/autonomous are written only by the orchestrator.`; Edit, Write,
+  MultiEdit and NotebookEdit of `<root>/.stratum/approve/1-1.ok`, `<root>/.stratum/./approve/x`
+  and `<root>/.stratum/autonomous` are denied the same way; Edit `src/a.py` and Bash
+  `bash tests/x.sh` give no output; in a non-worker session (no `.stratum/approve/`, branch
+  `010-demo`), `st-worker.sh approve ...` and `printf S1 > .stratum/autonomous` give no output. Then: (a) no `.stratum/approve`: no
   output, exit 0, nothing written; (b) `.stratum/approve` is a symlink: no output; (c) Bash `bash tests/x.sh`:
   a `<rid>.req` with `tool_name` and `tool_input` appears; the test then writes `<rid>.ok`; stdout
   is exactly the allow JSON; the three files are gone; (d) `.user`: no output, files gone; (e)
@@ -387,11 +399,17 @@ prompts through the hook; normal mode never answers them.
   `git commit --pathspec-from-file=f -m x`, `git add -u && git commit -m x`,
   `git add -A && git commit -m x`, `GIT_INDEX_FILE=idx git commit -m x`,
   `GIT_DIR=.git git commit -m x`, `GIT_WORK_TREE=. git commit -m x` and
-  `git -c user.name=x commit -m x`; `git commit -m x -- src/a.py` gives a `.req` with `staged`
-  `["src/a.py"]`; (h3) test runners give a `.req`: `npm test`, `npm run test`, `npx vitest run`,
+  `git -c user.name=x commit -m x`, and (F4) `git checkout other && git add src/a.py && git commit -m x`,
+  `git rm src/b.py && git commit -m x`, `git mv src/a.py src/c.py && git commit -m x`,
+  `git restore --staged src/b.py && git commit -m x`, `git apply --cached p.diff && git commit -m x`,
+  `git stash pop && git commit -m x`; `git commit -m x -- src/a.py` gives a `.req` with `staged`
+  `["src/a.py"]`, and (F6) `git add src/a.py && git commit -m "demo heredoc"` gives a `.req`
+  with `staged` `["src/a.py"]` (the two-word message is not a pathspec); (h3) test runners give a `.req`: `npm test`, `npm run test`, `npx vitest run`,
   `cargo test`, `go test ./...`, `pytest`, `uv run pytest`; install words give none:
   `npm install x`, `npm i x`, `pnpm add x`, `yarn add x`, `bun add x`, `pip install x`,
-  `uv add x`, `uv pip install x`, `cargo add x`, `go get x`; (i) stdin that is not JSON: no output, exit 0; (j) `hooks/commands.json` has
+  `uv add x`, `uv pip install x`, `cargo add x`, `go get x`; (h4) F3: no `.req` for an Edit of
+  `.claude/settings.json`, `.mcp.json`, `CLAUDE.md`, `AGENTS.md`, `.githooks/pre-commit` or
+  `.husky/pre-commit`, nor for `echo x > .claude/settings.json` or `echo {} > .mcp.json`; (i) stdin that is not JSON: no output, exit 0; (j) `hooks/commands.json` has
   one `PermissionRequest` entry with command `python3 "${CLAUDE_PLUGIN_ROOT}/hooks/st-approve.py"`
   and timeout 310, and one `PreToolUse` entry with matcher `Bash|Edit|Write|MultiEdit|NotebookEdit`,
   the same command and timeout 10; (k) no `PermissionRequest` case prints `deny`, and the hook
@@ -421,14 +439,23 @@ prompts through the hook; normal mode never answers them.
   `$CLAUDE_CODE_SESSION_ID` line, and `owns` lists the backticked paths of the task file's `Owns:`
   line, one per line (a task with no `Owns:` line: an empty `owns`); (c) `wait` on `blocked`
   with a `<rid>.req`: the lines `state\tapproval\t...`, `request\t<rid>`,
-  `tab\tworkspace worker-t004, tab Main`, `input\tBash: {...}`, exit 6; a commit `.req` adds
+  `tab\tworkspace worker-t004, tab Main`, `input\tBash: {...}`, then `pane text:` and the stub's
+  `STUB PANE` marker (F7, lessons L31), exit 6; a commit `.req` adds
   `branch\tworker-t004` and `staged\tsrc/a.py src/b.py`; with no `.req`: today's
-  exit 4; (d) `approve <id> --request <rid> --input <the input line's text> --record <file>`: writes `<rid>.ok`, appends one
+  exit 4; (d) `approve <id> --request <rid> --input-stdin --record <file> <<'ST_INPUT_END'` with the input
+  line's text: writes `<rid>.ok`, appends one
   TAB-split record line, calls `agent wait worker-t004 --until working --timeout 5000` before it
   prints `approved\tworker-t004\t<rid>`; refused when autonomous mode is off, for `--request ../x`,
   for a missing `.req`, for an `--input` that differs from the `.req` by one character
-  (`The input does not match request <rid>. Approve nothing.`, no `.ok`), and for an input over
-  4000 characters; (e) `pass`: writes `<rid>.user`, prints `passed\t...`; (f) `answer`
+  (`The input does not match request <rid>. Approve nothing.`, no `.ok`), for an input over
+  4000 characters, and when the worker's `session` file differs from the flag (`Worker worker-t004 is not in this autonomous run.`);
+  the text read from the heredoc keeps `$(touch pwned)` and backticks literal (no `pwned` file),
+  and its one trailing newline is dropped; (d2) F2: `approve`, `pass`, `start --autonomous` and
+  `autonomous-off` run from a feature's linked worktree read the main checkout's
+  `.stratum/autonomous` (a different line in the linked worktree's own copy is ignored); run
+  from a worker worktree (a `.stratum/approve/` folder, or branch `worker-t9`) each prints
+  `Run this from the orchestrator's checkout, not a worker worktree.`, exit 1, no call;
+  `pass` with autonomous mode off or a session mismatch is refused like `approve`; (e) `pass`: writes `<rid>.user`, prints `passed\t...`; (f) `answer`
   when the pane text has a line `Do you want to proceed?`, `Do you want to make this edit to a.py?`,
   `Do you want to create b.py?` or `❯ 1. Yes`, and when `agent read` fails: the exact
   refusal line, exit 1, no `send-keys` call; (g) `close` removes `.stratum/approve/`; (h) the
@@ -470,20 +497,22 @@ prompts through the hook; normal mode never answers them.
   (contracts/scripts.md section 7). Owns: `statusline/st-statusline.sh`. Test:
   `bash tests/test_statusline.sh && ! bash tests/test_inspect.sh | grep '^FAIL' | grep -vxF 'FAIL README tests'`. (FR-018)
 - [ ] T033 [P] [US4] Write W1 to W7, W11, W14, W16 and W17 in `skills/st-worker/SKILL.md` (step 6 and the
-  last line; remove the three "Gone" lines), W8, W9 and W12 in `skills/st/SKILL.md` (Always), W10
+  last line; remove the three "Gone" phrases from the sentence at `skills/st-worker/SKILL.md:21`
+  and keep the rest of that line), W8, W9 and W12 in `skills/st/SKILL.md` (Always), W10
   in `skills/st-build/SKILL.md` (Parallel tasks), W13 in `skills/st-herdr-workspace/SKILL.md`,
   and W15 in `README.md` (beside the worker section). Owns: `skills/st-worker/SKILL.md`,
   `skills/st/SKILL.md`, `skills/st-build/SKILL.md`, `skills/st-herdr-workspace/SKILL.md`,
   `README.md`. Test:
   `bash tests/test_worker_rules.sh && bash tests/test_on_demand.sh && bash tests/test_risk_rules.sh && bash tests/test_lock_rules.sh && bash tests/test_advisor_rules.sh && bash tests/test_test_scope.sh && bash tests/test_screen_rules.sh && ! bash tests/test_inspect.sh | grep '^FAIL' | grep -vxF 'FAIL README tests'`.
   (FR-017 to FR-022, D23, security note S4)
-- [ ] T034 [US4] Live run of quickstart section 4L on a scratch branch in herdr. Record each
-  step's output in research.md R-H, including whether the hook answers after more than 120 s.
+- [ ] T034 [US4] First run quickstart section 0 step 3 (the hook in use is this branch's) on each
+  machine used; no live result counts before it passes. Then the live run of quickstart section
+  4L on a scratch branch in herdr. Record each step's output in research.md R-H, including whether the hook answers after more than 120 s.
   D28 step, on a saved machine (whichever machine is not the one running the orchestrator):
   `start t992 ... --machine <m> --repo <path> --autonomous`, one approval there, then
   `autonomous-off --roster <roster>`; record that `<path>/.stratum/autonomous` on `<m>` was
   written, then removed.
-  D27 steps: with autonomous mode on, ask the worker to run `echo x > .stratum/approve/1-1.ok`
+  D27 steps (deny reason `.stratum/approve/ and .stratum/autonomous are written only by the orchestrator.`): with autonomous mode on, ask the worker to run `echo x > .stratum/approve/1-1.ok`
   and to Edit that path, and record both denials; then `rm -f .stratum/autonomous`, make the
   worker hit a dialog, and record that no `.req` appears and the dialog stays.
   Extra step (F9): give the worker a command its classifier blocks that is not on the hook's
@@ -492,7 +521,9 @@ prompts through the hook; normal mode never answers them.
   classifier blocked goes to the user) is the only guard: bring that result to the user.
   If the hook from `hooks/commands.json` never fires (no `.req` while the dialog shows), the
   contingency is that `start --autonomous` passes `--settings <generated file>` with the same
-  hook command to `agent start`; bring it to the user before building it. A failure goes back
+  hook command to `agent start`; bring it to the user before building it. If that fails too,
+  autonomous mode stays off and every prompt goes to the user; there is no fallback to
+  standing permissions (D29). A failure goes back
   to T030 or T031 with its first error line, or the task is ticked with
   `Not run, <first error line>`. Depends on T030, T031, T032 and T024 (research.md). Owns:
   `specs/010-workflow-overhaul/research.md`. Test: the commands of quickstart section 4L.
@@ -530,7 +561,7 @@ new screens to the Design lane and runs file-disjoint stories together.
 - [ ] T039 [P] [US5] Write DL11 to DL16 in `skills/st-build/SKILL.md` (DL11 to DL14 in Per task, DL15
   and DL16 in Parallel tasks; DL16 replaces ``merge it into `main` ``) and DL17 as step 5 of
   `agents/st-build.md`. Owns: `skills/st-build/SKILL.md`, `agents/st-build.md`. Test:
-  `bash tests/test_screen_rules.sh && bash tests/test_advisor_rules.sh && bash tests/test_lock_rules.sh && bash tests/test_test_scope.sh`.
+  `bash tests/test_screen_rules.sh && bash tests/test_advisor_rules.sh && bash tests/test_lock_rules.sh && bash tests/test_test_scope.sh && bash tests/test_on_demand.sh`.
   (FR-024, FR-025, FR-026)
 
 **Checkpoint**: quickstart section 5 passes.
@@ -596,7 +627,7 @@ new screens to the Design lane and runs file-disjoint stories together.
   worktree. (FR-031, lessons L2, L20, L25)
 - [ ] T048 Scoped regression of every test file this feature adds or whose files it changes, one
   command at a time:
-  `bash tests/test_lane_steps.sh && bash tests/test_advisor.sh && bash tests/test_advisor_waive.sh && bash tests/test_advisor_rules.sh && bash tests/test_test_scope.sh && bash tests/test_lock.sh && bash tests/test_lock_rules.sh && bash tests/test_advisor_matrix.sh && bash tests/test_codex_agent.sh && bash tests/test_risk_rules.sh && bash tests/test_st_worker.sh && bash tests/test_statusline.sh && bash tests/test_worker_rules.sh && bash tests/test_plan_rules.sh && bash tests/test_screen_rules.sh && bash tests/test_triage_rules.sh && bash tests/test_no_frontend_design.sh && bash tests/test_on_demand.sh && bash tests/test_design_lane.sh && bash tests/test_inspect.sh && bash tests/test_verify.sh && bash tests/test_shortcuts.sh && bash tests/test_model_files.sh && PYTHONDONTWRITEBYTECODE=1 python3 tests/test_git_guard.py && PYTHONDONTWRITEBYTECODE=1 python3 tests/test_approve_hook.py && PYTHONDONTWRITEBYTECODE=1 python3 tests/test_phase_hook.py && PYTHONDONTWRITEBYTECODE=1 python3 tests/test_model_hook.py`.
+  `bash tests/test_lane_steps.sh && bash tests/test_advisor.sh && bash tests/test_advisor_waive.sh && bash tests/test_advisor_rules.sh && bash tests/test_test_scope.sh && bash tests/test_lock.sh && bash tests/test_lock_rules.sh && bash tests/test_advisor_matrix.sh && { [ ! -f tests/test_codex_agent.sh ] || bash tests/test_codex_agent.sh; } && bash tests/test_risk_rules.sh && bash tests/test_st_worker.sh && bash tests/test_statusline.sh && bash tests/test_worker_rules.sh && bash tests/test_plan_rules.sh && bash tests/test_screen_rules.sh && bash tests/test_triage_rules.sh && bash tests/test_no_frontend_design.sh && bash tests/test_on_demand.sh && bash tests/test_design_lane.sh && bash tests/test_inspect.sh && bash tests/test_verify.sh && bash tests/test_shortcuts.sh && bash tests/test_model_files.sh && PYTHONDONTWRITEBYTECODE=1 python3 tests/test_git_guard.py && PYTHONDONTWRITEBYTECODE=1 python3 tests/test_approve_hook.py && PYTHONDONTWRITEBYTECODE=1 python3 tests/test_phase_hook.py && PYTHONDONTWRITEBYTECODE=1 python3 tests/test_model_hook.py`.
   Not in the list because no file they check changes: `test_design_check.sh`,
   `test_herdr_workspace.sh`, `test_pr_skill.sh`, `test_session_hooks.sh`,
   `test_pr_workflow.mjs`, `test_token_weather.mjs`. Owns: nothing. Test: the command above.
@@ -616,13 +647,14 @@ Test reads a file it changes. Test tasks still come before their build tasks.
 | 1 | T001, T002, T003, T004, T009, T010, T011, T012, T026, T028, T036, T037, T041, T042, T050 | nothing: each writes its own test file, T050 writes `research.md` (T002 also `tests/test_advisor.sh`, T003 also `tests/test_on_demand.sh`) |
 | 2 | T005, T006, T007, T013, T014, T016, T019, T030, T032, T044 | the wave 1 test of each; T019: T050 passed |
 | 3 | T015, T018, T021, T027, T038, then T008 last | T015: T006, T007 (shared `skills/st-build/SKILL.md`, agents). T018: T005 (`tests/test_advisor.sh` is T005's Test). T027: T016 (`tests/test_st_worker.sh`). T038: T007 (`agents/st-plan.md`, `procedures/tasks.md`). T021: T019, T050. T008: T044 (`README.md`) and every test file it lists, so after T018 |
-| 4 | T020, T023, T031, T039 | T020: T003, T006, T007, T015 (their Tests read `tests/test_on_demand.sh`). T023: T018, T021, T014. T031: T027. T039: T015 |
-| 5 | T022, T024 | T022: T020, T039, T008 (`skills/st-build/SKILL.md`, `skills/st/SKILL.md`, `README.md`). T024: T023 |
-| 6 | T029, T034 | T029: T022 (its Test reads `tests/test_on_demand.sh`). T034: T030, T031, T032, T024 (`research.md`) |
-| 7 | T033 | T029, T022 |
-| 8 | T043 | T033 (`skills/st/SKILL.md`), T038 (`skills/st-plan/SKILL.md`) |
-| 9 | T046 | T043, T033, T022 (`README.md`), every story task (T001's rows) |
-| 10 | T047 and T048, then T049 | T046, T034; T049 after T047 (`research.md`) |
+| 4 | T023, T031, T039 | T023: T018, T021, T014. T031: T027. T039: T015 |
+| 5 | T020, T024 | T020: T003, T006, T007, T015, T039 (their Tests read `tests/test_on_demand.sh`). T024: T023 |
+| 6 | T022 | T020, T039, T008 (`skills/st-build/SKILL.md`, `skills/st/SKILL.md`, `README.md`) |
+| 7 | T029, T034 | T029: T022 (its Test reads `tests/test_on_demand.sh`). T034: T030, T031, T032, T024 (`research.md`) |
+| 8 | T033 | T029, T022 |
+| 9 | T043 | T033 (`skills/st/SKILL.md`), T038 (`skills/st-plan/SKILL.md`) |
+| 10 | T046 | T043, T033, T022 (`README.md`), every story task (T001's rows) |
+| 11 | T047 and T048, then T049 | T046, T034; T049 after T047 (`research.md`) |
 
 - US1 MVP checkpoint: end of wave 3 (T002 to T008 done, quickstart section 1 passes).
 - The code tasks run early, beside US1: git guard (T009, T013), lock (T010, T014), Codex adapter
@@ -630,11 +662,11 @@ Test reads a file it changes. Test tasks still come before their build tasks.
   and the `st-frontend-design` removal (T042, T044).
 - The text tasks form one chain, because they share `skills/st-build/SKILL.md`,
   `skills/st/SKILL.md`, `tests/test_on_demand.sh` and `README.md`: T006 and T007, then T015 and
-  T038, then T039, then T022, then T033, then T043.
+  T038, then T039, then T020 (tests), then T022, then T033, then T043.
 - A Test that reads a file another task of the same wave writes can see it half done. Run that
   Test again at the end of the wave before a red result counts.
 - README tasks: two. T008 lists every test file that exists at the end of wave 3, T046 the two
-  made later (`tests/test_risk_rules.sh` in wave 4, `tests/test_worker_rules.sh` in wave 6). Only
+  made later (`tests/test_risk_rules.sh` in wave 5, `tests/test_worker_rules.sh` in wave 7). Only
   T008, T046 and T048 run `tests/test_inspect.sh`, so it is green at each of them.
 
 ## Parallel example: wave 2
@@ -649,9 +681,9 @@ T030 (st-approve.py, commands.json), T032 (statusline), T044 (st-frontend-design
 
 1. MVP: waves 1 to 3. US1 is done at the end of wave 3, and the US2 code (guard, lock) is done
    beside it.
-2. Waves 4 to 8 finish the other stories. Run each story's quickstart section when its last
+2. Waves 4 to 9 finish the other stories. Run each story's quickstart section when its last
    task is done.
-3. Waves 9 and 10 last.
+3. Waves 10 and 11 last.
 
 ## Counts
 

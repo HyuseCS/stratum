@@ -2,7 +2,7 @@
 
 **Branch**: `010-workflow-overhaul` | **Date**: 2026-10-31 | **Spec**: [spec.md](spec.md)
 
-**Input**: Feature specification from `specs/010-workflow-overhaul/spec.md`, decisions D1 to D22 in
+**Input**: Feature specification from `specs/010-workflow-overhaul/spec.md`, decisions D1 to D29 in
 `decisions.md`.
 
 ## Summary
@@ -30,7 +30,10 @@ Six changes to the Stratum plugin, each with tests in `tests/` (FR-031):
    issues, and `st-frontend-design` is removed.
 
 Research R-A shows the `PermissionRequest` hook can wait 75 s and answer `allow` in a worker
-running `--permission-mode auto`, so FR-019 needs no fallback.
+running `--permission-mode auto`. FR-019 has no fallback to permissions the user grants (D29):
+if the plugin hook does not fire, `start --autonomous` loads the same hook with `--settings`
+after the user OKs it; if that fails too, autonomous mode stays off and every prompt goes to the
+user.
 
 ## Technical Context
 
@@ -133,12 +136,20 @@ These tasks touch access rules, an external service, or text that can hold secre
   refuses if it differs from the request, so the orchestrator's permission check sees what it
   approves; README says never to put `st-worker.sh` on an allow list (W15). The hook never answers `deny`
   and never sets a rule or mode: each approval is one time. Tasks T026, T027, T030, T031.
-- **S4. Residual risk in S3 (D27).** A `PreToolUse` branch of the same hook denies any Bash
-  command, Edit or Write that touches `.stratum/approve/`, in every session. The brief forbids it
-  too (B2), and the hook refuses to send any request that names `.stratum`. The check is a text
-  match: a worker that builds the path at run time, on purpose, to get past both locks is not
-  stopped. On a saved machine, a worker can also reach its main checkout's `.stratum/autonomous`
-  by such a path; the write lock covers only the `.stratum/approve/` text. README states that risk (W15).
+- **S4. Residual risk in S3 (D27).** In a worker session, a `PreToolUse` branch of the same hook
+  denies any Bash command, Edit or Write that touches `.stratum/approve/` or
+  `.stratum/autonomous` (after normalizing `.stratum/./approve` and `//`), and any Bash command
+  that runs `st-worker.sh approve`, `pass` or `autonomous-off`. `approve`, `pass`,
+  `autonomous-off` and `start --autonomous` read the flag from the main checkout through the git
+  common dir, refuse inside a worker worktree, and `approve` and `pass` also need the worker's
+  session file to match the flag. The brief forbids the writes too (B2), and the hook refuses to
+  send any request that names `.stratum`. The checks are text matches: a worker that builds a
+  path at run time, on purpose, to get past them is not stopped. README states that risk (W15).
+- **S4b. Commits that never prompt (D23).** A worker commit on its own branch runs with no
+  prompt, because `start` writes `commit: auto` for the worker branch
+  (`scripts/st-worker.sh:176`). D23 covers only commits that do prompt (for example the guard's
+  ask on a commit in an unsplittable command). Commits with no prompt are checked at the story
+  review, as today. W15 says so.
 - **S5. Prompt text can hold secrets (FR-019).** The request file stays in the worktree's
   untracked `.stratum/approve/`, the approval record in the orchestrator's scratchpad. Neither is
   committed. B2 forbids committing `.stratum/approve/`.
@@ -146,7 +157,9 @@ These tasks touch access rules, an external service, or text that can hold secre
   `\`, `'` and `"`, so `\git` and `g''it` still count. It judges git lines with the folder
   unknown, so a `git commit` there asks even in commit `auto` mode. It only removes asks for
   commands with no git word. Today's gap stays: git called from inside another program in a
-  command that splits fine is not read (research R-F).
+  command that splits fine is not read (research R-F), and neither are forms that only the shell
+  expands, such as `{git,push}`, `$'git'` or `GIT=git; $GIT push`. Today's guard misses the same
+  forms.
 
 ## Project Structure
 
@@ -276,43 +289,39 @@ No constitution, so no violation to justify.
 
 ## Validate
 
-Date: 2026-10-31. Verdict: BLOCKED
+Date: 2026-10-31 (pass 2). Verdict: BLOCKED
 
 | Check | Verdict | Findings |
 |-------|---------|----------|
-| 1. Setup and dependencies | PASS | none (claude 2.1.312, codex-cli 0.166.0, herdr 0.9.4, bash 5.3, python 3.14, jq, git 2.56, sha256sum, timeout present; every herdr and codex flag in the contracts exists in `--help`) |
-| 2. Test coverage per requirement | CONCERN | F12, F13, F14, F15, F16 |
-| 3. Breaking changes | FAIL | F1, F2, F3 |
-| 4. Security and privacy | FAIL | F4, F5, F6, F7, F8, F9, F10, F11 |
+| 1. Setup and dependencies | CONCERN | F9 (claude 2.1.312, codex-cli 0.166.0, herdr 0.9.4, bash 5.3, python 3.14, jq 1.8, git 2.56, timeout, sha256sum, ssh present; `herdr tab create --env`, `agent prompt --until`, `agent read --source recent-unwrapped`, `tab rename/close`, `pane split --direction`, `pane run` exist) |
+| 2. Test coverage per requirement | CONCERN | F6, F13 |
+| 3. Breaking changes | FAIL | F1, F14 |
+| 4. Security and privacy | FAIL | F2, F3, F4, F5, F7, F8, F10, F11, F12 |
 
-F1. tests/test_advisor.sh:198 `badargs` expects `usage:` exit 2 for `diff specs/001-demo $first` and `continued diff specs/001-demo`. Contract 1.1 makes both valid, so T005's Test (wave 2) goes red, and T005 does not own the test file (T018 does, in wave 3). -> Give T002 `tests/test_advisor.sh` and move those two forms out of `badargs` (keep `check diff`), or run T005 after T018.
+F1. HIGH. tests/test_on_demand.sh:309 asserts `! grep -qF "st-advisor.sh diff" skills/st-build/SKILL.md`. A9 (contracts/phrases.md:22) writes `bash <plugin root>/scripts/st-advisor.sh diff <feature dir> <last review sha>` there. T006 writes A9 in wave 2, and its Test runs `test_on_demand.sh`, so it goes red. The Tests of T007, T015, T022, T033, T038, T043 and T048 also go red. No task changes check 309: T003 deletes row 268, T020 changes rows 274, 277 and 283, and T029 changes rows 222, 234 and 258. -> T003 (wave 1, owns `tests/test_on_demand.sh`) changes check 309 so the only `st-advisor.sh diff` line allowed is A9, and it keeps the `check diff` half.
 
-F2. tests/test_advisor.sh:339 `badjson` expects `BLOCKED: bad advisor.json` for `{"model": "gpt-test-1"}`. D24 makes a missing `mode` mean `auto`, so T023's Test goes red. T018 edits only lines 315 and 379. -> Add line 339 to T018: drop that case from `badjson` (11 cases) and assert it runs as `auto`.
+F2. HIGH. contracts/scripts.md:179 (`approve`: "the autonomous check as `start`"), :174, scripts/st-worker.sh:174 (`top=$(git rev-parse --show-toplevel)`), :133-143 (`find_worker` finds any worker through herdr). From inside its own worktree, worker A can do 3 steps. (1) Write `<wtA>/.stratum/autonomous`. (2) Set `CLAUDE_CODE_SESSION_ID` to the same value. (3) Run `st-worker.sh wait worker-B`, then `st-worker.sh approve worker-B --request <rid> --input <text>`. No step has `.stratum/approve` in its text, so D27 lock 2 does not stop it. B's hook then sees a real `.ok` and allows. The orchestrator's classifier never sees this approval. The lock 2 regex also misses `.stratum/./approve/`. This route does not build a path at run time, so S4 and W15 understate the risk. The hook reads the main checkout's file (data-model.md:63), but `approve` reads `<top>`. -> `approve`, `pass` and `start` read the main checkout's `.stratum/autonomous` through the git common dir, as the hook does. They refuse when `<top>` has `.stratum/approve/` or is a linked worktree. They require the worker's `.stratum/approve/session` to equal the caller's id, which also stops a new session from approving an orphan of a crashed session. When the root has `.stratum/approve/`, lock 2 also denies Bash text that names `st-worker.sh approve` or `pass`, or `.stratum/autonomous`. Normalize `/./` before the match. Add T026 and T027 cases. Change S4 and W15 to match. Goes to st-plan.
 
-F3. tests/test_st_worker.sh:174 (expected rule 1 text) and :231 (rule 1 must end in `.stratum/git-guard.json.`) break when T031 writes B2. T027 updates only cases that the layout changes. -> Name lines 174 and 231 in T027.
+F3. HIGH. contracts/scripts.md:213-218. The edit never list has no `.claude/` and no `.mcp.json`. W3 (phrases.md:109) approves "an edit inside the worker's own worktree". A worker can edit `<wt>/.claude/settings.local.json` (allow rules, hooks, `defaultMode`) or `.mcp.json`. One approved edit of that kind gives the worker standing permissions, and FR-019's "one time only" no longer holds. -> Add `.claude/` and `.mcp.json` to the edit never list, the Bash never list and W5. Add T026 (f) cases. Not verified live: whether a running session reloads its settings.
 
-F4. contracts/scripts.md:207-208 The fallback's git-word test does not see `\git`, `g''it` or `gi\t`. Today's guard asks on `\git push --force` and `g''it push --force` (shlex removes the quoting, checked live). In the fallback, a heredoc with `it's` followed by the line `\git push --force` has no git word, so it gets no decision and the push runs. This breaks FR-008. -> Remove `\`, `'` and `"` from each line before the git-word test. Add T009 cases for `\git push --force` and `g''it commit -m x` that expect `ask`. In S6, say that `$var push` still gets no decision, as it does today.
+F4. HIGH. contracts/scripts.md:228-246. The D23 checks read the branch (`symbolic-ref`) and the staged list (`diff --cached`) before the command runs, and they look only at `git add` and `git commit` words. Example: `git checkout other && git add src/a.py && git commit -m x`. The guard asks on it (`left`, hooks/st-git-guard.py:241), and the `.req` shows `branch worker-t1`, but the commit lands on `other`. These commands also change what gets committed and pass the rule: `git rm src/b.py && git commit -m x`, `git mv`, `git restore --staged`, `git apply --cached`, `git stash pop`. Also, a commit on the worker's own branch never asks (`commit: auto`, scripts/st-worker.sh:176). So W15's "approves only ... a commit of the task's own files" overstates the guard. -> A command with a commit holds no git subcommand other than `add` and `commit`. Add each form above to T026 (h2) with "no `.req`". Change W15 to say that an own-branch commit runs with no prompt and is checked at review.
 
-F5. plan.md:109-113 S2 undoes 006 D23 (`specs/006-codex-advisor/decisions.md:25`) on the herdr path. That decision says user config can start MCP servers, hooks and notify commands, and `-s read-only` does not cover them. A trusted project's `.codex/config.toml` also loads. This feature's decisions.md has no entry for it, and `README.md:182` (asserted by `tests/test_on_demand.sh:295`) would stay true only outside herdr. -> User decision: O1 accept it, record it as a decision, and limit README.md:182 to "outside herdr". O2 first probe whether a Stratum-owned `CODEX_HOME` (auth only) or `-c` overrides turn off user and project config in the TUI.
+F5. HIGH. contracts/phrases.md:109 (W3) and quickstart.md:122 put the worker's request text inside `--input "<the input line's text>"`. In the orchestrator's shell, `$(...)` and backticks in that text run, and each `"` of the JSON breaks the quoting. The worker controls that text, and W3 itself calls it data. -> `approve` reads the input from stdin through a quoted heredoc (`<<'ST_INPUT'`). The input is one line of JSON, so it cannot hold the end line, the classifier still sees the full text, and the shell expands nothing. Add a T027 (d) case whose input holds `$(touch pwned)`: no `pwned` file is made.
 
-F6. research.md:53-59, contracts/scripts.md:155 `approve <id> --request <rid>` shows the orchestrator's permission check only an id, so the classifier cannot judge what it approves. The text of the request is in a tool result, which the auto-mode classifier does not see. If the script is on an allow list, no check is left at all. -> `approve` takes the request's input text as an argument and refuses when it differs from the `.req`. W3 and README say: never put `st-worker.sh approve` on an allow list.
+F6. HIGH. contracts/scripts.md:250-253 splits words on white space, and :242-245 counts every non-option word after `commit` as a pathspec. In `git commit -m "demo heredoc"` (quickstart.md:118), `-m` takes only `demo`, so `heredoc` counts as an unowned path and the hook sends no `.req`. Step 3 of quickstart section 4L (line 121) then fails. Most real commit messages have spaces, so D23 never fires. T026 (h2) uses only `-m x`, so no test catches this. -> Split the git line with shlex (refuse only when that one line does not split), and add a T026 case `git commit -m "two words"` that gives a `.req`.
 
-F7. plan.md:123-126, contracts/scripts.md:163-165 The hook allows on any `<rid>.ok` in a real `.stratum/approve/`. A worker can write that `.ok` itself, or make the folder itself, and the hook does not check that autonomous mode is on. So self-approval also works in normal mode and after "stop autonomous". -> User decision: O1 accept S4 as a recorded decision, and the hook also needs the main checkout's `.stratum/autonomous` to match a session id that `start --autonomous` wrote into the folder. O2 also add a PreToolUse deny for Edit, Write and Bash on `.stratum/approve/` in worker folders, with a negative control (lessons L10).
+F7. MEDIUM. contracts/phrases.md:109 (W3) sends "a request for an action the worker's own classifier blocked (the pane says so)" to the user. In the `approval` state, `wait` prints no pane text (contracts/scripts.md:178, scripts/st-worker.sh:124-127). So the orchestrator cannot see the classifier block that pass-1 F9 is about. -> The `approval` state also prints the pane text. T027 (c) asserts it.
 
-F8. contracts/scripts.md:181-188 The D23 staged-path rule misses `git commit -m x src/b.py` (a pathspec with no `--`), `-o`/`--only`, `--pathspec-from-file`, `git add -u`/`--update`, and `GIT_INDEX_FILE=`, `GIT_DIR=` or `GIT_WORK_TREE=` prefixes. Each one can commit a file the task does not own while the staged list looks clean. -> In contract 5, every non-option word after `commit` counts as a path. Any `git add` option other than `--` fails the rule, and any `GIT_*=` word fails it. Add each form to T026 (h2) with "no `.req`".
+F8. MEDIUM. contracts/scripts.md:131 tells the user to "Answer it there" on `agent_not_ready`, with no rule for what to answer. With the new Codex home, a trust dialog can show. If the user picks "trust", Codex writes the trust into the Stratum home's `config.toml`. From then on, the project's `.codex/config.toml` loads in the tab, and D25 no longer holds. -> If T050 sees a trust dialog, the `agent_not_ready` line, R7 and R17 say to pick "do not trust".
 
-F9. research.md:10-49 Not verified: when the worker's auto-mode classifier blocks an action, it may fall back to a permission dialog. The hook would then send that action to the orchestrator, which could approve what the classifier refused. -> Add a T034 step: make the worker's classifier block a command that is not on the never list, and see whether a `.req` appears. If one does, bring it to the user before T034 is ticked.
+F9. MEDIUM. `~/.claude/plugins/installed_plugins.json` maps `/home/hyuse/Desktop/stratum` to the cached plugin 0.2.1. A worker started in this repo loads that copy's `hooks/commands.json`, which has no `PermissionRequest` entry. So T034's "the hook never fires" test is true for the wrong reason, and its contingency would start. -> Quickstart section 0, T024 and T034 name the step that loads this branch's plugin before the live runs.
 
-F10. contracts/scripts.md:157 The `answer` refusal matches only `Do you want to proceed?`. Edit and Write dialogs ("Do you want to make this edit to", "Do you want to create") get through, so FR-017 has no hard stop for them. -> Refuse on any `Do you want to` line, and add those strings to T027 (f).
+F10. LOW. research.md:160-162, tasks.md:229-230. T050 checks `test -L auth.json` after one short prompt only, and a short prompt does not refresh the token. If a refresh replaces the link with a file, the user's own `~/.codex/auth.json` keeps an old token. -> T024 repeats the `test -L` and `codex login status` checks. `st-codex-agent.sh` prints a line when `auth.json` is no longer a link, and does not quietly fall back.
 
-F11. contracts/scripts.md:32,38 `waive plan` needs no earlier record, so `check plan` can pass with no Codex run at all, or right after a `BLOCKED` result or a `REVISE` with CRITICAL or HIGH findings. FR-001 says those must run again. -> `waive` exits 1 unless the last `## plan | ... sha256` record is `APPROVED`, `WAIVED`, or a `REVISE` with only MEDIUM and LOW findings. Add these cases to T002.
+F11. LOW. decisions.md:37 (D28) says that a stop removes a stale file. contracts/scripts.md:176 removes only the caller's own id. A crashed session leaves a pair of files that still match each other. The hook then writes a `.req` and holds each prompt for 300 s, and no one answers it. There is no approval path, because `approve` needs the live id. -> Change the D28 text to match the contract.
 
-F12. tasks.md:138-148, 305-330 Test gaps. T009 has no escaped-git case (F4). T026 has no pathspec or `git add -u` case (F8). Nothing asserts that a usual test command (`npm test`, `npx vitest run`, `cargo test`, `go test ./...`, `uv run pytest`) is sent: contract 5 lists `npm`, `npx` and `uv` as package-install words, and a builder can read that either way. -> Add a T026 case: each of those commands gives a `.req`, and `npm install x`, `npx create-x` and `uv add x` give none.
+F12. LOW. contracts/scripts.md:268-270. The fallback finds no git word in `{git,push}`, `$'git' push` or `GIT=git; $GIT push`, so it gives no decision. Today's guard does the same for commands that split, so this opens no new route. But S6 (plan.md:145-149) does not name these forms, which pass-1 F4 asked for. -> Name them in S6.
 
-F13. tasks.md:485-491 T047 says "every new case must be red" on `6fe9d60`. That cannot happen: the old guard already asks on every command it cannot split (T009 (c), (d) ask, (g)), and the cases for kept text and for "no output" pass on the old tree. -> Every new file has at least one red case there, and the change cases each file names are red. For the guard, use the cases T013 names.
+F13. LOW. tasks.md:599. T048 runs `tests/test_codex_agent.sh` in all cases, but the file does not exist when T050 fails. -> Run it only if T050 passed.
 
-F14. tasks.md:529-533 `tests/test_inspect.sh` is red from wave 1 until T008, and from wave 4 until T046, because README does not list the new test files yet. So T006, T007, T022, T038, T043 and T044 never run its other rows on the files they change. A red found at T046 lands on a task that owns only README.md. -> Those tasks run `bash tests/test_inspect.sh` and treat only the README test-list line as an expected red.
-
-F15. spec.md:278 FR-009 says the lock MUST work on Windows (Git Bash). There is no runnable check, and plan.md:49-50 says so. -> Keep the README line. The user can drop Windows from the MUST.
-
-F16. tasks.md:495-497 T048 leaves out `tests/test_model_files.sh` because "no file they check changes", but it reads `skills/st-init/SKILL.md`, which T022 changes. -> Add it to T048 and T022.
+F14. LOW. tasks.md:530-533. T039 changes skills/st-build/SKILL.md:36-41, where on_demand rows 263 and 297 assert text. Its Test has no `test_on_demand.sh`, so the first task to see a break there is T022. -> T039 runs `test_on_demand.sh`, with only rows `#18 FR-010 modes`, `#18 FR-010 no file` and `#18 FR-015 init` as expected reds.

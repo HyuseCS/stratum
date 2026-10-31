@@ -41,20 +41,28 @@ closed after the probe. Scratch files: `<scratchpad>/ra/` (R-A) and `<scratchpad
   - `st-worker.sh wait` sees `blocked` while the hook waits, so `wait` must look for a request
     file before it reports `blocked` (contracts/scripts.md section 4).
   - The request id cannot come from `tool_use_id`. The hook makes its own id.
+- Plugin copy in use (F9): `~/.claude/plugins/installed_plugins.json` lists `stratum@stratum` for
+  this project at `installPath` `.../cache/stratum/stratum/0.2.1`, while
+  `known_marketplaces.json` gives the marketplace as `{'source': 'directory', 'path': '/home/hyuse/Desktop/stratum'}`.
+  So a live run can load an old hook. quickstart section 0 has the probe and the reload step
+  (`claude --help` lists `--plugin-dir <path>  Load a plugin from a directory or .zip for this session only`).
 - Not verified: the probe registered the hook with `--settings`. The plan registers it in the
   plugin's `hooks/commands.json`. T034 checks that the plugin hook fires. Contingency: `start
   --autonomous` passes `--settings <generated file>` with the same hook command to
   `agent start`.
+- D29: no fallback to permissions the user grants. If neither the plugin hook nor the
+  `--settings` hook fires, autonomous mode stays off.
 - Alternatives considered: the fallback "permissions the user grants at worker start"
   (`--allowedTools` at `agent start`). Not needed, because the hook works.
 
 ## R-B. How does the orchestrator send its answer so the classifier sees it?
 
-- Decision: The orchestrator runs `bash <plugin root>/scripts/st-worker.sh approve <id> --request <rid> --input "<input text>" --record <file>`
+- Decision: The orchestrator runs `bash <plugin root>/scripts/st-worker.sh approve <id> --request <rid> --input-stdin --record <file>` with the input text
+  in a quoted heredoc (`<<'ST_INPUT_END'`), so `$(...)` and backticks in it never run
   in its own Bash tool. That call writes `<worktree>/.stratum/approve/<rid>.ok`. The worker's
   hook reads the file and answers `allow` one time. The orchestrator's permission check (its
   classifier in auto mode, or the user in default mode) sees the call, its name, the request
-  id and the full command it approves (`--input`, checked against the `.req`) in plain text.
+  id and the full command it approves (the heredoc text, checked byte for byte against the `.req`) in plain text.
   `st-worker.sh` must never be on a permission allow list, or no check is left. If that check blocks the call, nothing is written, the hook times out with
   no decision, and the dialog stays for the user. That is D1's "tries no other way" by
   construction. The hook never answers `deny`.

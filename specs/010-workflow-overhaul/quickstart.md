@@ -9,6 +9,22 @@ of `tests/`. Interfaces: `contracts/scripts.md`. Text: `contracts/phrases.md`.
   (`HERDR_ENV=1`), `codex` logged in, `claude` 2.1.312 or later.
 - Python tests run with `PYTHONDONTWRITEBYTECODE=1` (L8).
 
+Before any live result (sections 3L and 4L) counts, prove that this branch's code is the code in
+use (F9). `~/.claude/plugins/installed_plugins.json` lists `stratum@stratum` from a cache copy
+(`.../cache/stratum/stratum/0.2.1`), although its marketplace is the directory
+`/home/hyuse/Desktop/stratum`:
+
+1. Note the branch: `git -C <this checkout> rev-parse --abbrev-ref HEAD` must print
+   `010-workflow-overhaul` (or the branch under test) on each machine used.
+2. Scripts (3L): run them by this checkout's path (`bash <this checkout>/scripts/st-advisor.sh`),
+   and check `grep -c codex-home <this checkout>/scripts/st-advisor.sh` prints a number above 0.
+3. Hook (4L): start the worker, then send it `Run exactly: touch .stratum/approve/probe`. It must
+   be denied with `.stratum/approve/ and .stratum/autonomous are written only by the orchestrator.`
+   If it runs instead, the session uses an old copy of the plugin. Reload step: update
+   `stratum@stratum` from its directory marketplace (`/plugin`, then update the plugin, with this
+   branch checked out in that directory) or start the worker's claude with
+   `--plugin-dir <this checkout>`; close the worker and run step 3 again. Record which one worked.
+
 ## 1. US1: fewer advisor runs, scoped tests
 
 ```bash
@@ -119,13 +135,20 @@ In a herdr pane in this repo, on a scratch branch, with a one-line task file:
    ```
 3. `bash scripts/st-worker.sh wait t990` prints `state approval`, a `request` id, the tab line,
    the input, `branch\tworker-t990` and `staged\tdemo/n.txt` (D23: own branch, owned file).
-4. `bash scripts/st-worker.sh approve t990 --request <rid> --input "<the input line's text>" --record <scratch>/approvals.txt`:
+4. Approve with the input text in a quoted heredoc, never on the command line:
+
+   ```text
+   bash scripts/st-worker.sh approve t990 --request <rid> --input-stdin --record <scratch>/approvals.txt <<'ST_INPUT_END'
+   <the input line's text, after "input<TAB>">
+   ST_INPUT_END
+   ```
+
    the dialog closes, the worker goes on, the record has one line.
 5. Start a second worker the same way (`t991`) and `pass` its request: the dialog stays for
    you in its Main tab, and `t990` keeps running.
 6. Wait more than 120 s before one `approve` and note whether the hook still answers.
 7. Ask the worker in its tab to run `echo x > .stratum/approve/1-1.ok`: the command is denied
-   with `.stratum/approve/ is written only by st-worker.sh approve and pass.` An Edit of that path
+   with `.stratum/approve/ and .stratum/autonomous are written only by the orchestrator.` An Edit of that path
    is denied the same way.
 8. `rm -f .stratum/autonomous`, make the worker hit a dialog: no `.req` appears and the dialog
    stays for you. `approve` again: `Autonomous build mode is off for this session.`
