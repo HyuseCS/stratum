@@ -23,4 +23,4 @@ Run only in the Stratum repo itself: the project root must hold `vendor.lock` an
 6. Show the user the combined diff, source by source. On their OK, update each ported entry's
    `commit` (and `version` where present) and set `synced` to today in `vendor.lock`, then commit
    one commit per source: `sync(<source>): <summary> (<old>..<new>)`.
-7. Run the tests in `tests/` and report the result. Push only on the user's "push".
+7. Run the tests that check the ported files (grep `tests/` for each changed path) and report the result. Run every test in `tests/` only when the user asks in their own words. Push only on the user's "push".

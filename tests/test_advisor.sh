@@ -35,6 +35,7 @@ FAKE
 chmod +x "$tmp/bin/codex" "$tmp/bin/timeout"
 export FAKE_DIR="$tmp"
 export PATH="$tmp/bin:$PATH"
+unset HERDR_ENV HERDR_WORKSPACE_ID
 
 proj="$tmp/proj"
 mkdir -p "$proj/specs/001-demo" "$proj/.stratum"
@@ -196,7 +197,7 @@ printf '# plan\n' > "$proj/specs/002-half/plan.md"
 badargs() {
   local ok=1 c
   n0=$(nrec)
-  for c in "plan" "plan specs/none" "plan specs/002-half" "diff specs/001-demo $first" "check diff specs/001-demo $first" "continued diff specs/001-demo" "test specs/001-demo $tmp/task.txt tests/x_test.sh $tmp/f1.txt $tmp/missing.txt"; do
+  for c in "plan" "plan specs/none" "plan specs/002-half" "check diff specs/001-demo $first" "test specs/001-demo $tmp/task.txt tests/x_test.sh $tmp/f1.txt $tmp/missing.txt"; do
     rm -f "$tmp/argv"
     run $c
     [ "$rc" = 2 ] && [[ "$(head -n1 <<<"$out")" == "usage: st-advisor.sh"* ]] && [ ! -e "$tmp/argv" ] && [ "$(nrec)" = "$n0" ] || { ok=0; echo "  bad case: $c rc=$rc" >&2; }
@@ -312,7 +313,7 @@ rm -f "$mf" "$tmp/argv"
 n0=$(nrec)
 run plan specs/001-demo
 printf '{"mode": "codex"}' > "$mf"
-check "no mode file: no advisor, exit 0, no codex" '[ $rc = 0 ] && [ "$out" = "no advisor: mode not set. Write .stratum/advisor.json with \"mode\": \"codex\", \"both\" or \"off\"." ] && [ ! -e "$tmp/argv" ] && [ "$(nrec)" = "$n0" ]'
+check "no mode file: no advisor, exit 0, no codex" '[ $rc = 0 ] && [ "$out" = "no advisor: mode not set. Write .stratum/advisor.json with \"mode\": \"auto\", \"codex\", \"both\" or \"off\"." ] && [ ! -e "$tmp/argv" ] && [ "$(nrec)" = "$n0" ]'
 
 rm -f "$tmp/argv"
 run plan specs/001-demo
@@ -336,7 +337,7 @@ check "mode off without codex" '[ $rc = 0 ] && [ "$out" = "no advisor: mode off"
 
 badjson() {
   local ok=1 c
-  for c in '{' '{"mode": "x"}' '[]' '{"mode": 1}' '{"mode": "codex", "modle": "x"}' '{"model": "gpt-test-1"}' '{"mode": "codex", "model": "--dangerously-bypass-approvals-and-sandbox"}' '{"mode": "codex", "model": "a b"}' '{"mode": "codex", "model": "x\n"}' '{"mode": "codex", "effort": "high\"x"}' '{"mode": "codex", "effort": "high\n"}' '{"mode": "codex", "effort": 3}'; do
+  for c in '{' '{"mode": "x"}' '[]' '{"mode": 1}' '{"mode": "codex", "modle": "x"}' '{"mode": "codex", "model": "--dangerously-bypass-approvals-and-sandbox"}' '{"mode": "codex", "model": "a b"}' '{"mode": "codex", "model": "x\n"}' '{"mode": "codex", "effort": "high\"x"}' '{"mode": "codex", "effort": "high\n"}' '{"mode": "codex", "effort": 3}'; do
     printf '%s' "$c" > "$mf"
     rm -f "$tmp/argv"
     n0=$(nrec)
@@ -345,7 +346,12 @@ badjson() {
   done
   [ $ok = 1 ]
 }
-check "bad advisor.json: BLOCKED, no codex, 12 cases" 'badjson'
+check "bad advisor.json: BLOCKED, no codex, 11 cases" 'badjson'
+printf '{"risk": "normal"}' > "$proj/.stratum/state.json"
+printf '{"model": "gpt-test-1"}' > "$mf"
+rm -f "$tmp/argv"
+run plan specs/001-demo
+check "D24 advisor.json with no mode key runs as auto" '[ "$(head -n1 <<<"$out")" = "advisors: codex (plan, risk normal)" ] && [ -f "$tmp/argv" ]'
 
 printf '{"mode": "codex", "model": "gpt-test-1", "effort": "high"}' > "$mf"
 rm -f "$tmp/argv"
@@ -376,7 +382,7 @@ runpath() { rm -f "$tmp/argv"; n0=$(nrec); out=$(cd "$proj" && PATH="$1" bash "$
 noadv() { [ $rc = 0 ] && [ "$out" = "$1" ] && [ ! -e "$tmp/argv" ] && [ "$(nrec)" = "$n0" ]; }
 rm -f "$mf"
 runpath "$tmp/nosha:$PATH"
-check "sha256sum prints nothing, no mode file: no advisor, exit 0" 'noadv "no advisor: mode not set. Write .stratum/advisor.json with \"mode\": \"codex\", \"both\" or \"off\"."'
+check "sha256sum prints nothing, no mode file: no advisor, exit 0" 'noadv "no advisor: mode not set. Write .stratum/advisor.json with \"mode\": \"auto\", \"codex\", \"both\" or \"off\"."'
 printf '{"mode": "off"}' > "$mf"
 runpath "$tmp/nosha:$PATH"
 check "sha256sum prints nothing, mode off: no advisor, exit 0" 'noadv "no advisor: mode off"'

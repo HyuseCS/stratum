@@ -41,7 +41,6 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 | grill-me, grilling | mattpocock/skills | MIT |
 | ui-ux-pro-max | nextlevelbuilder/ui-ux-pro-max-skill | MIT |
 | impeccable | pbakaus/impeccable | Apache-2.0 |
-| frontend-design | anthropics/claude-plugins-official | Apache-2.0 |
 | graphify skill | Graphify-Labs/graphify | Apache-2.0 |
 | Token Weather | anthropics/claude-code-playground | Apache-2.0 |
 
@@ -100,7 +99,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 
   The Spec Kit commands are folded into the phase skills. `st-constitution` (amend rules) and
   `st-issues` (tasks to GitHub issues) stay callable alone, as do the forked tools (`st-grill`,
-  `st-impeccable`, `st-ui-ux`, `st-frontend-design`, `st-graphify`, `st-hallmark`, ponytail's skills).
+  `st-impeccable`, `st-ui-ux`, `st-graphify`, `st-hallmark`, ponytail's skills).
   `st-sync` exists only in this repo.
 
   A skill called outside a lane skips that lane's gates but never the commit guard or the push
@@ -125,7 +124,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 | # | Phase | Steps | Gate after |
 |---|-------|-------|------------|
 | 1 | Define (orchestrator) | grill → specify → clarify only if gaps remain → checklist | User agrees the spec |
-| 2 | Plan (`st-plan`) | plan → tasks. Open decisions return to the orchestrator and are grilled one at a time, then `st-plan` resumes. | Orchestrator asks: make GitHub issues? |
+| 2 | Plan (`st-plan`) | plan → tasks. Open decisions return to the orchestrator and are grilled one at a time, then `st-plan` resumes. | User answers its open decisions |
 | 3 | Inspect (`st-inspect`) | analyze and validate in one pass. Findings that need a decision go to the user. | User OKs the build |
 | 4 | Build | See the build loop | None unless blocked or a decision falls outside the plan |
 | 5 | Close (`st-close`) | Drift fixes, gap report, lessons, shortcuts, docs graph update | Push only on the user's "push" |
@@ -168,8 +167,7 @@ dependency.
 ## 5. Tools
 
 - **D11. Design.** ui-ux-pro-max for build rules (it covers Flutter), impeccable for review at each
-  story's end, frontend-design for the visual direction once per project, written as a design
-  brief before the first screen.
+  story's end. The visual-direction skill was removed in 010 (D6).
 - **D12. Navigation.** Graphify is the first stop. Its post-commit hook rebuilds the code graph.
   `graphify-out/` stays out of git. The docs graph is updated once per feature in Close. The graph
   points to files; agents read a file before editing it.

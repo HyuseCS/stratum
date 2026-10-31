@@ -17,6 +17,7 @@ X=$(cat "$T/x")
 if [ $# -eq 0 ]; then echo BARE >> "$T/calls"; exit 99; fi
 ( IFS=$'\t'; printf '%s\n' "$*" >> "$T/calls" )
 M=; if [ "$1" = --machine ]; then M=$2; shift 2; fi
+printf '%s\n' "$1 $2" >> "$T/order"
 if [ "$1 $2" = "agent start" ] && [ -n "${STUB_BUSY:-}" ]; then
   b=$(cat "$T/n_busy" 2>/dev/null || echo 0); b=$((b+1)); echo $b > "$T/n_busy"
   if [ $b -le "$STUB_BUSY" ]; then printf '{"error":{"code":"agent_pane_busy","message":"stub busy"}}\n' >&2; exit 1; fi
@@ -75,8 +76,16 @@ case "$1 $2" in
   jq -nc --arg s "$s" --arg n "$3" --slurpfile c "$T/wc.json" '{result:{agent:{agent_status:$s,name:$n,pane_id:$c[0].result.root_pane.pane_id,workspace_id:$c[0].result.workspace.workspace_id}}}' ;;
 "agent list")
   jq -c '{result:{agents:.}}' "$T/agents.json" ;;
+"tab create")
+  t=stubT$RANDOM$RANDOM; rp=$t:p1
+  printf 'tab\t%s\t%s\n' "$t" "$rp" >> "$T/made"
+  jq -nc --arg t "$t" --arg r "$rp" '{result:{type:"tab_created",tab:{tab_id:$t},root_pane:{pane_id:$r}}}' ;;
+"pane split")
+  p=stubP$RANDOM$RANDOM
+  printf 'pane\t%s\n' "$p" >> "$T/made"
+  jq -nc --arg p "$p" '{result:{type:"pane_created",pane:{pane_id:$p}}}' ;;
 "agent read")
-  printf 'STUB PANE %s\n' "$X" ;;
+  if [ -e "$T/pane.txt" ]; then tail -n "$7" "$T/pane.txt"; else printf 'STUB PANE %s\n' "$X"; fi ;;
 "agent wait")
   if [[ " $* " == *" --until "* ]] && [ -e "$T/resume_result" ]; then
     printf 'RESULT FILE %s\n' "$X" > "$(jq -r .result.worktree.path "$T/wc.json")/result.md"
@@ -90,10 +99,12 @@ cat > "$tmp/bin/ssh" <<'EOF'
 T=$STUB_T
 n=$(cat "$T/n_ssh" 2>/dev/null || echo 0); n=$((n+1)); echo $n > "$T/n_ssh"
 ( IFS=$'\t'; printf '%s\n' "$*" >> "$T/ssh" )
+printf 'ssh\n' >> "$T/order"
 if [ -n "${STUB_SSH_RC:-}" ]; then [ -n "${STUB_SSH_QUIET:-}" ] || echo 'ssh: stub failure' >&2; exit "$STUB_SSH_RC"; fi
 while [ $# -gt 0 ] && [ "$1" != -- ]; do shift; done
 shift 2
 c="$*"
+[ -z "${STUB_SSH_EXEC:-}" ] || exec bash -c "$c"
 case "$c" in
 *"cat > "*) cat > "$T/ssh_in.$n" ;;
 "cat -- "*result.md) printf 'RESULT FILE %s\n' "$(cat "$T/x")" ;;
@@ -171,7 +182,7 @@ testcmd='bash tests/test_demo.sh'
 lane=st-build
 printf 'worker-t004\tlocal\tworker-t004\tT004\nworker-t005\tlocal\tworker-t005\tT005\n' > "$roster"
 printf '%s\n' \
-  '1. Commit each finished unit with the st-git agent, exact paths only. Never commit brief.md, result.md or .stratum/git-guard.json.' \
+  '1. Commit each finished unit with the st-git agent, exact paths only. Never commit brief.md, result.md, .stratum/git-guard.json or .stratum/approve/, and never write in .stratum/approve/.' \
   "2. Before you build on a teammate's work, merge its branch: \`git log <branch>\`, \`git merge <branch>\`. A teammate on another machine shares no commits with you: send it messages only, and do not build on its work." \
   '3. Ask a teammate by name: on your machine, SendMessage to its name; on another machine, `herdr --machine <label> agent prompt <name> "<text>"`, with `<label>` from `herdr machine list` on your machine.' \
   '4. Never merge into the base branch and never push. Merging a teammate'"'"'s branch into your own (rule 2) is fine. When your task says to run /stratum:st-pr, run it: it pushes your branch and opens the PR, and that is the only push allowed. The orchestrator reviews every branch and is the only one who merges into the base.' > "$rules"
@@ -181,7 +192,7 @@ sargs=(T004 --task "$task" --test "$testcmd" --lane "$lane" --roster "$roster")
 reset() { : > "$tmp/calls"; : > "$tmp/gh_calls"; }
 states() { rm -f "$tmp/n_get"; printf '%s\n' "$@" > "$tmp/states"; }
 fresh() {
-  rm -rf "$tmp"/repo-worker-* "$tmp"/n_* "$tmp/closed" "$tmp/resume_result" "$tmp/wc.json" "$tmp/s2"
+  rm -rf "$tmp"/repo-worker-* "$tmp"/n_* "$tmp/closed" "$tmp/resume_result" "$tmp/wc.json" "$tmp/s2" "$tmp/pane.txt" "$tmp/made" "$tmp/order"
   printf 'x%s\n' "$RANDOM$RANDOM" > "$tmp/x"
   printf 'TASK BODY %s\n' "$(cat "$tmp/x")" > "$task"
   jq -nc '[{workspace_id:"stubDecoyWS",label:"notaworker"}]' > "$tmp/ws.json"
@@ -224,11 +235,12 @@ s1() {
   check "S1 one worktree create, argv as built" '[ "$(cnt "^worktree\tcreate\t")" = 1 ] && hascall "worktree\tcreate\t--cwd\t%s\t--branch\tworker-t004\t--base\t%s\t--path\t%s\t--label\tworker-t004\t--no-focus" "$repo" "$sha" "$tmp/repo-worker-t004"'
   check "S1 brief has the task text" 'grep -qxF "TASK BODY $(rnd)" "$b"'
   check "S1 brief heading, test, lane, branch, machine, result path" 'grep -qxF "# Brief: worker-t004" "$b" && grep -qxF -- "- Test command: \`$testcmd\`" "$b" && grep -qxF -- "- Lane: $lane. If it names a skill, start it with the Skill tool. Run only task T004; skip every other task, ticked or not." "$b" && grep -qxF -- "- Branch: worker-t004" "$b" && grep -qxF -- "- Your machine: local. \`local\` is the orchestrator'"'"'s machine." "$b" && grep -qxF -- "- Result file: $(wt)/result.md" "$b"'
+  check "S1 brief holds the whole B1 line" 'grep -qxF -- "- Test lock: if your task is marked [lock], run its test command as \`bash <plugin root>/scripts/st-lock.sh -- <test command>\`, with the plugin root of the Stratum plugin. Never write a wait loop of your own." "$b"'
   check "S1 brief names the plugin root" 'grep -qxF -- "- Plugin root: $pr" "$b"'
   check "S1 brief order: Model, then Plugin root, then Your machine" 'mo=$(grep -n "^- Model: " "$b" | cut -d: -f1) && po=$(grep -n "^- Plugin root: " "$b" | cut -d: -f1) && yo=$(grep -n "^- Your machine: " "$b" | cut -d: -f1) && [ "$mo" -lt "$po" ] && [ "$po" -lt "$yo" ]'
   check "S1 brief has every roster row" 'grep -qxF "| worker-t004 | local | worker-t004 | T004 |" "$b" && grep -qxF "| worker-t005 | local | worker-t005 | T005 |" "$b"'
   check "S1 brief has the four team rules" '[ "$(grep -cxFf "$rules" "$b")" = 4 ]'
-  check "S1 brief rule 1 names .stratum/git-guard.json" 'grep -q "^1\. .*Never commit .*\.stratum/git-guard\.json\.\$" "$b"'
+  check "S1 brief rule 1 is the whole B2 line" 'grep -qxF -- "1. Commit each finished unit with the st-git agent, exact paths only. Never commit brief.md, result.md, .stratum/git-guard.json or .stratum/approve/, and never write in .stratum/approve/." "$b"'
   check "S1 brief has the advisor block only when st-advisor.sh is next to the script" '[ -f "$b" ] && if [ -f "$sd/st-advisor.sh" ]; then grep -qxF "## Advisor" "$b"; else ! grep -q "^## Advisor" "$b"; fi'
   check "S1 git-guard.json in the worktree is auto with the worker branch" '[ "$(jq -S -c . "$(wt)/.stratum/git-guard.json")" = "$(jq -S -c -n "{commit:\"auto\",branch:\"worker-t004\"}")" ] && [ "$(grep -c . "$(wt)/.stratum/git-guard.json")" = 1 ]'
   check "S1 repo has no git-guard.json and is unchanged" '[ ! -e "$repo/.stratum/git-guard.json" ] && [ -z "$(git -C "$repo" status --porcelain)" ]'
@@ -932,5 +944,307 @@ nc NC6 h1
 sed -E '/H\+=\(--machine/d' "$script" > "$tmp/NC1.sh" 2>/dev/null
 check "NC1 sed deletes exactly one line" '[ "$(diff "$script" "$tmp/NC1.sh" | grep -c "^<")" = 1 ]'
 nc NC1 r1
+
+rrepo="$tmp/rrepo"
+lw="$tmp/repo-worker-t004"
+sid=sess$RANDOM$RANDOM
+rid=1700000000000000001-4242
+rec="$tmp/rec"
+exp='Bash: {"command":"echo $(touch pwned)","description":"d \u00e9"}'
+exp2='Bash: {"command":"echo $(touch pwned) `touch pwned`"}'
+aroster="$tmp/aroster"
+aoroster="$tmp/aoff"
+oargs=(T004 --task "$tmp/task-owns.md" --test "$testcmd" --lane "$lane" --roster "$roster" --autonomous)
+printf 'TASK BODY\nOwns: `src/a.py`, `tests/t.sh`.\n' > "$tmp/task-owns.md"
+printf 'TASK BODY\n' > "$tmp/task-none.md"
+tabid() { jq -r .result.tab.tab_id "$tmp/wc.json"; }
+lazypane() { awk -F'\t' '$1=="pane"{print $2; exit}' "$tmp/made" 2>/dev/null; }
+devroot() { awk -F'\t' '$1=="tab"{print $3; exit}' "$tmp/made" 2>/dev/null; }
+vmroot() { awk -F'\t' '$1=="tab"{n++} n==2 && $1=="tab"{print $3; exit}' "$tmp/made" 2>/dev/null; }
+autoset() { printf '%s\n' "$1" > "$repo/.stratum/autonomous"; }
+autoclr() { rm -f "$repo/.stratum/autonomous"; }
+apd() { mkdir -p "$lw/.stratum/approve"; }
+mkreq() { apd; jq -nc --arg c "$2" '{tool_name:"Bash",tool_input:{command:$c},time:"2026-10-31T00:00:00Z"}' > "$lw/.stratum/approve/$1.req"; }
+apx() { mk; apd; printf '%s\n' "$sid" > "$lw/.stratum/approve/session"; autoset "$sid"; rm -f "$rec" "$repo/pwned" "$tmp/pwned"; }
+apv() { CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" approve T004 --request "$rid" --input-stdin --record "$rec" "$@"; }
+recok() { [ "$(grep -c . "$rec")" = 1 ] && awk -F'\t' 'NF==5 && $2=="worker-t004" && $3=="workspace worker-t004, tab Main" && $4=="Bash" && index($5,"touch pwned"){f=1} END{exit !f}' "$rec"; }
+xsetup() { rm -rf "$rrepo" "$tmp/rwt" "$tmp/rlink" "$tmp/rtarget"; mkdir -p "$rrepo/.stratum" "$tmp/rwt"; }
+ax() { rfresh; xsetup; printf 'worker-t004\tlaptop\tworker-t004\tT004\t%s\nworker-t005\tlocal\tworker-t005\tT005\n' "$rrepo" > "$aroster"; }
+axrun() { STUB_WT_PATH="$tmp/rwt" STUB_SSH_EXEC=1 CLAUDE_CODE_SESSION_ID="$sid" rrun bash "$script" start T004 --task "$task" --test "$testcmd" --lane "$lane" --roster "$aroster" --machine laptop --repo "$rrepo" --autonomous; }
+wtchk() { check "$1" '[ $rc = 1 ] && [ "$out" = "Run this from the orchestrator'"'"'s checkout, not a worker worktree." ] && [ ! -s "$tmp/calls" ]'; }
+
+fresh; autoclr
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" start "${sargs[@]}" --autonomous
+check "B1 no flag file: exit 1, the off line, no herdr call" '[ $rc = 1 ] && [ "$out" = "Autonomous build mode is off for this session." ] && [ ! -s "$tmp/calls" ]'
+fresh; autoset other-session
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" start "${sargs[@]}" --autonomous
+check "B2 the flag holds another id: exit 1, the off line, no herdr call" '[ $rc = 1 ] && [ "$out" = "Autonomous build mode is off for this session." ] && [ ! -s "$tmp/calls" ]'
+fresh; autoset ""
+CLAUDE_CODE_SESSION_ID= run bash "$script" start "${sargs[@]}" --autonomous
+check "B3 empty session id: exit 1, the off line, no herdr call" '[ $rc = 1 ] && [ "$out" = "Autonomous build mode is off for this session." ] && [ ! -s "$tmp/calls" ]'
+fresh; autoset "$sid"
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" start "${oargs[@]}"
+check "B4 flag matches: exit 0" '[ $rc = 0 ]'
+check "B4 approve folder, session holds the session id" '[ -d "$lw/.stratum/approve" ] && [ "$(cat "$lw/.stratum/approve/session")" = "$sid" ]'
+check "B4 owns holds the backticked Owns paths, one per line" '[ "$(cat "$lw/.stratum/approve/owns")" = "$(printf "src/a.py\ntests/t.sh")" ]'
+fresh; autoset "$sid"
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" start T004 --task "$tmp/task-none.md" --test "$testcmd" --lane "$lane" --roster "$roster" --autonomous
+check "B5 no Owns line: exit 0, owns is an empty file" '[ $rc = 0 ] && [ -f "$lw/.stratum/approve/owns" ] && [ ! -s "$lw/.stratum/approve/owns" ]'
+printf 'TASK BODY\nOwns: `a.sh`,\n  `b.sh`. Test: x\n' > "$tmp/task-wrap.md"
+fresh; autoset "$sid"
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" start T004 --task "$tmp/task-wrap.md" --test "$testcmd" --lane "$lane" --roster "$roster" --autonomous
+check "B6 Owns list wraps onto the next line: exit 0, owns holds both paths" '[ $rc = 0 ] && [ "$(cat "$lw/.stratum/approve/owns")" = "$(printf "a.sh\nb.sh")" ]'
+autoclr
+
+wk="$tmp/wk"; rm -rf "$wk"; mkdir -p "$wk/.stratum/approve"; git -C "$wk" init -q; git -C "$wk" -c user.name=t -c user.email=t@t commit -q --allow-empty -m first; printf '%s\n' "$sid" > "$wk/.stratum/autonomous"
+git -C "$repo" worktree add -q "$tmp/repo-w9" -b worker-t9
+autoset "$sid"
+for d in "$wk" "$tmp/repo-w9"; do
+  fresh; RUNDIR="$d" CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" start "${oargs[@]}"
+  wtchk "WT1 start from $d: exit 1, one line, no call"
+  fresh; RUNDIR="$d" CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" approve T004 --request "$rid" --input-stdin --record "$rec" <<'ST_INPUT_END'
+Bash: {"command":"echo hi"}
+ST_INPUT_END
+  wtchk "WT2 approve from $d: exit 1, one line, no call"
+  fresh; RUNDIR="$d" CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" pass T004 --request "$rid"
+  wtchk "WT3 pass from $d: exit 1, one line, no call"
+  fresh; RUNDIR="$d" CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-off --roster "$roster"
+  wtchk "WT4 autonomous-off from $d: exit 1, one line, no call"
+done
+git -C "$repo" worktree remove --force "$tmp/repo-w9"
+git -C "$repo" branch -q -D worker-t9
+autoclr
+
+git -C "$repo" worktree add -q "$tmp/repo-feat2" -b feat2
+mkdir -p "$tmp/repo-feat2/.stratum"; printf '%s\n' other-session > "$tmp/repo-feat2/.stratum/autonomous"
+autoset "$sid"
+fresh; RUNDIR="$tmp/repo-feat2" CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" start "${oargs[@]}"
+check "LW1 start from a feature's linked worktree: exit 0, session holds the main checkout's id" '[ $rc = 0 ] && [ "$(cat "$lw/.stratum/approve/session")" = "$sid" ]'
+mkreq "$rid" 'echo hi'
+RUNDIR="$tmp/repo-feat2" CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" approve T004 --request "$rid" --input-stdin --record "$rec" <<'ST_INPUT_END'
+Bash: {"command":"echo hi"}
+ST_INPUT_END
+check "LW2 approve from the linked worktree: exit 0, approved line, .ok written" '[ $rc = 0 ] && hasline "approved\tworker-t004\t%s" "$rid" && [ -e "$lw/.stratum/approve/$rid.ok" ]'
+rid2=1700000000000000002-4242
+mkreq "$rid2" 'echo hi'
+RUNDIR="$tmp/repo-feat2" CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" pass T004 --request "$rid2"
+check "LW3 pass from the linked worktree: exit 0, passed line" '[ $rc = 0 ] && hasline "passed\tworker-t004\t%s" "$rid2"'
+RUNDIR="$tmp/repo-feat2" CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-off --roster "$roster"
+check "LW4 autonomous-off from the linked worktree removes the main checkout's flag" '[ $rc = 0 ] && [ ! -e "$repo/.stratum/autonomous" ]'
+git -C "$repo" worktree remove --force "$tmp/repo-feat2"
+git -C "$repo" branch -q -D feat2
+
+mk; states blocked; mkreq "$rid" 'echo hi'
+run bash "$script" wait T004
+check "WA1 approval: exit 6" '[ $rc = 6 ]'
+check "WA1 state approval line with the pane" 'hasline "state\tapproval\tworker-t004\t%s" "$(pane)"'
+check "WA1 request line" 'hasline "request\t%s" "$rid"'
+check "WA1 tab line" 'hasline "tab\tworkspace worker-t004, tab Main"'
+check "WA1 input line: the tool and one-line JSON" 'hasline "input\tBash: {\"command\":\"echo hi\"}"'
+check "WA1 pane text block with the stub pane" 'grep -qxF "pane text:" <<<"$out" && paneshown'
+check "WA1 input line comes before pane text" '[ "$(grep -n "^input" <<<"$out" | cut -d: -f1)" -lt "$(grep -n "^pane text:" <<<"$out" | cut -d: -f1)" ]'
+check "WA1 no branch or staged line for a Bash request" '! grep -qP "^(branch|staged)\t" <<<"$out"'
+check "WA1 never-list" 'never 0 0'
+mk; states blocked; mkdir -p "$lw/.stratum/approve"
+jq -nc '{tool_name:"Bash",tool_input:{command:"git commit -m x"},time:"2026-10-31T00:00:00Z",branch:"worker-t004",staged:["src/a.py","src/b.py"]}' > "$lw/.stratum/approve/$rid.req"
+run bash "$script" wait T004
+check "WA2 commit request: exit 6, branch and staged lines" '[ $rc = 6 ] && hasline "branch\tworker-t004" && hasline "staged\tsrc/a.py src/b.py"'
+mk; states blocked; mkdir -p "$lw/.stratum/approve"
+run bash "$script" wait T004
+check "WA3 no request in the folder: exit 4, the blocked line, no approval line" '[ $rc = 4 ] && hasline "state\tblocked\tworker-t004\t%s" "$(pane)" && ! grep -qP "^state\tapproval" <<<"$out"'
+
+printf '%s\n' '{"tool_name":"Bash","tool_input":{"command":"echo $(touch pwned)","description":"d \u00e9"},"time":"t"}' > "$tmp/rq1.req"
+printf '%s\n' '{"time":"t","tool_input":{"description":"d \u00e9","command":"echo $(touch pwned)"},"tool_name":"Bash"}' > "$tmp/rq2.req"
+rd1=$(python3 "$root/hooks/st-approve.py" --render "$tmp/rq1.req")
+rd2=$(python3 "$root/hooks/st-approve.py" --render "$tmp/rq2.req")
+check "RD1 --render: key order does not change the line, and the line is the sorted compact JSON" '[ "$rd1" = "$rd2" ] && [ "$rd1" = "$exp" ]'
+mk; states blocked; mkdir -p "$lw/.stratum/approve"; cp "$tmp/rq2.req" "$lw/.stratum/approve/$rid.req"
+run bash "$script" wait T004
+check "RD2 wait: the input line is the --render line, whatever the .req key order" 'hasline "input\t%s" "$exp"'
+apx; cp "$tmp/rq2.req" "$lw/.stratum/approve/$rid.req"
+apv <<'ST_INPUT_END'
+Bash: {"command":"echo $(touch pwned)","description":"d \u00e9"}
+ST_INPUT_END
+check "RD3 approve: the sorted text matches the reordered .req, approved" '[ $rc = 0 ] && hasline "approved\tworker-t004\t%s" "$rid" && [ -e "$lw/.stratum/approve/$rid.ok" ]'
+autoclr
+
+apx; mkreq "$rid" 'echo $(touch pwned) `touch pwned`'
+apv <<'ST_INPUT_END'
+Bash: {"command":"echo $(touch pwned) `touch pwned`"}
+ST_INPUT_END
+check "AP1 pwned text: exit 0, approved line" '[ $rc = 0 ] && hasline "approved\tworker-t004\t%s" "$rid"'
+check "AP1 pwned text: .ok written" '[ -e "$lw/.stratum/approve/$rid.ok" ]'
+check "AP1 pwned text: no pwned file here, in the worker folder or in tmp" '[ ! -e "$repo/pwned" ] && [ ! -e "$lw/pwned" ] && [ ! -e "$tmp/pwned" ]'
+check "AP1 pwned text: agent wait until working, 5 s" 'hascall "agent\twait\tworker-t004\t--until\tworking\t--timeout\t5000"'
+check "AP1 pwned text: one record line with time, worker, tab, tool and input" 'recok'
+autoclr
+
+rfresh; rm -rf "$tmp/rwt"; mkdir -p "$tmp/rwt/.stratum/approve"
+STUB_WT_PATH="$tmp/rwt" rrun bash "$script" start "${rsargs[@]}"
+autoset "$sid"; printf '%s\n' "$sid" > "$tmp/rwt/.stratum/approve/session"
+lw="$tmp/rwt" mkreq "$rid" 'echo $(touch pwned) `touch pwned`'
+states blocked; : > "$tmp/ssh"
+STUB_SSH_EXEC=1 rrun bash "$script" wait T004 --machine laptop
+check "AP1m wait on laptop: exit 6, approval state and the input line" '[ $rc = 6 ] && hasline "state\tapproval\tworker-t004\t%s" "$(pane)" && hasline "input\t%s" "$exp2"'
+: > "$tmp/ssh"; rm -f "$rec"
+STUB_SSH_EXEC=1 CLAUDE_CODE_SESSION_ID="$sid" rrun bash "$script" approve T004 --request "$rid" --input-stdin --record "$rec" --machine laptop <<'ST_INPUT_END'
+Bash: {"command":"echo $(touch pwned) `touch pwned`"}
+ST_INPUT_END
+check "AP1m approve on laptop: exit 0, approved line, .ok written in the worker folder" '[ $rc = 0 ] && hasline "approved\tworker-t004\t%s" "$rid" && [ -e "$tmp/rwt/.stratum/approve/$rid.ok" ]'
+check "AP1m the .req is read over ssh, and the ssh log has no pwned text" 'grep -qF -- "$rid.req" "$tmp/ssh" && ! grep -q pwned "$tmp/ssh"'
+check "AP1m ssh carries only the reads and the .ok write" '[ -s "$tmp/ssh" ] && ! grep -vE "$rid\.(req|ok)|approve/session" "$tmp/ssh" | grep -q .'
+check "AP1m no pwned file here or in the worker folder" '[ ! -e "$repo/pwned" ] && [ ! -e "$tmp/rwt/pwned" ] && [ ! -e "$tmp/pwned" ]'
+autoclr
+
+apx; autoclr; mkreq "$rid" 'echo hi'
+apv <<'ST_INPUT_END'
+Bash: {"command":"echo hi"}
+ST_INPUT_END
+check "AP2 flag off: exit 1, the off line, no .ok, no agent wait" '[ $rc = 1 ] && [ "$out" = "Autonomous build mode is off for this session." ] && [ ! -e "$lw/.stratum/approve/$rid.ok" ] && [ "$(cnt "^agent\twait\t")" = 0 ]'
+apx; mkreq "$rid" 'echo hi'; printf '{}\n' > "$lw/.stratum/x.req"
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" approve T004 --request ../x --input-stdin --record "$rec" <<'ST_INPUT_END'
+Bash: {"command":"echo hi"}
+ST_INPUT_END
+check "AP3 --request ../x: exit 1, no .ok in the worker folder, no agent wait" '[ $rc = 1 ] && [ -z "$(find "$lw" -name "*.ok")" ] && [ "$(cnt "^agent\twait\t")" = 0 ]'
+apx
+apv <<'ST_INPUT_END'
+Bash: {"command":"echo hi"}
+ST_INPUT_END
+check "AP4 no .req for the id: exit 1, the no-request line" '[ $rc = 1 ] && [ "$out" = "No request $rid for worker-t004." ]'
+apx; mkreq "$rid" 'echo hi'
+apv <<'ST_INPUT_END'
+Bash: {"command":"echo ho"}
+ST_INPUT_END
+check "AP5 one character differs: exit 1, the mismatch line, no .ok" '[ $rc = 1 ] && [ "$out" = "The input does not match request $rid. Approve nothing." ] && [ ! -e "$lw/.stratum/approve/$rid.ok" ]'
+long=$(head -c 4100 /dev/zero | tr '\0' x)
+apx; mkreq "$rid" "$long"
+apv < <(printf 'Bash: {"command":"%s"}\n' "$long")
+check "AP6 input over 4000 characters: exit 1, the too-long line, no .ok" '[ $rc = 1 ] && [ "$out" = "Request $rid is too long to approve. Pass it to the user." ] && [ ! -e "$lw/.stratum/approve/$rid.ok" ]'
+apx; mkreq "$rid" 'echo hi'; printf '%s\n' other-session > "$lw/.stratum/approve/session"
+apv <<'ST_INPUT_END'
+Bash: {"command":"echo hi"}
+ST_INPUT_END
+check "AP7 session differs: exit 1, the not-in-run line, no .ok" '[ $rc = 1 ] && [ "$out" = "Worker worker-t004 is not in this autonomous run." ] && [ ! -e "$lw/.stratum/approve/$rid.ok" ]'
+autoclr
+
+apx; mkreq "$rid" 'echo hi'
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" pass T004 --request "$rid"
+check "PS1 pass: exit 0, passed line, .user written, no .ok" '[ $rc = 0 ] && hasline "passed\tworker-t004\t%s" "$rid" && [ -e "$lw/.stratum/approve/$rid.user" ] && [ ! -e "$lw/.stratum/approve/$rid.ok" ]'
+apx; autoclr; mkreq "$rid" 'echo hi'
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" pass T004 --request "$rid"
+check "PS2 pass with the flag off: exit 1, the off line, no .user" '[ $rc = 1 ] && [ "$out" = "Autonomous build mode is off for this session." ] && [ ! -e "$lw/.stratum/approve/$rid.user" ]'
+apx; mkreq "$rid" 'echo hi'; printf '%s\n' other-session > "$lw/.stratum/approve/session"
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" pass T004 --request "$rid"
+check "PS3 pass with a session mismatch: exit 1, the not-in-run line, no .user" '[ $rc = 1 ] && [ "$out" = "Worker worker-t004 is not in this autonomous run." ] && [ ! -e "$lw/.stratum/approve/$rid.user" ]'
+autoclr
+
+sydir() { apx; mkreq "$rid" 'echo hi'; rm -rf "$tmp/aptarget"; mv "$lw/.stratum/approve" "$tmp/aptarget"; ln -s "$tmp/aptarget" "$lw/.stratum/approve"; snap0=$(ls -A "$tmp/aptarget"); }
+syfile() { apx; mkreq "$rid" 'echo hi'; rm -rf "$tmp/aptarget"; printf 'keep\n' > "$tmp/aptarget"; ln -s "$tmp/aptarget" "$lw/.stratum/approve/$rid.$1"; }
+sydir
+apv <<'ST_INPUT_END'
+Bash: {"command":"echo hi"}
+ST_INPUT_END
+check "SY1 approve, .stratum/approve a symlink: exit 1, the cannot-write line, target unchanged" '[ $rc = 1 ] && [ "$out" = "Cannot write $rid.ok for worker-t004." ] && [ "$(ls -A "$tmp/aptarget")" = "$snap0" ]'
+syfile ok
+apv <<'ST_INPUT_END'
+Bash: {"command":"echo hi"}
+ST_INPUT_END
+check "SY2 approve, $rid.ok a symlink: exit 1, the cannot-write line, target unchanged" '[ $rc = 1 ] && [ "$out" = "Cannot write $rid.ok for worker-t004." ] && [ "$(cat "$tmp/aptarget")" = keep ]'
+sydir
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" pass T004 --request "$rid"
+check "SY3 pass, .stratum/approve a symlink: exit 1, the cannot-write line, target unchanged" '[ $rc = 1 ] && [ "$out" = "Cannot write $rid.user for worker-t004." ] && [ "$(ls -A "$tmp/aptarget")" = "$snap0" ]'
+syfile user
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" pass T004 --request "$rid"
+check "SY4 pass, $rid.user a symlink: exit 1, the cannot-write line, target unchanged" '[ $rc = 1 ] && [ "$out" = "Cannot write $rid.user for worker-t004." ] && [ "$(cat "$tmp/aptarget")" = keep ]'
+rm -rf "$tmp/aptarget"
+autoclr
+
+for pl in 'Do you want to proceed?' 'Do you want to make this edit to a.py?' 'Do you want to create b.py?' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)'; do
+  mk; states blocked; printf '%s\n' "$pl" > "$tmp/pane.txt"
+  run bash "$script" answer T004 --keys 1
+  check "AN1 pane line '$pl': exit 1, the permission line, no key sent" '[ $rc = 1 ] && [ "$out" = "This is a permission prompt. Tell the user the workspace, the tab and the prompt; do not answer it." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+done
+mk; states blocked
+STUB_FAIL="agent read" STUB_FAIL_CODE=timeout run bash "$script" answer T004 --keys 1
+check "AN2 agent read fails: exit 1, the same permission line, no key sent" '[ $rc = 1 ] && [ "$out" = "This is a permission prompt. Tell the user the workspace, the tab and the prompt; do not answer it." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+for pq in 'Should the helper be named normalizeInput?' 'Do you want to rename it?'; do
+  mk; states blocked working; printf '%s\n' "$pq" '❯ 1. Yes' '  2. No' > "$tmp/pane.txt"
+  run bash "$script" answer T004 --keys 1
+  check "AN3 ordinary question '$pq': exit 0, the key sent" '[ $rc = 0 ] && hascall "agent\tsend-keys\tworker-t004\t1"'
+done
+mk; states blocked working; { printf '%s\n' ' Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)'; seq -f 'line %g' 15; printf '%s\n' 'Should the helper be named normalizeInput?' '❯ 1. Yes' '  2. No'; } > "$tmp/pane.txt"
+run bash "$script" answer T004 --keys 1
+check "AN4 permission dialog more than 15 lines up: exit 0, the key sent" '[ $rc = 0 ] && hascall "agent\tsend-keys\tworker-t004\t1"'
+
+mk; states done; apd; printf '%s\n' "$sid" > "$lw/.stratum/approve/session"
+run bash "$script" close T004
+check "CL1 close: exit 0, the approve folder is gone" '[ $rc = 0 ] && [ ! -e "$lw/.stratum/approve" ]'
+
+xsetup; printf 'worker-t004\tlocal\tworker-t004\tT004\nworker-t005\tlaptop\tworker-t005\tT005\t%s\n' "$rrepo" > "$aoroster"
+autoset "$sid"; printf '%s\n' "$sid" > "$rrepo/.stratum/autonomous"
+STUB_SSH_EXEC=1 CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-off --roster "$aoroster"
+check "AO1 exit 0, the local and laptop lines" '[ $rc = 0 ] && hasline "autonomous off\tlocal" && hasline "autonomous off\tlaptop"'
+check "AO1 both flags with this session id are removed" '[ ! -e "$repo/.stratum/autonomous" ] && [ ! -e "$rrepo/.stratum/autonomous" ]'
+xsetup; autoset other-session; printf '%s\n' other-session > "$rrepo/.stratum/autonomous"
+STUB_SSH_EXEC=1 CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-off --roster "$aoroster"
+check "AO2 flags with another id are kept: exit 0" '[ $rc = 0 ] && [ -e "$repo/.stratum/autonomous" ] && [ -e "$rrepo/.stratum/autonomous" ]'
+xsetup; autoset "$sid"; printf '%s\n' "$sid" > "$rrepo/.stratum/autonomous"
+STUB_SSH_RC=255 CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-off --roster "$aoroster"
+check "AO3 ssh down: exit 1, the failed laptop line, local removed, laptop flag kept" '[ $rc = 1 ] && hasline "autonomous off failed\tlaptop\tssh: stub failure" && hasline "autonomous off\tlocal" && [ ! -e "$repo/.stratum/autonomous" ] && [ -e "$rrepo/.stratum/autonomous" ]'
+autoclr
+xsetup; rm -rf "$tmp/rrepo2"; mkdir -p "$tmp/rrepo2/.stratum"
+printf 'worker-t004\tlaptop\tworker-t004\tT004\t%s\nworker-t005\tlaptop\tworker-t005\tT005\t%s\n' "$rrepo" "$tmp/rrepo2" > "$aoroster"
+printf '%s\n' "$sid" > "$rrepo/.stratum/autonomous"; printf '%s\n' "$sid" > "$tmp/rrepo2/.stratum/autonomous"
+STUB_SSH_EXEC=1 CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-off --roster "$aoroster"
+check "AO4 two repos on one machine: exit 0, both flags removed" '[ $rc = 0 ] && [ ! -e "$rrepo/.stratum/autonomous" ] && [ ! -e "$tmp/rrepo2/.stratum/autonomous" ]'
+
+ax; autoset "$sid"
+axrun
+check "AM1 saved machine: exit 0" '[ $rc = 0 ]'
+check "AM1 the repo flag on the machine holds the session id" '[ "$(cat "$rrepo/.stratum/autonomous")" = "$sid" ]'
+check "AM1 one ssh call writes the repo flag, before worktree create" '[ "$(grep -c "stratum/autonomous" "$tmp/ssh")" = 1 ] && o1=$(grep -n "^ssh$" "$tmp/order" | head -n1 | cut -d: -f1) && o2=$(grep -n "^worktree create$" "$tmp/order" | head -n1 | cut -d: -f1) && [ -n "$o1" ] && [ -n "$o2" ] && [ "$o1" -lt "$o2" ]'
+check "AM1 the remote session file holds the session id" '[ "$(cat "$tmp/rwt/.stratum/approve/session")" = "$sid" ]'
+check "AM1 the remote brief has the four-column roster row and no repo path" 'grep -qxF "| worker-t004 | laptop | worker-t004 | T004 |" "$tmp/rwt/brief.md" && ! grep -qF "$rrepo" "$tmp/rwt/brief.md"'
+autoclr
+ax; autoset "$sid"; printf 'worker-t004\tlaptop\tworker-t004\tT004\nworker-t005\tlocal\tworker-t005\tT005\n' > "$aroster"
+axrun
+check "AM2 no fifth field: exit 1, the roster line, no call" '[ $rc = 1 ] && [ "$out" = "Roster row for worker-t004 needs the repo path as a fifth field." ] && [ ! -s "$tmp/calls" ] && [ ! -s "$tmp/ssh" ]'
+ax; autoset "$sid"; printf 'worker-t004\tlaptop\tworker-t004\tT004\t%s\nworker-t005\tlocal\tworker-t005\tT005\n' "$tmp/other-repo" > "$aroster"
+axrun
+check "AM2b a different fifth field: the same roster line, no call" '[ $rc = 1 ] && [ "$out" = "Roster row for worker-t004 needs the repo path as a fifth field." ] && [ ! -s "$tmp/calls" ] && [ ! -s "$tmp/ssh" ]'
+autoclr
+ax; autoset "$sid"; printf '%s\n' old-session > "$rrepo/.stratum/autonomous"
+axrun
+check "AM3 a stale repo flag with an old id is replaced" '[ $rc = 0 ] && [ "$(cat "$rrepo/.stratum/autonomous")" = "$sid" ]'
+autoclr
+ax; autoset "$sid"; rm -rf "$rrepo/.stratum"; mkdir "$tmp/rlink"; ln -s "$tmp/rlink" "$rrepo/.stratum"
+axrun
+check "AM4 symlinked .stratum: exit 1, the cannot-write line, no worktree create, no agent start, target empty" '[ $rc = 1 ] && grep -q "^cannot write .stratum/autonomous on laptop: " <<<"$out" && [ ! -e "$tmp/rlink/autonomous" ] && [ "$(cnt "^--machine\tlaptop\tworktree\tcreate\t")" = 0 ] && [ "$(cnt "^--machine\tlaptop\tagent\tstart\t")" = 0 ]'
+autoclr
+ax; autoset "$sid"; printf 'keep\n' > "$tmp/rtarget"; ln -s "$tmp/rtarget" "$rrepo/.stratum/autonomous"
+axrun
+check "AM5 symlinked repo flag: exit 1, the cannot-write line, target unchanged, no worktree create" '[ $rc = 1 ] && grep -q "^cannot write .stratum/autonomous on laptop: " <<<"$out" && [ "$(cat "$tmp/rtarget")" = keep ] && [ "$(cnt "^--machine\tlaptop\tworktree\tcreate\t")" = 0 ]'
+autoclr
+ax; autoset "$sid"
+STUB_SSH_RC=255 axrun
+check "AM6 ssh down on the repo flag write: exit 1, the line, no worktree create or agent start" '[ $rc = 1 ] && hasline "cannot write .stratum/autonomous on laptop: ssh: stub failure" && [ "$(cnt "^--machine\tlaptop\tworktree\tcreate\t")" = 0 ] && [ "$(cnt "^--machine\tlaptop\tagent\tstart\t")" = 0 ]'
+autoclr
+
+fresh; run bash "$script" start "${sargs[@]}"
+check "LY1 exit 0" '[ $rc = 0 ]'
+check "LY1 layout calls after worktree create and before agent start, in order" '[ "$(grep -P "^(worktree\tcreate\t|tab\t|pane\t|agent\tstart\t)" "$tmp/calls" | cut -f1-2)" = "$(printf "worktree\tcreate\ntab\trename\npane\tsplit\npane\trun\ntab\tcreate\npane\tsplit\ntab\tcreate\npane\tsplit\nagent\tstart")" ]'
+check "LY1 tab rename, Main" 'hascall "tab\trename\t%s\tMain" "$(tabid)"'
+check "LY1 split the root pane right, no focus" 'hascall "pane\tsplit\t%s\t--direction\tright\t--cwd\t%s\t--no-focus" "$(pane)" "$(wt)"'
+check "LY1 lazygit in the new pane" 'hascall "pane\trun\t%s\tlazygit" "$(lazypane)"'
+check "LY1 Dev Servers tab, then a split of its root pane" 'hascall "tab\tcreate\t--workspace\t%s\t--cwd\t%s\t--label\tDev Servers\t--no-focus" "$(wsid)" "$(wt)" && hascall "pane\tsplit\t%s\t--direction\tright\t--cwd\t%s\t--no-focus" "$(devroot)" "$(wt)"'
+check "LY1 VM tab, then a split of its root pane" 'hascall "tab\tcreate\t--workspace\t%s\t--cwd\t%s\t--label\tVM\t--no-focus" "$(wsid)" "$(wt)" && hascall "pane\tsplit\t%s\t--direction\tright\t--cwd\t%s\t--no-focus" "$(vmroot)" "$(wt)"'
+
+rfresh; STUB_WT_PATH=/home/u/proj-worker-t004 rrun bash "$script" start "${rsargs[@]}"
+check "LY2 exit 0" '[ $rc = 0 ]'
+check "LY2 layout calls on the machine, in order" '[ "$(grep -P "^--machine\tlaptop\t(worktree\tcreate\t|tab\t|pane\t|agent\tstart\t)" "$tmp/calls" | cut -f3-4)" = "$(printf "worktree\tcreate\ntab\trename\npane\tsplit\npane\trun\ntab\tcreate\npane\tsplit\ntab\tcreate\npane\tsplit\nagent\tstart")" ]'
+check "LY2 tab rename, Main, on the machine" 'rcall "tab\trename\t%s\tMain" "$(tabid)"'
+check "LY2 split the root pane right, no focus, on the machine" 'rcall "pane\tsplit\t%s\t--direction\tright\t--cwd\t%s\t--no-focus" "$(pane)" "$(wt)"'
+check "LY2 lazygit in the new pane, on the machine" 'rcall "pane\trun\t%s\tlazygit" "$(lazypane)"'
+check "LY2 Dev Servers and VM tabs, each with a split of its root pane, on the machine" 'rcall "tab\tcreate\t--workspace\t%s\t--cwd\t%s\t--label\tDev Servers\t--no-focus" "$(wsid)" "$(wt)" && rcall "pane\tsplit\t%s\t--direction\tright\t--cwd\t%s\t--no-focus" "$(devroot)" "$(wt)" && rcall "tab\tcreate\t--workspace\t%s\t--cwd\t%s\t--label\tVM\t--no-focus" "$(wsid)" "$(wt)" && rcall "pane\tsplit\t%s\t--direction\tright\t--cwd\t%s\t--no-focus" "$(vmroot)" "$(wt)"'
 
 exit $fail

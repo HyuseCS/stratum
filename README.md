@@ -55,8 +55,10 @@ Describe the work. Stratum picks the lane:
 /stratum:st add a parent notice when the bus is 10 minutes away
 ```
 
-It answers with one line, for example `Lane: full (privacy and access: new notice to parents).`
-Say `full`, `fast`, or `quick` to override.
+It answers with one line, for example `Lane: full, risk high (privacy and access: new notice to parents).`
+Say `full`, `fast`, `quick` or `design` to override.
+The line also names the risk level, which picks the advisors. Say `risk high`, `risk normal`, `risk low` or `risk none` to change it.
+When the task names GitHub issues (`#51` or an issue URL), `/stratum:st` runs `st-triage` on them first. If an issue is done or not valid, it tells you and waits for your word before it picks the lane.
 
 ### Lanes
 
@@ -76,7 +78,7 @@ The lane follows the highest impact area the change touches.
 | # | Phase | What happens | Gate |
 |---|-------|--------------|------|
 | 1 | Define | Grilling, then the spec, then clarify (if needed) and checklist | You agree the spec |
-| 2 | Plan | `st-plan` writes the plan and tasks. Open decisions come to you one at a time. It reads `docs/lessons.md` and cites the lessons that apply. | Asked: make GitHub issues? |
+| 2 | Plan | `st-plan` writes the plan and tasks. Open decisions come to you one at a time. It reads `docs/lessons.md` and cites the lessons that apply. | You answer its open decisions |
 | 3 | Inspect | `st-inspect` checks the files agree and the plan can be built | You OK the build |
 | 4 | Build | Per task: failing test, build, check, commit. Per story: one `st-review` pass, design review for screens. | None unless blocked |
 | 5 | Close | Fix spec drift, optional gap report, proposed lessons, shortcut list | Push only when you say "push" |
@@ -87,6 +89,15 @@ The lane follows the highest impact area the change touches.
 **Quick lane:** one file, no gate, related tests, commit. A small fix across a few files goes to `st-build` in brief mode. It moves up a lane if it needs a change plan.
 
 **Design lane:** a new look or a new page or screen. New look: a grill for the design file, one reference screen, its checks, your yes. Autonomous: the page in the existing look, checked, then your OK.
+In the Full lane, a task that makes a new screen goes to the Design lane (`st-design`) in the mode you pick at Plan: autonomous or new look.
+
+**Build with workers:** say `build with workers`, or name a machine ("US2 on the laptop"). Build sends each phase's `[P]` tasks to `st-worker`, one worker per task.
+
+**Autonomous mode:** say `autonomous mode` to turn on autonomous build mode for this run only, and `stop autonomous` to turn it off. The statusline shows `autonomous` while it is on.
+In normal mode the orchestrator never approves a worker's permission prompt: it tells you the worker's workspace, tab and what the prompt asks.
+
+**Test scope:** agents run the tests of the changed files and of the files that import them. The full suite runs only when you ask.
+When a change touches shared config, test setup, a schema or migration, middleware, or a file more than 20 files import, the orchestrator asks you first: a named list of tests or the full suite.
 
 ### Skills
 
@@ -112,7 +123,7 @@ The lane follows the highest impact area the change touches.
 | `st-pr [base]` | Open a draft PR from git facts and the spec; ready when CI passes. |
 | `st-sync` | Maintainers: port upstream changes into Stratum's forks. |
 | `st-grill` | Grilling interview, one question at a time. |
-| `st-ui-ux`, `st-impeccable`, `st-frontend-design`, `st-hallmark` | Design build rules, design review, visual direction, new-look engine. |
+| `st-ui-ux`, `st-impeccable`, `st-hallmark` | Design build rules, design review, new-look engine. |
 | `st-graphify` | Build or query the code graph. |
 | `st-ponytail`, `st-ponytail-review`, `-audit`, `-debt`, `-gain`, `-help` | Minimal-code mode and its reviews. |
 
@@ -151,7 +162,7 @@ search, then read. Code-writing agents carry the ponytail rule and add no explan
 .stratum/
 ├── constitution.md      project rules (committed)
 ├── state.json           current feature, phase, lane (committed)
-├── advisor.json         advisor mode (codex, both, off), optional Codex model and effort (committed)
+├── advisor.json         advisor mode (auto, codex, both, off), optional Codex model and effort (committed)
 ├── templates/           optional overrides of plugin templates (committed)
 ├── handoff.md           session handoff (git-ignored)
 ├── powerline.json       statusline theme, shape, colors (git-ignored, per machine)
@@ -163,22 +174,23 @@ AGENTS.md, CLAUDE.md     point every tool at the constitution
 ```
 
 Templates and scripts stay in the plugin. A file in `.stratum/templates/` overrides the plugin's
-copy for that project only.
+copy for that project only. `scripts/st-lock.sh` runs tests marked `[lock]` one at a time per repo; it is not checked on Windows.
 
 ## Built in
 
-- **Advisor.** Codex (OpenAI's `codex` CLI), a model from another vendor, runs at two points in the Full lane. At the end of the Plan phase, before its gate, it only advises on a simpler or better approach and does not validate the plan (`st-inspect` does that). It also reviews a test still red after two tries. The full diff before the build is called done and the whole Fast lane use `/advisor` if you set one. The Quick lane has no advisor.
+- **Advisor.** Codex (OpenAI's `codex` CLI), a model from another vendor, and `/advisor` if you set one, review four points in the Full lane: the plan before the Plan gate, a test still red after two tries, each story's small decisions, and the diff at the end of Build. At the plan point Codex only advises on a simpler or better approach and does not validate the plan (`st-inspect` does that). In mode `auto` the risk level picks Codex, `/advisor`, both or none at each point. The whole Fast lane uses `/advisor` if you set one. The Quick lane has no advisor.
   The orchestrator runs `scripts/st-advisor.sh` in the foreground and waits for the answer. Codex runs in the read-only sandbox and only reviews: it never builds or fixes.
-  It answers `APPROVED`, `REVISE` (findings, checked against the source like any finding, then one more run, two rounds at most), or `BLOCKED` (the orchestrator stops and asks you).
+  It answers `APPROVED`, `REVISE` (findings, checked against the source like any finding; one more run only when a CRITICAL or HIGH fix changed the plan, two rounds at most), or `BLOCKED` (the orchestrator stops and asks you).
   A failed, empty, malformed or late answer (540 seconds) is `BLOCKED`, never approval.
   Each run appends the point, a SHA256 of the input, the verdict and the findings to `specs/<feature>/advisor.md`. An approval of a plan that changed since then is stale.
-  What leaves the machine: each call sends the prompt and the files Codex reads to OpenAI, on your Codex login and quota (about 37,000 tokens per plan review). At the plan point the prompt names the plan files and Codex reads them; at the test point it holds the task text, the test path and both failure outputs.
+  What leaves the machine: each call sends the prompt and the files Codex reads to OpenAI, on your Codex login and quota (about 37,000 tokens per plan review). At the plan point the prompt names the plan files and Codex reads them; at the test point it holds the task text, the test path and both failure outputs. At the diff point Codex reads the diff since the last review, and at the decisions and round points the prompt holds the list or the views text.
   The prompt tells Codex to stay inside the named inputs, never open env or secret files, and never quote a secret value. The sandbox does not block reads.
   Whether Codex's own shell sees your environment variables is not checked.
-  `.stratum/advisor.json` sets the mode: `{"mode": "codex"}`, `{"mode": "both"}` (Codex, then `/advisor` if you set one), or `{"mode": "off"}`. `"mode": "off"` is the off switch: nothing goes to OpenAI.
-  With no file the advisor is off and prints `no advisor: mode not set. Write .stratum/advisor.json with "mode": "codex", "both" or "off".` `st-init` writes the file for new projects. A project set up before this feature has no file, so the advisor stays off until you write it.
+  `.stratum/advisor.json` sets the mode. `{"mode": "auto"}` (the default when the file has no `mode`): the risk level picks the advisors at each point. The others are `{"mode": "codex"}`, `{"mode": "both"}` (Codex, then `/advisor` if you set one), or `{"mode": "off"}`. `"mode": "off"` is the off switch: nothing goes to OpenAI.
+  With no file the advisor is off and prints `no advisor: mode not set. Write .stratum/advisor.json with "mode": "auto", "codex", "both" or "off".` `st-init` writes the file for new projects. A project set up before this feature has no file, so the advisor stays off until you write it.
   With no `codex` on PATH you get one line, `no advisor: codex not found`, and the flow runs as before, with `/advisor` if you set one.
   Optional `model` and `effort` keys in the same file pick the Codex model and reasoning effort, for example `{"mode": "codex", "model": "gpt-6-astra", "effort": "high"}`. Without them Codex uses its own default.
+  Codex runs in the background, also inside herdr.
   The call runs with `--ignore-user-config`: neither `~/.codex/config.toml` nor a project `.codex/config.toml` is read, so no MCP server, hook or notify command from them runs during a review, and the model and effort come only from this file. Your Codex login works as before.
 - **Git guard.** One mode per command: `commit`, `worktree_remove`, `worktree_prune`,
   `branch_delete`, `reset_hard`, `clean` (`clean -f`), `discard` (`checkout .`, `restore .`), and
@@ -198,6 +210,7 @@ copy for that project only.
 - **Worker guard.** `st-worker` writes the worker's guard file with `commit: auto` and its
   branch. Commit and the merge family run without a question only while that branch is checked
   out. `st-worker.sh close` deletes the file, and refuses while the branch has an open PR.
+- **Autonomous build mode.** In autonomous build mode a worker's permission prompt goes to the orchestrator, which approves only a test, a lint, an edit inside the worker's worktree, or a commit of the task's own files on the worker's own branch with no `--amend` and no `--no-verify`, one time. Never put `st-worker.sh` on a permission allow list: each `approve` call names the full command it approves, and your permission check must see it. The hook acts only while autonomous build mode is on for the orchestrator's session (the main checkout's `.stratum/autonomous` and the worker's session file must match). For a commit it checks that the command's git parts are only `git add` and `git commit`, the branch is the worker's, every staged file is one the task owns, and there is no `--amend`, no `--no-verify` and no option it does not know. A commit on the worker's own branch runs with no prompt (`commit: auto`), so it is checked at the review, not here. In a worker session, a check before every Bash command, Edit, Write, Read, Grep and Glob blocks any that touches `.stratum/approve/` or `.stratum/autonomous`, and any Bash command that runs `st-worker.sh` with `approve`, `pass`, `autonomous-off`, `wait` or `start`. Workers run as the same OS user as you, so this is a guard against mistakes and simple prompt injection, not a wall: a worker that works around it on purpose, for example by building that path at run time, is not stopped. A write outside the worker's worktree still prompts and goes to the user.
 - **PR flow.** Every merge into main goes through its GitHub PR, never a local merge. The
   session that works a branch opens its own PR with `st-pr` and stays open until it is merged.
   Nothing merges before you test it. An Approve at the `st-pr` gate counts as "push". A worker
@@ -316,6 +329,7 @@ ports, and waits for review before updating `vendor.lock`.
 python3 tests/test_git_guard.py
 python3 tests/test_model_hook.py
 python3 tests/test_phase_hook.py
+python3 tests/test_approve_hook.py
 bash tests/test_advisor.sh
 bash tests/test_design_check.sh
 bash tests/test_design_lane.sh
@@ -329,6 +343,19 @@ bash tests/test_shortcuts.sh
 bash tests/test_st_worker.sh
 bash tests/test_statusline.sh
 bash tests/test_verify.sh
+bash tests/test_lane_steps.sh
+bash tests/test_advisor_waive.sh
+bash tests/test_advisor_rules.sh
+bash tests/test_test_scope.sh
+bash tests/test_lock.sh
+bash tests/test_lock_rules.sh
+bash tests/test_advisor_matrix.sh
+bash tests/test_plan_rules.sh
+bash tests/test_screen_rules.sh
+bash tests/test_triage_rules.sh
+bash tests/test_no_frontend_design.sh
+bash tests/test_risk_rules.sh
+bash tests/test_worker_rules.sh
 node tests/test_token_weather.mjs
 node tests/test_pr_workflow.mjs
 claude plugin validate .claude-plugin/plugin.json
@@ -337,6 +364,6 @@ claude plugin validate .claude-plugin/plugin.json
 ## Credits and license
 
 Stratum is MIT licensed. It contains modified copies of GitHub Spec Kit, vibecode-pro-max-kit,
-ponytail, mattpocock/skills, ui-ux-pro-max, impeccable, frontend-design, graphify's skill, Token
+ponytail, mattpocock/skills, ui-ux-pro-max, impeccable, graphify's skill, Token
 Weather, and the theme colors of claude-powerline, each under its own MIT or Apache-2.0 license.
 See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and `licenses/`.

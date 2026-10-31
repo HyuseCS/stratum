@@ -99,5 +99,28 @@ check "cd into a subfolder: project settings kept" '! runi 100 "{\"workspace\":{
 echo '{"shape":"blocks"}' > "$tmp/home/proj/.stratum/powerline.json"
 check "shape blocks: no shaped edges" 'out=$(run 100); ! grep -qP "[\x{e0b0}-\x{e0bc}]" <<<"$out" && grep -qF "[48;2;" <<<"$out"'
 rm "$tmp/home/proj/.stratum/powerline.json"
+echo S1 > "$tmp/home/proj/.stratum/autonomous"
+check "autonomous: flag holds the session id: line 2 has the segment" 'runi 200 "{$ws,\"session_id\":\"S1\"}" | plain | sed -n 2p | grep -q " autonomous "'
+check "autonomous: segment after ponytail" 'runi 200 "{$ws,\"session_id\":\"S1\"}" | plain | sed -n 2p | grep -q "Ponytail.* autonomous "'
+check "autonomous: contextWarning background" 'runi 200 "{$ws,\"session_id\":\"S1\"}" | grep -qP "\x1b\[48;2;$(rgb f6c177)m\x1b\[38;2;[\d;]+m autonomous "'
+echo S2 > "$tmp/home/proj/.stratum/autonomous"
+check "autonomous: flag holds another session: no segment" '! runi 200 "{$ws,\"session_id\":\"S1\"}" | plain | grep -q autonomous'
+rm "$tmp/home/proj/.stratum/autonomous"
+check "autonomous: no flag file: no segment" '! runi 200 "{$ws,\"session_id\":\"S1\"}" | plain | grep -q autonomous'
+: > "$tmp/home/proj/.stratum/autonomous"
+check "autonomous: empty flag and no session id: no segment" '! runi 200 "{$ws}" | plain | grep -q autonomous'
+rm "$tmp/home/proj/.stratum/autonomous"
+g() { git -c user.name=t -c user.email=t@t -c commit.gpgsign=false "$@"; }
+g init -q "$tmp/repo"
+g -C "$tmp/repo" commit -q --allow-empty -m init
+g -C "$tmp/repo" worktree add -q "$tmp/wt" -b wt
+mkdir -p "$tmp/repo/.stratum" "$tmp/wt/.stratum"
+echo S2 > "$tmp/repo/.stratum/autonomous"
+echo S1 > "$tmp/wt/.stratum/autonomous"
+wtws="\"workspace\":{\"current_dir\":\"$tmp/wt\"},\"cwd\":\"$tmp/wt\""
+check "autonomous: linked worktree's own flag is ignored, main checkout's S2 decides" '! runi 200 "{$wtws,\"session_id\":\"S1\"}" | plain | grep -q autonomous'
+echo S1 > "$tmp/repo/.stratum/autonomous"
+echo S2 > "$tmp/wt/.stratum/autonomous"
+check "autonomous: linked worktree reverse, main checkout's S1 shows the segment" 'runi 200 "{$wtws,\"session_id\":\"S1\"}" | plain | sed -n 2p | grep -q " autonomous "'
 
 exit $fail

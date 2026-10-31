@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -9,6 +10,8 @@ SEPARATORS = {"&&", "||", ";", "|", "&", "\n"}
 GIT_OPTS_WITH_VALUE = {"-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path",
                        "--config-env"}
 RANK = {None: 0, "ask": 1, "deny": 2}
+GIT_WORD = re.compile(r"(?<![^\s;&|()\[\],`/$=])git(?![^\s;&|()\[\],`<>])")
+UNQUOTE = str.maketrans("", "", "\\'\"")
 
 
 def segments(command):
@@ -215,32 +218,48 @@ def main():
                 decision = d
 
     here, left = cwd, False
-    try:
-        for seg in segments(command):
-            i = 0
-            while i < len(seg) and (seg[i] in ("command", "builtin", "exec")
-                                    or "=" in seg[i] and not seg[i].startswith("-")):
-                i += 1
-            env = any(w.startswith(("GIT_DIR=", "GIT_WORK_TREE=")) for w in seg[:i])
-            seg = seg[i:]
-            if not seg:
-                continue
-            if seg[0] in ("cd", "pushd"):
-                target = (seg[1:] or [None])[0]
-                logical, physical = resolve(here, target, os.path.normpath), resolve(here, target)
-                left = left or away(logical) or away(physical)
-                here = logical if logical and os.path.isdir(logical) else physical
-                continue
-            parsed = parse_git(seg)
-            if not parsed:
-                continue
+
+    def check(seg, unknown=False):
+        nonlocal here, left
+        i = 0
+        while i < len(seg) and (seg[i] in ("command", "builtin", "exec")
+                                or "=" in seg[i] and not seg[i].startswith("-")):
+            i += 1
+        env = any(w.startswith(("GIT_DIR=", "GIT_WORK_TREE=")) for w in seg[:i])
+        seg = seg[i:]
+        if not seg:
+            return False
+        if seg[0] in ("cd", "pushd"):
+            target = (seg[1:] or [None])[0]
+            logical, physical = resolve(here, target, os.path.normpath), resolve(here, target)
+            left = left or away(logical) or away(physical)
+            here = logical if logical and os.path.isdir(logical) else physical
+            return False
+        parsed = parse_git(seg)
+        if parsed:
             sub, args, cdir, elsewhere, conf = parsed
             gitdir = resolve(here, cdir) if cdir else here
-            note(*judge(sub, args, gitdir or cwd,
-                        env or elsewhere or left or away(gitdir) or off_branch(gitdir), conf))
+            note(*judge(sub, args, gitdir or cwd, unknown or env or elsewhere or left
+                        or away(gitdir) or off_branch(gitdir), conf))
             left = left or sub in ("switch", "checkout")
+        return bool(parsed and re.fullmatch(r"[a-z][a-z0-9-]*", parsed[0]))
+
+    try:
+        for seg in segments(command):
+            check(seg)
     except ValueError:
-        note("ask", "The git guard could not parse the command.")
+        decision, reasons, here, left = None, [], cwd, False
+        for line in command.split("\n"):
+            if not GIT_WORD.search(line.translate(UNQUOTE)):
+                continue
+            try:
+                segs = list(segments(line))
+            except ValueError:
+                note("ask", "The git guard could not parse the command.")
+                continue
+            for seg in segs:
+                if not check(seg, True) and GIT_WORD.search(" ".join(seg).translate(UNQUOTE)):
+                    note("ask", "The git guard could not read a git command on this line.")
     if decision:
         print(json.dumps({"hookSpecificOutput": {
             "hookEventName": "PreToolUse",

@@ -9,6 +9,8 @@ Plugin root is two levels up from this skill's base directory.
 
 Make no herdr call yourself.
 
+This is a manual tool. For agents that work by themselves, the orchestrator uses `/stratum:st-worker`.
+
 1. Read from the request: the folder, the machine (label or id, as the user says it), the template (`full` by default; "template 1" or "the three tabs" means `full`), the agent (`claude` by default, `claude2` when asked).
 2. Pick the label: the issue or task the workspace is for, `<number>-<short-name>` when an issue number is known; when the request names none, one first name, like a person (`ada`).
 3. Run the script with each value as one quoted argument, and `--machine` only when the request names a machine:

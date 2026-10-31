@@ -71,27 +71,32 @@ The tasks.md should be immediately executable - each task must be specific enoug
 Every task MUST strictly follow this format:
 
 ```text
-- [ ] [TaskID] [P?] [Story?] Description with file path
+- [ ] [TaskID] [P?] [Story?] Description with file path. Owns: <files, [P] only>. Test: <cmd>.
 ```
 
 **Format Components**:
 
 1. **Checkbox**: ALWAYS start with `- [ ]` (markdown checkbox)
 2. **Task ID**: Sequential number (T001, T002, T003...) in execution order
-3. **[P] marker**: Include ONLY if task is parallelizable (different files, no dependencies on incomplete tasks)
-4. **[Story] label**: REQUIRED for user story phase tasks only
+3. **[P] marker**: every task that shares no file with another task in its phase and needs no other task's result. It ends with `Owns:` and the files it owns. No two `[P]` tasks in one phase own the same file.
+4. **[lock] marker**: a test that cannot run at the same time as another. Build runs it through `scripts/st-lock.sh`.
+5. **[screen: <mode>] marker**: a task that makes a page or view the app does not have yet, with its Design lane mode.
+6. **[Story] label**: REQUIRED for user story phase tasks only
    - Format: [US1], [US2], [US3], etc. (maps to user stories from spec.md)
    - Setup phase: NO story label
    - Foundational phase: NO story label
    - User Story phases: MUST have story label
    - Polish phase: NO story label
-5. **Description**: Clear action with exact file path
+7. **Description**: Clear action with exact file path
+
+Every task ends with `Test:` and its exact test command. No task runs the full test suite.
+Write each `Owns:` path in backticks.
 
 **Examples**:
 
 - ✅ CORRECT: `- [ ] T001 Create project structure per implementation plan`
-- ✅ CORRECT: `- [ ] T005 [P] Implement authentication middleware in src/middleware/auth.py`
-- ✅ CORRECT: `- [ ] T012 [P] [US1] Create User model in src/models/user.py`
+- ✅ CORRECT: ``- [ ] T005 [P] Implement authentication middleware in src/middleware/auth.py. Owns: `src/middleware/auth.py`. Test: pytest tests/test_auth.py.``
+- ✅ CORRECT: ``- [ ] T012 [P] [US1] Create User model in src/models/user.py. Owns: `src/models/user.py`. Test: pytest tests/test_user.py.``
 - ✅ CORRECT: `- [ ] T014 [US1] Implement UserService in src/services/user_service.py`
 - ❌ WRONG: `- [ ] Create User model` (missing ID and Story label)
 - ❌ WRONG: `T001 [US1] Create model` (missing checkbox)

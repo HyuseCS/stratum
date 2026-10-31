@@ -300,6 +300,66 @@ class GitGuardTest(unittest.TestCase):
                     "git pull origin main", "git pull"):
             self.assertEqual(self.run_guard(cmd), (None, ""), cmd)
 
+    def test_stray_quote_heredoc_without_git_word_no_decision(self):
+        self.assertEqual(self.run_guard("cat > t.txt <<EOF\nit's here\nEOF\ngrep -n here t.txt"),
+                         (None, ""))
+
+    def test_stray_quote_heredoc_read_only_git_no_decision(self):
+        for last in ("git status", "git log --oneline"):
+            self.assertEqual(self.run_guard(f"cat > t.txt <<EOF\nit's here\nEOF\n{last}"),
+                             (None, ""), last)
+
+    def test_stray_quote_commit_asks(self):
+        cmd = "cat > t.txt <<EOF\nit's here\nEOF\ngit commit -m x"
+        d, reason = self.run_guard(cmd)
+        self.assertEqual(d, "ask")
+        self.assertIn("git commit (commit: ask)", reason)
+        self.set_mode("auto")
+        d, reason = self.run_guard(cmd)
+        self.assertEqual(d, "ask")
+        self.assertIn("may target another folder or branch", reason)
+
+    def test_stray_quote_force_push_asks(self):
+        d, reason = self.run_guard("cat > t.txt <<EOF\nit's here\nEOF\ngit push --force")
+        self.assertEqual(d, "ask")
+        self.assertIn("force push", reason)
+
+    def test_stray_quote_add_all_denied(self):
+        self.assertEqual(self.run_guard("cat > t.txt <<EOF\nit's here\nEOF\ngit add -A")[0],
+                         "deny")
+
+    def test_stray_quote_python_heredoc_git_line_asks(self):
+        cmd = ("python3 - <<'PY'\nsubprocess.run([\"git\", \"commit\", \"-m\", \"x\"])\n"
+               "# it's a test\nPY")
+        d, reason = self.run_guard(cmd)
+        self.assertEqual(d, "ask")
+        self.assertIn("The git guard could not read a git command on this line.", reason)
+
+    def test_stray_quote_quoted_git_text_asks(self):
+        d, reason = self.run_guard("echo \"run git status\"\necho it's")
+        self.assertEqual(d, "ask")
+        self.assertIn("The git guard could not read a git command on this line.", reason)
+
+    def test_stray_quote_path_with_git_no_decision(self):
+        self.assertEqual(self.run_guard("cat > t.txt <<EOF\nhooks/st-git-guard.py it's\nEOF"),
+                         (None, ""))
+
+    def test_stray_quote_escaped_git_words(self):
+        for cmd in ("\\git push --force", "g''it push --force", "gi\\t push --force"):
+            d, reason = self.run_guard(f"echo it's\n{cmd}")
+            self.assertEqual(d, "ask", cmd)
+            self.assertIn("force push", reason, cmd)
+        for cmd in ("\\git status", "g''it status", "gi\\t status"):
+            self.assertEqual(self.run_guard(f"echo it's\n{cmd}"), (None, ""), cmd)
+
+    def test_stray_quote_wrapped_git_asks(self):
+        for cmd in ("$'git' push --force", '$"git" push --force', "git>/dev/null push --force",
+                    "git</dev/null push origin main", "git status && env git push --force",
+                    "git status; sudo git push origin main", "git log | xargs git add -A",
+                    "git status && bash -c 'git push --force'", "x=git; $x push"):
+            with self.subTest(cmd=cmd):
+                self.assertEqual(self.run_guard(f"echo it's\n{cmd}")[0], "ask", cmd)
+
 
 if __name__ == "__main__":
     unittest.main()

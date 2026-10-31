@@ -30,9 +30,14 @@ Plugin root (`<plugin root>`) is two levels up from this skill's base directory.
 
 ## Gate: user OKs the build
 
-Run `bash <plugin root>/scripts/st-advisor.sh check plan <feature dir>` and show its line; `advisor approval is stale` counts as no approval: run the plan point (`st-plan` step 4) once more, as a round, before the gate. Have `st-git` commit `<feature dir>/advisor.md` if it changed.
+Run `bash <plugin root>/scripts/st-advisor.sh check plan <feature dir>` and show its line; `advisor approval is stale` counts as no approval: run the plan point (`st-plan` step 4) once more, as a round, before the gate.
+If the plan changed at Inspect only by fixes of findings, with no approach change, run `bash <plugin root>/scripts/st-advisor.sh waive plan <feature dir> "<reason>"` in place of the plan point.
+Skip the waive, and `check plan`, when the plan point printed `advisors: none` or a `no advisor` line.
+Have `st-git` commit `<feature dir>/advisor.md` if it changed.
 Show in short form: coverage, remaining findings by severity, small fixes made,
 findings dropped, and the verdict.
+At "OK to build?", show the `WAIVED` line and its reason.
+With no advisor at the plan point, say so in place of the `WAIVED` line.
 Ask: "OK to build?" Start `/stratum:st-build` only on yes.
 
 ## Always
