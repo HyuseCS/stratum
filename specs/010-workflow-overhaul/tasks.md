@@ -535,7 +535,7 @@ prompts through the hook; normal mode never answers them.
 - [X] T032 [P] [US4] Add the `autonomous` segment to `statusline/st-statusline.sh`
   (contracts/scripts.md section 7). Owns: `statusline/st-statusline.sh`. Test:
   `bash tests/test_statusline.sh && ! bash tests/test_inspect.sh | grep '^FAIL' | grep -vxF 'FAIL README tests'`. (FR-018)
-- [ ] T033 [P] [US4] Write W1 to W7, W11, W14, W16 and W17 in `skills/st-worker/SKILL.md` (step 6 and the
+- [X] T033 [P] [US4] Write W1 to W7, W11, W14, W16 and W17 in `skills/st-worker/SKILL.md` (step 6 and the
   last line; remove two "Gone" phrases, `pick the one-time yes` and
   `a tool permission for the task's own command`, from the sentence at
   `skills/st-worker/SKILL.md:21` and keep the rest of that line, and replace the whole line
