@@ -55,10 +55,14 @@ Never delete a remote branch: the user does that. If the project is another repo
   to the user, one question at a time, with your recommendation. Decide small ones yourself.
 - Work touches a higher impact area than the lane allows: move up a lane.
 
-When all tasks are ticked, consult the advisor if one is set (`/advisor`) on the feature's full
-diff: hidden regressions, broken rules from the constitution. Handle its notes like review
-findings. Then say so, list the small decisions and findings (fixed and dropped), and name the
-next phase: `/stratum:st-close`.
+Note `git rev-parse HEAD` after each story's review fixes are committed: that is the story's review point.
+When all tasks are ticked, run the end-of-Build advisor pass.
+Skip the end-of-Build advisor pass when every story had an `st-review` and no code changed after the last one.
+Otherwise run it once, on the changes after the last review only: `bash <plugin root>/scripts/st-advisor.sh diff <feature dir> <last review sha>`.
+Handle its notes like review findings.
+Then run `bash <plugin root>/scripts/st-advisor.sh count <feature dir>` and show its line word for word.
+Then say the build is done, list the small decisions and findings (fixed and dropped), and name
+the next phase: `/stratum:st-close`.
 
 ## Advisor
 
@@ -69,7 +73,14 @@ The advisor is Codex (the `codex` CLI), a model from another vendor. It runs at 
 - `no advisor: codex not found`, `no advisor: mode not set` (show the user its line) or `no advisor: mode off`: go on as before; consult `/advisor` only if the user set one.
 - First line `mode both: also consult /advisor if one is set`: after Codex, consult `/advisor` on the same input if one is set.
 - `APPROVED`: go on.
-- `REVISE`: handle each finding like a review finding: check it against the source, fix the real small ones, bring big ones to the user, drop the false ones. Then run the same point once more on the changed input. Two rounds at most per point per gate pass, then the user decides. A later gate pass starts a new count.
+- `WAIVED sha256 <hash>`: the plan changed only by fixes, and `check plan` passes until the input changes again.
+- `REVISE`: handle each finding like a review finding: check it against the source, fix the real small ones, bring big ones to the user, drop the false ones.
+  A `REVISE` with only MEDIUM and LOW findings counts as passed: handle each finding and do not run the point again.
+  Run the point again only when a CRITICAL or HIGH fix changed the plan, or the plan's approach changed.
+  The approach changed when a user story or task was added or removed, a file outside the plan's file list is now touched, or a design choice in `plan.md` was replaced. A fix inside a task's own text and files is not an approach change.
+  Two rounds at most per point per gate pass, then the user decides. A later gate pass starts a new count.
+- `no change since <base>: skip`: nothing changed after the last review, so the pass is skipped.
+- After each `/advisor` call, run `bash <plugin root>/scripts/st-advisor.sh note <point> <feature dir> "<one-line summary>"`.
 - `BLOCKED: <reason>`: stop and show the user the reason. Nothing passes the gate. If the user says to continue, run `bash <plugin root>/scripts/st-advisor.sh continued <point> <feature dir>` and skip the point. Do not retry it in this gate pass.
 - Each run appends a record to `<feature dir>/advisor.md`: the point, the time, the SHA256 of the input, the verdict and the findings. The mode comes from `.stratum/advisor.json` (`codex`, `both` or `off`). No file means off, with the `mode not set` line.
 - At the build gate, `check plan` compares the latest plan record with the current input. `advisor approval is stale` or `no record` counts as no approval: run the plan point once more, as a round. Skip the check after a `no advisor` line.
