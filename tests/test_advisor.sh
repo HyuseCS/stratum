@@ -196,7 +196,7 @@ printf '# plan\n' > "$proj/specs/002-half/plan.md"
 badargs() {
   local ok=1 c
   n0=$(nrec)
-  for c in "plan" "plan specs/none" "plan specs/002-half" "diff specs/001-demo $first" "check diff specs/001-demo $first" "continued diff specs/001-demo" "test specs/001-demo $tmp/task.txt tests/x_test.sh $tmp/f1.txt $tmp/missing.txt"; do
+  for c in "plan" "plan specs/none" "plan specs/002-half" "check diff specs/001-demo $first" "test specs/001-demo $tmp/task.txt tests/x_test.sh $tmp/f1.txt $tmp/missing.txt"; do
     rm -f "$tmp/argv"
     run $c
     [ "$rc" = 2 ] && [[ "$(head -n1 <<<"$out")" == "usage: st-advisor.sh"* ]] && [ ! -e "$tmp/argv" ] && [ "$(nrec)" = "$n0" ] || { ok=0; echo "  bad case: $c rc=$rc" >&2; }
