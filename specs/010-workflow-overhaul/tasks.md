@@ -515,7 +515,7 @@ prompts through the hook; normal mode never answers them.
 
 ### Build
 
-- [ ] T030 [P] [US4] Write `hooks/st-approve.py` with both branches (contracts/scripts.md sections
+- [X] T030 [P] [US4] Write `hooks/st-approve.py` with both branches (contracts/scripts.md sections
   5.1 and 5.2) and add its `PermissionRequest` and `PreToolUse` entries to
   `hooks/commands.json`, with the `ponytail:` lines for the text never list and the text write
   lock, the D23 commit rules, the D27 session check, and the `--render` helper that
