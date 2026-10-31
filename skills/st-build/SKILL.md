@@ -43,6 +43,7 @@ A task that is both `[P]` and `[screen]` goes to `/stratum:st-design` in the mai
 ## Parallel tasks `[P]`
 
 When the user said "build with workers" or named a machine ("US2 on the laptop"), run the phase's `[P]` tasks with `/stratum:st-worker` (Skill tool), one worker per task. Otherwise use subagents:
+
 When the project is this session's own repo, run each `[P]` task of a phase in its own subagent
 with `isolation: "worktree"`, all started in one message.
 User stories that tasks.md says share no files run at the same time.
