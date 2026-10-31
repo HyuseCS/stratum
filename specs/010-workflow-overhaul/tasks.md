@@ -329,7 +329,7 @@ the High talk.
   `skills/st-init/SKILL.md`, `README.md`. Test:
   `bash tests/test_risk_rules.sh && bash tests/test_on_demand.sh && bash tests/test_design_lane.sh && bash tests/test_advisor_rules.sh && bash tests/test_lock_rules.sh && bash tests/test_test_scope.sh && bash tests/test_shortcuts.sh && bash tests/test_screen_rules.sh && bash tests/test_model_files.sh && ! bash tests/test_inspect.sh | grep '^FAIL' | grep -vxF 'FAIL README tests'`.
   (FR-011 to FR-016, D25, security note S1, S2)
-- [ ] T023 [US3] In `scripts/st-advisor.sh` add mode `auto` (missing `mode` = `auto`), the risk
+- [X] T023 [US3] In `scripts/st-advisor.sh` add mode `auto` (missing `mode` = `auto`), the risk
   read, the matrix and the `advisors:` line, Codex at `diff` with the checked hash, `decisions`,
   `round`, `talk`, `codex-home`, the herdr path with `st-lock.sh` and `st-codex-agent.sh` (only
   with the Stratum Codex home; both only if T050 passed), exit 75 as
