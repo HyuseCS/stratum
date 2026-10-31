@@ -172,6 +172,52 @@ closed after the probe. Scratch files: `<scratchpad>/ra/` (R-A) and `<scratchpad
 - If any step fails: the tab path is not built. Codex runs in the background through
   `codex exec --ignore-user-config` as today, at every point, in herdr too. tasks.md names the
   tasks this skips.
+- T050 result (live, 2026-10-31 16:38 to 16:44 +08:00, codex-cli 0.166.0, herdr 0.9.4):
+  **FAIL. First failed check: 1, the agent gave no answer.**
+  - Setup: `<scratch>/cxhome/` held only `auth.json -> /home/hyuse/.codex/auth.json`.
+    `<scratch>/cxproj/` (`git init`) had `.codex/config.toml` with
+    `notify = ["sh", "-c", "touch <scratch>/canary-notify"]` and `[mcp_servers.canary]`
+    (`command = "sh"`, `args = ["-c", "touch <scratch>/canary-mcp; sleep 30"]`).
+  - `herdr tab create --workspace w13 --cwd <scratch>/cxproj --label cx-probe --env CODEX_HOME=<scratch>/cxhome --no-focus`
+    gave tab `w13:t6`, pane `w13:p9`. `herdr agent start cx-probe --kind codex --pane w13:p9 --timeout 120000 -- -s read-only -a never --no-alt-screen`
+    gave `"agent_status":"idle",…,"interactive_ready":true`.
+  - Codex used the scratch home. The first screen line was
+    `WARNING: proceeding, even though we could not create PATH aliases: Refusing to create helper binaries under temporary dir "/tmp" (codex_home: AbsolutePathBuf("<scratch>/cxhome"))`.
+    This comes from the scratch folder being under `/tmp`. The real home under
+    `~/.local/state` does not hit it.
+  - Trust dialog: yes, at start. Text: `Trust this folder? … Folder settings can run code automatically, even without a model request. … Your trust decision will be saved.`
+    Options: `1. Trust and continue`, `2. Back to Agent Command Center`. There is no
+    "do not trust" label. Option 2 is the only one that does not trust, so the probe picked it.
+  - What "do not trust" does: it opens an empty `Agent command center` (`No tasks yet`).
+    `herdr agent prompt cx-probe "Say OK." --wait --until done --until idle --timeout 120000`
+    there gave `{"error":{"code":"agent_prompt_stalled","message":"agent prompt produced no observed working or blocked state within 5000 ms; current status is idle"}}`.
+    Its `n new` key shows the same trust dialog again. Option 2 again, then `esc`, opens
+    the chat box with the footer `GPT-6.1-Sol default` and `⚠ 1 warning`. The warning (f2):
+    `Project-local config, hooks, and exec policies are disabled in the following folders until the project is trusted, but skills still load.`
+    The same prompt there gave `agent_prompt_stalled` again, and the screen showed
+    `• Queued follow-up inputs ↳ Say OK.` A plain `enter` and 3 minutes of waiting did not
+    run it. The Codex log (`<scratch>/cxhome/logs_2.sqlite`) has no thread or turn start.
+    Its only ERROR line is the project-config warning above.
+  - No decision was saved. `<scratch>/cxhome/config.toml` held only
+    `[tui] screen_reader_detection_done = true`, and `grep -c cxproj ~/.codex/config.toml`
+    printed `0`.
+  - Checks:
+    1. FAIL. There was no login screen (the log shows `account/read` and `getAuthStatus`
+       calls, and `wham/security-setup` returned `200 OK`), but no answer came.
+    2. PASS. The footer model was `GPT-6.1-Sol default`, not `GPT-6-Astra xhigh`.
+    3. PASS. `ls <scratch>` showed only `cxhome cxproj`, with no `canary-notify` and no
+       `canary-mcp`. The proof is weak, because Codex never ran a turn and kept the project
+       config off without trust.
+    4. Trust dialog: yes. Without trust, no chat path takes a prompt.
+    5. PASS. `test -L <scratch>/cxhome/auth.json` gave `rc=0` (it points to
+       `/home/hyuse/.codex/auth.json`). `codex login status` printed `Logged in using ChatGPT`.
+       `~/.codex/auth.json` was last changed `2026-10-25 00:22:37`, so it did not change.
+  - The probe closed tab `w13:t6` (`{"type":"ok"}`). After that, `herdr agent list` had no
+    `cx-probe`.
+  - Open question for the user: the probe did not test trust. The dialog says that trust is
+    saved and that folder settings can then run code. The probe did not check where trust is
+    saved. With trust, the project's `.codex/config.toml` would load. To run checks 1 to 3
+    with trust, a second probe and a design change are necessary.
 
 ## R-D. A portable test lock
 

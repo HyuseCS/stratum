@@ -38,7 +38,7 @@ after. Test tasks go to `st-test`, build tasks to `st-build`.
 
 ## Phase 1: Setup
 
-- [ ] T001 [P] Write `tests/test_lane_steps.sh`: one check per row of the plan.md "FR-027"
+- [X] T001 [P] Write `tests/test_lane_steps.sh`: one check per row of the plan.md "FR-027"
   table, named by its row number. A row with old text asserts that text is gone (the "Gone"
   lines of `contracts/phrases.md`, US1 to US6, in their files). A row that adds a missing step
   asserts the first phrase in its Fix column is present. Run it: it must be red now, one FAIL
@@ -60,7 +60,7 @@ scoped tests.
 
 ### Tests (write first, must fail)
 
-- [ ] T002 [P] [US1] Write `tests/test_advisor_waive.sh` for `scripts/st-advisor.sh`. Copy the
+- [X] T002 [P] [US1] Write `tests/test_advisor_waive.sh` for `scripts/st-advisor.sh`. Copy the
   setup of `tests/test_advisor.sh:1-56` (stub `codex` and `timeout`, temp project) and add
   `unset HERDR_ENV HERDR_WORKSPACE_ID`. In `tests/test_advisor.sh`, move `"diff specs/001-demo $first"` and
   `"continued diff specs/001-demo"` out of `badargs` (line 198; `check diff` stays), because
@@ -87,7 +87,7 @@ scoped tests.
   `no advisor: mode off`; (l) `diff <f> nosuchref` gives `usage:`, exit 2. Run it: red. Owns:
   `tests/test_advisor_waive.sh`, `tests/test_advisor.sh`. Test: `bash tests/test_advisor_waive.sh`. (FR-001, FR-002, FR-003,
   FR-004, lessons L1, L16)
-- [ ] T003 [P] [US1] Write `tests/test_advisor_rules.sh`: assert A1 to A13 in their files, and
+- [X] T003 [P] [US1] Write `tests/test_advisor_rules.sh`: assert A1 to A13 in their files, and
   that `Then run the same point once more on the changed input.` is gone from
   `skills/st-build/SKILL.md`. In `tests/test_on_demand.sh`, delete only the row
   `#18 FR-005 revise ... Then run the same point once more on the changed input.` (the row with
@@ -97,7 +97,7 @@ scoped tests.
   it), and `check diff` does not appear. Run it: red. Owns: `tests/test_advisor_rules.sh`,
   `tests/test_on_demand.sh`. Test: `bash tests/test_advisor_rules.sh`. (FR-001 to FR-004,
   lessons L1, L39)
-- [ ] T004 [P] [US1] Write `tests/test_test_scope.sh`: assert S1 to S6 in their files, the three
+- [X] T004 [P] [US1] Write `tests/test_test_scope.sh`: assert S1 to S6 in their files, the three
   "Gone" lines of the US1 test scope table, and the repo rule: every line that matches
   `full (test )?suite` (any case) in `skills/*/SKILL.md` (not `st-hallmark`, `st-impeccable`,
   `st-ui-ux`), `agents/*.md`, `procedures/*.md` and `templates/*.md` holds S1, S3, S4, S5 or
@@ -149,7 +149,7 @@ at the same time.
 
 ### Tests (write first, must fail)
 
-- [ ] T009 [P] [US2] Add to `tests/test_git_guard.py` (contracts/scripts.md section 6). Each
+- [X] T009 [P] [US2] Add to `tests/test_git_guard.py` (contracts/scripts.md section 6). Each
   command has a stray `'` (as in `it's`) on a line, so the whole command does not split: (a) a
   heredoc with no git word, then `grep -n here t.txt`: no decision; (b) the same with a last
   line `git status`, and one with `git log --oneline`: no decision; (c) with `git commit -m x`:
@@ -162,7 +162,7 @@ at the same time.
   stray-quote line: `\git push --force`, `g''it push --force` and `gi\t push --force` ask;
   `\git status`, `g''it status` and `gi\t status` give no decision. Run it: red. Owns: `tests/test_git_guard.py`.
   Test: `PYTHONDONTWRITEBYTECODE=1 python3 tests/test_git_guard.py`. (FR-008, lessons L1, L3)
-- [ ] T010 [P] [US2] Write `tests/test_lock.sh` for `scripts/st-lock.sh` (contracts/scripts.md
+- [X] T010 [P] [US2] Write `tests/test_lock.sh` for `scripts/st-lock.sh` (contracts/scripts.md
   section 3). Make a temp git repo with one commit and a linked worktree (`git worktree add`).
   Cases: (a) free lock: the command runs, its exit code passes through (`sh -c 'exit 7'` gives
   7), the lock folder is gone after; (b) held: A `st-lock.sh -- sleep 3` in the background from
@@ -178,11 +178,11 @@ at the same time.
   `lock: not in a git repo`, exit 2; (h) `--timeout abc` and a missing `--` give a usage line,
   exit 2; (i) the script has no `pgrep`, `flock`, `pkill` or `ps ` text. Run it: red (no
   script). Owns: `tests/test_lock.sh`. Test: `bash tests/test_lock.sh`. (FR-009, lessons L29)
-- [ ] T011 [P] [US2] Write `tests/test_lock_rules.sh`: assert L1 in `agents/st-test.md`,
+- [X] T011 [P] [US2] Write `tests/test_lock_rules.sh`: assert L1 in `agents/st-test.md`,
   `agents/st-build.md`, `agents/st-debug.md` and `skills/st-build/SKILL.md`, L2 in the three
   agents, L3 in `skills/st-build/SKILL.md`. Run it: red. Owns: `tests/test_lock_rules.sh`. Test:
   `bash tests/test_lock_rules.sh`. (FR-010, lessons L1)
-- [ ] T012 [P] [US2] In `tests/test_st_worker.sh` case S1, assert the brief holds the whole B1
+- [X] T012 [P] [US2] In `tests/test_st_worker.sh` case S1, assert the brief holds the whole B1
   line (`grep -qxF`). Run it: red. Owns: `tests/test_st_worker.sh`. Test:
   `bash tests/test_st_worker.sh`. (FR-010, lessons L37)
 
@@ -219,7 +219,7 @@ the High talk.
 
 ### Tests (write first, must fail)
 
-- [ ] T050 [US3] Live probe of the Stratum Codex home (research R-J, D25). Runs in wave 1, before
+- [X] T050 [US3] Live probe of the Stratum Codex home (research R-J, D25). Runs in wave 1, before
   any Codex adapter task. In a herdr pane: make `<scratchpad>/cxhome/` holding only
   `auth.json -> ~/.codex/auth.json`; make `<scratchpad>/cxproj/` (`git init`) with
   `.codex/config.toml` holding a canary `notify = ["sh", "-c", "touch <scratchpad>/canary-notify"]`
@@ -277,7 +277,7 @@ the High talk.
   Run it: red. Owns: `tests/test_advisor_matrix.sh`, `tests/test_advisor.sh`. Test:
   `bash tests/test_advisor_matrix.sh`. (FR-011, FR-012, FR-013, FR-014, FR-015, FR-016,
   D24, D25, lessons L14, L16, L17, L26, L31)
-- [ ] T019 [P] [US3] Wave 2, after T050 passed. Write `tests/test_codex_agent.sh` for `scripts/st-codex-agent.sh` with a
+- [X] T019 Not run, T050 failed: check 1, the agent gave no answer. [P] [US3] Wave 2, after T050 passed. Write `tests/test_codex_agent.sh` for `scripts/st-codex-agent.sh` with a
   stub `herdr` whose ids have a random part (lessons L26) and whose `agent read` prints plain
   text (lessons L31), from a temp project with `specs/010-demo/`. Cases from contracts/scripts.md
   section 2, each run with a temp `<codex home>` whose `auth.json` is a symlink: (a0) a
@@ -314,7 +314,7 @@ the High talk.
 
 ### Build
 
-- [ ] T021 [P] [US3] Wave 3, after T050 passed and T019. Write `scripts/st-codex-agent.sh` (contracts/scripts.md section 2). Owns:
+- [X] T021 Not run, T050 failed: check 1, the agent gave no answer. [P] [US3] Wave 3, after T050 passed and T019. Write `scripts/st-codex-agent.sh` (contracts/scripts.md section 2). Owns:
   `scripts/st-codex-agent.sh`. Test: `bash tests/test_codex_agent.sh`. (FR-013, lessons L26,
   L30, L31, L33)
 - [ ] T022 [P] [US3] Write R1 to R3 and R12 in `skills/st/SKILL.md` (R1 replaces the lane line,
@@ -337,7 +337,7 @@ the High talk.
   sections 1.3 to 1.5). Depends on T021. Owns: `scripts/st-advisor.sh`. Test:
   `bash tests/test_advisor_matrix.sh && bash tests/test_advisor.sh && bash tests/test_advisor_waive.sh`.
   (FR-012 to FR-016, security note S1, lessons L14, L16, L17)
-- [ ] T024 [US3] Only if T050 passed. First run quickstart section 0 step 2 (the scripts in use are
+- [X] T024 Not run, T050 failed: check 1, the agent gave no answer. [US3] Only if T050 passed. First run quickstart section 0 step 2 (the scripts in use are
   this branch's); no live result counts before it passes. Then the live run of quickstart section
   3L in a scratch clone in herdr. Record in research.md R-H: the time, the lines read, whether the
   JSON parsed, the tab and agent names, steps 2 to 4, and `test -L ~/.local/state/stratum/codex-home/auth.json`
@@ -498,7 +498,7 @@ prompts through the hook; normal mode never answers them.
   the layout changes, and name each one in the report. Run it: red. Owns:
   `tests/test_st_worker.sh`. Test: `bash tests/test_st_worker.sh`. (FR-017, FR-018, FR-019,
   FR-021, D23, lessons L26, L27, L34, L37)
-- [ ] T028 [P] [US4] In `tests/test_statusline.sh` add: input with `"session_id":"S1"` and
+- [X] T028 [P] [US4] In `tests/test_statusline.sh` add: input with `"session_id":"S1"` and
   `.stratum/autonomous` holding `S1`: line 2 has ` autonomous `; the file holds `S2`: no
   `autonomous`; no file: no `autonomous`; (F2) input `cwd` a linked worktree whose own
   `.stratum/autonomous` holds `S1` while the main checkout's holds `S2`: no `autonomous`, and the
@@ -583,11 +583,11 @@ new screens to the Design lane and runs file-disjoint stories together.
 
 ### Tests (write first, must fail)
 
-- [ ] T036 [P] [US5] Write `tests/test_plan_rules.sh`: assert DL1 to DL10 and DL18 in their files and
+- [X] T036 [P] [US5] Write `tests/test_plan_rules.sh`: assert DL1 to DL10 and DL18 in their files and
   the "Gone" lines for `agents/st-plan.md`, `procedures/tasks.md` and `templates/tasks.md`. Run
   it: red. Owns: `tests/test_plan_rules.sh`. Test: `bash tests/test_plan_rules.sh`. (FR-023,
   FR-026, lessons L1, L41)
-- [ ] T037 [P] [US5] Write `tests/test_screen_rules.sh`: assert DL11 to DL17 and that `design brief`
+- [X] T037 [P] [US5] Write `tests/test_screen_rules.sh`: assert DL11 to DL17 and that `design brief`
   is gone from `agents/st-build.md` and ``merge it into `main` `` from `skills/st-build/SKILL.md`.
   Run it: red. Owns: `tests/test_screen_rules.sh`. Test: `bash tests/test_screen_rules.sh`.
   (FR-024, FR-025, FR-026, lessons L1, L11, L12, L40)
@@ -617,12 +617,12 @@ new screens to the Design lane and runs file-disjoint stories together.
 
 ### Tests (write first, must fail)
 
-- [ ] T041 [P] [US6] Write `tests/test_triage_rules.sh`: assert TP1 to TP4 and the US6 "Gone" lines
+- [X] T041 [P] [US6] Write `tests/test_triage_rules.sh`: assert TP1 to TP4 and the US6 "Gone" lines
   (`Make GitHub issues from the tasks?` in no `skills/*/SKILL.md`), and that
   `Next phase: \`/stratum:st-inspect\`.` stays in `skills/st-plan/SKILL.md`. Run it: red. Owns:
   `tests/test_triage_rules.sh`. Test: `bash tests/test_triage_rules.sh`. (FR-028, FR-029,
   lessons L1, L12, L38)
-- [ ] T042 [P] [US6] Write `tests/test_no_frontend_design.sh`:
+- [X] T042 [P] [US6] Write `tests/test_no_frontend_design.sh`:
   `grep -rn frontend-design <root> --exclude-dir=.git --exclude-dir=specs --exclude=test_no_frontend_design.sh`
   prints nothing; `skills/st-frontend-design/` and `licenses/frontend-design.Apache-2.0.txt` do
   not exist; `vendor.lock` is valid JSON with no `frontend-design` key; and the two-way README
