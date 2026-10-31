@@ -28,5 +28,8 @@ check "gone issue question" '[ -z "$(grep -lF -- "Make GitHub issues from the ta
 check "gone st-plan question" '! grep -qF -- "or at the \`st-plan\` question" "$root/skills/st/SKILL.md"'
 check "gone offer issues" '! grep -qF -- "then offer GitHub issues" "$root/skills/st-plan/SKILL.md"'
 check "gone asks issues" '! grep -qF -- "(asks: make GitHub issues?)" "$root/skills/st-full/SKILL.md"'
+check "gone readme issues" '! grep -qF -- "Asked: make GitHub issues?" "$root/README.md"'
+check "gone design issues" '! grep -qF -- "Orchestrator asks: make GitHub issues?" "$root/DESIGN.md"'
+check "gone status issues" '! grep -qF -- "Plan → \"make GitHub issues?\"" "$root/skills/st-status/SKILL.md"'
 
 exit $fail

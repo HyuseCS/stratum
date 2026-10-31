@@ -76,7 +76,7 @@ The lane follows the highest impact area the change touches.
 | # | Phase | What happens | Gate |
 |---|-------|--------------|------|
 | 1 | Define | Grilling, then the spec, then clarify (if needed) and checklist | You agree the spec |
-| 2 | Plan | `st-plan` writes the plan and tasks. Open decisions come to you one at a time. It reads `docs/lessons.md` and cites the lessons that apply. | Asked: make GitHub issues? |
+| 2 | Plan | `st-plan` writes the plan and tasks. Open decisions come to you one at a time. It reads `docs/lessons.md` and cites the lessons that apply. | You answer its open decisions |
 | 3 | Inspect | `st-inspect` checks the files agree and the plan can be built | You OK the build |
 | 4 | Build | Per task: failing test, build, check, commit. Per story: one `st-review` pass, design review for screens. | None unless blocked |
 | 5 | Close | Fix spec drift, optional gap report, proposed lessons, shortcut list | Push only when you say "push" |

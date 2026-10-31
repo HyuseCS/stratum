@@ -10,7 +10,7 @@ block. Change nothing.
 
 1. **Work:** from `<project>/.stratum/state.json`: feature dir, phase, lane. Tasks done and total
    from `<feature dir>/tasks.md` (lines `- [x]`/`- [X]` against all `- [ ]`/`- [x]` task lines).
-2. **Next gate:** Define → "you agree the spec"; Plan → "make GitHub issues?"; Inspect → "you OK the
+2. **Next gate:** Define → "you agree the spec"; Plan → "you answer its open decisions"; Inspect → "you OK the
    build"; Build → "none unless blocked"; Close → "push on your word"; Fast lane → "you OK the
    change plan".
 3. **Git guard:** for each of `commit`, `worktree_remove`, `worktree_prune`, `branch_delete`,

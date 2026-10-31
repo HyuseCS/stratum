@@ -14,6 +14,8 @@ If `<project>/.stratum/` does not exist, stop and tell the user to run `/stratum
 ## 1. Pick the lane
 
 When the task names GitHub issue numbers (`#51` or an issue URL), run `/stratum:st-triage` on them first (Skill tool), show its short verdict per issue, then pick the lane.
+Pass st-triage only the issue numbers; take the number from an issue URL.
+If triage says an issue is done or not valid, or triage stops, tell the user and wait for their word before you pick the lane.
 
 Find the impact areas the task touches (graph first: `graphify-out/GRAPH_REPORT.md`, then search).
 The highest area wins:

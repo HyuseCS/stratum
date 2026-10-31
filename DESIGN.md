@@ -124,7 +124,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 | # | Phase | Steps | Gate after |
 |---|-------|-------|------------|
 | 1 | Define (orchestrator) | grill → specify → clarify only if gaps remain → checklist | User agrees the spec |
-| 2 | Plan (`st-plan`) | plan → tasks. Open decisions return to the orchestrator and are grilled one at a time, then `st-plan` resumes. | Orchestrator asks: make GitHub issues? |
+| 2 | Plan (`st-plan`) | plan → tasks. Open decisions return to the orchestrator and are grilled one at a time, then `st-plan` resumes. | User answers its open decisions |
 | 3 | Inspect (`st-inspect`) | analyze and validate in one pass. Findings that need a decision go to the user. | User OKs the build |
 | 4 | Build | See the build loop | None unless blocked or a decision falls outside the plan |
 | 5 | Close (`st-close`) | Drift fixes, gap report, lessons, shortcuts, docs graph update | Push only on the user's "push" |
