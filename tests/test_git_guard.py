@@ -364,9 +364,16 @@ class GitGuardTest(unittest.TestCase):
         self.assertEqual(self.run_guard(
             "cat > f.md <<'EOF'\nthe git guard can't read this\ngit push --force\nEOF"), (None, ""))
 
-    def test_quoted_heredoc_python_text_no_decision(self):
+    def test_quoted_heredoc_tee_body_no_decision(self):
+        for cmd in ("tee notes.md <<'EOF'\ngit push --force\nit's text\nEOF",
+                    "tee -a notes.md <<\"EOF\"\ngit push --force\nit's text\nEOF",
+                    "cat <<-'EOF' >> notes.md\ngit push --force\nit's text\n\tEOF"):
+            with self.subTest(cmd=cmd):
+                self.assertEqual(self.run_guard(cmd), (None, ""))
+
+    def test_quoted_heredoc_python_text_asks(self):
         self.assertEqual(self.run_guard(
-            "python3 - <<'PY'\ns=\"it's git push text\"\nopen('a','w').write(s)\n# it's\nPY"), (None, ""))
+            "python3 - <<'PY'\ns=\"it's git push text\"\nopen('a','w').write(s)\n# it's\nPY")[0], "ask")
 
     def test_quoted_heredoc_python_subprocess_asks(self):
         cmd = ("python3 - <<'PY'\nimport subprocess\nsubprocess.run(['git','push','--force'])\n"
@@ -390,6 +397,63 @@ class GitGuardTest(unittest.TestCase):
         d, reason = self.run_guard("git commit -F - <<'EOF'\nmsg it's\nEOF")
         self.assertEqual(d, "ask")
         self.assertIn("git commit (commit: ask)", reason)
+
+    def test_heredoc_must_ask_reader_after_redirect_or_keyword(self):
+        for opener in ("<<'EOF' bash", "time bash <<'EOF'", "if bash <<'EOF'", "! bash <<'EOF'"):
+            with self.subTest(opener=opener):
+                d, reason = self.run_guard(f"{opener}\ngit push --force\n# it's a push\nEOF")
+                self.assertEqual(d, "ask")
+                self.assertIn("force push", reason)
+
+    def test_heredoc_must_ask_opener_in_comment(self):
+        for opener in ("# Example: cat <<'exit'", "true # note; cat <<'exit'"):
+            with self.subTest(opener=opener):
+                d, reason = self.run_guard(f"{opener}\ngit push --force\n# it's a comment\nexit")
+                self.assertEqual(d, "ask")
+                self.assertIn("force push", reason)
+
+    def test_heredoc_must_ask_inside_unquoted_body(self):
+        for cmd in ("cat <<OUTER\ncat <<'INNER'\n$(git push --force)\n# it's expanded\nINNER\nOUTER",
+                    "cat <<OUTER\ncat <<'INNER'\nINNER\nOUTER\ngit push --force\n# it's",
+                    "cat <<E\nx\\\nE\ncat <<'X'\n$(git push --force)\n# it's\nX\nE"):
+            with self.subTest(cmd=cmd):
+                self.assertEqual(self.run_guard(cmd)[0], "ask")
+
+    def test_heredoc_must_ask_python_execvp(self):
+        cmd = ("python3 - <<'PYTHON'\nfrom os import execvp\n# it's a push\n"
+               "execvp('git', ['git', 'push', '--force'])\nPYTHON")
+        self.assertEqual(self.run_guard(cmd)[0], "ask")
+
+    def test_heredoc_must_ask_cat_feeds_a_reader(self):
+        for cmd in ("cat <<'EOF' | sh\ngit push --force\n# it's\nEOF",
+                    "{\ncat <<'EOF'\ngit push --force\n# it's\nEOF\n} | sh",
+                    "$(\ncat <<'EOF'\ngit push --force\nEOF\n)\n# it's",
+                    "bash -c \"\ncat <<'EOF'\n\" ; git push --force\nEOF",
+                    "cat <<'EOF' 2>${x- #} | sh\ngit push --force\n# it's\nEOF",
+                    "sh -s \\; cat <<'EOF'\ngit push --force\n# it's\nEOF",
+                    "cat <<'EOF'\ngit push --force\n# it's"):
+            with self.subTest(cmd=cmd):
+                self.assertEqual(self.run_guard(cmd)[0], "ask")
+
+    def test_heredoc_must_ask_file_then_run(self):
+        for cmd in ("cat > f.sh <<'EOF'\ngit push --force\n# it's\nEOF\nsh f.sh",
+                    "cat > f.sh <<'EOF'\ngit push --force\n# it's\nEOF\nchmod +x f.sh && ./f.sh",
+                    "cat > f.sh <<'EOF'\ngit push --force\n# it's\nEOF\ncat <<X\n$(sh f.sh)\nX",
+                    "cat > f.sh <<'EOF'\ngit push --force\n# it's\nEOF\nx=$(sh f.sh)",
+                    "cat > f.sh <<'EOF'\ngit push --force\n# it's\nEOF\ntimeout 5 ./f.sh",
+                    "cat > f.sh <<'EOF'\ngit push --force\n# it's\nEOF\nnohup ./f.sh",
+                    "cat > f.sh <<'EOF'\ngit push --force\n# it's\nEOF\nmake",
+                    "cat > f.sh <<'EOF'\ngit push --force\n# it's\nEOF\nnpm run x",
+                    "PATH=/tmp/x cat > f.md <<'EOF'\ngit push --force\n# it's\nEOF",
+                    "PATH=/tmp/x\ncat > f.md <<'EOF'\ngit push --force\n# it's\nEOF"):
+            with self.subTest(cmd=cmd):
+                self.assertEqual(self.run_guard(cmd)[0], "ask")
+
+    def test_quoted_heredoc_then_plain_command_no_decision(self):
+        for cmd in ("cat > f.md <<'EOF'\ngit push text\n# it's\nEOF\nls f.md",
+                    "cd /tmp && cat > a/b.md <<'EOF'\ngit push text\n# it's\nEOF\nls a"):
+            with self.subTest(cmd=cmd):
+                self.assertEqual(self.run_guard(cmd), (None, ""))
 
 
 if __name__ == "__main__":

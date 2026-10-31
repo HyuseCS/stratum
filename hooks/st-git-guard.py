@@ -13,10 +13,11 @@ RANK = {None: 0, "ask": 1, "deny": 2}
 GIT_WORD = re.compile(r"(?<![^\s;&|()\[\],`/$=])git(?![^\s;&|()\[\],`<>])")
 UNQUOTE = str.maketrans("", "", "\\'\"")
 PREFIX = ("command", "builtin", "exec")
-RUNNERS = {"sh", "bash", "zsh", "dash", "ksh", "fish", "eval", "xargs", "env", "sudo", "exec", "source", "."}
-PROCESS_CALLS = ("subprocess", "os.system", "popen", "Popen", "os.exec", "spawn", "child_process",
-                 "execSync", "Runtime.exec", "system(", "shell_exec")
-HEREDOC = re.compile(r"(?<!<)<<(?!<)(-?)\s*(?:(['\"])([^'\"\s]+)\2)?")
+TOKEN = re.compile(r"""[ \t]*(?:(\d*(?:<<-|<<<|<>|>\||[<>][<>&]?)|&>>?)|([;&|]+)|([()])"""
+                   r"""|((?:[^\s;&|()<>'"\\]|\\.|'[^']*'|"(?:[^"\\]|\\.)*")+))""")
+COMPOUND = {"{", "if", "then", "else", "elif", "do", "while", "until", "for", "case", "select", "function",
+            "coproc"}
+INERT = {"cat", "tee", "cd", "echo", "printf", "ls", "mkdir", "true", ":", "wc", "pwd"}
 
 
 def segments(command):
@@ -198,27 +199,55 @@ def judge(sub, args, gitdir, elsewhere=False, conf=()):
     return None, ""
 
 
-def quoted_body(line, rest):
-    m = HEREDOC.search(line)
-    if not m or not m.group(3):
-        return 0
-    dash, tag = m.group(1), m.group(3)
-    try:
-        segs = list(segments(line))
-    except ValueError:
-        return 0
-    if not any(a == "<<" and b == dash + tag for s in segs for a, b in zip(s, s[1:])):
-        return 0
-    for seg in segs:
+def heredocs(line):
+    toks, pos, stop = [], 0, len(line.rstrip(" \t"))
+    while pos < stop:
+        m = TOKEN.match(line, pos)
+        if not m or m[3] or m[4] and any(s in m[4] for s in ("`", "${", "$'")):
+            return None
+        if m[4] and m[4][0] == "#":
+            break
+        toks.append(m)
+        pos = m.end()
+    docs, seg, runs = [], [], False
+    for m in toks + [None]:
+        if m and not m[2]:
+            seg.append(m)
+            continue
+        words, tags, it = [], [], iter(seg)
+        for t in it:
+            if t[1]:
+                target = next(it, None)
+                if not target or not target[4]:
+                    return None
+                if t[1].lstrip("0123456789") in ("<<", "<<-"):
+                    tags.append((target[4], t[1].endswith("-")))
+            else:
+                words.append(t[4])
+        if any(w in COMPOUND for w in words):
+            return None
         i = 0
-        while i < len(seg) - 1 and (seg[i] in PREFIX or "=" in seg[i] and not seg[i].startswith("-")):
+        while i < len(words) and (words[i] in PREFIX or "=" in words[i] and not words[i].startswith("-")):
             i += 1
-        if any(os.path.basename(w) in RUNNERS for w in seg[:i + 1]):
-            return 0
-    for n, body in enumerate(rest):
-        if body == tag or dash and body.lstrip("\t") == tag:
-            return 0 if any(p in "\n".join(rest[:n]) for p in PROCESS_CALLS) else n + 1
-    return 0
+        runs = runs or i < len(words) and words[i] not in INERT or any("=" in w for w in words[:i])
+        reader = words[i:] and os.path.basename(words[i]) in ("cat", "tee") and not (m and "|" in m[2]) \
+            and all(w in ("-a", "--append", "-") or not w.startswith("-") for w in words[i + 1:])
+        for word, dash in tags:
+            quoted = re.fullmatch(r"'[^']*'|\"[^\"\\]*\"", word)
+            if not quoted and any(c in word for c in "'\"\\"):
+                return None
+            docs.append((word[1:-1] if quoted else word, dash, bool(quoted), bool(reader and quoted)))
+        seg = []
+    return docs, runs
+
+
+def body_end(lines, start, tag, dash, quoted):
+    for j in range(start, len(lines)):
+        if lines[j] == tag or dash and lines[j].lstrip("\t") == tag:
+            return j
+        if not quoted and lines[j].endswith("\\"):
+            break
+    return len(lines)
 
 
 def main():
@@ -277,12 +306,31 @@ def main():
             check(seg)
     except ValueError:
         decision, reasons, here, left = None, [], cwd, False
-        lines, skip = command.split("\n"), 0
+        lines, bodies, clean, runs, quiet = command.split("\n"), [], True, False, set()
         for n, line in enumerate(lines):
-            if skip:
-                skip -= 1
+            if bodies:
+                end, reader, quoted = bodies[0]
+                if reader:
+                    quiet.add(n)
+                elif not quoted and ("$(" in line or "`" in line):
+                    runs = True
+                if n == end:
+                    bodies.pop(0)
+            elif clean:
+                found = heredocs(line)
+                clean = found is not None
+                docs, more = found or ((), False)
+                runs = runs or more
+                start = n + 1
+                for tag, dash, quoted, reader in docs:
+                    end = body_end(lines, start, tag, dash, quoted)
+                    bodies.append((end, reader and end < len(lines), quoted))
+                    start = end + 1
+        if runs or not clean:
+            quiet = set()
+        for n, line in enumerate(lines):
+            if n in quiet:
                 continue
-            skip = quoted_body(line, lines[n + 1:])
             if not GIT_WORD.search(line.translate(UNQUOTE)):
                 continue
             try:
