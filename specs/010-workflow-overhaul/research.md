@@ -291,3 +291,53 @@ sentence. `tests/test_inspect.sh:111-127` checks README skill rows both ways and
 T050 (Stratum Codex home probe, R-J, runs first), T024 (Codex plan review through herdr, real answer length), T034 (worker with full layout,
 autonomous approval through the plugin hook, `pass`, a hook wait past 120 s). Each one is
 recorded here when it runs, or ticked with `Not run, <first error line>` (L32).
+
+- T050: failed at check 1 (R-J). T019, T021 and T024: not run.
+- T034: not run. The PC was not reachable this session, so quickstart 4L (and the D28 step on a
+  saved machine) must run before the merge.
+- T049, 2026-10-31, on `125e02c`:
+  - Section 1 (scratch repo, stub `codex`, mode `codex`): `plan` printed `APPROVED sha256 54b05a…`;
+    `waive plan … "fix-only change"` printed `WAIVED sha256 54b05a…` and `reason: fix-only change`
+    with no new `codex` call (1 call in all); `check plan` printed `WAIVED sha256 54b05a…`, rc 0;
+    after a change to `tasks.md` it printed `advisor approval is stale`, rc 1; `count` printed
+    `advisor calls: codex 1, waived 1, /advisor 0`; `diff … HEAD` printed `no change since HEAD: skip`.
+  - Section 2 (this repo): a second `st-lock.sh -- echo second` printed
+    `lock: waiting for test (pid <A>)`, then `second` after A ended; `--timeout 3` printed
+    `lock: waited 3 s for test; held by pid <A> since <time>; ran nothing`, exit 75, no `never`;
+    after `kill -9` of the holder, `st-lock.sh -- echo freed` printed `freed` at once.
+  - Section 6: `git grep -n frontend-design -- ':!specs'` lists only
+    `tests/test_no_frontend_design.sh`; test_triage_rules, test_no_frontend_design, test_inspect and
+    test_design_lane exit 0.
+
+## R-I. Negative controls
+
+Base `6fe9d60`, HEAD `125e02c`. Old tree: git worktree at `<scratchpad>/old`, detached at 6fe9d60. All 19 changed or new test files were green at HEAD (rc 0), then copied into the old tree and run there. Unit: one `ok` or `FAIL` line per case in the `.sh` files, one method per case in the `.py` files (`python3 <file> -v`). Red = a changed behavior that fails on old. Same = a kept behavior, or a no-output or negative check that old also passes. `tests/test_codex_agent.sh` is skipped (T050 failed).
+
+| File | Red on old | Same on old | Verdict |
+|---|---|---|---|
+| tests/test_advisor.sh | 3 | 79 | OK |
+| tests/test_advisor_matrix.sh | 20 | 11 | OK, see note 2 |
+| tests/test_advisor_rules.sh | 14 | 1 | OK |
+| tests/test_advisor_waive.sh | 33 | 3 | OK |
+| tests/test_approve_hook.py | 31 | 0 | OK, see note 1 |
+| tests/test_git_guard.py | 9 | 37 | OK |
+| tests/test_lane_steps.sh | 29 | 0 | OK |
+| tests/test_lock.sh | 13 | 0 | OK, see note 1 |
+| tests/test_lock_rules.sh | 8 | 0 | OK |
+| tests/test_no_frontend_design.sh | 4 | 2 | OK |
+| tests/test_on_demand.sh | 4 | 164 | OK, see note 3 |
+| tests/test_plan_rules.sh | 15 | 0 | OK |
+| tests/test_risk_rules.sh | 22 | 2 | OK, see note 4 |
+| tests/test_screen_rules.sh | 9 | 0 | OK |
+| tests/test_st_worker.sh | 87 | 385 | OK |
+| tests/test_statusline.sh | 4 | 53 | OK |
+| tests/test_test_scope.sh | 11 | 1 | OK |
+| tests/test_triage_rules.sh | 11 | 1 | OK |
+| tests/test_worker_rules.sh | 20 | 1 | OK |
+
+Total: 347 red, 740 same. Every file has at least one red case.
+
+1. Red by absence. `scripts/st-lock.sh` and `hooks/st-approve.py` do not exist at 6fe9d60. In `test_approve_hook.py`, 155 of 156 failures are `hooks/st-approve.py does not exist yet`. Only `test_registered_in_commands_json` checks the changed `commands.json`.
+2. `test_advisor_matrix.sh` aborts on old at `(j) count` (`usage: unbound variable` under `set -u`). The literal run evaluates 25 of 31 cases (17 red, 8 same). The table uses a scratch copy with `set -u` relaxed, which evaluates all 31.
+3. `test_on_demand.sh` check `#18 plan-only st-build no diff point` changed and passes on old. The grep matches zero lines on old, as T003 intends.
+4. `test_risk_rules.sh` R21 passes on old. With T050 failed, the fallback sentence equals `README.md:182` at 6fe9d60.

@@ -546,7 +546,7 @@ prompts through the hook; normal mode never answers them.
   `README.md`. Test:
   `bash tests/test_worker_rules.sh && bash tests/test_on_demand.sh && bash tests/test_risk_rules.sh && bash tests/test_lock_rules.sh && bash tests/test_advisor_rules.sh && bash tests/test_test_scope.sh && bash tests/test_screen_rules.sh && ! bash tests/test_inspect.sh | grep '^FAIL' | grep -vxF 'FAIL README tests'`.
   (FR-017 to FR-022, D23, security note S4)
-- [ ] T034 [US4] First run quickstart section 0 step 3 (the hook in use is this branch's) on each
+- [X] T034 Not run, the PC was not reachable this session; run quickstart 4L before the merge. [US4] First run quickstart section 0 step 3 (the hook in use is this branch's) on each
   machine used; no live result counts before it passes. If the `/plugin` update route does not
   make it pass, tick T034 `Not run, <the probe's result>`. Then the live run of quickstart section
   4L on a scratch branch in herdr. Record each step's output in research.md R-H, including whether the hook answers after more than 120 s.
@@ -658,7 +658,7 @@ new screens to the Design lane and runs file-disjoint stories together.
   `README.md`. Then `bash tests/test_lane_steps.sh` must be green: every FR-027 row is fixed. A
   red row goes back to the task named in the plan.md FR-027 table. Owns: `README.md`. Test:
   `bash tests/test_lane_steps.sh && bash tests/test_inspect.sh`. (FR-027, FR-031, lessons L7)
-- [ ] T047 FR-031 negative controls. Make a worktree of `6fe9d60` in the scratchpad
+- [X] T047 FR-031 negative controls. Make a worktree of `6fe9d60` in the scratchpad
   (`git worktree add <scratchpad>/old 6fe9d60`), copy each new test file and each changed test
   file into it, and run each one there right after its green run here (lessons L25). Count only the
   cases whose behavior this feature changes: each must be red there, and each new file must
@@ -668,13 +668,13 @@ new screens to the Design lane and runs file-disjoint stories together.
   negative controls". Remove nothing: tell the user the scratch worktree path. Owns:
   `specs/010-workflow-overhaul/research.md`. Test: the commands of T048, run in the old
   worktree. (FR-031, lessons L2, L20, L25)
-- [ ] T048 Scoped regression of every test file this feature adds or whose files it changes, one
+- [X] T048 Scoped regression of every test file this feature adds or whose files it changes, one
   command at a time:
   `bash tests/test_lane_steps.sh && bash tests/test_advisor.sh && bash tests/test_advisor_waive.sh && bash tests/test_advisor_rules.sh && bash tests/test_test_scope.sh && bash tests/test_lock.sh && bash tests/test_lock_rules.sh && bash tests/test_advisor_matrix.sh && { [ ! -f tests/test_codex_agent.sh ] || bash tests/test_codex_agent.sh; } && bash tests/test_risk_rules.sh && bash tests/test_st_worker.sh && bash tests/test_statusline.sh && bash tests/test_worker_rules.sh && bash tests/test_plan_rules.sh && bash tests/test_screen_rules.sh && bash tests/test_triage_rules.sh && bash tests/test_no_frontend_design.sh && bash tests/test_on_demand.sh && bash tests/test_design_lane.sh && bash tests/test_inspect.sh && bash tests/test_verify.sh && bash tests/test_shortcuts.sh && bash tests/test_model_files.sh && PYTHONDONTWRITEBYTECODE=1 python3 tests/test_git_guard.py && PYTHONDONTWRITEBYTECODE=1 python3 tests/test_approve_hook.py && PYTHONDONTWRITEBYTECODE=1 python3 tests/test_phase_hook.py && PYTHONDONTWRITEBYTECODE=1 python3 tests/test_model_hook.py`.
   Not in the list because no file they check changes: `test_design_check.sh`,
   `test_herdr_workspace.sh`, `test_pr_skill.sh`, `test_session_hooks.sh`,
   `test_pr_workflow.mjs`, `test_token_weather.mjs`. Owns: nothing. Test: the command above.
-- [ ] T049 Run the hand checks of quickstart sections 1, 2 and 6 and record the outputs in
+- [X] T049 Run the hand checks of quickstart sections 1, 2 and 6 and record the outputs in
   research.md R-H. Owns: `specs/010-workflow-overhaul/research.md`. Test: the commands in those
   sections.
 
