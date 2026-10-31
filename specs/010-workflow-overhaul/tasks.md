@@ -653,7 +653,7 @@ new screens to the Design lane and runs file-disjoint stories together.
 
 ## Phase 9: Polish and cross-cutting
 
-- [ ] T046 README task 2 of 2, and the FR-027 check. Add `bash tests/test_risk_rules.sh` and
+- [X] T046 README task 2 of 2, and the FR-027 check. Add `bash tests/test_risk_rules.sh` and
   `bash tests/test_worker_rules.sh` (the test files made after wave 3) to the Tests block of
   `README.md`. Then `bash tests/test_lane_steps.sh` must be green: every FR-027 row is fixed. A
   red row goes back to the task named in the plan.md FR-027 table. Owns: `README.md`. Test:

@@ -343,6 +343,8 @@ bash tests/test_plan_rules.sh
 bash tests/test_screen_rules.sh
 bash tests/test_triage_rules.sh
 bash tests/test_no_frontend_design.sh
+bash tests/test_risk_rules.sh
+bash tests/test_worker_rules.sh
 node tests/test_token_weather.mjs
 node tests/test_pr_workflow.mjs
 claude plugin validate .claude-plugin/plugin.json
