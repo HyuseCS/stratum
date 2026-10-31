@@ -4,7 +4,7 @@ usage() { echo "usage: st-advisor.sh plan|test|diff|decisions|round|check|contin
 cmd=run
 case ${1:-} in check|continued|waive|note|round|talk) cmd=$1; shift ;; count) cmd=count ;; esac
 point=${1:-}
-case "$cmd $point $#" in "run plan 2"|"run test 6"|"run diff 3"|"run decisions 3"|"round plan 4"|"round test 4"|"round diff 4"|"round decisions 4"|"check plan 2"|"continued plan 2"|"continued test 2"|"waive plan 3"|"note plan 3"|"note test 3"|"note diff 3"|"note decisions 3"|"talk plan 3"|"talk test 3"|"talk diff 3"|"talk decisions 3"|"count count 2") ;; *) usage ;; esac
+case "$cmd $point $#" in "run plan 2"|"run test 6"|"run diff 3"|"run decisions 3"|"round plan 4"|"round test 4"|"round diff 4"|"round decisions 4"|"check plan 2"|"continued plan 2"|"continued test 2"|"continued diff 2"|"continued decisions 2"|"waive plan 3"|"note plan 3"|"note test 3"|"note diff 3"|"note decisions 3"|"talk plan 3"|"talk test 3"|"talk diff 3"|"talk decisions 3"|"count count 2") ;; *) usage ;; esac
 at=$point
 label=$point
 [ $cmd = round ] && { at=round; label="$point round $3"; }
@@ -35,10 +35,6 @@ if [ $cmd = talk ]; then
   echo "talk recorded: $point, $n rounds"
   exit 0
 fi
-if [ $cmd = waive ]; then
-  last=$(awk '/^## plan \| [^|]* \| sha256 /{sub(/^.* sha256 [^ ]* \| /, ""); v=$0; bad=0; r=1; next} /^## /{r=0} r && /^- / && !/^- \[(MEDIUM|LOW)\] /{bad=1} END{if (v != "") print v (bad ? " bad" : "")}' "$f/advisor.md" 2>/dev/null)
-  case ${last:=none} in APPROVED|WAIVED|REVISE) ;; *) echo "nothing to waive: the last plan record is ${last% bad}"; exit 1 ;; esac
-fi
 if [ $cmd = check ] || [ $cmd = continued ]; then
   rec=$(grep -aE "^## $point \| [^|]* \| sha256 " "$f/advisor.md" 2>/dev/null | tail -n1)
   if [ -z "$rec" ]; then echo "no record: $point"; [ $cmd = check ] && exit 1; exit 2; fi
@@ -56,8 +52,13 @@ case $cmd-$point in
   *-decisions) [ -f "$3" ] && [ -r "$3" ] || usage ;;
   *-test) [ -f "$3" ] && [ -r "$3" ] && [ -f "$5" ] && [ -r "$5" ] && [ -f "$6" ] && [ -r "$6" ] || usage ;;
   *-diff) git rev-parse --verify --quiet "$3^{commit}" >/dev/null || usage
-    git diff --quiet "$3" HEAD && { echo "no change since $3: skip"; exit 0; } ;;
+    git diff --quiet "$3" HEAD --
+    case $? in 0) echo "no change since $3: skip"; exit 0 ;; 1) ;; *) usage ;; esac ;;
 esac
+if [ $cmd = waive ]; then
+  last=$(awk '/^## plan \| [^|]* \| sha256 /{sub(/^.* sha256 [^ ]* \| /, ""); v=$0; bad=0; r=1; next} /^## /{r=0} r && /^- / && !/^- \[(MEDIUM|LOW)\] /{bad=1} END{if (v != "") print v (bad ? " bad" : "")}' "$f/advisor.md" 2>/dev/null)
+  case ${last:=none} in APPROVED|WAIVED|REVISE) ;; *) echo "nothing to waive: the last plan record is ${last% bad}"; exit 1 ;; esac
+fi
 bad=0
 if [ $cmd = run ]; then
   [ -e .stratum/advisor.json ] || { echo 'no advisor: mode not set. Write .stratum/advisor.json with "mode": "auto", "codex", "both" or "off".'; exit 0; }
@@ -112,7 +113,7 @@ case $cmd-$point in
   *-decisions) hash=$(sha256sum < "$3") || { echo "cannot hash inputs"; exit 2; } ;;
   *-plan) hash=$({ cat "$f/spec.md" && awk '/^```/{f=!f} !f&&/^## Validate$/{s=1;next} !f&&/^## /{s=0} !s' "$f/plan.md" && cat "$f/tasks.md"; } | sha256sum) || { echo "cannot hash inputs"; exit 2; } ;;
   *-test) hash=$(cat "$5" "$6" | sha256sum) || { echo "cannot hash inputs"; exit 2; } ;;
-  *-diff) hash=$(git diff --no-ext-diff --no-color "$3" HEAD | sha256sum) || { echo "cannot hash inputs"; exit 2; } ;;
+  *-diff) hash=$(git diff --no-ext-diff --no-color "$3" HEAD -- | sha256sum) || { echo "cannot hash inputs"; exit 2; } ;;
 esac
 hash=${hash%% *}
 [[ $hash =~ ^[0-9a-f]{64}$ ]] || { echo "cannot hash inputs"; exit 2; }

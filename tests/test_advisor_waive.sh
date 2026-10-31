@@ -48,7 +48,9 @@ feat() {
   printf '# plan\nPLANBODY\n' > "$proj/$1/plan.md"
   printf '# tasks\n' > "$proj/$1/tasks.md"
 }
-for d in 001-demo 002-reasons 003-refuse 004-note 005-zero 006-cont 007-off 008-nofile 009-diff 010-hash; do feat "specs/$d"; done
+for d in 001-demo 002-reasons 003-refuse 004-note 005-zero 006-cont 007-off 008-nofile 009-diff 010-hash 011-cdiff 012-cdec 013-git; do feat "specs/$d"; done
+mkdir -p "$proj/specs/014-noplan"
+printf '# spec\n' > "$proj/specs/014-noplan/spec.md"
 git -C "$proj" add -A
 git -C "$proj" -c user.name=t -c user.email=t@t commit -q -m first
 first=$(git -C "$proj" rev-parse HEAD)
@@ -171,6 +173,34 @@ check "(k) diff after a commit, mode off: no advisor line" '[ $rc = 0 ] && [ "$(
 printf '{"mode": "codex"}' > "$proj/.stratum/advisor.json"
 run diff specs/009-diff nosuchref
 check "(l) diff with an unknown base: usage, exit 2" '[ "$(head -n1 <<<"$kout")" = "advisors: /advisor (mode codex)" ] && [ $rc = 2 ] && [[ "$(head -n1 <<<"$out")" == "usage: st-advisor.sh"* ]]'
+
+printf '{' > "$proj/.stratum/advisor.json"
+printf 'DECIDED\n' > "$tmp/list.txt"
+for p in diff decisions; do
+  d=specs/011-cdiff
+  [ $p = decisions ] && d=specs/012-cdec
+  rm -f "$tmp/argv"
+  if [ $p = diff ]; then run diff $d "$first"; else run decisions $d "$tmp/list.txt"; fi
+  bh=$(last_header $p $d | sed 's/^.* sha256 \([^ ]*\) .*$/\1/')
+  check "(m) $p with bad advisor.json: BLOCKED, record, no codex" '[ $rc = 1 ] && [ "$(head -n1 <<<"$out")" = "BLOCKED: bad advisor.json" ] && last_header $p $d | grep -q "| BLOCKED$" && [ ! -e "$tmp/argv" ]'
+  run continued $p $d
+  check "(m) continued $p after BLOCKED: exit 0, continued line and record" '[ $rc = 0 ] && [ "$out" = "BLOCKED, user continued sha256 $bh" ] && last_header $p $d | grep -qE "^## $p \| [^|]* \| sha256 $bh \| BLOCKED, user continued$"'
+done
+printf '{"mode": "codex"}' > "$proj/.stratum/advisor.json"
+
+git -C "$proj" branch a.py
+rm -f "$tmp/argv"
+run diff specs/013-git a.py
+check "(n) diff base named like a file, no change: skip, exit 0, no record" '[ $rc = 0 ] && [ "$out" = "no change since a.py: skip" ] && [ ! -e "$proj/specs/013-git/advisor.md" ] && [ ! -e "$tmp/argv" ]'
+realgit=$(command -v git)
+mkdir -p "$tmp/git128"
+printf '#!/usr/bin/env bash\n[ "$1 $2" = "diff --quiet" ] && exit 128\nexec %s "$@"\n' "$realgit" > "$tmp/git128/git"
+chmod +x "$tmp/git128/git"
+out=$(cd "$proj" && PATH="$tmp/git128:$PATH" bash "$root/scripts/st-advisor.sh" diff specs/013-git "$first"); rc=$?
+check "(n) git diff --quiet exits 128: usage, exit 2, no record" '[ $rc = 2 ] && [[ "$(head -n1 <<<"$out")" == "usage: st-advisor.sh"* ]] && [ ! -e "$proj/specs/013-git/advisor.md" ] && [ ! -e "$tmp/argv" ]'
+
+run waive plan specs/014-noplan fix-only
+check "(o) waive with no plan.md and no record: usage, exit 2, no record" '[ $rc = 2 ] && [[ "$(head -n1 <<<"$out")" == "usage: st-advisor.sh"* ]] && [ ! -e "$proj/specs/014-noplan/advisor.md" ]'
 
 check "no repo writes" '[ "$(git -C "$root" status --porcelain)" = "$repo_before" ]'
 exit $fail
