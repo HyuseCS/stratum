@@ -60,7 +60,7 @@ if [ $cmd = waive ]; then
   case ${last:=none} in APPROVED|WAIVED|REVISE) ;; *) echo "nothing to waive: the last plan record is ${last% bad}"; exit 1 ;; esac
 fi
 bad=0 say=
-if [ $cmd = run ]; then
+if [ $cmd = run ] || [ $cmd = round ]; then
   [ -e .stratum/advisor.json ] || { echo 'no advisor: mode not set. Write .stratum/advisor.json with "mode": "auto", "codex", "both" or "off".'; exit 0; }
   common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) && sf=$(dirname "$common")/.stratum/state.json || sf=.stratum/state.json
   cfg=$(python3 -I - "$sf" <<'PY'

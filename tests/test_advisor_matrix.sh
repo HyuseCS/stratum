@@ -223,6 +223,16 @@ r18='no advisor: mode not set. Write .stratum/advisor.json with "mode": "auto", 
 n0=$(nrec)
 run plan specs/001-demo
 check "(l) no advisor.json: R18 message, exit 0, no Codex, no record" '[ $rc = 0 ] && [ "$out" = "$r18" ] && calls_ok 0'
+run round plan specs/001-demo 1 "$tmp/views.txt"
+check "(n) round with no advisor.json: R18 message, exit 0, no Codex, no record" '[ $rc = 0 ] && [ "$out" = "$r18" ] && calls_ok 0'
+setmode '{"mode": "off"}'
+run round plan specs/001-demo 1 "$tmp/views.txt"
+check "(n) round with mode off: no advisor: mode off, exit 0, no Codex, no record" '[ $rc = 0 ] && [ "$out" = "no advisor: mode off" ] && calls_ok 0'
+setmode '{"mode": "auto", "model": "m1", "effort": "high"}'
+setrisk low
+approve
+run round plan specs/001-demo 1 "$tmp/views.txt"
+check "(n) round under auto at risk low: Codex runs with -m m1 and the effort option" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "advisors: codex (round, risk low)" ] && grep -x -A1 -- -m "$tmp/argv" | grep -qx m1 && grep -x -A1 -- -c "$tmp/argv" | grep -qxF "model_reasoning_effort=\"high\""'
 
 setmode '{"mode": "auto"}'
 setrisk high

@@ -90,12 +90,13 @@ Every task MUST strictly follow this format:
 7. **Description**: Clear action with exact file path
 
 Every task ends with `Test:` and its exact test command. No task runs the full test suite.
+Write each `Owns:` path in backticks.
 
 **Examples**:
 
 - ✅ CORRECT: `- [ ] T001 Create project structure per implementation plan`
-- ✅ CORRECT: `- [ ] T005 [P] Implement authentication middleware in src/middleware/auth.py. Owns: src/middleware/auth.py. Test: pytest tests/test_auth.py.`
-- ✅ CORRECT: `- [ ] T012 [P] [US1] Create User model in src/models/user.py. Owns: src/models/user.py. Test: pytest tests/test_user.py.`
+- ✅ CORRECT: ``- [ ] T005 [P] Implement authentication middleware in src/middleware/auth.py. Owns: `src/middleware/auth.py`. Test: pytest tests/test_auth.py.``
+- ✅ CORRECT: ``- [ ] T012 [P] [US1] Create User model in src/models/user.py. Owns: `src/models/user.py`. Test: pytest tests/test_user.py.``
 - ✅ CORRECT: `- [ ] T014 [US1] Implement UserService in src/services/user_service.py`
 - ❌ WRONG: `- [ ] Create User model` (missing ID and Story label)
 - ❌ WRONG: `T001 [US1] Create model` (missing checkbox)
