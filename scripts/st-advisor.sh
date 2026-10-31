@@ -59,7 +59,7 @@ if [ $cmd = waive ]; then
   last=$(awk '/^## plan \| [^|]* \| sha256 /{sub(/^.* sha256 [^ ]* \| /, ""); v=$0; bad=0; r=1; next} /^## /{r=0} r && /^- / && !/^- \[(MEDIUM|LOW)\] /{bad=1} END{if (v != "") print v (bad ? " bad" : "")}' "$f/advisor.md" 2>/dev/null)
   case ${last:=none} in APPROVED|WAIVED|REVISE) ;; *) echo "nothing to waive: the last plan record is ${last% bad}"; exit 1 ;; esac
 fi
-bad=0
+bad=0 say=
 if [ $cmd = run ]; then
   [ -e .stratum/advisor.json ] || { echo 'no advisor: mode not set. Write .stratum/advisor.json with "mode": "auto", "codex", "both" or "off".'; exit 0; }
   common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) && sf=$(dirname "$common")/.stratum/state.json || sf=.stratum/state.json

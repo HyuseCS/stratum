@@ -67,7 +67,7 @@ task (L37).
 |----|------|--------|
 | R1 | skills/st/SKILL.md | Before the first lane skill or agent starts, Quick too, say it in one line: `Lane: <lane>, risk <level> (<area>: <why>). Say "full", "fast", "quick" or "design" to override. Say "risk high", "risk normal" or "risk low" to change the risk.` |
 | R2 | skills/st/SKILL.md | Risk level: High for privacy and access, the data model, contracts, secrets, money, or work that cannot be undone. Normal for other Full work. Low for Fast. None for Quick and Design. |
-| R3 | skills/st/SKILL.md | Write the risk as `risk` (`high`, `normal`, `low` or `none`) in `<project>/.stratum/state.json` and keep the other keys. On the user's "risk <level>", write the new level. |
+| R3 | skills/st/SKILL.md | Write the risk as `risk` (`high`, `normal`, `low` or `none`) in `"$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/.stratum/state.json"` and keep the other keys. On the user's "risk <level>", write the new level. |
 | R4 | skills/st-build/SKILL.md | The mode comes from `.stratum/advisor.json`: `auto` (the default when the file has no `mode`), `codex`, `both` or `off`. |
 | R5 | skills/st-build/SKILL.md | `advisors: codex`: Codex runs. `advisors: both`: Codex runs, then consult `/advisor` on the same input, then hold the talk. `advisors: /advisor`: consult `/advisor` only. `advisors: none`: no advisor at this point, and skip `check plan`. |
 | R6 | skills/st-build/SKILL.md | \| test red after 2 tries \| Codex, then both if still red \| Codex \| `/advisor` \| none \| |
@@ -93,7 +93,7 @@ Gone: `It runs at two points` and
 (skills/st-init/SKILL.md). Kept: ``First line `mode both: also consult /advisor if one is set` ``
 (skills/st-build/SKILL.md, row `#18 FR-010 modes`).
 
-If T050 fails (no tab path): R7 becomes `Codex runs in the background as before, also in herdr.` and R17 becomes `Codex runs in the background, also inside herdr, with \`--ignore-user-config\`.`; R19 and R20 are dropped; R21 starts `The call runs with` in place of `Outside herdr, the call runs with`. T020 and T022 use those lines.
+If T050 fails (no tab path): R7 becomes `Codex runs in the background as before, also in herdr.` and R17 becomes `Codex runs in the background, also inside herdr.`; R19 and R20 are dropped; R21 starts `The call runs with` in place of `Outside herdr, the call runs with`. T020 and T022 use those lines.
 
 R6 is the one matrix row the test pins; the other rows are in the same table (contracts/scripts.md
 section 1.4 is the source). `skills/st-fast/SKILL.md` keeps no `st-advisor.sh` call (existing

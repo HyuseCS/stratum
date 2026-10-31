@@ -31,7 +31,7 @@ A new page that also needs API, data or sign-in work goes to Full.
 
 Before the first lane skill or agent starts, Quick too, say it in one line: `Lane: <lane>, risk <level> (<area>: <why>). Say "full", "fast", "quick" or "design" to override. Say "risk high", "risk normal" or "risk low" to change the risk.`
 Risk level: High for privacy and access, the data model, contracts, secrets, money, or work that cannot be undone. Normal for other Full work. Low for Fast. None for Quick and Design.
-Write the risk as `risk` (`high`, `normal`, `low` or `none`) in `<project>/.stratum/state.json` and keep the other keys. On the user's "risk <level>", write the new level.
+Write the risk as `risk` (`high`, `normal`, `low` or `none`) in `"$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/.stratum/state.json"` and keep the other keys. On the user's "risk <level>", write the new level.
 Then run the lane. If the user overrides, use their lane.
 
 ## 2. Run the lane

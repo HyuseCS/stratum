@@ -119,6 +119,8 @@ setmode '{"mode": "codex"}'
 h=$(plan_hash)
 run plan specs/001-demo
 check "(d) mode codex: plan prints today's first line, no advisors line" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "APPROVED sha256 $h" ] && ! grep -q "^advisors:" <<<"$out"'
+out=$(cd "$proj" && say='advisors: none (plan, risk none)' bash "$root/scripts/st-advisor.sh" plan specs/001-demo); rc=$?
+check "(d) mode codex with say in the environment: no advisors line" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "APPROVED sha256 $h" ] && ! grep -q "^advisors:" <<<"$out"'
 n0=$(nrec)
 run decisions specs/001-demo "$tmp/list.txt"
 check "(d) mode codex: decisions prints advisors: /advisor (mode codex), no record, no Codex" '[ $rc = 0 ] && [ "$out" = "advisors: /advisor (mode codex)" ] && calls_ok 0'

@@ -9,7 +9,7 @@ while IFS='|' read -r id file phrase; do
 done <<'TABLE'
 R1|skills/st/SKILL.md|Before the first lane skill or agent starts, Quick too, say it in one line: `Lane: <lane>, risk <level> (<area>: <why>). Say "full", "fast", "quick" or "design" to override. Say "risk high", "risk normal" or "risk low" to change the risk.`
 R2|skills/st/SKILL.md|Risk level: High for privacy and access, the data model, contracts, secrets, money, or work that cannot be undone. Normal for other Full work. Low for Fast. None for Quick and Design.
-R3|skills/st/SKILL.md|Write the risk as `risk` (`high`, `normal`, `low` or `none`) in `<project>/.stratum/state.json` and keep the other keys. On the user's "risk <level>", write the new level.
+R3|skills/st/SKILL.md|Write the risk as `risk` (`high`, `normal`, `low` or `none`) in `"$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/.stratum/state.json"` and keep the other keys. On the user's "risk <level>", write the new level.
 R4|skills/st-build/SKILL.md|The mode comes from `.stratum/advisor.json`: `auto` (the default when the file has no `mode`), `codex`, `both` or `off`.
 R5|skills/st-build/SKILL.md|`advisors: codex`: Codex runs. `advisors: both`: Codex runs, then consult `/advisor` on the same input, then hold the talk. `advisors: /advisor`: consult `/advisor` only. `advisors: none`: no advisor at this point, and skip `check plan`.
 R6|skills/st-build/SKILL.md|| test red after 2 tries | Codex, then both if still red | Codex | `/advisor` | none |
@@ -23,7 +23,7 @@ R13|skills/st-build/SKILL.md|Send the story's small-decision list to the advisor
 R14|skills/st-fast/SKILL.md|At the end of the change, send the small-decision list to `/advisor` if one is set. A decision it sends to the user is undone if the user says no.
 R15|skills/st-init/SKILL.md|advisor mode `auto` (recommended: the risk level picks Codex, `/advisor` or both at each point; needs `codex` logged in for Codex), `codex` (Codex reviews the plan and a test red after 2 tries), `both` (Codex, then `/advisor` if set), or `off` (no Codex, nothing sent to OpenAI)?
 R16|README.md|`{"mode": "auto"}` (the default when the file has no `mode`): the risk level picks the advisors at each point.
-R17|README.md|Codex runs in the background, also inside herdr, with `--ignore-user-config`.
+R17|README.md|Codex runs in the background, also inside herdr.
 R18|README.md|With no file the advisor is off and prints `no advisor: mode not set. Write .stratum/advisor.json with "mode": "auto", "codex", "both" or "off".`
 R21|README.md|The call runs with `--ignore-user-config`: neither `~/.codex/config.toml` nor a project `.codex/config.toml` is read
 K1|skills/st-build/SKILL.md|First line `mode both: also consult /advisor if one is set`

@@ -172,14 +172,14 @@ copy for that project only. `scripts/st-lock.sh` runs tests marked `[lock]` one 
   It answers `APPROVED`, `REVISE` (findings, checked against the source like any finding; one more run only when a CRITICAL or HIGH fix changed the plan, two rounds at most), or `BLOCKED` (the orchestrator stops and asks you).
   A failed, empty, malformed or late answer (540 seconds) is `BLOCKED`, never approval.
   Each run appends the point, a SHA256 of the input, the verdict and the findings to `specs/<feature>/advisor.md`. An approval of a plan that changed since then is stale.
-  What leaves the machine: each call sends the prompt and the files Codex reads to OpenAI, on your Codex login and quota (about 37,000 tokens per plan review). At the plan point the prompt names the plan files and Codex reads them; at the test point it holds the task text, the test path and both failure outputs.
+  What leaves the machine: each call sends the prompt and the files Codex reads to OpenAI, on your Codex login and quota (about 37,000 tokens per plan review). At the plan point the prompt names the plan files and Codex reads them; at the test point it holds the task text, the test path and both failure outputs. At the diff point Codex reads the diff since the last review, and at the decisions and round points the prompt holds the list or the views text.
   The prompt tells Codex to stay inside the named inputs, never open env or secret files, and never quote a secret value. The sandbox does not block reads.
   Whether Codex's own shell sees your environment variables is not checked.
   `.stratum/advisor.json` sets the mode. `{"mode": "auto"}` (the default when the file has no `mode`): the risk level picks the advisors at each point. The others are `{"mode": "codex"}`, `{"mode": "both"}` (Codex, then `/advisor` if you set one), or `{"mode": "off"}`. `"mode": "off"` is the off switch: nothing goes to OpenAI.
   With no file the advisor is off and prints `no advisor: mode not set. Write .stratum/advisor.json with "mode": "auto", "codex", "both" or "off".` `st-init` writes the file for new projects. A project set up before this feature has no file, so the advisor stays off until you write it.
   With no `codex` on PATH you get one line, `no advisor: codex not found`, and the flow runs as before, with `/advisor` if you set one.
   Optional `model` and `effort` keys in the same file pick the Codex model and reasoning effort, for example `{"mode": "codex", "model": "gpt-6-astra", "effort": "high"}`. Without them Codex uses its own default.
-  Codex runs in the background, also inside herdr, with `--ignore-user-config`.
+  Codex runs in the background, also inside herdr.
   The call runs with `--ignore-user-config`: neither `~/.codex/config.toml` nor a project `.codex/config.toml` is read, so no MCP server, hook or notify command from them runs during a review, and the model and effort come only from this file. Your Codex login works as before.
 - **Git guard.** One mode per command: `commit`, `worktree_remove`, `worktree_prune`,
   `branch_delete`, `reset_hard`, `clean` (`clean -f`), `discard` (`checkout .`, `restore .`), and

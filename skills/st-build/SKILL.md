@@ -98,6 +98,7 @@ Every Fast-lane point uses `/advisor`. The Quick lane has no advisor.
   In round 3 each advisor proposes a compromise for every open point. A compromise both accept is a combined finding. A point with no compromise both accept goes to the user with both views, in short, simple words.
   If one advisor has no answer (`no advisor`, mode off), the point runs with the one left, and the talk record says so.
   After the talk, record it: `bash <plugin root>/scripts/st-advisor.sh talk <point> <feature dir> <file>` with the rounds, the agreed points, the compromises, the points sent to the user and the calls.
+  A BLOCKED round ends the talk: send the open points to the user, do not run `continued`.
 - `APPROVED`: go on.
 - `WAIVED sha256 <hash>`: the plan changed only by fixes, and `check plan` passes until the input changes again.
 - `REVISE`: handle each finding like a review finding: check it against the source, fix the real small ones, bring big ones to the user, drop the false ones.
