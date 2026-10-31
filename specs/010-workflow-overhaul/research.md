@@ -1,0 +1,192 @@
+# Research: Workflow Overhaul
+
+Tool versions on this machine (2026-10-31): `claude --version` = `2.1.312 (Claude Code)`,
+`codex --version` = `codex-cli 0.166.0`, `herdr --version` = `herdr 0.9.4`,
+`bash --version` = `GNU bash, version 5.3.20(1)-release`.
+
+Live probes ran in the orchestrator's own herdr workspace (`w13`), each in a new tab that was
+closed after the probe. Scratch files: `<scratchpad>/ra/` (R-A) and `<scratchpad>/rc/` (R-C).
+
+## R-A. Can a worker's permission hook hand a prompt to the orchestrator and wait for the answer?
+
+- Decision: Yes. Use a `PermissionRequest` hook. FR-019 needs no fallback.
+- Evidence (binary help text, `strings /opt/claude-code/bin/claude`):
+
+  ```text
+  PermissionRequest:{summary:"When a permission dialog is displayed",description:`Input to command is JSON with tool_name, tool_input, and tool_use_id.
+  Output JSON with hookSpecificOutput containing decision to allow or deny.
+  Exit code 0 - use hook decision if provided
+  ```
+  and `(PermissionRequest decision must be {"behavior": "allow"} or {"behavior": "deny", "message": "..."})`.
+  The string `PermissionRequest hook failed before a hook's ask for` shows the hook also runs
+  after a PreToolUse hook's `ask` (the git guard's case).
+- Evidence (live, 2026-10-31 11:56): a claude session started with
+  `herdr agent start ra-probe --kind claude --pane w13:p7 -- --permission-mode auto --settings <scratch>/settings.json --model sonnet`.
+  The settings had a PreToolUse Bash hook that answers `ask` for `ra-probe`, and a
+  `PermissionRequest` hook (`timeout: 300`) that saves its input and waits for a file `ok`.
+  1. The hook fired in auto mode. Its saved input (transcript path removed):
+     `{"session_id":"315eace7-…","cwd":"<scratch>/ra","permission_mode":"auto","hook_event_name":"PermissionRequest","tool_name":"Bash","tool_input":{"command":"echo ra-probe > <scratch>/ra/out.txt","description":"Write probe text to file"}}`.
+     There is no `tool_use_id` field, although the help text names it.
+  2. While the hook waited, the dialog was on screen at the same time
+     (`Hook PreToolUse:Bash requires confirmation for this command: ra test ask` … `Do you want to proceed? ❯ 1. Yes 2. No`),
+     and `herdr agent get` said `blocked` at every 5 s check from 5 s to 40 s.
+  3. At 75 s (`elapsed=75`) the probe wrote `ok`. The hook printed
+     `{"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"allow"}}}`,
+     the dialog closed, `out.txt` held `ra-probe`, and the agent went on (`done`).
+- Consequences for the design:
+  - A hook wait of at least 75 s works. The cap for a command hook's `timeout` was not found in
+    the binary. The plan uses a 300 s wait (`timeout: 310`); T034 measures it live.
+  - The user can answer the dialog while the hook waits. A request the orchestrator never answers
+    stays for the user (spec edge case), with no extra code.
+  - `st-worker.sh wait` sees `blocked` while the hook waits, so `wait` must look for a request
+    file before it reports `blocked` (contracts/scripts.md section 4).
+  - The request id cannot come from `tool_use_id`. The hook makes its own id.
+- Not verified: the probe registered the hook with `--settings`. The plan registers it in the
+  plugin's `hooks/commands.json`. T034 checks that the plugin hook fires. Contingency: `start
+  --autonomous` passes `--settings <generated file>` with the same hook command to
+  `agent start`.
+- Alternatives considered: the fallback "permissions the user grants at worker start"
+  (`--allowedTools` at `agent start`). Not needed, because the hook works.
+
+## R-B. How does the orchestrator send its answer so the classifier sees it?
+
+- Decision: The orchestrator runs `bash <plugin root>/scripts/st-worker.sh approve <id> --request <rid> --record <file>`
+  in its own Bash tool. That call writes `<worktree>/.stratum/approve/<rid>.ok`. The worker's
+  hook reads the file and answers `allow` one time. The orchestrator's permission check (its
+  classifier in auto mode, or the user in default mode) sees the call, its name and the request
+  id in plain text. If that check blocks the call, nothing is written, the hook times out with
+  no decision, and the dialog stays for the user. That is D1's "tries no other way" by
+  construction. The hook never answers `deny`.
+- Rationale: one visible command per approval, no send-keys into the dialog (rejected O4), and a
+  file channel that `rsh` already reaches on a saved machine.
+- Guard: `approve` refuses unless `<project>/.stratum/autonomous` holds the caller's
+  `$CLAUDE_CODE_SESSION_ID`. Evidence: `env` in this session shows
+  `CLAUDE_CODE_SESSION_ID=a5645c15-5e7e-448a-bb3c-12b611437958`, the same id as the session's
+  scratchpad folder. This variable is not in the public docs. If a later Claude Code drops it,
+  `approve` refuses and every prompt goes to the user (safe side).
+- Alternatives considered: `herdr agent send-keys` on the dialog (rejected by D1, O4); a hook
+  `deny` with a message (it would stop the worker's tool call instead of leaving it to the user).
+
+## R-C. Codex as an interactive herdr agent
+
+- Decision: Start Codex once per workspace and feature with
+  `herdr agent start st-codex-<NNN> --kind codex --pane <pane> --timeout 120000 -- -s read-only -a never --no-alt-screen [-m <model>] [-c model_reasoning_effort="<effort>"]`
+  in a new tab labelled `Codex`. Send each review as a short prompt that names a prompt file.
+  Read the answer with `herdr agent read <name> --source recent-unwrapped --lines 400`, take
+  the last pair of exact marker lines, and join the lines between them with one space.
+- Evidence, flags (`codex --help`): `-s, --sandbox <SANDBOX_MODE> [possible values: read-only, workspace-write, danger-full-access]`,
+  `-a, --ask-for-approval … never: Never ask for user approval`, `--no-alt-screen … preserving terminal scrollback history`.
+  The TUI has no `--ignore-user-config`, no `--ephemeral` and no `--output-schema`: those are
+  `codex exec` flags only (`codex exec --help`). So in herdr, `~/.codex/config.toml` applies
+  (model, hooks), the session is saved under `~/.codex/sessions/`, and the JSON shape is checked
+  only by `st-advisor.sh`'s validator.
+- Evidence, start (live 11:59): `{"agent":"codex","agent_status":"idle",…,"interactive_ready":true,"name":"st-codex","pane_id":"w13:p8",…}`.
+  The folder was already trusted in `~/.codex/config.toml` (`[projects."/home/hyuse/Desktop/stratum"] trust_level = "trusted"`).
+  An untrusted folder may show a trust dialog at start. The live claude probe hit the same kind
+  of dialog: `{"error":{"code":"agent_not_ready","message":"agent ra-probe is blocked during startup and is not ready for prompts"}}`.
+  So `agent_not_ready` at Codex start ends as `BLOCKED` with a line that names the tab.
+- Evidence, review (live): `herdr agent prompt st-codex "Read the file <scratch>/rc/prompt.md and follow it." --wait --until idle --until done --until blocked --timeout 540000`
+  returned `done` after 19.4 s. Codex ran `rg` and read files in the read-only sandbox with no
+  prompt. The screen showed:
+
+  ```text
+  • ST-ADVISOR-BEGIN-k7Q2x9
+    {"verdict":"APPROVED","summary":"The file defines a function named project_root.","findings":[{"claim":"The file /home/hyuse/
+    Desktop/stratum/scripts/common.sh defines a function named project_root.","evidence":"Line 5 contains the explicit Bash
+    function declaration project_root() {, …
+    ST-ADVISOR-END-k7Q2x9
+  ```
+  Codex wraps long lines itself, so `recent-unwrapped` cannot undo the wrap. Sometimes the
+  wrap is at a space (`Bash` / `function`) and sometimes it is not (`/home/hyuse/` /
+  `Desktop`). Stripping `•` and leading spaces from each line and joining the lines with one
+  space gave valid JSON: `APPROVED /home/hyuse/Desktop/stratum/scripts/common.sh:5`. Inside
+  string values, a wrap that was not at a space now has a stray space
+  (`The file /home/hyuse/ Desktop/…`). Verdict and severity values have no spaces, so they are
+  exact.
+- Evidence, prompt echo: the pane showed only the short prompt (`Read the file … and follow it.`),
+  not the marker lines. The prompt file holds the markers. Codex may show part of the file in a
+  tool output, so the parser takes the last exact pair.
+- Evidence, new conversation: `herdr agent prompt st-codex "/new"` answered
+  `agent_prompt_stalled` and opened a dialog (`Where should the new conversation run? › 1. Use current Git worktree`).
+  After that dialog was answered, the question "What claim did you review earlier in this
+  conversation?" got `• NONE`. `/new` works, but it needs a second key for a dialog. Decision:
+  for a new feature, close the old `st-codex-*` tab (`herdr tab close <tab>`) and start a new
+  agent. One code path serves a new feature and a tab the user closed.
+- Evidence, workspace scope: `herdr agent list` gives each agent `workspace_id`, `tab_id` and
+  `name`, so "one Codex agent per workspace" is a filter on `workspace_id` and the name prefix
+  `st-codex-`.
+- Risk: the lines `recent` keeps were not measured. A review with many findings may have more
+  than 400 lines on screen. T024 measures a real plan review.
+- Alternatives considered: read Codex's session file (exact text, but herdr gives no session id
+  for codex (`"agent_session":null`), and the newest-file guess fails with two Codex sessions);
+  `codex exec` in the tab (rejected O25).
+
+## R-D. A portable test lock
+
+- Decision: `scripts/st-lock.sh`. It uses `mkdir` as the atomic step, writes its own `$$` to
+  `<lock>/pid`, removes the folder on exit (`trap`), and frees a lock whose pid fails
+  `kill -0`. The lock folder is `<git common dir>/stratum-<name>.lock`
+  (`git rev-parse --path-format=absolute --git-common-dir`), so all worktrees of one repo share
+  it (L29). It waits with `sleep 1` up to `--timeout` seconds (default 600), then prints one
+  `lock:` line and exits 75 with nothing run.
+- Evidence (live, this machine): eight concurrent `mkdir L` calls printed one `win 1`. A finished
+  child's pid gave `gone pid=196499` on `kill -0`. `git rev-parse --path-format=absolute --git-common-dir`
+  printed `/home/hyuse/Desktop/stratum/.git`.
+- Not verified: macOS and Windows (Git Bash). `mkdir` is atomic on both, and `kill -0` works on
+  Git Bash's own pids. A Windows pid seen through a non-MSYS tool would not match. Say so in the
+  README, as L3 did for the console encoding.
+- Known limit: two waiters that both see a dead owner in the same second can both remove the
+  folder, and both can run. The script marks it with a `ponytail:` line.
+- Alternatives considered: `flock` (not on macOS by default), `pgrep` loops (match their own
+  command line, issue #55, L21).
+
+## R-E. The status line shows "autonomous"
+
+- Decision: The orchestrator writes `.stratum/autonomous` with one line, its
+  `$CLAUDE_CODE_SESSION_ID`, when the user turns the mode on, and removes the file when the run
+  ends or on "stop autonomous". `statusline/st-statusline.sh` adds an `autonomous` segment to line
+  2 only when that line equals the `session_id` in the status line's JSON input. A new session
+  has a new id, so it never shows or uses the mode, even if an old file is left (D21). No
+  SessionStart hook change is needed.
+- Evidence: `statusline/st-statusline.sh:16-20` reads the JSON input. `hooks/st-phase.py:29-48`
+  loads `state.json`, changes only `phase` and `lane`, and writes the whole object back, so a new
+  `risk` key in `state.json` (FR-011) is kept.
+- Alternatives considered: a flag in `.stratum/state.json` (it would outlive the session and needs
+  a SessionStart reset); clearing it in `hooks/st-session-start.sh` (it would also clear it on
+  `compact` in the middle of a run).
+
+## R-F. Git guard on a command it cannot split (FR-008)
+
+- Decision: In the `except ValueError` path, read each line of the command that has a git word.
+  A git word is `git` as a whole word, or a path that ends in `/git`, with a shell separator,
+  quote or line edge on each side (`st-git-guard.py` does not match). Split that line alone with
+  the same `segments`. Judge each segment whose first word is git with today's `judge`, with the
+  folder unknown (`elsewhere=True`). A git line that does not split, or that has no segment
+  starting with git, asks.
+- Evidence (current guard, run on this repo):
+  `heredoc git status -> … "permissionDecision": "ask", "permissionDecisionReason": "The git guard could not parse the command."`,
+  same for `heredoc git commit`. A heredoc with balanced quotes splits today and gets no
+  decision, so the tests must use an unbalanced quote (an apostrophe as in `it's`) to reach the
+  fallback.
+- Finding: `python3 - <<'EOF'` with `subprocess.run(["git", "commit", "-m", "x"])` and no stray
+  quote splits today and gets no decision. The guard does not read git inside other programs.
+  That is today's behavior outside the parse-failure path, and this feature does not change it.
+
+## R-G. Existing tests that assert text this feature changes
+
+`tests/test_on_demand.sh` rows `#17 one-time yes`, `#17 FR-014 build`, the check
+`#17 FR-014 build skill` (`! grep -qF st-worker skills/st-build/SKILL.md`), `#18 FR-005 revise`
+(`Then run the same point once more on the changed input.`), `#18 FR-010 modes`,
+`#18 FR-010 no file` (both rows), `#18 FR-015 init` (`advisor mode \`codex\` (recommended`).
+`tests/test_advisor.sh:315,379` assert the `mode not set` line. `tests/test_design_lane.sh:82`
+asserts `Say "full", "fast", "quick" or "design" to override.`, so the new lane line keeps that
+sentence. `tests/test_inspect.sh:111-127` checks README skill rows both ways and needs every
+`tests/test_*` file named in README. `tests/test_advisor.sh` runs the real script: inside herdr
+(`HERDR_ENV=1`) it would take the new herdr path, so it must unset `HERDR_ENV` and
+`HERDR_WORKSPACE_ID`.
+
+## R-H. Live runs still to record
+
+T024 (Codex plan review through herdr, real answer length), T034 (worker with full layout,
+autonomous approval through the plugin hook, `pass`, a hook wait past 120 s). Each one is
+recorded here when it runs, or ticked with `Not run, <first error line>` (L32).
