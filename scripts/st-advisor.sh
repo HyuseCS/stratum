@@ -1,20 +1,40 @@
 #!/usr/bin/env bash
 set -o pipefail
-usage() { echo "usage: st-advisor.sh plan|test|check|continued ..."; exit 2; }
+usage() { echo "usage: st-advisor.sh plan|test|diff|check|continued|waive|note|count ..."; exit 2; }
 cmd=run
-case ${1:-} in check|continued) cmd=$1; shift ;; esac
+case ${1:-} in check|continued|waive|note) cmd=$1; shift ;; count) cmd=count ;; esac
 point=${1:-}
-case "$cmd $point $#" in "run plan 2"|"run test 6"|"check plan 2"|"continued plan 2"|"continued test 2") ;; *) usage ;; esac
+case "$cmd $point $#" in "run plan 2"|"run test 6"|"run diff 3"|"check plan 2"|"continued plan 2"|"continued test 2"|"waive plan 3"|"note plan 3"|"note test 3"|"note diff 3"|"note decisions 3"|"count count 2") ;; *) usage ;; esac
 f=${2%/}
 [ -f "$f/spec.md" ] && [ -r "$f/spec.md" ] || usage
 [ -L "$f/advisor.md" ] && usage
-if [ $cmd != run ]; then
-  rec=$(grep -a "^## $point | " "$f/advisor.md" 2>/dev/null | tail -n1)
+ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+if [ $cmd = count ]; then
+  src=/dev/null
+  [ -e "$f/advisor.md" ] && src=$f/advisor.md
+  awk '/^## .* \| sha256 [^ ]* \| (APPROVED|REVISE|BLOCKED)$/{a++} /^## .* \| sha256 [^ ]* \| WAIVED$/{b++} /^## .* \| \/advisor$/{c++} END{printf "advisor calls: codex %d, waived %d, /advisor %d\n", a, b, c}' "$src" || exit 1
+  exit 0
+fi
+if [ $cmd = waive ] || [ $cmd = note ]; then
+  text=${3//[$'\r\n']/ }
+  [[ $text = *[![:space:]]* ]] || usage
+fi
+if [ $cmd = note ]; then
+  { [ -s "$f/advisor.md" ] && echo; printf '## %s | %s | /advisor\nsummary: %s\n' "$point" "$ts" "$text"; } >> "$f/advisor.md" || exit 1
+  echo "noted: $point /advisor"
+  exit 0
+fi
+if [ $cmd = waive ]; then
+  last=$(awk '/^## plan \| [^|]* \| sha256 /{sub(/^.* sha256 [^ ]* \| /, ""); v=$0; bad=0; r=1; next} /^## /{r=0} r && /^- / && !/^- \[(MEDIUM|LOW)\] /{bad=1} END{if (v != "") print v (bad ? " bad" : "")}' "$f/advisor.md" 2>/dev/null)
+  case ${last:=none} in APPROVED|WAIVED|REVISE) ;; *) echo "nothing to waive: the last plan record is ${last% bad}"; exit 1 ;; esac
+fi
+if [ $cmd = check ] || [ $cmd = continued ]; then
+  rec=$(grep -aE "^## $point \| [^|]* \| sha256 " "$f/advisor.md" 2>/dev/null | tail -n1)
   if [ -z "$rec" ]; then echo "no record: $point"; [ $cmd = check ] && exit 1; exit 2; fi
   rest=${rec#* | * | sha256 }
   rhash=${rest%% | *}
   if [ $cmd = continued ]; then
-    { [ -s "$f/advisor.md" ] && echo; printf '## %s | %s | sha256 %s | BLOCKED, user continued\n' "$point" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$rhash"; } >> "$f/advisor.md" || exit 1
+    { [ -s "$f/advisor.md" ] && echo; printf '## %s | %s | sha256 %s | BLOCKED, user continued\n' "$point" "$ts" "$rhash"; } >> "$f/advisor.md" || exit 1
     echo "BLOCKED, user continued sha256 $rhash"
     exit 0
   fi
@@ -22,6 +42,8 @@ fi
 case $point in
   plan) [ -f "$f/plan.md" ] && [ -r "$f/plan.md" ] && [ -f "$f/tasks.md" ] && [ -r "$f/tasks.md" ] || usage ;;
   test) [ -f "$3" ] && [ -r "$3" ] && [ -f "$5" ] && [ -r "$5" ] && [ -f "$6" ] && [ -r "$6" ] || usage ;;
+  diff) git rev-parse --verify --quiet "$3^{commit}" >/dev/null || usage
+    git diff --quiet "$3" HEAD && { echo "no change since $3: skip"; exit 0; } ;;
 esac
 bad=0
 if [ $cmd = run ]; then
@@ -43,6 +65,7 @@ PY
   if [ $bad = 0 ]; then
     { read -r mode; read -r model; read -r effort; } <<<"$cfg"
     [ $mode = off ] && { echo "no advisor: mode off"; exit 0; }
+    [ $point = diff ] && { echo "advisors: /advisor (mode $mode)"; exit 0; }
     [ $mode = both ] && echo "mode both: also consult /advisor if one is set"
     opts=()
     [ -n "$model" ] && opts+=(-m "$model")
@@ -56,12 +79,18 @@ trap 'rm -rf "$tmp"' EXIT
 case $point in
   plan) hash=$({ cat "$f/spec.md" && awk '/^```/{f=!f} !f&&/^## Validate$/{s=1;next} !f&&/^## /{s=0} !s' "$f/plan.md" && cat "$f/tasks.md"; } | sha256sum) || { echo "cannot hash inputs"; exit 2; } ;;
   test) hash=$(cat "$5" "$6" | sha256sum) || { echo "cannot hash inputs"; exit 2; } ;;
+  diff) hash=$(git diff --no-ext-diff --no-color "$3" HEAD | sha256sum) || { echo "cannot hash inputs"; exit 2; } ;;
 esac
 hash=${hash%% *}
 [[ $hash =~ ^[0-9a-f]{64}$ ]] || { echo "cannot hash inputs"; exit 2; }
 if [ $cmd = check ]; then
   [ "$hash" = "$rhash" ] || { echo "advisor approval is stale"; exit 1; }
   echo "${rest#* | } sha256 $hash"
+  exit 0
+fi
+if [ $cmd = waive ]; then
+  { [ -s "$f/advisor.md" ] && echo; printf '## plan | %s | sha256 %s | WAIVED\nreason: %s\n' "$ts" "$hash" "$text"; } >> "$f/advisor.md" || exit 1
+  printf 'WAIVED sha256 %s\nreason: %s\nrecord: %s/advisor.md\n' "$hash" "$text" "$f"
   exit 0
 fi
 block() {
