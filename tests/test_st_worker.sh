@@ -1138,6 +1138,27 @@ CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" pass T004 --request "$rid"
 check "PS3 pass with a session mismatch: exit 1, the not-in-run line, no .user" '[ $rc = 1 ] && [ "$out" = "Worker worker-t004 is not in this autonomous run." ] && [ ! -e "$lw/.stratum/approve/$rid.user" ]'
 autoclr
 
+sydir() { apx; mkreq "$rid" 'echo hi'; rm -rf "$tmp/aptarget"; mv "$lw/.stratum/approve" "$tmp/aptarget"; ln -s "$tmp/aptarget" "$lw/.stratum/approve"; snap0=$(ls -A "$tmp/aptarget"); }
+syfile() { apx; mkreq "$rid" 'echo hi'; rm -rf "$tmp/aptarget"; printf 'keep\n' > "$tmp/aptarget"; ln -s "$tmp/aptarget" "$lw/.stratum/approve/$rid.$1"; }
+sydir
+apv <<'ST_INPUT_END'
+Bash: {"command":"echo hi"}
+ST_INPUT_END
+check "SY1 approve, .stratum/approve a symlink: exit 1, the cannot-write line, target unchanged" '[ $rc = 1 ] && [ "$out" = "Cannot write $rid.ok for worker-t004." ] && [ "$(ls -A "$tmp/aptarget")" = "$snap0" ]'
+syfile ok
+apv <<'ST_INPUT_END'
+Bash: {"command":"echo hi"}
+ST_INPUT_END
+check "SY2 approve, $rid.ok a symlink: exit 1, the cannot-write line, target unchanged" '[ $rc = 1 ] && [ "$out" = "Cannot write $rid.ok for worker-t004." ] && [ "$(cat "$tmp/aptarget")" = keep ]'
+sydir
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" pass T004 --request "$rid"
+check "SY3 pass, .stratum/approve a symlink: exit 1, the cannot-write line, target unchanged" '[ $rc = 1 ] && [ "$out" = "Cannot write $rid.user for worker-t004." ] && [ "$(ls -A "$tmp/aptarget")" = "$snap0" ]'
+syfile user
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" pass T004 --request "$rid"
+check "SY4 pass, $rid.user a symlink: exit 1, the cannot-write line, target unchanged" '[ $rc = 1 ] && [ "$out" = "Cannot write $rid.user for worker-t004." ] && [ "$(cat "$tmp/aptarget")" = keep ]'
+rm -rf "$tmp/aptarget"
+autoclr
+
 for pl in 'Do you want to proceed?' 'Do you want to make this edit to a.py?' 'Do you want to create b.py?' '❯ 1. Yes'; do
   mk; states blocked; printf '%s\n' "$pl" > "$tmp/pane.txt"
   run bash "$script" answer T004 --keys 1
@@ -1163,6 +1184,11 @@ xsetup; autoset "$sid"; printf '%s\n' "$sid" > "$rrepo/.stratum/autonomous"
 STUB_SSH_RC=255 CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-off --roster "$aoroster"
 check "AO3 ssh down: exit 1, the failed laptop line, local removed, laptop flag kept" '[ $rc = 1 ] && hasline "autonomous off failed\tlaptop\tssh: stub failure" && hasline "autonomous off\tlocal" && [ ! -e "$repo/.stratum/autonomous" ] && [ -e "$rrepo/.stratum/autonomous" ]'
 autoclr
+xsetup; rm -rf "$tmp/rrepo2"; mkdir -p "$tmp/rrepo2/.stratum"
+printf 'worker-t004\tlaptop\tworker-t004\tT004\t%s\nworker-t005\tlaptop\tworker-t005\tT005\t%s\n' "$rrepo" "$tmp/rrepo2" > "$aoroster"
+printf '%s\n' "$sid" > "$rrepo/.stratum/autonomous"; printf '%s\n' "$sid" > "$tmp/rrepo2/.stratum/autonomous"
+STUB_SSH_EXEC=1 CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-off --roster "$aoroster"
+check "AO4 two repos on one machine: exit 0, both flags removed" '[ $rc = 0 ] && [ ! -e "$rrepo/.stratum/autonomous" ] && [ ! -e "$tmp/rrepo2/.stratum/autonomous" ]'
 
 ax; autoset "$sid"
 axrun

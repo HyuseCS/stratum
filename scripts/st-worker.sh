@@ -442,8 +442,10 @@ autonomous-off)
   while IFS= read -r l || [ -n "$l" ]; do
     IFS=$'\t' read -r -a f <<<"$l"
     mm=${f[1]:-}
-    [ -n "$mm" ] && [ -z "${seen[$mm]:-}" ] || continue
-    seen[$mm]=1
+    k=$mm
+    [ "$mm" = local ] || k+=$'\t'${f[4]:-}
+    [ -n "$mm" ] && [ -z "${seen[$k]:-}" ] || continue
+    seen[$k]=1
     msg=
     if [ "$mm" = local ]; then
       F=$MAIN/.stratum/autonomous
