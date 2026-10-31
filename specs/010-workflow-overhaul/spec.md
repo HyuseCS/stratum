@@ -6,7 +6,7 @@
 
 **Status**: Draft
 
-**Input**: User description: "GitHub issues #51, #48 and #55 on HyuseCS/stratum as one feature. #51: bring the newer skills into the lanes and look again at the lane steps. #48: fewer advisor calls, and no full test suite unless a human asks. #55: worker sessions stop on permission prompts the orchestrator cannot answer, and the test wait loop matches itself." Decisions D1 to D29 are in `decisions.md`. #51 stays open after this feature for a later skill-by-skill workflow review (D22).
+**Input**: User description: "GitHub issues #51, #48 and #55 on HyuseCS/stratum as one feature. #51: bring the newer skills into the lanes and look again at the lane steps. #48: fewer advisor calls, and no full test suite unless a human asks. #55: worker sessions stop on permission prompts the orchestrator cannot answer, and the test wait loop matches itself." Decisions D1 to D30 are in `decisions.md`. #51 stays open after this feature for a later skill-by-skill workflow review (D22).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -318,12 +318,13 @@ line. Run the Plan phase and see no issue question. Search the plugin and see no
   `--no-verify`) one time only, and MUST send all others to
   the user with the tab name in short, simple words. It MUST never approve: push, force-push,
   deleting a branch or worktree, `reset --hard`, anything outside the worker's worktree, secrets
-  or `.env`, `.claude/` or `.mcp.json`, new dependencies, network calls to new hosts. When the classifier blocks an approval,
+  or `.env`, `.claude/`, `.mcp.json`, `.githooks/` or `.husky/`, new dependencies, network calls to new hosts. When the classifier blocks an approval,
   it MUST try no other way. Every approval MUST be recorded and listed at the end of the run. The
   hook MUST act only while the main checkout's `.stratum/autonomous` holds the orchestrator's
   session id and the worker's session file matches it, and in a worker session every Bash
-  command, Edit or Write that touches `.stratum/approve/` or `.stratum/autonomous`, or runs
-  `st-worker.sh approve`, `pass` or `autonomous-off`, MUST be denied (D27). On a saved machine,
+  command, Edit, Write, MultiEdit, NotebookEdit, Read, Grep or Glob that touches
+  `.stratum/approve/` or `.stratum/autonomous`, and every Bash command that runs `st-worker.sh` with `approve`, `pass`, `autonomous-off`, `wait` or `start`,
+  MUST be denied (D27, D30). On a saved machine,
   `start --autonomous` MUST write that machine's flag and the run's end or "stop autonomous" MUST
   remove it (D28). There is no fallback to standing permissions: if the plugin hook does not
   fire, `start --autonomous` loads the same hook with `--settings` once the user OKs it; if that

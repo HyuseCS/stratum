@@ -360,7 +360,8 @@ prompts through the hook; normal mode never answers them.
   (contracts/scripts.md section 5). Run the hook by subprocess with JSON on stdin and `cwd` in a
   temp git repo (the main checkout) with `.stratum/approve/`. "Autonomous on" means the main
   checkout's `.stratum/autonomous` and `.stratum/approve/session` both hold `S1`; every
-  `PermissionRequest` case below runs with it on unless it says otherwise. D27 lock 1 cases, each
+  `PermissionRequest` case below runs with it on unless it says otherwise. Every "no output" and
+  "no `.req`" case below also asserts exit 0 and empty stderr (F7). D27 lock 1 cases, each
   with no output and no `.req`: (a1) a stale `.stratum/approve/` and no `.stratum/autonomous`
   (normal mode); (a2) `.stratum/autonomous` holds `S1`, `session` holds `S2`; (a3) after a
   first `.req` round, `.stratum/autonomous` is removed ("stop autonomous") and a new prompt
@@ -374,14 +375,22 @@ prompts through the hook; normal mode never answers them.
   `st-worker.sh pass worker-t1 --request 1-1`, `st-worker.sh autonomous-off --roster r`,
   `touch .stratum/././approve/1-1.ok`, `touch .stratum///approve/1-1.ok`,
   `touch .stratum/x/../approve/1-1.ok`, `bash scripts/st-worker.sh $'approve' worker-t1`,
-  `ls scripts/st-worker.sh`, `cd <main> && bash scripts/st-worker.sh pass worker-t1` (cwd the
+  `bash scripts/st-worker.sh "pass" worker-t1`, `st-worker.sh wait worker-b`,
+  `st-worker.sh start t9 --autonomous`, `cd <main> && bash scripts/st-worker.sh pass worker-t1` (cwd the
   worktree, `CLAUDE_PROJECT_DIR` the worktree), and `git init sub && cd sub && st-worker.sh pass x`
   (cwd `sub`, a folder above it has `.stratum/approve/`) each
   get `permissionDecision` `deny` with the reason `.stratum/approve/ and .stratum/autonomous are written only by the orchestrator.`; Edit, Write,
   MultiEdit and NotebookEdit of `<root>/.stratum/approve/1-1.ok`, `<root>/.stratum/./approve/x`
   and `<root>/.stratum/autonomous` are denied the same way, and so are Read of
   `<root>/.stratum/approve/session`, Read of `<root>/.stratum/autonomous`, Grep with `path`
-  `<root>/.stratum/approve` and Glob with `pattern` `.stratum/approve/*`; (F7) a worker session
+  `<root>/.stratum/approve`, Grep with `glob` `.stratum/approve/*` and Glob with `pattern`
+  `.stratum/approve/*`; (D30) no output, exit 0 and empty stderr for `ls scripts/st-worker.sh`,
+  `cat scripts/st-worker.sh`, `bash -n scripts/st-worker.sh`, `shellcheck scripts/st-worker.sh`,
+  `grep -n approve scripts/st-worker.sh`, `git add scripts/st-worker.sh && git commit -m x`, an
+  Edit of `scripts/st-worker.sh`, and a Grep with `pattern` `.stratum/approve` and a plain `path`
+  `scripts` (the pattern is a content regex, not a path); (F7) `cwd` a non-worker folder and `CLAUDE_PROJECT_DIR` the worker worktree: `echo x > .stratum/approve/1-1.ok`
+  is denied; a symlink `link -> .stratum/approve` and an Edit of `link/1-1.ok`: denied (realpath,
+  F5); a worker session
   found only by its branch (`worker-t1`, no `.stratum/approve/`) denies `echo x > .stratum/autonomous`; Edit `src/a.py` and Bash
   `bash tests/x.sh` give no output; in a non-worker session (no `.stratum/approve/`, branch
   `010-demo`), `st-worker.sh approve ...` and `printf S1 > .stratum/autonomous` give no output. Then: (a) no `.stratum/approve`: no
@@ -423,13 +432,19 @@ prompts through the hook; normal mode never answers them.
   `npm install x`, `npm i x`, `pnpm add x`, `yarn add x`, `bun add x`, `pip install x`,
   `uv add x`, `uv pip install x`, `cargo add x`, `go get x`; (h4) F3: no `.req` for an Edit of
   `.claude/settings.json`, `.mcp.json`, `CLAUDE.md`, `AGENTS.md`, `.githooks/pre-commit` or
-  `.husky/pre-commit`, nor for `echo x > .claude/settings.json` or `echo {} > .mcp.json`; (i) stdin that is not JSON: no output, exit 0; (j) `hooks/commands.json` has
+  `.husky/pre-commit`, nor for `echo x > .claude/settings.json`, `cd .claude && echo x > settings.local.json` or
+  `echo {} > .mcp.json`; (h5) F3 commit parse: `git add src/a.py && git commit -m x 2>&1` gives a
+  `.req` with `staged` `["src/a.py"]`; `git add src/a.py && git commit -m "explain git guard"` gives a
+  `.req`; `git commit -F - <<'EOF'` with a body and `git commit --file=- -m x` give none; (h6) F6:
+  `st-approve.py --render <req>` prints `Bash: ` and the sorted, compact, ASCII-escaped JSON of
+  `tool_input` on one line (a `é` prints as `\u00e9`), and the same input with keys in another
+  order prints the same bytes; (i) stdin that is not JSON: no output, exit 0; (j) `hooks/commands.json` has
   one `PermissionRequest` entry with command `python3 "${CLAUDE_PLUGIN_ROOT}/hooks/st-approve.py"`
   and timeout 310, and one `PreToolUse` entry with matcher `Bash|Edit|Write|MultiEdit|NotebookEdit|Read|Grep|Glob`,
   the same command and timeout 10; (k) no `PermissionRequest` case prints `deny`, and the hook
   file has no `"behavior": "deny"` text. Run it: red. Owns:
   `tests/test_approve_hook.py`. Test: `PYTHONDONTWRITEBYTECODE=1 python3 tests/test_approve_hook.py`.
-  (FR-019, D23, D27, security notes S3, S4, lessons L3, L5)
+  (FR-019, D23, D27, D30, security notes S3, S4, lessons L3, L5)
 - [ ] T027 [P] [US4] Extend `tests/test_st_worker.sh` (contracts/scripts.md section 4). Teach the
   stub `herdr` `tab rename`, `pane split`, `pane run` and `tab create` with random ids, and an
   `agent read` text taken from a file the case writes. Cases: (a) `start` makes, in this order
@@ -503,12 +518,14 @@ prompts through the hook; normal mode never answers them.
 - [ ] T030 [P] [US4] Write `hooks/st-approve.py` with both branches (contracts/scripts.md sections
   5.1 and 5.2) and add its `PermissionRequest` and `PreToolUse` entries to
   `hooks/commands.json`, with the `ponytail:` lines for the text never list and the text write
-  lock, the D23 commit rules and the D27 session check. Owns: `hooks/st-approve.py`, `hooks/commands.json`. Test:
+  lock, the D23 commit rules, the D27 session check, and the `--render` helper that
+  `st-worker.sh` uses for `wait` and `approve` (F6). Owns: `hooks/st-approve.py`, `hooks/commands.json`. Test:
   `PYTHONDONTWRITEBYTECODE=1 python3 tests/test_approve_hook.py && PYTHONDONTWRITEBYTECODE=1 python3 tests/test_phase_hook.py && PYTHONDONTWRITEBYTECODE=1 python3 tests/test_model_hook.py`.
   (FR-019, D23, D27, security notes S3, S4, S5, lessons L3, L5)
 - [ ] T031 [P] [US4] In `scripts/st-worker.sh` add `start --autonomous` (with the `owns` and
   `session` files, and the remote `.stratum/autonomous` write for `--machine`, D28),
-  `autonomous-off`, the layout, the `wait`
+  `autonomous-off`, the `input` rendering through `python3 <plugin root>/hooks/st-approve.py --render`
+  (T030's helper, F6), the layout, the `wait`
   approval state, `approve`, `pass`, the `answer` refusal, the `close` cleanup and B2 (Team rule
   1); update the usage line; change rule 1 in section 3 of
   `specs/008-herdr-workers/contracts/script.md` to B2 (contracts/scripts.md section 4). Owns:
@@ -673,7 +690,7 @@ Test reads a file it changes. Test tasks still come before their build tasks.
 | 1 | T001, T002, T003, T004, T009, T010, T011, T012, T026, T028, T036, T037, T041, T042, T050 | nothing: each writes its own test file, T050 writes `research.md` (T002 also `tests/test_advisor.sh`, T003 also `tests/test_on_demand.sh`) |
 | 2 | T005, T006, T007, T013, T014, T016, T019, T030, T032, T044 | the wave 1 test of each; T019: T050 passed |
 | 3 | T015, T018, T021, T027, T038, then T008 last | T015: T006, T007 (shared `skills/st-build/SKILL.md`, agents). T018: T005 (`tests/test_advisor.sh` is T005's Test). T027: T016 (`tests/test_st_worker.sh`). T038: T007 (`agents/st-plan.md`, `procedures/tasks.md`). T021: T019, T050. T008: T044 (`README.md`) and every test file it lists, so after T018 |
-| 4 | T023, T031, T039 | T023: T018, T021, T014. T031: T027. T039: T015 |
+| 4 | T023, T031, T039 | T023: T018, T021, T014. T031: T027, T030 (the `--render` helper). T039: T015 |
 | 5 | T020, T024 | T020: T003, T006, T007, T015, T039 (their Tests read `tests/test_on_demand.sh`). T024: T023 |
 | 6 | T022 | T020, T039, T008 (`skills/st-build/SKILL.md`, `skills/st/SKILL.md`, `README.md`) |
 | 7 | T029, T034 | T029: T022 (its Test reads `tests/test_on_demand.sh`). T034: T030, T031, T032, T024 (`research.md`) |
