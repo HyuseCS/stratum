@@ -127,7 +127,7 @@ scoped tests.
   `skills/st/SKILL.md`, `agents/st-plan.md`, `procedures/tasks.md`, `skills/st-sync/SKILL.md`.
   Test: `bash tests/test_test_scope.sh && bash tests/test_on_demand.sh && bash tests/test_design_lane.sh && ! bash tests/test_inspect.sh | grep '^FAIL' | grep -vxF 'FAIL README tests'`.
   (FR-005, FR-006, FR-007)
-- [ ] T008 [US1] README task 1 of 2. Add to the Tests block of `README.md` every test file that
+- [X] T008 [US1] README task 1 of 2. Add to the Tests block of `README.md` every test file that
   exists at the end of wave 3: `bash tests/test_lane_steps.sh`, `bash tests/test_advisor_waive.sh`,
   `bash tests/test_advisor_rules.sh`, `bash tests/test_test_scope.sh`, `bash tests/test_lock.sh`,
   `bash tests/test_lock_rules.sh`, `bash tests/test_codex_agent.sh` (only if T050 passed),
@@ -601,7 +601,7 @@ new screens to the Design lane and runs file-disjoint stories together.
   `agents/st-plan.md`, `procedures/tasks.md`, `templates/tasks.md`, `skills/st-plan/SKILL.md`.
   Test: `bash tests/test_plan_rules.sh && bash tests/test_test_scope.sh && bash tests/test_on_demand.sh && ! bash tests/test_inspect.sh | grep '^FAIL' | grep -vxF 'FAIL README tests'`.
   (FR-023, FR-026)
-- [ ] T039 [P] [US5] Write DL11 to DL16 in `skills/st-build/SKILL.md` (DL11 to DL14 in Per task, DL15
+- [X] T039 [P] [US5] Write DL11 to DL16 in `skills/st-build/SKILL.md` (DL11 to DL14 in Per task, DL15
   and DL16 in Parallel tasks; DL16 replaces ``merge it into `main` ``) and DL17 as step 5 of
   `agents/st-build.md`. Owns: `skills/st-build/SKILL.md`, `agents/st-build.md`. Test:
   `bash tests/test_screen_rules.sh && bash tests/test_advisor_rules.sh && bash tests/test_lock_rules.sh && bash tests/test_test_scope.sh && bash tests/test_on_demand.sh`.

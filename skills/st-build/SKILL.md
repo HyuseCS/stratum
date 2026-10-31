@@ -33,13 +33,18 @@ subagent absolute paths: plugin root, project root, feature dir, and its task ID
    Then start the `st-debug` agent (`stratum:st-debug`) with the task, the test, both failure outputs, and the advisor's answer.
 5. **Commit.** The `st-git` agent (`stratum:st-git`) commits the exact paths of the task, with tasks.md, and `<feature dir>/advisor.md` if it changed.
 
+A task marked `[screen: <mode>]` goes to `/stratum:st-design` (Skill tool) in that mode, not to `st-build`. Go on with the other tasks while the screen waits, and show the screen's report with the story review.
+If the Design lane cannot start (its tool check fails, or no dev server answers), pause only that task. Tell the user what is missing in short, simple words, and go on with the other tasks. On the user's "go", run the screen again from `/stratum:st-design` step 1.
+Never move a `[screen]` task to `st-build` and `st-ui-ux` without telling the user.
+If `/stratum:st-design` ends with no report, the screen task stays open: tell the user.
+
 ## Parallel tasks `[P]`
 
 When the project is this session's own repo, run each `[P]` task of a phase in its own subagent
 with `isolation: "worktree"`, all started in one message.
+User stories that tasks.md says share no files run at the same time.
 Each runs the per-task steps in its worktree, except step 4: a subagent whose test is still red after 2 tries stops and reports both failures.
-Then check each branch (tests green, no added comments) and merge it into `main`
-yourself. Keep each worktree and branch after the merge. Delete one only when the user says so.
+Then check each branch (tests green, no added comments) and merge it into the feature branch yourself. Keep each worktree and branch after the merge. Delete one only when the user says so.
 Never delete a remote branch: the user does that. If the project is another repo, run `[P]` tasks one after another.
 
 ## Per story (after its last task)
