@@ -15,7 +15,9 @@ description: "Task list template for feature implementation"
 
 ## Format: `[ID] [P?] [Story] Description`
 
-- **[P]**: Can run in parallel (different files, no dependencies)
+- **[P]**: Can run in parallel: no shared file in the phase and no other task's result; the task ends with `Owns:`
+- **[lock]**: Test that cannot run at the same time as another; it runs through the test lock
+- **[screen: <mode>]**: New screen; Build sends it to the Design lane in that mode
 - **[Story]**: Which user story this task belongs to (e.g., US1, US2, US3)
 - Include exact file paths in descriptions
 
@@ -243,7 +245,7 @@ With multiple developers:
 
 ## Notes
 
-- [P] tasks = different files, no dependencies
+- [P] tasks = no shared file in the phase and no other task's result; each names the files it owns (`Owns:`)
 - [Story] label maps task to specific user story for traceability
 - Each user story should be independently completable and testable
 - Verify tests fail before implementing

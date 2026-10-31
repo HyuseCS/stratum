@@ -22,9 +22,11 @@ Plugin root (`<plugin root>`) is two levels up from this skill's base directory.
 2. **Open decisions.** If it returns any, grill the user one decision at a time, each with the
    options and your recommendation. When all are answered, resume the **same** subagent with
    `SendMessage` (its agent ID) and the answers. Repeat until it reports no open decisions.
+   A `[screen]` task's Design lane mode is an open decision like the others: the user picks autonomous or new look, and custom design only when `skills/st-design/SKILL.md` names a custom mode.
 3. **Verify.** Check that `plan.md`, `research.md`, `quickstart.md` and `tasks.md` exist in the
-   feature dir, that every FR has a test task before its build task, and that every task names
-   exact file paths. Send gaps back to the same subagent.
+   feature dir, that every FR has a test task before its build task, that every task names exact file paths,
+   that every task names its exact test command (`Test:`), that every `[P]` task names the files it owns (`Owns:`) and no two `[P]` tasks in one phase own the same file, and that every `[screen]` task has its mode.
+   Send gaps back to the same subagent.
 4. **Advisor.** Run `bash <plugin root>/scripts/st-advisor.sh plan <feature dir>` from the project root in the foreground, with a Bash timeout of 600000 ms, and wait for it.
    Codex reads spec, plan and tasks in the read-only sandbox and only advises: a simpler or better approach, tasks to cut or merge. It does not validate; st-inspect does.
    Handle its answer as in "Advisor" in `<plugin root>/skills/st-build/SKILL.md`; big ones go to the user before the gate.

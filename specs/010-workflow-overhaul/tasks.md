@@ -198,7 +198,7 @@ at the same time.
 - [X] T014 [P] [US2] Write `scripts/st-lock.sh` (contracts/scripts.md section 3, data-model
   section 4), with the `ponytail:` line for the two-waiter race (research R-D). Owns:
   `scripts/st-lock.sh`. Test: `bash tests/test_lock.sh`. (FR-009, lessons L29)
-- [ ] T015 [P] [US2] Write L1 and L2 in `agents/st-test.md` (Steps), `agents/st-build.md` and
+- [X] T015 [P] [US2] Write L1 and L2 in `agents/st-test.md` (Steps), `agents/st-build.md` and
   `agents/st-debug.md` (Steps), and L1 and L3 in `skills/st-build/SKILL.md` (Per task). Owns:
   `agents/st-test.md`, `agents/st-build.md`, `agents/st-debug.md`, `skills/st-build/SKILL.md`.
   Test: `bash tests/test_lock_rules.sh && bash tests/test_test_scope.sh && bash tests/test_advisor_rules.sh && bash tests/test_on_demand.sh`.
@@ -236,7 +236,7 @@ the High talk.
   (n), T023 builds no herdr path and no `codex-home`, and T020 and T022 use the "T050 fails"
   lines of contracts/phrases.md. Owns: `specs/010-workflow-overhaul/research.md`. Test: the
   commands above. (FR-013, D25, security note S2, lessons L32)
-- [ ] T018 [P] [US3] Write `tests/test_advisor_matrix.sh` (setup as T002, plus a
+- [X] T018 [P] [US3] Write `tests/test_advisor_matrix.sh` (setup as T002, plus a
   `.stratum/state.json` with `risk`). In `tests/test_advisor.sh` add
   `unset HERDR_ENV HERDR_WORKSPACE_ID` at the top and change the expected `mode not set` lines at
   lines 315 and 379 to R18's message, and in `badjson` (line 339) drop `{"model": "gpt-test-1"}`
@@ -594,7 +594,7 @@ new screens to the Design lane and runs file-disjoint stories together.
 
 ### Build
 
-- [ ] T038 [P] [US5] Write DL1 and DL2 in `agents/st-plan.md` (Rules; DL2 replaces
+- [X] T038 [P] [US5] Write DL1 and DL2 in `agents/st-plan.md` (Rules; DL2 replaces
   `Mark tasks that touch no common file \`[P]\`.`), DL3 to DL5 in `procedures/tasks.md` (Format
   Components; DL3 replaces the old `[P] marker` item), DL6 to DL8 and DL18 in `templates/tasks.md`
   (Format list and Notes), DL9 and DL10 in `skills/st-plan/SKILL.md` (steps 3 and 2). Owns:
