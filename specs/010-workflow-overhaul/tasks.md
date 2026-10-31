@@ -522,7 +522,7 @@ prompts through the hook; normal mode never answers them.
   `st-worker.sh` uses for `wait` and `approve` (F6). Owns: `hooks/st-approve.py`, `hooks/commands.json`. Test:
   `PYTHONDONTWRITEBYTECODE=1 python3 tests/test_approve_hook.py && PYTHONDONTWRITEBYTECODE=1 python3 tests/test_phase_hook.py && PYTHONDONTWRITEBYTECODE=1 python3 tests/test_model_hook.py`.
   (FR-019, D23, D27, security notes S3, S4, S5, lessons L3, L5)
-- [ ] T031 [P] [US4] In `scripts/st-worker.sh` add `start --autonomous` (with the `owns` and
+- [X] T031 [P] [US4] In `scripts/st-worker.sh` add `start --autonomous` (with the `owns` and
   `session` files, and the remote `.stratum/autonomous` write for `--machine`, D28),
   `autonomous-off`, the `input` rendering through `python3 <plugin root>/hooks/st-approve.py --render`
   (T030's helper, F6), the layout, the `wait`
