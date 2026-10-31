@@ -103,6 +103,8 @@ command, FR-005).
 
 ## 9. Stratum Codex home (`${XDG_STATE_HOME:-$HOME/.local/state}/stratum/codex-home/`, outside every repo)
 
+Not built: T050 failed (research R-J). No command makes this folder and no tab uses it. The design stays for a later build.
+
 | Part | Rule |
 |------|------|
 | folder | mode 700, made only by `st-advisor.sh codex-home` when the user opts in to a Codex advisor (D25) |

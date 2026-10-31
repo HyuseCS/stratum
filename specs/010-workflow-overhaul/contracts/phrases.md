@@ -71,7 +71,7 @@ task (L37).
 | R4 | skills/st-build/SKILL.md | The mode comes from `.stratum/advisor.json`: `auto` (the default when the file has no `mode`), `codex`, `both` or `off`. |
 | R5 | skills/st-build/SKILL.md | `advisors: codex`: Codex runs. `advisors: both`: Codex runs, then consult `/advisor` on the same input, then hold the talk. `advisors: /advisor`: consult `/advisor` only. `advisors: none`: no advisor at this point, and skip `check plan`. |
 | R6 | skills/st-build/SKILL.md | \| test red after 2 tries \| Codex, then both if still red \| Codex \| `/advisor` \| none \| |
-| R7 | skills/st-build/SKILL.md | In herdr, with the Stratum Codex home in place, Codex runs as the `st-codex-<NNN>` agent in the `Codex` tab of this workspace, read-only and never asking, and the user can watch it there. Otherwise it runs in the background as before. |
+| R7 | skills/st-build/SKILL.md | Codex runs in the background as before, also in herdr. |
 | R8 | skills/st-build/SKILL.md | At a High point both advisors first answer alone. Then hold the talk: at most 3 rounds of `bash <plugin root>/scripts/st-advisor.sh round <point> <feature dir> <n> <views file>`, each with `/advisor`'s answer to the same views. |
 | R9 | skills/st-build/SKILL.md | In round 3 each advisor proposes a compromise for every open point. A compromise both accept is a combined finding. A point with no compromise both accept goes to the user with both views, in short, simple words. |
 | R10 | skills/st-build/SKILL.md | If one advisor has no answer (`no advisor`, mode off), the point runs with the one left, and the talk record says so. |
@@ -81,10 +81,8 @@ task (L37).
 | R14 | skills/st-fast/SKILL.md | At the end of the change, send the small-decision list to `/advisor` if one is set. A decision it sends to the user is undone if the user says no. |
 | R15 | skills/st-init/SKILL.md | advisor mode `auto` (recommended: the risk level picks Codex, `/advisor` or both at each point; needs `codex` logged in for Codex), `codex` (Codex reviews the plan and a test red after 2 tries), `both` (Codex, then `/advisor` if set), or `off` (no Codex, nothing sent to OpenAI)? |
 | R16 | README.md | `{"mode": "auto"}` (the default when the file has no `mode`): the risk level picks the advisors at each point. |
-| R17 | README.md | Inside herdr, Codex runs as an agent in a `Codex` tab of your workspace, read-only and never asking, so you can watch it. The tab uses Stratum's own Codex home, `~/.local/state/stratum/codex-home`, which holds only a link to your Codex login: your `~/.codex/config.toml`, `~/.codex/hooks.json` and a project's `.codex/config.toml` do not load there, and the model comes from `.stratum/advisor.json`. |
-| R21 | README.md | Outside herdr, the call runs with `--ignore-user-config`: neither `~/.codex/config.toml` nor a project `.codex/config.toml` is read |
-| R19 | skills/st-init/SKILL.md | If the answer is `auto`, `codex` or `both`, run `bash <plugin root>/scripts/st-advisor.sh codex-home` and show its line word for word. |
-| R20 | skills/st-build/SKILL.md | When the user asks to add a Codex advisor, or sets a mode that uses Codex, run `bash <plugin root>/scripts/st-advisor.sh codex-home` and show its line word for word. Never run it on your own. |
+| R17 | README.md | Codex runs in the background, also inside herdr. |
+| R21 | README.md | The call runs with `--ignore-user-config`: neither `~/.codex/config.toml` nor a project `.codex/config.toml` is read |
 | R18 | README.md | With no file the advisor is off and prints `no advisor: mode not set. Write .stratum/advisor.json with "mode": "auto", "codex", "both" or "off".` |
 
 Gone: `It runs at two points` and
@@ -93,7 +91,7 @@ Gone: `It runs at two points` and
 (skills/st-init/SKILL.md). Kept: ``First line `mode both: also consult /advisor if one is set` ``
 (skills/st-build/SKILL.md, row `#18 FR-010 modes`).
 
-If T050 fails (no tab path): R7 becomes `Codex runs in the background as before, also in herdr.` and R17 becomes `Codex runs in the background, also inside herdr.`; R19 and R20 are dropped; R21 starts `The call runs with` in place of `Outside herdr, the call runs with`. T020 and T022 use those lines.
+T050 failed (research R-J), so the rows above hold the text in force: R7 and R17 say Codex runs in the background, R21 starts `The call runs with`, and R19 and R20 are dropped. T020 and T022 use those lines.
 
 R6 is the one matrix row the test pins; the other rows are in the same table (contracts/scripts.md
 section 1.4 is the source). `skills/st-fast/SKILL.md` keeps no `st-advisor.sh` call (existing
@@ -172,3 +170,16 @@ Gone: `Make GitHub issues from the tasks?` (every `skills/*/SKILL.md`), ``or at 
 (skills/st-plan/SKILL.md, `tests/test_inspect.sh:93`).
 FR-030: no `frontend-design` text in any tracked file outside `specs/` and the test itself, no
 `skills/st-frontend-design/`, no `licenses/frontend-design.Apache-2.0.txt`.
+
+## Built text with no row
+
+No phrase test asserts these lines. Each one is built text that the table does not list:
+
+- `skills/st-design/SKILL.md` step 4: ``When the task line has `[screen: <mode>]`, use that mode.``
+- `skills/st-design/SKILL.md` step 5: ``When `/stratum:st-build` calls this skill for a `[screen]` task, "stop" stops only that screen task.``
+- `skills/st-build/SKILL.md` line 40: ``After the user's OK and the st-design commit, tick the `[screen]` task and have `st-git` commit tasks.md.``
+- `skills/st-build/SKILL.md` line 41: ``A task that is both `[P]` and `[screen]` goes to `/stratum:st-design` in the main session, not to a worktree subagent.``
+- `skills/st/SKILL.md` line 17: ``Pass st-triage only the issue numbers; take the number from an issue URL.``
+- `skills/st/SKILL.md` line 18: ``If triage says an issue is done or not valid, or triage stops, tell the user and wait for their word before you pick the lane.``
+- `skills/st/SKILL.md` line 87: ``Turn on autonomous build mode only as the line above that starts "Autonomous build mode turns on only when" says.``
+- `skills/st-build/SKILL.md` line 101: ``A BLOCKED round ends the talk: send the open points to the user, do not run `continued`.``

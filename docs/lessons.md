@@ -312,3 +312,35 @@
 
 - What happened: The upstream `st-hallmark` description says "Use when the user asks to build or design something new", so Fast, Full, Quick or `st-build` could load it by itself. Plan validation (F7) found it. D22 set `disable-model-invocation: true` in the copy, and the copy check asserts that line (negative control N10).
 - Rule: A vendored skill copy that another lane could load by description has `disable-model-invocation: true` in its frontmatter, and a copy check asserts that line.
+
+## 2026-10-31: 010-workflow-overhaul
+
+### L44. A phrase row that a fallback changed kept its old text
+
+- What happened: After the T050 probe failed, `skills/st-build/SKILL.md`, `README.md` and `tests/test_risk_rules.sh` carried the fallback text for R7, R17 and R21. `contracts/phrases.md` kept the pass text, and R19 and R20 stayed in the table although no file held them. The phrase tests embed their own copy of the text, so every test stayed green, and 5 of 84 rows were not word for word in their file.
+- Rule: A check fails when any phrase row in `contracts/phrases.md` is not found word for word in the file it names.
+
+### L45. A canary probe proved nothing because its agent never ran a turn
+
+- What happened: The T050 probe passed its canary checks (no `notify` file, no MCP file), but Codex never answered, so no canary could have fired. Research R-J still recorded check 3 as PASS and noted that the proof is weak.
+- Rule: A canary probe passes only when a control run with the same setup writes the canary file.
+
+### L46. A new refusal in the approval hook was not added to its contract
+
+- What happened: Commit `82514b2` made `hooks/st-approve.py` refuse `$(`, backticks, `<(`, `>(` and `${` in a commit request, and `cd` and `pushd`. Contract section 5.2 did not list them, named three `GIT_` variables where the hook matches any `GIT_` assignment, and did not list `git clean` or `git update-ref` from the never list.
+- Rule: A check fails when a word that the approval hook's never list or commit rule refuses is missing from `contracts/scripts.md`.
+
+### L47. An unlisted field in a roster loop's key left one repo's flag
+
+- What happened: `autonomous-off` skipped every roster row whose machine it had already handled, so a second repo on the same machine kept its `.stratum/autonomous` flag. Commit `566d120` made the key machine and repo, and test AO4 covers two repos on one machine.
+- Rule: A test with two repos on one machine fails when `autonomous-off` leaves the second repo's flag.
+
+### L48. A negative-control record kept its counts after later fixes to the code it covers
+
+- What happened: Research R-I ran the controls at HEAD `125e02c`. Commits `82514b2` (`hooks/st-approve.py`, `tests/test_approve_hook.py`) and `566d120` (`scripts/st-worker.sh`, `tests/test_st_worker.sh`) came after, and the record still gives its counts as current.
+- Rule: A check fails when a file named by a negative-control record changed after the commit that the record names.
+
+### L49. A deny rule on a script's name blocked the script's own files
+
+- What happened: Plan validation F1 found that lock 2 denied any Bash text naming `st-worker`, so a worker could not `git add`, `cat` or `grep` Stratum's own `st-worker.sh`. Decision D30 narrowed the rule to a call with a risky subcommand, and `tests/test_approve_hook.py` asserts that `ls scripts/st-worker.sh` gives no output.
+- Rule: A deny rule for a script matches a call with a risky subcommand, and a test shows that reading the script is still allowed.

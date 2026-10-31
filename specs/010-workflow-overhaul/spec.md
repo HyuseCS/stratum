@@ -101,10 +101,10 @@ user can see what Codex reviewed.
 2. **Given** advisor mode `auto`, **When** an advisor point runs, **Then** the advisors called are
    the ones the matrix names for that point and risk level; modes `codex`, `both` and `off`
    override the matrix.
-3. **Given** the orchestrator runs in herdr, **When** a Codex point runs, **Then** Codex runs as a
+3. **Given** the orchestrator runs in herdr, **When** a Codex point runs (not built, see FR-013), **Then** Codex runs as a
    herdr agent in its own tab of the same workspace, read-only, with no permission prompts, and
    at most one Codex agent exists per workspace.
-4. **Given** Codex's answer in the tab, **When** the orchestrator reads it, **Then** the answer
+4. **Given** Codex's answer in the tab (not built, see FR-013), **When** the orchestrator reads it, **Then** the answer
    between the two marker lines is checked against the verdict format, and a bad answer counts
    as BLOCKED.
 5. **Given** a High point, **When** both advisors answered alone, **Then** they talk at most 3
@@ -210,7 +210,7 @@ line. Run the Plan phase and see no issue question. Search the plugin and see no
 **Acceptance Scenarios**:
 
 1. **Given** a task that names issue numbers, **When** `/stratum:st` starts, **Then** it runs
-   `st-triage` on them side by side, shows a short verdict per issue, then picks the lane.
+   `st-triage` on them side by side, shows a short verdict per issue, then picks the lane. It passes triage only the issue numbers. If triage says an issue is done or not valid, or triage stops, it tells the user and waits for their word before it picks the lane.
 2. **Given** the Plan phase ends, **When** the orchestrator reaches its end, **Then** it does not
    ask to make GitHub issues; issues are made only when the user asks in their own words.
 3. **Given** the plugin, **When** it is searched, **Then** `st-frontend-design` has no folder,
@@ -221,9 +221,9 @@ line. Run the Plan phase and see no issue question. Search the plugin and see no
 
 - A command the guard cannot split has `git` only inside a quoted string, such as an `echo`
   text: the guard asks, because it cannot read it as a full command (safe side).
-- Codex's tab was closed by the user mid-feature: the orchestrator starts a new Codex agent in the
+- (Not built, see FR-013.) Codex's tab was closed by the user mid-feature: the orchestrator starts a new Codex agent in the
   workspace and gives it the review as a new conversation.
-- Two orchestrator sessions in one workspace: the second finds the existing Codex agent and uses
+- (Not built, see FR-013.) Two orchestrator sessions in one workspace: the second finds the existing Codex agent and uses
   it, one review at a time; it does not start a second one.
 - The permission hook gets no answer from the orchestrator (session ended): the prompt stays for
   the user, as in normal mode.
@@ -293,7 +293,7 @@ line. Run the Plan phase and see no issue question. Search the plugin and see no
   start a new conversation per feature; its answer MUST be read between two marker lines and
   checked against the verdict format, and a bad answer MUST count as BLOCKED. The tab MUST run only
   with the Stratum Codex home the user opted in to, and only after the live probe T050 passed;
-  otherwise, and outside herdr, Codex MUST run in the background as today (D12, D25).
+  otherwise, and outside herdr, Codex MUST run in the background as today (D12, D25). Status: T050 failed (research R-J), so no tab is built and Codex runs in the background in herdr too.
 - **FR-014**: At a High point the two advisors MUST first answer alone, then talk at most 3 rounds;
   in the last round each MUST propose a compromise for every open point; a point with no
   compromise both accept MUST go to the user with both views in short, simple words (D16, D17).
@@ -317,7 +317,7 @@ line. Run the Plan phase and see no issue question. Search the plugin and see no
   on its own branch, that stages only files its task owns and has no `--amend` and no
   `--no-verify`) one time only, and MUST send all others to
   the user with the tab name in short, simple words. It MUST never approve: push, force-push,
-  deleting a branch or worktree, `reset --hard`, anything outside the worker's worktree, secrets
+  deleting a branch or worktree, `reset --hard`, `git clean`, `git update-ref`, anything outside the worker's worktree, secrets
   or `.env`, `.claude/`, `.mcp.json`, `.githooks/` or `.husky/`, new dependencies, network calls to new hosts. When the classifier blocks an approval,
   it MUST try no other way. Every approval MUST be recorded and listed at the end of the run. The
   hook MUST act only while the main checkout's `.stratum/autonomous` holds the orchestrator's
@@ -359,7 +359,7 @@ line. Run the Plan phase and see no issue question. Search the plugin and see no
 **Skills (#51)**
 
 - **FR-028**: When a task names GitHub issue numbers, `/stratum:st` MUST run `st-triage` on them
-  side by side, show a short verdict per issue, then pick the lane (D7).
+  side by side, show a short verdict per issue, then pick the lane (D7). It passes triage only the issue numbers; if triage says an issue is done or not valid, or stops, it waits for the user before it picks the lane.
 - **FR-029**: The Plan phase MUST NOT ask to make GitHub issues from tasks. Stratum MUST make an
   issue only when the user asks in their own words. `/stratum:st-issues` stays a manual tool (D8).
 - **FR-030**: `st-frontend-design` MUST be removed: its folder, license file, `vendor.lock` entry,
@@ -402,7 +402,7 @@ line. Run the Plan phase and see no issue question. Search the plugin and see no
 - The Claude Code permission hook in worker sessions can send a prompt to the orchestrator and
   wait for its answer; the Plan phase checked this (research R-A). FR-019 has no fallback to
   permissions the user grants (D29).
-- herdr 0.9.4 supports `--kind codex`; Codex runs with `-s read-only -a never`.
+- herdr 0.9.4 supports `--kind codex`; Codex runs with `-s read-only -a never`. T050 started Codex this way; the prompt got no answer (research R-J).
 - The approval record lives in the run's scratch space and is not committed, because a prompt can
   hold a secret value.
 - The parasat constitution's wait loop is out of scope; the user gets the line to change there.

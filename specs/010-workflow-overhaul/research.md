@@ -341,3 +341,7 @@ Total: 347 red, 740 same. Every file has at least one red case.
 2. `test_advisor_matrix.sh` aborts on old at `(j) count` (`usage: unbound variable` under `set -u`). The literal run evaluates 25 of 31 cases (17 red, 8 same). The table uses a scratch copy with `set -u` relaxed, which evaluates all 31.
 3. `test_on_demand.sh` check `#18 plan-only st-build no diff point` changed and passes on old. The grep matches zero lines on old, as T003 intends.
 4. `test_risk_rules.sh` R21 passes on old. With T050 failed, the fallback sentence equals `README.md:182` at 6fe9d60.
+
+Re-run after `82514b2` and `566d120` (US4 review fixes), same old tree: `tests/test_approve_hook.py`
+gives 178 failures on old; `tests/test_st_worker.sh` gives 92 FAIL lines on old, among them the new
+cases AO4 and SY1 to SY4.
