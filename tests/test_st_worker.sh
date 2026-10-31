@@ -85,7 +85,7 @@ case "$1 $2" in
   printf 'pane\t%s\n' "$p" >> "$T/made"
   jq -nc --arg p "$p" '{result:{type:"pane_created",pane:{pane_id:$p}}}' ;;
 "agent read")
-  if [ -e "$T/pane.txt" ]; then cat "$T/pane.txt"; else printf 'STUB PANE %s\n' "$X"; fi ;;
+  if [ -e "$T/pane.txt" ]; then tail -n "$7" "$T/pane.txt"; else printf 'STUB PANE %s\n' "$X"; fi ;;
 "agent wait")
   if [[ " $* " == *" --until "* ]] && [ -e "$T/resume_result" ]; then
     printf 'RESULT FILE %s\n' "$X" > "$(jq -r .result.worktree.path "$T/wc.json")/result.md"
@@ -1159,7 +1159,7 @@ check "SY4 pass, $rid.user a symlink: exit 1, the cannot-write line, target unch
 rm -rf "$tmp/aptarget"
 autoclr
 
-for pl in 'Do you want to proceed?' 'Do you want to make this edit to a.py?' 'Do you want to create b.py?' '❯ 1. Yes'; do
+for pl in 'Do you want to proceed?' 'Do you want to make this edit to a.py?' 'Do you want to create b.py?' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)'; do
   mk; states blocked; printf '%s\n' "$pl" > "$tmp/pane.txt"
   run bash "$script" answer T004 --keys 1
   check "AN1 pane line '$pl': exit 1, the permission line, no key sent" '[ $rc = 1 ] && [ "$out" = "This is a permission prompt. Tell the user the workspace, the tab and the prompt; do not answer it." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
@@ -1167,6 +1167,14 @@ done
 mk; states blocked
 STUB_FAIL="agent read" STUB_FAIL_CODE=timeout run bash "$script" answer T004 --keys 1
 check "AN2 agent read fails: exit 1, the same permission line, no key sent" '[ $rc = 1 ] && [ "$out" = "This is a permission prompt. Tell the user the workspace, the tab and the prompt; do not answer it." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+for pq in 'Should the helper be named normalizeInput?' 'Do you want to rename it?'; do
+  mk; states blocked working; printf '%s\n' "$pq" '❯ 1. Yes' '  2. No' > "$tmp/pane.txt"
+  run bash "$script" answer T004 --keys 1
+  check "AN3 ordinary question '$pq': exit 0, the key sent" '[ $rc = 0 ] && hascall "agent\tsend-keys\tworker-t004\t1"'
+done
+mk; states blocked working; { printf '%s\n' ' Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)'; seq -f 'line %g' 15; printf '%s\n' 'Should the helper be named normalizeInput?' '❯ 1. Yes' '  2. No'; } > "$tmp/pane.txt"
+run bash "$script" answer T004 --keys 1
+check "AN4 permission dialog more than 15 lines up: exit 0, the key sent" '[ $rc = 0 ] && hascall "agent\tsend-keys\tworker-t004\t1"'
 
 mk; states done; apd; printf '%s\n' "$sid" > "$lw/.stratum/approve/session"
 run bash "$script" close T004

@@ -324,7 +324,7 @@ wait)
 answer)
   look
   [ "$S" = blocked ] || fail "not blocked: $S"
-  "${H[@]}" agent read "$N" --source recent-unwrapped --lines 40 >"$t" 2>"$e" && ! grep -qE '^([[:space:]]|│)*(Do you want to|(❯[[:space:]]*)?1\. Yes)' "$t" || fail "This is a permission prompt. Tell the user the workspace, the tab and the prompt; do not answer it."
+  "${H[@]}" agent read "$N" --source recent-unwrapped --lines 15 >"$t" 2>"$e" && ! grep -qE '^([[:space:]]|│)*Do you want to (proceed|make this edit|create|allow|run)|don.t ask again|tell Claude what to do differently' "$t" || fail "This is a permission prompt. Tell the user the workspace, the tab and the prompt; do not answer it."
   if [ -n "${keys+x}" ]; then
     h agent send-keys "$N" "${keys[@]}"
   else
