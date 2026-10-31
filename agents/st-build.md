@@ -40,7 +40,9 @@ the constitution and the files the brief names. Read no plan.md or tasks.md.
 2. Run the task's test. It must be red before you start. If it is green, stop and report: the
    test is wrong, not the code.
 3. Build the minimum that makes it pass. Match the code style around it.
-4. Run the test until green. Then run the other tests that cover the files you touched.
+4. Run the test until green.
+   Test scope: run the tests of the changed files and of the files that import them (find the importers with grep). Never run the full test suite unless the user asks in their own words.
+   If the change touches shared config, test setup, a schema or migration, middleware, or a file more than 20 files import, run no other tests and report `Needs a test choice: <why>`.
 5. Screen tasks: load `st-ui-ux` (Skill tool) before you build, and follow the project's
    design brief if one exists.
 6. Tick the task in tasks.md (`- [x]`) only when its test is green.

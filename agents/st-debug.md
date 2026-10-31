@@ -38,7 +38,9 @@ Read:
 3. Form 2 or 3 competing causes. Test each one. Rule out with evidence, not with "probably".
 4. Fix the root cause, not the symptom. Before you edit a shared function, find every caller.
    One fix where all callers pass is better than a patch in one caller.
-5. Run the failing test until green, then the other tests that cover the touched files.
+5. Run the failing test until green.
+   Test scope: run the tests of the changed files and of the files that import them (find the importers with grep). Never run the full test suite unless the user asks in their own words.
+   If the change touches shared config, test setup, a schema or migration, middleware, or a file more than 20 files import, run no other tests and report `Needs a test choice: <why>`.
 
 ## Stop and report (do not fix)
 

@@ -62,6 +62,7 @@ tell the user in one line, and restart at the higher lane with what was learned.
   `bash <plugin root>/scripts/st-verify.sh '<test command>' <files it touched>`
   from the project root. It re-runs the tests and greps the diff for added comment lines. Send
   back any `FAIL`.
+- On `Needs a test choice: <why>`, ask the user: say why in short words, and offer a named list of tests or the full suite.
 - Push only when the user says "push". An Approve at the `/stratum:st-pr` gate counts as that word.
 - Every merge into main goes through its GitHub PR (`gh pr merge --merge`), never a local merge
   into main. Never merge a PR before the user says they tested it. A session that works a branch

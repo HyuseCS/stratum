@@ -39,6 +39,7 @@ Read first:
 - Test first. Every functional requirement (FR) gets a task that writes a test which can fail,
   placed before the task that builds it.
 - Every task names its exact file paths. Mark tasks that touch no common file `[P]`.
+- Every task names its exact test command. No task runs the full test suite.
 - Ground the plan in the code as it is. Read the files the plan touches. Check library calls
   against the installed version, not memory.
 - Call out every task that touches access rules, sign-in, the data model, contracts, secrets,

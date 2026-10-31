@@ -87,6 +87,8 @@ Every task MUST strictly follow this format:
    - Polish phase: NO story label
 5. **Description**: Clear action with exact file path
 
+Every task ends with `Test:` and its exact test command. No task runs the full test suite.
+
 **Examples**:
 
 - ✅ CORRECT: `- [ ] T001 Create project structure per implementation plan`
