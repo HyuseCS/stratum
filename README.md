@@ -163,7 +163,7 @@ AGENTS.md, CLAUDE.md     point every tool at the constitution
 ```
 
 Templates and scripts stay in the plugin. A file in `.stratum/templates/` overrides the plugin's
-copy for that project only.
+copy for that project only. `scripts/st-lock.sh` runs tests marked `[lock]` one at a time per repo; it is not checked on Windows.
 
 ## Built in
 
@@ -316,6 +316,7 @@ ports, and waits for review before updating `vendor.lock`.
 python3 tests/test_git_guard.py
 python3 tests/test_model_hook.py
 python3 tests/test_phase_hook.py
+python3 tests/test_approve_hook.py
 bash tests/test_advisor.sh
 bash tests/test_design_check.sh
 bash tests/test_design_lane.sh
@@ -329,6 +330,17 @@ bash tests/test_shortcuts.sh
 bash tests/test_st_worker.sh
 bash tests/test_statusline.sh
 bash tests/test_verify.sh
+bash tests/test_lane_steps.sh
+bash tests/test_advisor_waive.sh
+bash tests/test_advisor_rules.sh
+bash tests/test_test_scope.sh
+bash tests/test_lock.sh
+bash tests/test_lock_rules.sh
+bash tests/test_advisor_matrix.sh
+bash tests/test_plan_rules.sh
+bash tests/test_screen_rules.sh
+bash tests/test_triage_rules.sh
+bash tests/test_no_frontend_design.sh
 node tests/test_token_weather.mjs
 node tests/test_pr_workflow.mjs
 claude plugin validate .claude-plugin/plugin.json
