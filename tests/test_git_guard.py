@@ -352,6 +352,14 @@ class GitGuardTest(unittest.TestCase):
         for cmd in ("\\git status", "g''it status", "gi\\t status"):
             self.assertEqual(self.run_guard(f"echo it's\n{cmd}"), (None, ""), cmd)
 
+    def test_stray_quote_wrapped_git_asks(self):
+        for cmd in ("$'git' push --force", '$"git" push --force', "git>/dev/null push --force",
+                    "git</dev/null push origin main", "git status && env git push --force",
+                    "git status; sudo git push origin main", "git log | xargs git add -A",
+                    "git status && bash -c 'git push --force'", "x=git; $x push"):
+            with self.subTest(cmd=cmd):
+                self.assertEqual(self.run_guard(f"echo it's\n{cmd}")[0], "ask", cmd)
+
 
 if __name__ == "__main__":
     unittest.main()

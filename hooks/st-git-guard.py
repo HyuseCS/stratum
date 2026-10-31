@@ -10,7 +10,7 @@ SEPARATORS = {"&&", "||", ";", "|", "&", "\n"}
 GIT_OPTS_WITH_VALUE = {"-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path",
                        "--config-env"}
 RANK = {None: 0, "ask": 1, "deny": 2}
-GIT_WORD = re.compile(r"(?<![^\s;&|()\[\],`/])git(?![^\s;&|()\[\],`])")
+GIT_WORD = re.compile(r"(?<![^\s;&|()\[\],`/$=])git(?![^\s;&|()\[\],`<>])")
 UNQUOTE = str.maketrans("", "", "\\'\"")
 
 
@@ -242,7 +242,7 @@ def main():
             note(*judge(sub, args, gitdir or cwd, unknown or env or elsewhere or left
                         or away(gitdir) or off_branch(gitdir), conf))
             left = left or sub in ("switch", "checkout")
-        return os.path.basename(seg[0]) == "git"
+        return bool(parsed and re.fullmatch(r"[a-z][a-z0-9-]*", parsed[0]))
 
     try:
         for seg in segments(command):
@@ -253,12 +253,13 @@ def main():
             if not GIT_WORD.search(line.translate(UNQUOTE)):
                 continue
             try:
-                found = [check(seg, True) for seg in segments(line)]
+                segs = list(segments(line))
             except ValueError:
                 note("ask", "The git guard could not parse the command.")
                 continue
-            if not any(found):
-                note("ask", "The git guard could not read a git command on this line.")
+            for seg in segs:
+                if not check(seg, True) and GIT_WORD.search(" ".join(seg).translate(UNQUOTE)):
+                    note("ask", "The git guard could not read a git command on this line.")
     if decision:
         print(json.dumps({"hookSpecificOutput": {
             "hookEventName": "PreToolUse",
