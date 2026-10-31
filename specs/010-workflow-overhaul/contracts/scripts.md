@@ -314,7 +314,8 @@ In the `except ValueError` path only:
 
 1. Remove every `\`, `'` and `"` from a copy of each line, so `\git`, `g''it` and `gi\t` read as
    `git`. No copy has a git word: no decision. A git word is `git`, or a path ending in `/git`,
-   with a line edge, white space, `;&|()` or a backtick on each side.
+   with a line edge, white space, `;&|()[],` or a backtick on each side (the copy has no quotes,
+   so `["git", "commit"]` reads as `[git, commit]`).
 2. For each line whose copy has a git word: split the original line with `segments` (shlex
    removes the quoting, so `g''it push` is a git segment). It does not split: ask with
    `The git guard could not parse the command.`. No segment starts with git (after the prefix
