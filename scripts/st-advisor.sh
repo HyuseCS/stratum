@@ -229,7 +229,7 @@ if a.get("verdict") not in ("APPROVED", "REVISE", "BLOCKED"):
     blocked("no verdict")
 keys = ("claim", "evidence", "location", "severity")
 fs = a.get("findings")
-if not isinstance(a.get("summary"), str) or not isinstance(fs, list) or not all(isinstance(x, dict) and all(isinstance(x.get(k), str) for k in keys) for x in fs):
+if not isinstance(a.get("summary"), str) or not isinstance(fs, list) or not all(isinstance(x, dict) and all(isinstance(x.get(k), str) for k in keys) and x["severity"] in ("CRITICAL", "HIGH", "MEDIUM", "LOW") for x in fs):
     blocked("malformed answer")
 if a["verdict"] == "REVISE" and not fs:
     blocked("REVISE with no findings")

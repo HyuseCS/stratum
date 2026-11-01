@@ -11,6 +11,7 @@ root=$(pwd -P)
 [ -L "$home/auth.json" ] || die "ERROR: no Stratum Codex home" 2
 h="[projects.\"$root\"]" awk '$0 == ENVIRON["h"] {s = 1; next} /^\[/ {s = 0} s && $0 == "trust_level = \"untrusted\"" {f = 1} END {exit !f}' "$home/config.toml" 2>/dev/null || die "ERROR: no Stratum Codex home entry for $root: run st-advisor.sh codex-home" 2
 ws=$HERDR_WORKSPACE_ID
+want=$(printf '%s\n' "$name" "$root" "$@")
 made=
 nofolder='ERROR: Codex stopped at start on a screen Stratum does not know, so the Codex tab is closed. Run the point again, or check Codex.'
 
@@ -42,8 +43,9 @@ for a in json.loads(sys.stdin.read())["result"]["agents"]:
         print(n + "\t" + a.get("tab_id", ""))' "$ws" "$root" <<<"$out") || die "ERROR: $(head -n1 <<<"$out")"
 found=0
 while IFS=$'\t' read -r n tab; do
-  [ -n "$n" ] || continue
-  if [ "$n" = "$name" ]; then found=1; else hd tab close "$tab"; fi
+  r=$home/agents/$tab
+  [[ $tab =~ ^[A-Za-z0-9:_-]+$ ]] && [ "$(head -n2 "$r" 2>/dev/null)" = "$n"$'\n'"$root" ] || continue
+  if [ "$n" = "$name" ] && [ "$(cat "$r")" = "$want" ]; then found=1; else hd tab close "$tab"; rm -f "$r"; fi
 done <<<"$others"
 
 if [ $found = 0 ]; then
@@ -56,7 +58,7 @@ if [ $found = 0 ]; then
     out=$(herdr agent start "$name" --kind codex --pane "$pane" --timeout 120000 -- -s read-only -a never --no-alt-screen "$@" 2>&1) && break
     code=$(jget error code <<<"$out")
     [ "$code" = agent_not_ready ] && { notready=1; break; }
-    [ "$code" = agent_pane_busy ] && [ $i -lt 10 ] || die "ERROR: $(head -n1 <<<"$out")"
+    [ "$code" = agent_pane_busy ] && [ $i -lt 10 ] || quit "ERROR: $(head -n1 <<<"$out")"
     sleep 1
   done
   s=$(screen)
@@ -71,6 +73,8 @@ if [ $found = 0 ]; then
   elif [ $notready = 1 ] || grep -q 'Folder access' <<<"$s"; then
     quit "$nofolder"
   fi
+  [[ $made =~ ^[A-Za-z0-9:_-]+$ ]] || quit "ERROR: bad tab id from herdr: $made"
+  (umask 077; mkdir -p "$home/agents" && printf '%s\n' "$want" > "$home/agents/$made") || quit "ERROR: cannot write $home/agents/$made"
 fi
 
 nonce=$(od -An -N6 -tx1 /dev/urandom | tr -d ' \n')

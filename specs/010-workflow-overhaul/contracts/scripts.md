@@ -130,7 +130,8 @@ other value: first print `risk not set: normal`, then use `normal`.
   `codex exec` fallback, so the fallback is never silent.
 - Else (not in herdr, or no Stratum Codex home):
   today's `codex exec -s read-only --ignore-user-config ... --ephemeral --output-schema ... -o ...`.
-- Both write the answer file. The same validator reads it. Exit 75 from the lock:
+- Both write the answer file. The same validator reads it. A finding whose severity is not
+  `CRITICAL`, `HIGH`, `MEDIUM` or `LOW`: `BLOCKED: malformed answer`. Exit 75 from the lock:
   `BLOCKED: Codex agent busy with another review`, no fallback. Any other non-zero exit from the
   tab path: print its last `ERROR:` line (exit 124 or 137, the outer `timeout` killed it:
   `ERROR: Codex tab timed out`), then run the `codex exec` path for that run with the time left. A non-zero
@@ -146,12 +147,19 @@ st-codex-agent.sh <feature dir> <prompt file> <answer file> <codex home> [-m <mo
 1. Agent name `st-codex-<NNN>`, `<NNN>` the leading 3 digits of the feature dir's name. None:
    `ERROR: feature dir must start with three digits` on stderr, exit 2.
 2. `herdr agent list`. Agents in `$HERDR_WORKSPACE_ID` whose name starts with `st-codex-` and
-   whose `cwd` is the project root (`pwd -P`): the one with this exact name is used. Each other
-   one gets `herdr tab close <its tab_id>` first. An `st-codex-*` agent with another `cwd`
-   belongs to another checkout: never used, never closed.
+   whose `cwd` is the project root (`pwd -P`) are ours only if `<codex home>/agents/<tab_id>`
+   (the ownership record, step 3) exists and its first two lines are the agent's name and the
+   project root. No such record (a tab id outside `[A-Za-z0-9:_-]` has none): the agent is
+   foreign, never used, never closed. Ours with this exact name, and the record's launch options
+   equal this run's `-m`/`-c` options: used. Every other agent of ours (another name, or other
+   options) gets `herdr tab close <its tab_id>` first and its record removed. An `st-codex-*`
+   agent with another `cwd` belongs to another checkout: never used, never closed.
 3. None left: `herdr tab create --workspace <ws> --cwd <pwd> --label Codex --env CODEX_HOME=<codex home> --no-focus`, then
    `herdr agent start <name> --kind codex --pane <root pane> --timeout 120000 -- -s read-only -a never --no-alt-screen [-m ..] [-c ..]`.
-   `agent_pane_busy`: retry, 10 tries, 1 s apart (L30). Ids are read from herdr's answers, never
+   `agent_pane_busy`: retry, 10 tries, 1 s apart (L30). Any other `agent start` error (for
+   example herdr refuses the name because a foreign agent holds it), or busy after 10 tries:
+   `ERROR: <its first line>`, exit 1, and the tab this run created is closed, so
+   `st-advisor.sh` falls back to `codex exec`. Ids are read from herdr's answers, never
    built (L26). `<codex home>/auth.json` not a symlink: `ERROR: no Stratum Codex home`, exit 2,
    before any herdr call. `<codex home>/config.toml` without `[projects."<pwd>"]` and
    `trust_level = "untrusted"`:
@@ -171,10 +179,11 @@ st-codex-agent.sh <feature dir> <prompt file> <answer file> <codex home> [-m <mo
    `ERROR: Codex stopped at start on a screen Stratum does not know, so the Codex tab is closed. Run the point again, or check Codex.`,
    exit 1, no prompt, and the tab this run created is closed (`herdr tab close <tab_id from tab create>`,
    errors ignored). The script never sends a key for `Trust this folder?` (option 1 there
-   trusts the folder and loads the project config). An existing
-   `st-codex-<NNN>` agent from before D25 is reused only if its tab was made by this script
-   (label `Codex`); `ponytail:` the script cannot read a running pane's `CODEX_HOME`, so a tab
-   the user made by hand with that name would be reused.
+   trusts the folder and loads the project config). After a good start the script writes the
+   ownership record `<codex home>/agents/<tab_id from tab create>`, mode 600 (directory 700):
+   the agent name, the project root, then each launch option (`-m`, `<model>`, `-c`,
+   `<key=value>`) on its own line. A tab id outside `[A-Za-z0-9:_-]`, or a failed write:
+   `ERROR: ...`, exit 1, the tab closed.
 4. Nonce: 12 hex characters from `/dev/urandom`. The script appends to the prompt file:
    `The project root is <pwd>. Read every path above relative to it.`, the JSON shape line, and
    `Print the line ST-ADVISOR-BEGIN-<nonce> alone, then the JSON object on one line, then the line ST-ADVISOR-END-<nonce> alone. Print nothing after the end line.`

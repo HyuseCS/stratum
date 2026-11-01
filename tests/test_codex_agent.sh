@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -u
 root="${ST_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
-tmp=$(mktemp -d)
+tmp=$(mktemp -d) || exit 1
 trap 'rm -rf "$tmp"' EXIT
 fail=0
 check() { if eval "$2"; then echo "ok   $1"; else echo "FAIL $1"; fail=1; fi; }
@@ -34,6 +34,7 @@ case "$1 $2" in
     n=$(cat "$S/startcount" 2>/dev/null || echo 0); n=$((n + 1)); echo "$n" > "$S/startcount"
     [ "$n" -le "$(cat "$S/start_busy" 2>/dev/null || echo 0)" ] && err agent_pane_busy "pane is busy"
     [ -f "$S/notready" ] && err agent_not_ready "agent did not become ready"
+    [ -f "$S/dup" ] && err agent_exists "name taken"
     pane=
     while [ $# -gt 0 ]; do [ "$1" = --pane ] && pane=$2; shift; done
     [ "$pane" = "$(cat "$S/pane" 2>/dev/null)" ] || err pane_not_found "no such pane"
@@ -96,6 +97,7 @@ lineno() { grep -n -m1 -- "$1" "$S/log.txt" | cut -d: -f1; }
 outhas() { printf '%s\n' "$out" | grep -qF -- "$1"; }
 agent_json() { printf '[{"name":"%s","workspace_id":"%s","tab_id":"%s:t3","pane_id":"p9","cwd":"%s"}]' "$1" "$2" "$2" "${3:-$pp}" > "$S/agents"; }
 closed() { [ "$(cnt "^tab close $(cat "$S/tab")\$")" = 1 ]; }
+own() { mkdir -p "$home/agents"; printf '%s\n' "$1" "$pp" "${@:2}" > "$home/agents/$HERDR_WORKSPACE_ID:t3"; }
 nofolder='ERROR: Codex stopped at start on a screen Stratum does not know, so the Codex tab is closed. Run the point again, or check Codex.'
 
 new; rm "$home/auth.json"; go
@@ -114,12 +116,25 @@ check "a rc 0 and answer written" '[ $rc -eq 0 ] && [ -s "$af" ]'
 check "a tab create line" '[ "$(cnt "^tab create --workspace $HERDR_WORKSPACE_ID --cwd $pp --label Codex --env CODEX_HOME=$home --no-focus\$")" = 1 ]'
 check "a agent start line with -m -c after --no-alt-screen" '[ "$(cnt "^agent start st-codex-010 --kind codex --pane $pane --timeout 120000 -- -s read-only -a never --no-alt-screen -m m1 -c model_reasoning_effort=\"high\"\$")" = 1 ]'
 check "a tab create comes before agent start" '[ "$(lineno "^tab create")" -lt "$(lineno "^agent start")" ]'
+rec="$home/agents/$(cat "$S/tab")"
+check "a ownership record: name, root, launch options, mode 600" '[ "$(cat "$rec")" = "$(printf "%s\n" st-codex-010 "$pp" -m m1 -c "model_reasoning_effort=\"high\"")" ] && [ "$(stat -c %a "$rec")" = 600 ]'
+
+new; agent_json st-codex-010 "$HERDR_WORKSPACE_ID"; own st-codex-010; go
+check "b existing agent with a matching record reused: no tab create, no agent start" '[ $rc -eq 0 ] && [ "$(cnt "^tab create")" = 0 ] && [ "$(cnt "^agent start")" = 0 ] && [ "$(cnt "^agent prompt st-codex-010")" = 1 ]'
 
 new; agent_json st-codex-010 "$HERDR_WORKSPACE_ID"; go
-check "b existing agent reused: no tab create, no agent start" '[ $rc -eq 0 ] && [ "$(cnt "^tab create")" = 0 ] && [ "$(cnt "^agent start")" = 0 ] && [ "$(cnt "^agent prompt st-codex-010")" = 1 ]'
+check "b1 same-name agent with no record is foreign: not reused, not closed, own tab started" '[ $rc -eq 0 ] && [ "$(cnt "^tab create")" = 1 ] && [ "$(cnt "^agent start st-codex-010")" = 1 ] && [ "$(cnt "^tab close")" = 0 ]'
+new; agent_json st-codex-010 "$HERDR_WORKSPACE_ID"; own st-codex-010 -m m1; go -m m2
+check "b2 changed model: our old tab closed, new agent started with -m m2" '[ $rc -eq 0 ] && [ "$(cnt "^tab close $HERDR_WORKSPACE_ID:t3\$")" = 1 ] && [ "$(lineno "^tab close")" -lt "$(lineno "^tab create")" ] && [ "$(cnt " --no-alt-screen -m m2\$")" = 1 ] && [ ! -e "$home/agents/$HERDR_WORKSPACE_ID:t3" ] && [ -f "$home/agents/$(cat "$S/tab")" ]'
+new; agent_json st-codex-010 "$HERDR_WORKSPACE_ID"; own st-codex-010; printf '%s\n' st-codex-010 /other > "$home/agents/$HERDR_WORKSPACE_ID:t3"; go
+check "b3 record for another root is foreign: not reused, not closed" '[ "$(cnt "^tab create")" = 1 ] && [ "$(cnt "^tab close $HERDR_WORKSPACE_ID:t3\$")" = 0 ]'
+new; agent_json st-codex-010 "$HERDR_WORKSPACE_ID"; touch "$S/dup"; go
+check "b4 foreign agent and herdr refuses the name: error, exit 1, our tab closed, foreign tab kept, no prompt" '[ $rc -eq 1 ] && outhas "ERROR:" && closed && [ "$(cnt "^tab close $HERDR_WORKSPACE_ID:t3\$")" = 0 ] && [ "$(cnt "^agent prompt")" = 0 ]'
 
+new; agent_json st-codex-009 "$HERDR_WORKSPACE_ID"; own st-codex-009; go
+check "c other st-codex agent of ours: its tab closed before the new start" '[ $rc -eq 0 ] && [ "$(cnt "^tab close $HERDR_WORKSPACE_ID:t3\$")" = 1 ] && [ "$(lineno "^tab close")" -lt "$(lineno "^agent start")" ]'
 new; agent_json st-codex-009 "$HERDR_WORKSPACE_ID"; go
-check "c other st-codex agent: its tab closed before the new start" '[ $rc -eq 0 ] && [ "$(cnt "^tab close $HERDR_WORKSPACE_ID:t3\$")" = 1 ] && [ "$(lineno "^tab close")" -lt "$(lineno "^agent start")" ]'
+check "c1 other st-codex agent with no record: not closed" '[ $rc -eq 0 ] && [ "$(cnt "^tab close")" = 0 ]'
 
 new; agent_json st-codex-010 "wsOTHER$RANDOM"; go
 check "d agent in another workspace ignored: new start, no tab close" '[ $rc -eq 0 ] && [ "$(cnt "^tab create")" = 1 ] && [ "$(cnt "^agent start st-codex-010")" = 1 ] && [ "$(cnt "^tab close")" = 0 ]'
@@ -179,7 +194,7 @@ new; touch "$S/prompt_blocked"; go
 check "h blocked: error, exit 1" '[ $rc -eq 1 ] && outhas "ERROR: Codex waits for an answer in its Codex tab."'
 new; touch "$S/prompt_timeout"; go
 check "h2 prompt timeout: error, exit 1, the tab this run made is closed" '[ $rc -eq 1 ] && outhas "ERROR:" && closed'
-new; agent_json st-codex-010 "$HERDR_WORKSPACE_ID"; touch "$S/prompt_timeout"; go
+new; agent_json st-codex-010 "$HERDR_WORKSPACE_ID"; own st-codex-010; touch "$S/prompt_timeout"; go
 check "h3 prompt timeout on a reused tab: no tab close" '[ $rc -eq 1 ] && [ "$(cnt "^tab close")" = 0 ]'
 
 new

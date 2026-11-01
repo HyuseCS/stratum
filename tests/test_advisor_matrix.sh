@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -u
 root="${ST_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
-tmp=$(mktemp -d)
+tmp=$(mktemp -d) || exit 1
 trap 'rm -rf "$tmp"' EXIT
 fail=0
 check() { if eval "$2"; then echo "ok   $1"; else echo "FAIL $1"; fail=1; fi; }
@@ -336,6 +336,10 @@ hrun notready
 check "(k3) agent_not_ready with an unknown screen: ERROR line printed, codex exec runs, verdict APPROVED, no BLOCKED" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "ERROR: Codex stopped at start on a screen Stratum does not know, so the Codex tab is closed. Run the point again, or check Codex." ] && grep -qx "APPROVED sha256 $h" <<<"$out" && ! grep -q "^BLOCKED" <<<"$out" && [ "$(head -n1 "$tmp/argv")" = exec ] && ! grep -q "send-keys" "$tmp/herdr.log"'
 hrun nomarkers
 check "(k6) no markers in the answer: the ERROR line, then codex exec runs and the verdict is APPROVED" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "ERROR: no answer between the markers" ] && grep -qx "APPROVED sha256 $h" <<<"$out" && [ "$(head -n1 "$tmp/argv")" = exec ]'
+printf '%s' '{"verdict":"REVISE","summary":"s","findings":[{"claim":"c","evidence":"e","location":"l","severity":"URGENT"}]}' > "$tmp/answer"
+hrun nofolder
+check "(k8) tab answer with severity URGENT: BLOCKED: malformed answer, codex exec not run" '[ $rc = 1 ] && [ "$(head -n1 <<<"$out")" = "BLOCKED: malformed answer" ] && [ ! -e "$tmp/argv" ]'
+approve
 mkdir -p "$tmp/t124"
 printf '#!/usr/bin/env bash\n[ "$4" = bash ] && exit 124\nshift 3\nexec "$@"\n' > "$tmp/t124/timeout"
 chmod +x "$tmp/t124/timeout"
