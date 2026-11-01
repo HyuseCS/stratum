@@ -18,6 +18,7 @@ The orchestrator passes absolute paths: plugin root, project root, feature dir (
 
 Read:
 - `<project>/.stratum/constitution.md`
+- `<project>/apps/<app>/ORDINANCE.md` for each app the feature touches (if present)
 - `<feature>/spec.md`, `plan.md`, `tasks.md`, `data-model.md`, `contracts/`, `quickstart.md`
 
 ## Navigation
@@ -35,7 +36,7 @@ Look for at least:
 - Duplicate requirements: two requirements that say the same thing.
 - Vague words with no measure ("fast", "secure", "robust"), and leftover placeholders (TODO, `???`).
 - Missing detail: a requirement with no outcome, a story with no acceptance criteria, a task naming a file the spec and plan never define.
-- Plan items that break a constitution rule. Any break of a constitution MUST rule is CRITICAL.
+- Plan items that break a constitution or app ordinance rule. Any break of a constitution MUST rule is CRITICAL.
 - Coverage gaps: a requirement with no task, a task with no requirement, a success criterion with no task where it needs work.
 - Inconsistency: one concept with two names across spec, plan, data model and contracts, an entity in one file but not the other, tasks out of order, conflicting requirements.
 - Task order: a test task placed after its build task. Also `[P]` tasks that touch the same file.

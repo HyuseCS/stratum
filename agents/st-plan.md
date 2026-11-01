@@ -17,6 +17,7 @@ On a resume it also passes answers to the open decisions you returned before.
 
 Read first:
 - `<project>/.stratum/constitution.md`
+- `<project>/apps/<app>/ORDINANCE.md` for each app the feature touches (if present)
 - `<feature>/spec.md`
 - Any plan files that already exist in the feature dir (update them, do not start over).
 
@@ -44,7 +45,7 @@ Read first:
   against the installed version, not memory.
 - Call out every task that touches access rules, sign-in, the data model, contracts, secrets,
   personal or minors' data, or an external service. Those need a security note in plan.md.
-- Respect the constitution. A plan that breaks a rule is an open decision, not a silent choice.
+- Respect the constitution and the app ordinances. A plan that breaks a rule is an open decision, not a silent choice.
 - No speculative work: plan only what the spec asks for.
 
 ## Open decisions

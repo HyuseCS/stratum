@@ -166,10 +166,15 @@ check "no docs/lessons.md" '! grep -rqF -- "docs/lessons.md" "$root/agents" "$ro
 phrases <<'EOF'
 lessons holding st-close	agents/st-close.md	lessons to `<project>/.stratum/lessons.md`
 lessons holding st-close	agents/st-close.md	you may write `.stratum/lessons.md`
-lessons holding empty	skills/st-close/SKILL.md	Remove each lesson from
+lessons holding empty	skills/st-close/SKILL.md	Remove a dropped lesson from
+lessons holding empty	skills/st-close/SKILL.md	a kept lesson once its rule is in the target file
 lessons holding empty	skills/st-close/SKILL.md	has `.stratum/lessons.md`
 lessons holding st-init	skills/st-init/SKILL.md	`.stratum/lessons.md`,
 lessons holding design	DESIGN.md	`.stratum/lessons.md` (not tracked by git)
+ordinance read	agents/st-plan.md	`<project>/apps/<app>/ORDINANCE.md` for each app the feature touches
+ordinance read	agents/st-inspect.md	`<project>/apps/<app>/ORDINANCE.md` for each app the feature touches
+ordinance rule	agents/st-inspect.md	break a constitution or app ordinance rule
+ordinance rule	agents/st-plan.md	Respect the constitution and the app ordinances
 EOF
 check "no report-only lessons" '! grep -qF -- "Write no lessons file" "$root/agents/st-close.md"'
 

@@ -125,3 +125,30 @@ Negative control: remove the T9 phrase once, see T9 go red, restore.
 - T8 to T12 check text, not behavior. No live Close run is planned.
 - `hooks/st-approve.py:129` `edit_ok` rejects every `.stratum` path. In an autonomous worker session
   the agent's write to `.stratum/lessons.md` gets the normal permission prompt. No hook change planned.
+
+## Amendment 2: PR #60 review fixes
+
+Source: PR #60 review file, findings F1 and F2, both checked against the source.
+
+### Files
+- `skills/st-close/SKILL.md` step 5 (F1) - replace the two sentences
+  `Remove each lesson from \`.stratum/lessons.md\` as soon as the user decides it. After the last decision the file is empty.`
+  with
+  `Remove a dropped lesson from \`.stratum/lessons.md\` at once, and a kept lesson once its rule is in the target file. Every other lesson stays in it.`
+- `agents/st-plan.md` "Read first" and `agents/st-inspect.md` "Read" (F2) - add a bullet after the
+  constitution bullet:
+  `- \`<project>/apps/<app>/ORDINANCE.md\` for each app the feature touches (if present)`
+- `agents/st-inspect.md` Analysis - `Plan items that break a constitution or app ordinance rule.`
+- `agents/st-plan.md` Rules - `Respect the constitution and the app ordinances.`
+
+### Tests (written first, must fail before the build)
+- T9 `lessons holding empty` - replace the phrase `Remove each lesson from` with
+  `Remove a dropped lesson from` and add `a kept lesson once its rule is in the target file`.
+- T13 `ordinance read` - `agents/st-plan.md` and `agents/st-inspect.md` each have
+  `` `<project>/apps/<app>/ORDINANCE.md` for each app the feature touches ``.
+- T14 `ordinance rule` - `agents/st-inspect.md` has `break a constitution or app ordinance rule`, and
+  `agents/st-plan.md` has `Respect the constitution and the app ordinances`.
+Command: `PYTHONDONTWRITEBYTECODE=1 bash tests/test_inspect.sh`. Before the build: FAIL on T9, T13 and T14 only.
+
+### Risks
+- Text checks only. No live Close or Inspect run.

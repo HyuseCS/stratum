@@ -43,8 +43,8 @@ Plugin root (`<plugin root>`) is two levels up from this skill's base directory.
    `apps/<app>/ORDINANCE.md` if it is missing, and make sure `apps/<app>/CLAUDE.md` has the line
    `@ORDINANCE.md` (create the file with that one line if it is missing). Show the user any other
    proposed constitution or harness change. Never apply one without their OK.
-   Remove each lesson from `.stratum/lessons.md` as soon as the user decides it. After the last
-   decision the file is empty. An undecided lesson stays in it.
+   Remove a dropped lesson from `.stratum/lessons.md` at once, and
+   a kept lesson once its rule is in the target file. Every other lesson stays in it.
 6. **Shortcuts.** `st-close` reports the rows from `scripts/st-shortcuts.sh`. Show each row.
    For each, the user picks fix now or keep.
    - Fix now: the `st-build` agent (`stratum:st-build`) fixes it, then verify with
