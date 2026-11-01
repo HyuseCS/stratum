@@ -102,6 +102,11 @@ mk F9; cli_fake
 out=$(st mcp); rc=$?
 want "F9 mcp" 0 "cli: mcp --attach $port"
 
+mk F11
+out=$(PATH="$c/bin:$c/sys" ST_FIGCRAFT_PORT="$port" "$BASH" "$script" mcp 2>&1 >/dev/null); rc=$?
+want "F11 mcp, no cli: stderr" 127 "missing: figcraft-cli. Install: $link"
+check "F11 mcp, no cli: no stdout" '[ -z "$(PATH="$c/bin:$c/sys" ST_FIGCRAFT_PORT="$port" "$BASH" "$script" mcp 2>/dev/null)" ]'
+
 stop_all
 check "F10 no writes, no live pids" '[ "$git_before" = "$(git -C "$root" status --porcelain)" ] && [ -z "$(alive)" ]'
 exit $fail

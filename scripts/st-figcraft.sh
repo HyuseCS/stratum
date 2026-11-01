@@ -6,7 +6,7 @@ rec=${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}}/st-figcraft-$port
 
 resolve_cli() {
   if command -v figcraft-cli >/dev/null 2>&1; then cli=(figcraft-cli)
-  elif figcraft cli --version >/dev/null 2>&1; then cli=(figcraft cli)
+  elif [[ $(figcraft cli --version 2>/dev/null) == figcraft-cli* ]]; then cli=(figcraft cli)
   else cli=()
   fi
 }
@@ -74,7 +74,8 @@ case ${1:-} in
         "${pre[@]}" nohup figcraft --control "$port" --automation-read-root "$proj" --automation-write-root "$proj/design" >/dev/null 2>"$rec.log" &
         pid=$!
         echo "$pid $proj" > "$rec"
-        for _ in {1..40}; do
+        SECONDS=0
+        while (( SECONDS < 20 )); do
           [ "$(probe)" = figcraft ] && { echo "FigCraft: started on port $port"; exit 0; }
           kill -0 "$pid" 2>/dev/null || { echo "FigCraft did not start: $(tail -n 1 "$rec.log")"; exit 1; }
           sleep 0.5

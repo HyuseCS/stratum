@@ -90,6 +90,16 @@ mk K19; fake_node 20.11.1; fake_npm; mkdir -p "$glob/puppeteer-core"; fake_appim
 kcase "K19 --custom AppImage only" 0 "design tools: ok" "$proj" "$bin" "$chrome_ok" --custom
 check "K19 AppImage checked" '[ -e "$c/called" ]'
 
+mk K21; fake_node 20.11.1; fake_npm; mkdir -p "$glob/puppeteer-core"
+printf '#!/bin/sh\ncase "$*" in *--version*) echo FigCraft 0.13.1;; *) exit 1;; esac\n' > "$bin/figcraft"; chmod +x "$bin/figcraft"
+kcase "K21 --custom native app, no figcraft-cli" 1 "missing: figcraft-cli. Install: https://github.com/storytold/figcraft/releases" "$proj" "$bin" "$chrome_ok" --custom
+
+mk K22; fake_node 20.11.1; fake_npm; mkdir -p "$glob/puppeteer-core"; fake_fc; fake_cli 0.13.0
+kcase "K22 --custom 0.13.0 too old" 1 "too old: figcraft-cli 0.13.0, needs 0.13.1 or later. Install: https://github.com/storytold/figcraft/releases" "$proj" "$bin" "$chrome_ok" --custom
+
+mk K23; fake_node 20.11.1; fake_npm; mkdir -p "$glob/puppeteer-core"; fake_fc; fake_cli 1.0.0
+kcase "K23 --custom 1.0.0 ok" 0 "design tools: ok" "$proj" "$bin" "$chrome_ok" --custom
+
 mk K20; tool apt-get
 kcase "K20 --custom no node, no FigCraft" 1 $'missing: node 18 or later. Install: sudo apt install nodejs npm\nmissing: puppeteer-core. Install: npm i -g puppeteer-core\nmissing: FigCraft. Install: https://github.com/storytold/figcraft/releases\nmissing: figcraft-cli. Install: https://github.com/storytold/figcraft/releases' "$proj" "$bin" "$chrome_ok" --custom
 

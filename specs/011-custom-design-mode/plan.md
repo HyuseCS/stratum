@@ -109,7 +109,9 @@ Post-design re-check: all gates pass. Complexity Tracking stays empty.
   sends one `window.list` line and reads one reply. `start` accepts a running FigCraft only when its
   start record names this project and a live pid (research R9), so the agent never drives an
   unconfined app that Stratum did not start. A stale pid reused by another process is a known gap,
-  marked `ponytail:` in the script.
+  marked `ponytail:` in the script. With `XDG_RUNTIME_DIR` unset the record sits in a shared
+  `/tmp`, an accepted risk: `kill -0` refuses another user's pid, `fs.protected_symlinks` blocks a
+  planted symlink, and both target machines set `XDG_RUNTIME_DIR`.
 - **S4. MCP server in every session (T011).** The `plugin.json` entry runs
   `bash ${CLAUDE_PLUGIN_ROOT}/scripts/st-figcraft.sh mcp` in every session of every project with
   the plugin on. It execs the user's installed `figcraft-cli mcp --attach 7979`, which talks only to

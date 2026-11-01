@@ -7,7 +7,7 @@ that each phrase row sits on one line. `<…>` is a placeholder the text keeps a
 
 Spike results can change five items, and only these: the MCP tool name form (sections 2, 3, 7d
 and 9, from S2), the Start step and the launch line (sections 2 and 4, from S1 steps 2 and 6), the `plugin.json` entry (section 6, from S3), the agent's `tools:` line (section 3a and
-009's `FR-001 agent frontmatter` check and the `C-FR-015 agent tools` check, from S3: dropped when an agent that
+009's `FR-001 agent frontmatter` check, from S3: dropped when an agent that
 names an absent server's tools cannot start), and the Read commands (section 2, from S5). The task
 that applies a spike result changes this file first.
 
@@ -72,7 +72,7 @@ Setup stops (a missing tool, the one-time /mcp reconnect) do not count.
    window.
 8. The gate: show the screenshots, the theme pick if one ran, the report and `DESIGN.md`. Yes:
    commit (section 5). Changes: make each one the way the user names it: in the design tool
-   (step 4, then steps 5 to 8) or in code (section 4, step build, then this gate). With no way
+   (steps 2 to 8) or in code (section 4, step build, then this gate). With no way
    named, layout and look changes go to the design tool, and small code-only fixes (text, a link)
    go to code. A different direction: back to step 1 at the theme branch, then steps 2
    to 8. Gate rounds do not count as fix rounds.
@@ -115,7 +115,8 @@ attached to the app that Start runs: `mcp__plugin_stratum_figcraft__<tool>`.
   starts FigCraft with that control port, the project as its read root and `design/` as its write
   root, so sharing is off. It prints one line. Exit 1: print the line and stop. Never close
   FigCraft. Run it before the session's first FigCraft call. After `FigCraft: started on port`,
-  this session's FigCraft MCP server started while FigCraft was down and has failed: say
+  this session's FigCraft MCP server started while FigCraft was down and has failed. After that
+  line, or when the first FigCraft call fails because the server is not connected, say
   "FigCraft is open. Run /mcp, reconnect plugin:stratum:figcraft (or restart this session), then
   say go." and stop. On go, go on.
 - **Draw.** Open `<project>/design/<screen>.figcraft` with `open_file` when it exists, else make a
@@ -190,8 +191,9 @@ the PATH), so the tests can run it with a stub PATH. No `dirname`, no `sort`.
   Above the record check in `start`:
   `# ponytail: a dead FigCraft's pid reused by another process passes the record check, add a start-time check if that shows up`.
 - `link=https://github.com/storytold/figcraft/releases`.
-- CLI resolution: `figcraft-cli` on the PATH; else `figcraft cli --version` exits 0 (an AppImage):
-  `figcraft cli`; else none.
+- CLI resolution: `figcraft-cli` on the PATH; else `figcraft cli --version` prints a line that
+  starts `figcraft-cli` (an AppImage; the native app prints `FigCraft …`): `figcraft cli`; else
+  none.
 - `check`: prints each line that applies, in this order, and exits 1 if it printed any, else
   prints nothing and exits 0:
   - `missing: FigCraft. Install: <link>` when `figcraft` is not on the PATH.
@@ -215,7 +217,8 @@ the PATH), so the tests can run it with a stub PATH. No `dirname`, no `sort`.
   6. `free`: run `setsid nohup figcraft --control <port> --automation-read-root <project>
      --automation-write-root <project>/design >/dev/null 2><run>/st-figcraft-<port>.log &`
      (plain `nohup` when `command -v setsid` fails), write
-     `<pid> <project>` to the record, then probe every 0.5 s for up to 20 s:
+     `<pid> <project>` to the record, then probe every 0.5 s while bash's `SECONDS` (reset to 0
+     before the loop) is below 20:
      `figcraft`: print `FigCraft: started on port <port>`, exit 0. The pid is gone: print
      `FigCraft did not start: <last line of the log>`, exit 1. 20 s: print
      `FigCraft did not answer on port <port> in 20 s.`, exit 1.
@@ -316,6 +319,7 @@ C-FR-004 SKILL.md	skills/st-design/SKILL.md	Else skip the theme branch:
 C-FR-004 SKILL.md	skills/st-design/SKILL.md	or from the code's
 C-FR-005 SKILL.md	skills/st-design/SKILL.md	Run the design tool's Start from the project root.
 C-FR-005 design-tool.md	skills/st-design/design-tool.md	Never close
+C-FR-005 design-tool.md	skills/st-design/design-tool.md	or when the first FigCraft call fails because the server is not connected
 C-FR-006 design-tool.md	skills/st-design/design-tool.md	pass it as `document` on
 C-FR-006 design-tool.md	skills/st-design/design-tool.md	bind each color, font size, gap, padding and radius to a variable.
 C-FR-006 SKILL.md	skills/st-design/SKILL.md	Build no code from a half-drawn design.
@@ -358,7 +362,7 @@ C-FR-006 design-tool.md	skills/st-design/design-tool.md	first run the engine's B
 US3 rows (T012):
 
 ```text
-C-FR-013 SKILL.md	skills/st-design/SKILL.md	(step 4, then steps 5 to 8)
+C-FR-013 SKILL.md	skills/st-design/SKILL.md	(steps 2 to 8)
 C-FR-013 SKILL.md	skills/st-design/SKILL.md	With no way
 C-FR-013 SKILL.md	skills/st-design/SKILL.md	small code-only fixes (text, a link)
 C-FR-013 SKILL.md	skills/st-design/SKILL.md	then steps 2
@@ -381,8 +385,6 @@ Checks (not phrases) for `tests/test_design_lane.sh`:
   replaces the old one in it.
 - `C-FR-015 mcp entry`: `python3 -I` reads `.claude-plugin/plugin.json`: `mcpServers.figcraft`
   equals `{"command": "bash", "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/st-figcraft.sh", "mcp"]}`.
-- `C-FR-015 agent tools`: the `tools:` line holds the 11 FigCraft tool names of research R8 and no
-  `pointer`, `key`, `type_text`.
 - `C-FR-015 tool list` (T010): the line of `skills/st-design/design-tool.md` that starts
   `- **Tools.** ` holds exactly the 11 names of research R8, each once, and no `pointer`, `key`,
   `type_text` (D23: `st-init` allows these names).
@@ -417,6 +419,9 @@ each case has its own port and run dir.
   `figcraft-cli 0.13.1` and echoes `app:` and its args otherwise: `cli info x` prints
   `app: cli info x`.
 - F9 `mcp`: prints `cli: mcp --attach <port>` with F7's fake.
+- F11 `mcp` with no CLI (no `figcraft`, no `figcraft-cli`): stderr
+  `missing: figcraft-cli. Install: https://github.com/storytold/figcraft/releases`, no stdout,
+  exit 127.
 - F10 no writes: `git status --porcelain` of the repo is the same before and after, and no case's
   pid is alive at the end.
 
@@ -436,6 +441,12 @@ each case has its own port and run dir.
   FigCraft checks).
 - K19 `--custom`, AppImage only: `figcraft` answers `cli --version` with `figcraft-cli 0.13.1`, no
   `figcraft-cli`: exit 0, `design tools: ok`.
+- K21 `--custom`, native app only: `figcraft` prints `FigCraft 0.13.1` for any `--version` and
+  exits 0, no `figcraft-cli`: exit 1,
+  `missing: figcraft-cli. Install: https://github.com/storytold/figcraft/releases`.
+- K22 `--custom`, `figcraft-cli 0.13.0`: exit 1,
+  `too old: figcraft-cli 0.13.0, needs 0.13.1 or later. Install: https://github.com/storytold/figcraft/releases`.
+- K23 `--custom`, `figcraft-cli 1.0.0`: exit 0, `design tools: ok`.
 - K20 `--custom`, no node, no `figcraft` and no `figcraft-cli`, Chrome given as in K5: exit 1,
   these four lines in this
   order: the node line, the `puppeteer-core` line,

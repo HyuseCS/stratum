@@ -25,7 +25,8 @@ attached to the app that Start runs: `mcp__plugin_stratum_figcraft__<tool>`.
   starts FigCraft with that control port, the project as its read root and `design/` as its write
   root, so sharing is off. It prints one line. Exit 1: print the line and stop. Never close
   FigCraft. Run it before the session's first FigCraft call. After `FigCraft: started on port`,
-  this session's FigCraft MCP server started while FigCraft was down and has failed: say
+  this session's FigCraft MCP server started while FigCraft was down and has failed. After that
+  line, or when the first FigCraft call fails because the server is not connected, say
   "FigCraft is open. Run /mcp, reconnect plugin:stratum:figcraft (or restart this session), then
   say go." and stop. On go, go on.
 - **Draw.** Open `<project>/design/<screen>.figcraft` with `open_file` when it exists, else make a

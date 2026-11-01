@@ -45,7 +45,7 @@ fail, the fallback taken. A spike that cannot run writes `Not run, <reason>` (le
   Pass: the agent starts and reports the line (an agent whose `tools:` names an absent server's
   tool still runs, so new-look and autonomous runs work without FigCraft, SC-004). Fail: drop the
   `tools:` line from `agents/st-design.md` (the agent then inherits every tool, MCP included), and
-  change the `FR-001 agent frontmatter` and `C-FR-015 agent tools` checks and plan S6 to match.
+  change the `FR-001 agent frontmatter` check and plan S6 to match.
 - **S2, plugin subagent calls a plugin MCP tool (no install needed).** In its own scratch folder
   `<s2>`, separate from S3's, make the same `stratum-spike` copy as S3 and point its entry at a
   scratch stdio MCP server instead of `fail.sh`, still through `${CLAUDE_PLUGIN_ROOT}`:
@@ -117,7 +117,7 @@ Run each right after a green baseline, on a scratch copy (`ST_ROOT=<copy>`), one
 - N4 the version compare treats 0.12.1 as new enough: K17 red.
 - N5 `plugin.json` without `mcpServers`: `C-FR-015 mcp entry` red.
 - N6 `skills/st-design/SKILL.md` gets the word FigCraft: `C-FR-014 one place` red.
-- N7 the agent `tools:` line gains `mcp__plugin_stratum_figcraft__pointer`: `C-FR-015 agent tools` red.
+- N7 the agent `tools:` line gains `mcp__plugin_stratum_figcraft__pointer`: `FR-001 agent frontmatter` red.
 - N8 `design-tool.md` names the engine by name: 009's `FR-010 one place` check red.
 - N9 `skills/st-design/SKILL.md` section 1 step 1 loses `[screen: custom]`: `C-FR-002 SKILL.md` red.
 - N10 the `design-tool.md` Tools line gains `mcp__plugin_stratum_figcraft__pointer`: `C-FR-015 tool list` red.

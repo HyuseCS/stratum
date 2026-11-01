@@ -52,14 +52,6 @@ lines = [l for l in open(sys.argv[1], encoding="utf-8") if l.startswith("- **Too
 sys.exit(not (len(lines) == 1 and sorted(t for t in lines[0].split() if t.startswith("mcp__")) == want and not any(w in lines[0] for w in ("pointer", "key", "type_text"))))
 PY
 }
-agent_tools() {
-python3 -I - "$root/agents/st-design.md" <<'PY'
-import sys
-want = sorted("mcp__plugin_stratum_figcraft__" + n for n in "list_commands run_command batch create_node set_properties inspect_document get_node screenshot open_file save_file undo".split())
-lines = [l for l in open(sys.argv[1], encoding="utf-8") if l.startswith("tools: ")]
-sys.exit(not (len(lines) == 1 and sorted(t.rstrip(",") for t in lines[0].split() if t.startswith("mcp__")) == want and not any(w in lines[0] for w in ("pointer", "key", "type_text"))))
-PY
-}
 
 check "FR-017 lock" 'lock'
 check "FR-017 copy" '[ -f "$root/skills/st-hallmark/SKILL.md" ] &&
@@ -81,7 +73,6 @@ n_git=$(grep -cF -- '(`stratum:st-git`)' "$root/skills/st-design/SKILL.md" 2>/de
 check "FR-001 one start each" '[ "$n_design" = 1 ] && [ "$n_git" = 1 ]'
 check "C-FR-015 mcp entry" 'mcp_entry'
 check "C-FR-015 tool list" 'tool_list'
-check "C-FR-015 agent tools" 'agent_tools'
 check "C-FR-014 one place" '[ "$(grep -rliE figcraft "$root/skills/st-design" "$root/agents/st-design.md" | sort | tr "\n" " ")" = "$root/agents/st-design.md $root/skills/st-design/design-tool.md " ] && [ -z "$(grep -i figcraft "$root/agents/st-design.md" | grep -v "^tools: ")" ]'
 
 phrases <<'EOF'
@@ -161,6 +152,7 @@ EOF
 
 phrases <<'EOF'
 C-FR-005 design-tool.md	skills/st-design/design-tool.md	Never close
+C-FR-005 design-tool.md	skills/st-design/design-tool.md	or when the first FigCraft call fails because the server is not connected
 C-FR-006 design-tool.md	skills/st-design/design-tool.md	pass it as `document` on
 C-FR-006 design-tool.md	skills/st-design/design-tool.md	bind each color, font size, gap, padding and radius to a variable.
 C-FR-006 design-tool.md	skills/st-design/design-tool.md	first run the engine's Before step, then draw the current screen
@@ -196,7 +188,7 @@ C-FR-011 SKILL.md	skills/st-design/SKILL.md	The user has one design stop between
 C-FR-011 SKILL.md	skills/st-design/SKILL.md	Setup stops (a missing tool, the one-time /mcp reconnect) do not count.
 C-FR-011 SKILL.md	skills/st-design/SKILL.md	the theme pick if one ran, the report and `DESIGN.md`.
 C-FR-012 SKILL.md	skills/st-design/SKILL.md	the commit adds the saved design on the design tool's Files line.
-C-FR-013 SKILL.md	skills/st-design/SKILL.md	(step 4, then steps 5 to 8)
+C-FR-013 SKILL.md	skills/st-design/SKILL.md	(steps 2 to 8)
 C-FR-013 SKILL.md	skills/st-design/SKILL.md	With no way
 C-FR-013 SKILL.md	skills/st-design/SKILL.md	small code-only fixes (text, a link)
 C-FR-013 SKILL.md	skills/st-design/SKILL.md	then steps 2

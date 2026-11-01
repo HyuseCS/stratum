@@ -128,7 +128,7 @@ Setup stops (a missing tool, the one-time /mcp reconnect) do not count.
    window.
 8. The gate: show the screenshots, the theme pick if one ran, the report and `DESIGN.md`. Yes:
    commit (section 5). Changes: make each one the way the user names it: in the design tool
-   (step 4, then steps 5 to 8) or in code (section 4, step build, then this gate). With no way
+   (steps 2 to 8) or in code (section 4, step build, then this gate). With no way
    named, layout and look changes go to the design tool, and small code-only fixes (text, a link)
    go to code. A different direction: back to step 1 at the theme branch, then steps 2
    to 8. Gate rounds do not count as fix rounds.
