@@ -162,8 +162,12 @@ spikes (R15) run.
 - Finding: Claude Code asks before each MCP tool the first time, in the main session and for
   subagents. `hooks/st-approve.py:261` handles only Bash and edit tools, so FigCraft calls go to the
   normal prompt. Without a rule, a first custom run meets up to 11 prompts.
-- Decision: D22 (decisions.md). On the user's FigCraft yes, `st-init` merges one allow rule for
-  the server's tools into the project's `.claude/settings.json` (contract 7d).
+- Decision: D22 and D23 (decisions.md). On the user's FigCraft yes, `st-init` merges the 11 tool
+  names of R8 into `permissions.allow` of the project's `.claude/settings.json` (contract 7d). It
+  reads them from the Tools line of `design-tool.md`, so the list holds even if S3 drops the
+  agent's `tools:` line. Not the server-wide `mcp__plugin_stratum_figcraft`: `pointer`, `key`,
+  `type_text` and the other FigCraft tools still prompt. `run_command` is one of the 11 and runs
+  any FigCraft command inside the app's roots (R3). The names follow the form S2 records.
 
 ## R15. Spike results
 

@@ -89,7 +89,7 @@ that change and the rest kept.
 
 At the gate the user sees the built screen and wants changes. The user says how each change is
 made: in FigCraft or in code. When the user does not say, a layout or look change goes to FigCraft
-and a small code-only fix (text, a link, behavior) goes to code (D13).
+and a small code-only fix (text, a link) goes to code (D13).
 
 **Why this priority**: It keeps the saved design and the code the same, and still lets the user
 pick a fast code fix.
@@ -183,7 +183,7 @@ with the install link. Run a new-look task and see it go on.
   when the user names "this" or "the selected" layer (D11, D18).
 - **FR-009**: On "good", the agent MUST save the design, with the user's unsaved changes, to
   `design/<screen>.figcraft` in the project. The lane MUST write the design file (`DESIGN.md` +
-  `.impeccable/design.json`) from the design's variables and styles and the grill answers, and the
+  `.impeccable/design.json`) from the design's variables and the grill answers, and the
   project's tokens (the engine's `tokens.css` and `base.css`) from the same variables, so a picked
   theme's tokens never ship over the user's changes (D12, D16).
 - **FR-010**: The code build MUST read the saved design file (its layout and a picture of it) and
@@ -198,7 +198,9 @@ with the install link. Run a new-look task and see it go on.
   MUST go to FigCraft and small code-only fixes MUST go to code (D13).
 - **FR-014**: The FigCraft steps (start, draw, save, read back) MUST live in one file beside the
   skill, `skills/st-design/design-tool.md`, as `engine.md` names the engine. FigCraft is the only
-  tool built in this feature (D14).
+  tool built in this feature (D14). A later tool changes this file and the other places it lists:
+  the FigCraft script, the `plugin.json` MCP entry, the agent's MCP tool names, `st-init`,
+  `st-status` and `README.md`.
 - **FR-015**: The FigCraft MCP server config MUST be in `.claude-plugin/plugin.json`, and the
   `st-design` agent MUST have the FigCraft MCP tools (D18).
 - **FR-016**: A custom-mode run MUST check for the FigCraft app and `figcraft-cli` at the start and
@@ -213,9 +215,9 @@ with the install link. Run a new-look task and see it go on.
 - **Saved design**: `design/<screen>.figcraft`, the screen's design as the user approved it. It is
   the source of the screen's layout and is committed with the screen.
 - **Design file**: `DESIGN.md` + `.impeccable/design.json`, the project's look. In the custom mode
-  its tokens come from the saved design's variables and styles.
-- **Design tool file**: `skills/st-design/design-tool.md`, the FigCraft steps. A later tool is a
-  new copy of this file and one setting.
+  its tokens come from the saved design's variables.
+- **Design tool file**: `skills/st-design/design-tool.md`, the FigCraft steps. A later tool changes
+  this file and the other places it lists (FR-014).
 
 ## Success Criteria *(mandatory)*
 
@@ -245,12 +247,14 @@ with the install link. Run a new-look task and see it go on.
 - The `plugin.json` MCP entry starts in every session of every project. The plan tests that it
   does not break or warn in sessions where `figcraft-cli` is not installed. If it does, the config
   moves to a project-level `.mcp.json` that `st-init` writes on the user's yes.
-- The MCP config's command must find `figcraft-cli` on both machines. A Flatpak install does not
-  put it on the PATH by that name, so the plan picks the command per install type.
+- The MCP config's command must find `figcraft-cli` on both machines: on the PATH from a native
+  package, or through an AppImage named `figcraft` (its `cli` command). The Flatpak is not
+  supported: it ships no `figcraft-cli` and cannot open a project folder (research R2).
 - `figcraft-cli info --json` lists only the top-level frames. The plan picks the full layer-tree
   read for the build (an export format, or a `figcraft-cli run` script with read commands).
-- FigCraft is installed from its GitHub release packages (AppImage, Flatpak, `.deb`, `.rpm`,
-  tarball). The plan picks the install command per machine.
+- FigCraft is installed on Linux from its GitHub release packages (`.pkg.tar.zst`, `.deb`, `.rpm`,
+  or an AppImage). The plan picks the install command per machine. The Flatpak is unsupported
+  (research R2).
 - One saved design file per screen.
 - Out of scope: other design tools (D14), Plan marks for existing screens (D17), and FigCraft's
   own code export (the lane's agent builds the code).
