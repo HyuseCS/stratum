@@ -14,7 +14,7 @@ description: Write the session handoff to .stratum/handoff.md so the next sessio
 
 ## Write it
 
-Write `<project>/.stratum/handoff.md`. Keep the facts block between `<!-- st-facts:start -->` and
+Write `<project>/.stratum/handoff.md` with the Write tool, never through Bash. Keep the facts block between `<!-- st-facts:start -->` and
 `<!-- st-facts:end -->` if one exists (a hook maintains it); replace everything above it.
 
 Write, in plain short sentences, from this session's work:

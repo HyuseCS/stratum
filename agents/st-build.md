@@ -75,6 +75,8 @@ the brief does not name; or when it grows beyond a small bounded change. Report
 - Add features, refactors or "improvements" the plan does not ask for.
 - Weaken or delete a test to make it pass.
 - Edit the constitution, `.env` files, or harness files.
+- Write or change a file through Bash (a heredoc, or an echo or printf redirect). Use the Write
+  or Edit tool. The git guard reads Bash text and stops on git words it cannot parse.
 - Run `git add` or `git commit`.
 
 ## Report

@@ -66,6 +66,8 @@ as printed. Do not fix them.
 ## Never
 
 - Edit product code, tests, `.stratum/constitution.md`, `.stratum/` state, or plugin files.
+- Write or change a file through Bash (a heredoc, or an echo or printf redirect). Use the Write
+  or Edit tool. The git guard reads Bash text and stops on git words it cannot parse.
 - Run `git add` or `git commit`.
 
 ## Report

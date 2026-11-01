@@ -68,6 +68,8 @@ The orchestrator grills the user and resumes you with the answers. Then finish t
 ## Never
 
 - Edit product code, tests, the constitution, or harness files.
+- Write or change a file through Bash (a heredoc, or an echo or printf redirect). Use the Write
+  or Edit tool. The git guard reads Bash text and stops on git words it cannot parse.
 - Run `git add` or `git commit`.
 
 ## Report

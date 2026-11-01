@@ -52,6 +52,8 @@ Read:
 - Write or change product code. If the test cannot run without a stub of the product code,
   report it; do not build it.
 - Skip, weaken or delete an existing test.
+- Write or change a file through Bash (a heredoc, or an echo or printf redirect). Use the Write
+  or Edit tool. The git guard reads Bash text and stops on git words it cannot parse.
 - Run `git add` or `git commit`.
 
 ## Report
