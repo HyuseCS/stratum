@@ -150,6 +150,11 @@ lessons st-close target	agents/st-close.md	before any file of the app is opened
 lessons st-close write	skills/st-close/SKILL.md	write the rule to the target file yourself
 lessons st-close write	skills/st-close/SKILL.md	`@ORDINANCE.md`
 lessons st-fast	skills/st-fast/SKILL.md	the files a kept lesson went to
+lessons st-close no app	agents/st-close.md	If no changed file is under `apps/`, the target
+lessons st-close missing	skills/st-close/SKILL.md	create it with that one rule
+lessons st-close missing	skills/st-close/SKILL.md	show the user the line `@.stratum/<app>-constitution.md`
+lessons st-close missing	skills/st-close/SKILL.md	tell the user and do not write the rule
+lessons st-fast skip	skills/st-fast/SKILL.md	If it changed no docs and no lesson was kept, skip this step.
 split st-constitution	skills/st-constitution/SKILL.md	| `apps/<app>/ORDINANCE.md`
 split st-constitution	skills/st-constitution/SKILL.md	before any file of the app is opened
 split st-init	skills/st-init/SKILL.md	| `apps/<app>/ORDINANCE.md`
