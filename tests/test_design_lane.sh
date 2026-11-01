@@ -203,6 +203,8 @@ C-FR-017 st-init	skills/st-init/SKILL.md	install FigCraft for the custom design 
 C-FR-017 st-init	skills/st-init/SKILL.md	Never run it.
 C-FR-017 st-init	skills/st-init/SKILL.md	On yes, also merge each tool name on the Tools line of
 C-FR-017 st-init	skills/st-init/SKILL.md	into `permissions.allow` in the project's `.claude/settings.json`. Keep every other key.
+C-FR-017 st-init	skills/st-init/SKILL.md	When `check` prints nothing, ask instead: "FigCraft is installed. Allow its 11 tools in this project (default yes)?" On yes, do the same merge.
+C-FR-017 st-init	skills/st-init/SKILL.md	For both merges, add no server-wide `mcp__plugin_stratum_figcraft` entry and do not add a name that is already there.
 EOF
 
 exit $fail

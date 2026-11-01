@@ -282,6 +282,8 @@ becomes `write the mode in the task line: `[screen: autonomous]`, `[screen: new 
    On yes, also merge each tool name on the Tools line of `<plugin root>/skills/st-design/design-tool.md`
    into `permissions.allow` in the project's `.claude/settings.json`. Keep every other key. Those
    tools then run without a prompt. Other FigCraft tools still ask.
+   When `check` prints nothing, ask instead: "FigCraft is installed. Allow its 11 tools in this project (default yes)?" On yes, do the same merge.
+   For both merges, add no server-wide `mcp__plugin_stratum_figcraft` entry and do not add a name that is already there.
 ```
 
 D22 and D23: the rule lists the 11 tool names, not the server-wide `mcp__plugin_stratum_figcraft`.
@@ -378,6 +380,8 @@ C-FR-017 st-init	skills/st-init/SKILL.md	install FigCraft for the custom design 
 C-FR-017 st-init	skills/st-init/SKILL.md	Never run it.
 C-FR-017 st-init	skills/st-init/SKILL.md	On yes, also merge each tool name on the Tools line of
 C-FR-017 st-init	skills/st-init/SKILL.md	into `permissions.allow` in the project's `.claude/settings.json`. Keep every other key.
+C-FR-017 st-init	skills/st-init/SKILL.md	When `check` prints nothing, ask instead: "FigCraft is installed. Allow its 11 tools in this project (default yes)?" On yes, do the same merge.
+C-FR-017 st-init	skills/st-init/SKILL.md	For both merges, add no server-wide `mcp__plugin_stratum_figcraft` entry and do not add a name that is already there.
 ```
 
 Checks (not phrases) for `tests/test_design_lane.sh`:

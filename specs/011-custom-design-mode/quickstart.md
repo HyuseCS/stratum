@@ -149,7 +149,7 @@ picks, with its dev server started by the user. Record each in research.md R16.
   `.claude/settings.json` gains exactly the 11 names of the `design-tool.md` Tools line, with no
   `mcp__plugin_stratum_figcraft` server-wide entry and no `pointer`, `key` or `type_text`, and
   every other key kept (D22, D23). A custom task: stops with the install link before
-  any question. A new-look task: goes on (SC-004). `/stratum:st-status`: the FigCraft lines under
+  any question. Then `/stratum:st-init` with FigCraft on the PATH: the "FigCraft is installed. Allow its 11 tools" question, and on yes the same 11 names, none twice. A new-look task: goes on (SC-004). `/stratum:st-status`: the FigCraft lines under
   `FigCraft (optional, for the custom mode):`.
 - **L5 (SC-006).** L1 again on the PC, after `git pull` and section 0 there.
 - **Edge runs.** During L1's stop, close the FigCraft window, then say "good": the lane says the
