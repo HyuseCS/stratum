@@ -36,7 +36,7 @@ to `/stratum:st-full`.
    Lessons step added the line (never `.stratum/lessons.md`). If it changed no docs,
    kept no lesson and added no `.gitignore` line, skip this step. If the commit did not land, stop
    and tell the user.
-10. After the last commit lands (step 9, or step 6 when step 9 is skipped), set `phase` to `done` in `<project>/.stratum/state.json`. Keep the other keys.
+10. After the last commit lands (step 9, or step 6 when step 9 is skipped), set `phase` to `done` in `<project>/.stratum/state.json` with `bash <plugin root>/scripts/st-state.sh <project>/.stratum/state.json phase done`.
     Push only on the user's "push".
 
 If any agent reports the change needs a higher lane, stop and move up.
