@@ -17,7 +17,7 @@ Six changes to the Stratum plugin, each with tests in `tests/` (FR-031):
 2. No stops on Stratum's own prompts (US2): the git guard reads a command it cannot split line by
    line, and a new `scripts/st-lock.sh` makes tests that cannot run at the same time take turns.
 3. Advisors for the risk (US3): a risk level with the lane, an advisor matrix in `st-advisor.sh`
-   (mode `auto`), Codex as a herdr agent in a `Codex` tab (`scripts/st-codex-agent.sh`; not built, T050 failed), and a
+   (mode `auto`), Codex as a herdr agent in a `Codex` tab (`scripts/st-codex-agent.sh`), and a
    talk of at most 3 rounds at High points (`round`, `talk`).
 4. Autonomous build with workers (US4): Build can send `[P]` tasks to `st-worker`; workers get the
    full layout; in autonomous mode a `PermissionRequest` hook (`hooks/st-approve.py`) sends a
@@ -57,12 +57,12 @@ new herdr or claude call (L32).
 
 **Performance Goals**: a lock wait ends by its limit (default 600 s, SC-004). A herdr Codex review
 ends under the Bash tool's 600 s cap: `st-codex-agent.sh` keeps agent start and review under
-480 s, inside a 540 s `timeout` that starts before the 50 s lock wait (contracts/scripts.md 1.5). Not built: T050 failed, so every review takes the background `codex exec` call (540 s `timeout`).
+480 s, inside a 540 s `timeout` that starts before the 50 s lock wait (contracts/scripts.md 1.5). Outside the tab path, or after it fails, `codex exec` takes the time left of the 540 s.
 
 **Constraints**: built code adds no explanatory comments, only `ponytail:` markers. Every task
 names its exact test command. No step runs the whole of `tests/`.
 
-**Scale/Scope**: 8 scripts and hooks, about 20 Markdown files, 14 new (tests/test_codex_agent.sh not built) and 5 changed test files.
+**Scale/Scope**: 8 scripts and hooks, about 20 Markdown files, 14 new and 5 changed test files.
 
 ## Constitution Check
 
@@ -83,16 +83,16 @@ Phase 1: pass.
 | lessons L8 | test runs do not write into the repo | Python tests run with `PYTHONDONTWRITEBYTECODE=1` |
 | lessons L11 | a background action lists its failure states | Design lane in Build: cannot start (DL12), ends with no report (DL14), screen still open while others run (DL11) |
 | lessons L12 | a phase starts through the Skill tool | `/stratum:st-design` and `/stratum:st-triage` are started with the Skill tool (DL11, TP1) |
-| lessons L14 | a prompt string change updates the contract and test together | the Codex prompt lines are in contracts/scripts.md sections 1.3 and 2; T018 asserts them (T019 is not built, T050 failed) |
+| lessons L14 | a prompt string change updates the contract and test together | the Codex prompt lines are in contracts/scripts.md sections 1.3 and 2; T018 asserts them (T019 is `tests/test_codex_agent.sh`) |
 | lessons L16, L17 | a hash step has one failing test per producer | `diff` point: a failing `git diff` and a failing `sha256sum`; `decisions`: an unreadable list (T002, T018) |
 | lessons L18 | a commit line for a generated file says "if it changed" | the Inspect and Build lines that commit `advisor.md` keep "if it changed" |
 | lessons L19 | work moved to the main session names its folder | `approve` and `pass` run in the main session and name the worker by id; the record file is in the orchestrator's scratchpad |
 | lessons L25 | a negative control runs on a green baseline | T047 and T013 run the new code green first, then the old copy |
-| lessons L26 | stub ids have a random part | herdr stand-ins in T019 (not built) and T027 |
+| lessons L26 | stub ids have a random part | herdr stand-ins in T019 and T027 |
 | lessons L29 | worktree work uses the main checkout | the test lock lives in `git rev-parse --git-common-dir`, shared by all worktrees |
-| lessons L30 | `agent start` retries `agent_pane_busy` | `st-codex-agent.sh` step 3 (not built, T050 failed) |
-| lessons L31 | a herdr stub answers in the real CLI format | `agent read` stub prints plain text with the Codex wrap seen live (research R-C); T019, not built |
-| lessons L32 | each new herdr or claude call gets a live run | T050 (Codex home probe), T024 (Codex tab review), T034 (worker layout and approval). Results: T050 failed at check 1 (research R-J); T024 not run (no tab path); T034 not run, the PC was not reachable (research R-H) |
+| lessons L30 | `agent start` retries `agent_pane_busy` | `st-codex-agent.sh` step 3 |
+| lessons L31 | a herdr stub answers in the real CLI format | `agent read` stub prints plain text with the Codex wrap seen live (research R-C); T019 |
+| lessons L32 | each new herdr or claude call gets a live run | T050 (Codex home probe), T024 (Codex tab review), T034 (worker layout and approval). Results: T050 failed at check 1, then passed on re-run 2026-11-01 (research R-J); T024 ran 2026-11-01 (research R-H); T034 not run, the PC was not reachable (research R-H) |
 | lessons L33 | a review fix that adds `--` to a real CLI call is run once live | no new `--` except the documented agent-argument separator of `herdr agent start`, already used by `st-worker.sh:200` |
 | lessons L34 | wait for `blocked` to clear after an answer | `approve` runs `agent wait --until working --timeout 5000` before it returns |
 | lessons L37 | a brief rule change updates contract 008 section 3 and test S1 | T016 (B1), T031 (B2) |
@@ -115,10 +115,10 @@ These tasks touch access rules, an external service, or text that can hold secre
   Stratum-owned `CODEX_HOME` (`~/.local/state/stratum/codex-home`) that holds only a link to the
   user's Codex login. `~/.codex/config.toml`, `~/.codex/hooks.json` and a trusted project's
   `.codex/config.toml` do not load; the model comes from `.stratum/advisor.json`. The folder is
-  made only by `st-advisor.sh codex-home`, when the user opts in to a Codex advisor. T050 proves
-  it live before the adapter is built; if it fails, Codex runs in the background as today and the
+  made only by `st-advisor.sh codex-home`, when the user opts in to a Codex advisor. T050 proved
+  it live (re-run 2026-11-01, research R-J); without the home, Codex runs in the background as today and the
   tab is not used. The sandbox stays `read-only` and approvals `never`. README says so (R17).
-  Tasks T050, T018, T019, T021, T022, T023. Result: T050 failed at check 1 (research R-J). The tab, `codex-home` and the herdr path are not built, so every Codex review runs in the background, also in herdr.
+  Tasks T050, T018, T019, T021, T022, T023. Result: the T050 re-run passed (research R-J). The tab, `codex-home` and the herdr path are built.
 - **S3. Permission approvals (FR-019, access rules, D27).** The hook acts only in a folder with
   `.stratum/approve/`, which only `st-worker.sh start --autonomous` makes, and only while the
   main checkout's `.stratum/autonomous` (read through the git common dir) holds the same session
@@ -193,8 +193,8 @@ hooks/
 ├── st-approve.py          # new (US4)
 └── st-git-guard.py        # fallback for unsplittable commands (US2)
 scripts/
-├── st-advisor.sh          # waive, note, count, diff (US1); auto, matrix, decisions, round, talk; codex-home and herdr path not built (US3)
-├── st-codex-agent.sh      # not built (T050 failed)
+├── st-advisor.sh          # waive, note, count, diff (US1); auto, matrix, decisions, round, talk; codex-home, herdr tab path (US3)
+├── st-codex-agent.sh      # new (US3)
 ├── st-lock.sh             # new (US2)
 └── st-worker.sh           # brief (US2, US4); --autonomous, layout, approve, pass, wait, answer, close (US4)
 statusline/st-statusline.sh  # autonomous segment (US4)
@@ -207,7 +207,7 @@ specs/008-herdr-workers/contracts/script.md (brief section 3, L37)
 tests/
 ├── test_advisor_waive.sh, test_advisor_rules.sh, test_test_scope.sh      # US1, new
 ├── test_lock.sh, test_lock_rules.sh                                      # US2, new
-├── test_advisor_matrix.sh, test_risk_rules.sh       # US3, new (test_codex_agent.sh not built)
+├── test_advisor_matrix.sh, test_risk_rules.sh       # US3, new; test_codex_agent.sh
 ├── test_approve_hook.py, test_worker_rules.sh                            # US4, new
 ├── test_plan_rules.sh, test_screen_rules.sh                              # US5, new
 ├── test_triage_rules.sh, test_no_frontend_design.sh                      # US6, new
@@ -219,8 +219,6 @@ tests/
 file pairs with one build task, so tasks in a phase can run at the same time (L6).
 
 ## Design choices
-
-Not built (T050 failed, research R-J): C3, C4 and C10 stay as the design for a later build.
 
 - **C1. One lock script, two uses.** `st-lock.sh` serves `[lock]` tests (FR-009) and one Codex
   review at a time per workspace (spec edge case), by `--name`. No second lock.
