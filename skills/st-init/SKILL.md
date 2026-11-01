@@ -74,6 +74,7 @@ overwrite an existing file; report it and move on.
    and duplicate installs.
 11. **Advisor.** If `.stratum/advisor.json` is missing, ask the user in one question: advisor mode `auto` (recommended: the risk level picks Codex, `/advisor` or both at each point; needs `codex` logged in for Codex), `codex` (Codex reviews the plan and a test red after 2 tries), `both` (Codex, then `/advisor` if set), or `off` (no Codex, nothing sent to OpenAI)?
    Write `.stratum/advisor.json` as `{"mode": "<answer>"}`. It is committed. New projects get the file here; without it the advisor is off. Say how to change it later: edit the file. Optional `model` and `effort` keys pick the Codex model and reasoning effort; without them Codex uses its own default model and effort.
+   If the answer is `auto`, `codex` or `both`, run `bash <plugin root>/scripts/st-advisor.sh codex-home` and show its line word for word.
 12. **Report** in one block: files created, files skipped because they existed, what the user
    still needs to do. Commit only the created or changed project files (`.stratum/state.json`,
    `.stratum/constitution.md`, `.stratum/advisor.json`, `.gitignore`, `AGENTS.md`, `CLAUDE.md`, `.claude/settings.json`),

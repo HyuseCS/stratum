@@ -13,7 +13,7 @@ R3|skills/st/SKILL.md|Write the risk (`high`, `normal`, `low` or `none`) with `b
 R4|skills/st-build/SKILL.md|The mode comes from `.stratum/advisor.json`: `auto` (the default when the file has no `mode`), `codex`, `both` or `off`.
 R5|skills/st-build/SKILL.md|`advisors: codex`: Codex runs. `advisors: both`: Codex runs, then consult `/advisor` on the same input, then hold the talk. `advisors: /advisor`: consult `/advisor` only. `advisors: none`: no advisor at this point, and skip `check plan`.
 R6|skills/st-build/SKILL.md|| test red after 2 tries | Codex, then both if still red | Codex | `/advisor` | none |
-R7|skills/st-build/SKILL.md|Codex runs in the background as before, also in herdr.
+R7|skills/st-build/SKILL.md|In herdr, with the Stratum Codex home in place, Codex runs as the `st-codex-<NNN>` agent in the `Codex` tab of this workspace, read-only and never asking, and the user can watch it there. Otherwise it runs in the background as before.
 R8|skills/st-build/SKILL.md|At a High point both advisors first answer alone. Then hold the talk: at most 3 rounds of `bash <plugin root>/scripts/st-advisor.sh round <point> <feature dir> <n> <views file>`, each with `/advisor`'s answer to the same views.
 R9|skills/st-build/SKILL.md|In round 3 each advisor proposes a compromise for every open point. A compromise both accept is a combined finding. A point with no compromise both accept goes to the user with both views, in short, simple words.
 R10|skills/st-build/SKILL.md|If one advisor has no answer (`no advisor`, mode off), the point runs with the one left, and the talk record says so.
@@ -23,9 +23,11 @@ R13|skills/st-build/SKILL.md|Send the story's small-decision list to the advisor
 R14|skills/st-fast/SKILL.md|At the end of the change, send the small-decision list to `/advisor` if one is set. A decision it sends to the user is undone if the user says no.
 R15|skills/st-init/SKILL.md|advisor mode `auto` (recommended: the risk level picks Codex, `/advisor` or both at each point; needs `codex` logged in for Codex), `codex` (Codex reviews the plan and a test red after 2 tries), `both` (Codex, then `/advisor` if set), or `off` (no Codex, nothing sent to OpenAI)?
 R16|README.md|`{"mode": "auto"}` (the default when the file has no `mode`): the risk level picks the advisors at each point.
-R17|README.md|Codex runs in the background, also inside herdr.
+R17|README.md|Inside herdr, Codex runs as an agent in a `Codex` tab of your workspace, read-only and never asking, so you can watch it. The tab uses Stratum's own Codex home, `~/.local/state/stratum/codex-home`, which holds only a link to your Codex login and a `config.toml` that marks the project untrusted: your `~/.codex/config.toml`, `~/.codex/hooks.json` and a project's `.codex/config.toml` do not load there, and the model comes from `.stratum/advisor.json`.
+R19|skills/st-init/SKILL.md|If the answer is `auto`, `codex` or `both`, run `bash <plugin root>/scripts/st-advisor.sh codex-home` and show its line word for word.
+R20|skills/st-build/SKILL.md|When the user asks to add a Codex advisor, or sets a mode that uses Codex, run `bash <plugin root>/scripts/st-advisor.sh codex-home` and show its line word for word. Never run it on your own.
 R18|README.md|With no file the advisor is off and prints `no advisor: mode not set. Write .stratum/advisor.json with "mode": "auto", "codex", "both" or "off".`
-R21|README.md|The call runs with `--ignore-user-config`: neither `~/.codex/config.toml` nor a project `.codex/config.toml` is read
+R21|README.md|The background call runs with `--ignore-user-config`: neither `~/.codex/config.toml` nor a project `.codex/config.toml` is read
 K1|skills/st-build/SKILL.md|First line `mode both: also consult /advisor if one is set`
 TABLE
 

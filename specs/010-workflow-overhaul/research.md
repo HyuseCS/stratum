@@ -148,8 +148,10 @@ closed after the probe. Scratch files: `<scratchpad>/ra/` (R-A) and `<scratchpad
 - Decision: the tab runs with `CODEX_HOME=${XDG_STATE_HOME:-$HOME/.local/state}/stratum/codex-home`,
   set with `herdr tab create --env CODEX_HOME=<dir>` (an option `herdr tab create --help` lists:
   `--env <KEY=VALUE> Set an environment variable for the launched process`). The folder holds
-  only `auth.json`, a symlink to the user's `~/.codex/auth.json`. `st-advisor.sh codex-home`
-  makes it, and only when the user opts in to a Codex advisor.
+  `auth.json`, a symlink to the user's `~/.codex/auth.json`, and `config.toml`, with one
+  `[projects."<abs project root>"]` entry and `trust_level = "untrusted"` per project (plus what
+  Codex writes). `st-advisor.sh codex-home` makes it, and only when the user opts in to a Codex
+  advisor.
 - Why there: it is outside every repo, so no `.gitignore` entry is needed and it can never be
   committed. It is not inside the project tree, which here is synced (`.stfolder` and
   `.stignore` at the repo root): a symlink to the login inside the project would travel to other
@@ -169,9 +171,9 @@ closed after the probe. Scratch files: `<scratchpad>/ra/` (R-A) and `<scratchpad
   5. after the run, `auth.json` is still a symlink (Codex may replace it with a copy when it
      refreshes the token, which would leave the user's own login stale), and
      `codex login status` in a normal shell still says `Logged in using ChatGPT`.
-- If any step fails: the tab path is not built. Codex runs in the background through
-  `codex exec --ignore-user-config` as today, at every point, in herdr too. tasks.md names the
-  tasks this skips.
+- The tab path is built (T050 re-run below). Outside herdr, with no Stratum Codex home, with no
+  `config.toml` entry for the project root, or when the tab path fails, Codex runs in the
+  background through `codex exec --ignore-user-config`.
 - T050 result (live, 2026-10-31 16:38 to 16:44 +08:00, codex-cli 0.166.0, herdr 0.9.4):
   **FAIL. First failed check: 1, the agent gave no answer.**
   - Setup: `<scratch>/cxhome/` held only `auth.json -> /home/hyuse/.codex/auth.json`.
@@ -218,6 +220,23 @@ closed after the probe. Scratch files: `<scratchpad>/ra/` (R-A) and `<scratchpad
     saved and that folder settings can then run code. The probe did not check where trust is
     saved. With trust, the project's `.codex/config.toml` would load. To run checks 1 to 3
     with trust, a second probe and a design change are necessary.
+- T050 re-run: PASS with config.toml trust_level untrusted and one enter (live, 2026-11-01,
+  codex-cli 0.166.0, herdr 0.9.4).
+  - Setup: `CODEX_HOME` held only `auth.json -> ~/.codex/auth.json` and `config.toml` with
+    `[projects."<abs project path>"]` and `trust_level = "untrusted"`.
+  - `herdr tab create ... --env CODEX_HOME=<dir> --no-focus`, then
+    `herdr agent start <label> --kind codex --pane <pane> -- -s read-only -a never --no-alt-screen`.
+  - Codex first showed a `Folder access` screen: `1. Open restricted` (the default) and
+    `2. Back to Agent Command Center`. One `enter` picked option 1. After that,
+    `herdr agent prompt <label> "<prompt>" --wait --until done --until idle` gave a real answer.
+  - The canaries in the project's `.codex/config.toml` did not fire: no project config, hook or
+    MCP server ran. The footer model was not the user's global model.
+  - `auth.json` stayed a symlink, and `codex login status` still said logged in.
+  - Codex added `[tui]` keys to that `config.toml`. The `projects` entry stayed.
+  - A `-c 'projects."<p>".trust_level="untrusted"'` override does not work: the old trust dialog
+    shows. The entry must be in `config.toml`.
+  - Not tested in this probe: whether the Folder access screen shows again on a later start
+    with the same `CODEX_HOME`. T024 (R-H) answered it: it does, and the one `enter` handles it.
 
 ## R-D. A portable test lock
 
@@ -292,7 +311,38 @@ T050 (Stratum Codex home probe, R-J, runs first), T024 (Codex plan review throug
 autonomous approval through the plugin hook, `pass`, a hook wait past 120 s). Each one is
 recorded here when it runs, or ticked with `Not run, <first error line>` (L32).
 
-- T050: failed at check 1 (R-J). T019, T021 and T024: not run.
+- T050: failed at check 1 on 2026-10-31. The re-run on 2026-11-01 passed (R-J). T019 and T021
+  are built.
+- T024, 2026-11-01 22:39 to 22:47 +08:00, codex-cli 0.166.0, herdr 0.9.4, workspace `w15`, on
+  branch `worker-codex-tab` (quickstart section 0 step 2: the scratch clone ran this branch's
+  `scripts/st-advisor.sh` and `scripts/st-codex-agent.sh`, `grep -c codex-home` printed `3`).
+  Scratch clone with a two-task feature `specs/001-demo`, mode `auto`, risk `normal`. **PASS.**
+  - Step 0: `codex home: /home/hyuse/.local/state/stratum/codex-home`, mode 700, `auth.json`
+    a link to `~/.codex/auth.json`, `config.toml` with the clone's `[projects."<root>"]` entry and
+    `trust_level = "untrusted"`.
+  - Step 1: `advisors: codex (plan, risk normal)`, `APPROVED sha256 b17f9d…`, a record in
+    `advisor.md`, 21 s. Tab `w15:t5` labeled `Codex`, agent `st-codex-001`. The screen held 29
+    lines; the answer was 1 JSON line between the markers (2 lines on screen) and it parsed.
+  - Step 2: 19 s, the same agent and tab, no new tab.
+  - Step 3: tab closed, run again: a new tab and agent. The herdr call log showed
+    `agent start`, `agent read`, `agent send-keys st-codex-001 enter`, `agent read`,
+    `agent prompt`, `agent read`: the Folder access screen shows again on a later start with
+    the same `CODEX_HOME`, and the one `enter` answers it.
+  - Step 4: `advisors: none (plan, risk low)`, no herdr call.
+  - Step 5: footer `GPT-6.1-Sol default`, not the user's `GPT-6-Astra xhigh`.
+  - Step 6: run with `XDG_STATE_HOME=<scratch>/emptystate`: no herdr call, `codex exec` gave
+    APPROVED, nothing written there.
+  - After every run: `test -L ~/.local/state/stratum/codex-home/auth.json` held, and
+    `codex login status` printed `Logged in using ChatGPT`.
+  - Linked worktree (build finding F5): a `git worktree` of the clone, with its own
+    `codex-home` entry, got APPROVED through a new tab with one `enter`. Codex matches the trust
+    entry by the worktree path.
+  - Fallback seen live: the first try of step 6 moved the real home away while a Codex tab ran.
+    Codex's app-server daemon for that home (it outlives the tab) then failed every command
+    (`Failed to create unified exec process: No such file or directory`), so the next two tab runs
+    printed `ERROR: no answer between the markers` and fell back to `codex exec`, which gave
+    APPROVED. Stopping that daemon fixed it. Quickstart step 6 now uses an empty
+    `XDG_STATE_HOME` instead of moving the home.
 - T034: not run. The PC was not reachable this session, so quickstart 4L (and the D28 step on a
   saved machine) must run before the merge.
 - T049, 2026-10-31, on `125e02c`:

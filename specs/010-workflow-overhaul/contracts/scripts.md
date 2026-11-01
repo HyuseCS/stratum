@@ -18,7 +18,7 @@ st-advisor.sh waive plan <feature dir> <reason>               (new, US1)
 st-advisor.sh note <point> <feature dir> <summary>            (new, US1)
 st-advisor.sh talk <point> <feature dir> <file>               (new, US3)
 st-advisor.sh count <feature dir>                             (new, US1)
-st-advisor.sh codex-home                                       (not built: T050 failed, research R-J)
+st-advisor.sh codex-home                                       (new, US3)
 ```
 
 `<point>` is `plan`, `test`, `diff` or `decisions`. The usage line names every form. Any other
@@ -36,7 +36,7 @@ CR and LF are replaced: `usage: ...` on stdout, exit 2, nothing recorded, nothin
 | `talk` | `talk recorded: <point>, <n> rounds` | 0 | talk entry |
 | `count` | `advisor calls: codex <a>, waived <b>, /advisor <c>` | 0 | none |
 | `check plan` after `waive` | `WAIVED sha256 <h>` | 0 | none |
-| `codex-home` (not built, T050 failed) | `codex home: <dir>` | 0 | none |
+| `codex-home` | `codex home: <dir>` | 0 | none |
 
 - `waive` runs only when the last `^## plan \| [^|]* \| sha256 ` record is `APPROVED`, `WAIVED`,
   or `REVISE` whose finding lines (`- [<SEV>] ...`) are all `MEDIUM` or `LOW` (FR-001). Any other
@@ -44,11 +44,22 @@ CR and LF are replaced: `usage: ...` on stdout, exit 2, nothing recorded, nothin
   finding) or no record: refused, exit 1, nothing written.
 - `waive` needs no `.stratum/advisor.json` and no `codex`. It hashes the plan input with the same
   pipeline as `plan`. A hash failure is `cannot hash inputs`, exit 2, nothing written (L16).
-- `codex-home` (D25; not built, T050 failed, research R-J) would make the Stratum Codex home `<dir>` =
-  `${XDG_STATE_HOME:-$HOME/.local/state}/stratum/codex-home` (mode 700) holding only
-  `auth.json`, a symlink to `${CODEX_HOME:-$HOME/.codex}/auth.json`. A missing login file:
-  `no codex login: run codex login, then run this again`, exit 1, nothing made. Run again: same
-  line, nothing changed. Only this command makes the folder. The skills run it only when the
+- `codex-home` (D25, research R-J) makes the Stratum Codex home `<dir>` =
+  `${XDG_STATE_HOME:-$HOME/.local/state}/stratum/codex-home` (mode 700) holding `auth.json`, a
+  symlink to `${CODEX_HOME:-$HOME/.codex}/auth.json`, and `config.toml` (plus what Codex
+  writes). `config.toml` holds `[projects."<abs project root>"]` and `trust_level = "untrusted"`
+  for the project root it runs from. A `-c` override does not work, so the entry must be in the
+  file. Codex adds `[tui]` keys later; the `projects` entry stays.
+  One home serves many projects: each run appends its root's entry when
+  `grep -qxF '[projects."<root>"]'` fails (with a leading newline if the file does not end in
+  one), and never rewrites other lines. A root path holding `"`, `\` or a control character (a
+  newline, for example) skips the entry with one printed line, so that project uses `codex exec`.
+  When `<dir>` and the login's folder are the same real folder (`CODEX_HOME` set to `<dir>`, or
+  `<dir>` a symlink to `~/.codex`): `codex home is your Codex login folder: unset CODEX_HOME, then run this again`,
+  exit 1, checked right after `mkdir -p` and before any `chmod` or link, so nothing else changes. Only `codex-home` writes `config.toml`; a
+  review run never writes it. A missing login file:
+  `no codex login: run codex login, then run this again`, exit 1, nothing made. Run again from
+  the same root: same line, nothing changed. Only this command makes the folder. The skills run it only when the
   user opts in to a Codex advisor (st-init setup, or a request to add one or set a mode that
   uses Codex).
 - `talk`'s file must hold one line each starting `rounds: ` (1 to 3), `agreed: `,
@@ -103,22 +114,25 @@ other value: first print `risk not set: normal`, then use `normal`.
 
 ### 1.5 Where Codex runs (US3, FR-013)
 
-Status: the herdr path below is not built (T050 failed, research R-J). Every run takes the `codex exec` path, also in herdr. The herdr bullets and command are the design for a later build.
-
 - Budget: lock wait up to 50 s, then `st-codex-agent.sh` keeps its own start and review under
   480 s (section 2 step 5), so a slow step ends with its own `ERROR:` line, not the outer
-  `timed out`.
+  `timed out`. A `codex exec` fallback after the tab path gets only the time left of the 540 s
+  (`540 - SECONDS`, counted from script start). Under 60 s left: `BLOCKED: timed out`, no
+  `codex exec`. Without the tab path, `codex exec` gets the full 540 s.
 - In herdr (`HERDR_ENV` is `1`, `HERDR_WORKSPACE_ID` is set, `herdr` is on PATH) and with the
-  Stratum Codex home in place (`<dir>/auth.json` is a symlink):
+  Stratum Codex home in place (`<dir>/auth.json` is a symlink and `<dir>/config.toml` has the
+  project root's `[projects."<root>"]` entry):
   `timeout -k 10 540 bash <scripts>/st-lock.sh --name codex-<workspace id> --timeout 50 -- bash <scripts>/st-codex-agent.sh <feature dir> <prompt file> <answer file> <dir> [-m <model>] [-c model_reasoning_effort="<effort>"]`.
-- Else (not in herdr, or no Stratum Codex home, or T050 failed and the tab path was not built):
+- Else (not in herdr, or no Stratum Codex home, or no `config.toml` entry for the project root):
   today's `codex exec -s read-only --ignore-user-config ... --ephemeral --output-schema ... -o ...`.
 - Both write the answer file. The same validator reads it. Exit 75 from the lock:
-  `BLOCKED: Codex agent busy with another review`. Other non-zero: today's
-  `BLOCKED: codex exited <rc>` with the last `ERROR:` line.
+  `BLOCKED: Codex agent busy with another review`, no fallback. Any other non-zero exit from the
+  tab path: print its last `ERROR:` line (exit 124 or 137, the outer `timeout` killed it:
+  `ERROR: Codex tab timed out`), then run the `codex exec` path for that run with the time left. A non-zero
+  `codex exec`: today's `BLOCKED: codex exited <rc>` with the last `ERROR:` line.
 - `command -v codex` is checked on both paths.
 
-## 2. `scripts/st-codex-agent.sh` (new, US3; not built, T050 failed)
+## 2. `scripts/st-codex-agent.sh` (new, US3)
 
 ```text
 st-codex-agent.sh <feature dir> <prompt file> <answer file> <codex home> [-m <model>] [-c <key=value>]
@@ -130,10 +144,20 @@ st-codex-agent.sh <feature dir> <prompt file> <answer file> <codex home> [-m <mo
    with this exact name is used. Each other one gets `herdr tab close <its tab_id>` first.
 3. None left: `herdr tab create --workspace <ws> --cwd <pwd> --label Codex --env CODEX_HOME=<codex home> --no-focus`, then
    `herdr agent start <name> --kind codex --pane <root pane> --timeout 120000 -- -s read-only -a never --no-alt-screen [-m ..] [-c ..]`.
-   `agent_pane_busy`: retry, 10 tries, 1 s apart (L30). `agent_not_ready`:
-   `ERROR: Codex waits for an answer at start in its Codex tab. If it asks whether to trust the folder, pick the option that does not trust it (trusting loads the project's .codex/config.toml), then run the point again.`,
-   exit 1. Ids are read from herdr's answers, never built (L26). `<codex home>/auth.json` not a
-   symlink: `ERROR: no Stratum Codex home`, exit 2, before any herdr call. An existing
+   `agent_pane_busy`: retry, 10 tries, 1 s apart (L30). Ids are read from herdr's answers, never
+   built (L26). `<codex home>/auth.json` not a symlink, or `<codex home>/config.toml` without
+   `[projects."<pwd>"]` and `trust_level = "untrusted"`: `ERROR: no Stratum Codex home`, exit 2,
+   before any herdr call.
+   Folder access screen: right after `agent start` returns (success, or error `agent_not_ready`),
+   `herdr agent read <name> --source recent-unwrapped --lines 60`, ANSI stripped. If it holds both
+   `Folder access` and `Open restricted`: `herdr agent send-keys <name> enter` (one key, option 1
+   is the default), then poll `agent read` (up to 20 tries, 1 s apart) until the screen no longer
+   holds `Folder access`. At most one `enter` per start. Screen not shown: send nothing.
+   `agent_not_ready` with no Folder access screen (for example the old `Trust this folder?`, or a
+   login screen), or Folder access still shown after the poll:
+   `ERROR: Codex waits for an answer at start in its Codex tab. It did not show the Folder access screen. Check the tab, then run the point again.`,
+   exit 1, no prompt. The script never sends a key for `Trust this folder?` (option 1 there
+   trusts the folder and loads the project config). An existing
    `st-codex-<NNN>` agent from before D25 is reused only if its tab was made by this script
    (label `Codex`); `ponytail:` the script cannot read a running pane's `CODEX_HOME`, so a tab
    the user made by hand with that name would be reused.
