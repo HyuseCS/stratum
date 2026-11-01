@@ -30,9 +30,16 @@ Plugin root (`<plugin root>`) is two levels up from this skill's base directory.
    - On send back: resume the same `st-close` with `SendMessage` to append the tasks (converge
      step 7), run `/stratum:st-build`, then run step 2 again without a gap report.
    - Defer and drop: `st-close` records them in spec.md.
-5. **Lessons.** `st-close` appends proposed lessons to `docs/lessons.md`. st-plan and st-inspect
-   read that file at the next feature's Plan and Inspect, so
-   each lesson's Rule line is one testable sentence. Show the user any
+5. **Lessons.** `st-close` reports each lesson with its target file and the reason. For each, the
+   user picks keep, another target, or drop. On keep, write the rule to the target file yourself.
+   For a constitution target, bump its `**Version**` (MINOR for a new rule, per
+   `<plugin root>/procedures/constitution.md` step 2) and set `**Last Amended**` to today. If the
+   app constitution is missing, create it with that one rule, `**Version**` 1.0.0 and today's
+   `**Last Amended**`. Then show the user the line `@.stratum/<app>-constitution.md` for the
+   CLAUDE.md that loads in that app's worktrees. If `.stratum/constitution.md` is the target and
+   is missing, tell the user and do not write the rule. For an ordinance target, create
+   `apps/<app>/ORDINANCE.md` if it is missing, and make sure `apps/<app>/CLAUDE.md` has the line
+   `@ORDINANCE.md` (create the file with that one line if it is missing). Show the user any other
    proposed constitution or harness change. Never apply one without their OK.
 6. **Shortcuts.** `st-close` reports the rows from `scripts/st-shortcuts.sh`. Show each row.
    For each, the user picks fix now or keep.
@@ -42,7 +49,7 @@ Plugin root (`<plugin root>`) is two levels up from this skill's base directory.
    - Keep: no record. The marker stays in the code, and `st-ponytail-debt` finds kept markers
      across the whole repo.
 7. **Docs graph.** Run the `st-graphify` skill once to update the docs graph.
-8. `st-git` commits the changed docs with exact paths.
+8. `st-git` commits the changed docs with exact paths, and the files step 5 wrote.
    After the commit lands, set `phase` to `done` in `<project>/.stratum/state.json`. Keep the other keys.
 
 ## Gate

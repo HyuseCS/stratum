@@ -13,4 +13,16 @@ Plugin root (`<plugin root>`) is two levels up from this skill's base directory.
 3. When a value is unclear, ask the user one question at a time, with your recommendation.
 4. Show the version change and the summary. Have `st-git` commit `.stratum/constitution.md` only.
 
+## Where rules go
+
+| File | Holds | Loads |
+| --- | --- | --- |
+| `.stratum/constitution.md` | Rules for the whole repo | Every session |
+| `.stratum/<app>-constitution.md` | How we work on one app: git, branches, staging, lanes, proof, PRs, releases | Every session in that app's worktrees |
+| `apps/<app>/ORDINANCE.md` (loaded by a one-line `apps/<app>/CLAUDE.md` with `@ORDINANCE.md`) | Rules about the app's code and specs | Only when work touches `apps/<app>/` |
+
+Must the rule apply before any file of the app is opened (a branch, merge or lane decision)? Then
+a constitution. Otherwise the ordinance. With no `apps/` folder, `.stratum/constitution.md` is the
+only target.
+
 Never skip the commit guard. Push only when the user says "push".

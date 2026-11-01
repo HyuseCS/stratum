@@ -28,13 +28,13 @@ to `/stratum:st-full`.
    list (no gap report, no lessons unless something went wrong). Do this only after the step 6
    commit landed: the shortcut list sees only committed work. If the commit did not land, stop
    and tell the user.
-8. Handle the shortcut rows as in `<plugin root>/skills/st-close/SKILL.md` ("Shortcuts" step).
-   List the small decisions and findings (fixed and dropped).
+8. Handle the shortcut rows as in `<plugin root>/skills/st-close/SKILL.md` ("Shortcuts" step),
+   and a proposed lesson as in its "Lessons" step. List the small decisions and findings (fixed and dropped).
 9. Check each drift change against the code it names (as in
    `<plugin root>/skills/st-close/SKILL.md` step 3). Then the `stratum:st-git` agent
    commits the docs `st-close` changed, with exact paths: the doc files in its drift list, and
-   `docs/lessons.md` if it wrote a lesson. If it changed no docs, skip this step. If the commit
-   did not land, stop and tell the user.
+   the files a kept lesson went to. If it changed no docs and no lesson was kept, skip this step.
+   If the commit did not land, stop and tell the user.
 10. After the last commit lands (step 9, or step 6 when step 9 is skipped), set `phase` to `done` in `<project>/.stratum/state.json`. Keep the other keys.
     Push only on the user's "push".
 

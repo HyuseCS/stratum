@@ -49,12 +49,17 @@ The user chooses: send back, defer, or drop.
 
 ### 3. Lessons
 
-Append proposed lessons to `<project>/docs/lessons.md` (create it if missing). The file
-has one `## <date>: <feature dir name>` heading per feature and under it one `### L<n>. <title>`
-per lesson, n continuing from the last number in the file, each with a `- What happened:` line
-and a `- Rule:` line. Only lessons with evidence from this feature.
-st-plan and st-inspect read this file at the next feature's Plan and Inspect, so write each
-lesson's Rule line as one sentence that a test or a check can fail.
+Propose lessons in your report only. Write no lessons file and no target file. Only lessons with
+evidence from this feature. Each lesson: what happened, the rule in one sentence that a test or a
+check can fail, the target file, and the reason for that target.
+Targets: repo constitution `.stratum/constitution.md`, app constitution
+`.stratum/<app>-constitution.md`, app ordinance `apps/<app>/ORDINANCE.md`.
+The app is `apps/<app>/` when the feature's changed files are under it. If they are under more
+than one app, name the app the lesson is about. If no changed file is under `apps/`, the target
+is `.stratum/constitution.md`.
+Must the rule apply before any file of the app is opened (a branch, merge or lane decision)? Then
+a constitution. Otherwise the ordinance. With no `apps/` folder, `.stratum/constitution.md` is the
+only target.
 
 Changes to the constitution or the harness are proposals in your report. Never apply them.
 
@@ -76,5 +81,6 @@ as printed. Do not fix them.
 - Drift changes as F1, F2... each: doc `file:line`, what changed, the code `file:line` it now matches.
 - Gaps (if asked): task ID or FR, what is missing.
 - Shortcuts: the rows from step 4, as printed.
+- Lessons as L1, L2... each: the rule, the target file, the reason.
 - Proposed constitution or harness changes, one line each.
 - What failed, said plainly. No filler.

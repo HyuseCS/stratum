@@ -18,7 +18,6 @@ The orchestrator passes absolute paths: plugin root, project root, feature dir (
 
 Read:
 - `<project>/.stratum/constitution.md`
-- `<project>/docs/lessons.md` (if present)
 - `<feature>/spec.md`, `plan.md`, `tasks.md`, `data-model.md`, `contracts/`, `quickstart.md`
 
 ## Navigation
@@ -40,7 +39,6 @@ Look for at least:
 - Coverage gaps: a requirement with no task, a task with no requirement, a success criterion with no task where it needs work.
 - Inconsistency: one concept with two names across spec, plan, data model and contracts, an entity in one file but not the other, tasks out of order, conflicting requirements.
 - Task order: a test task placed after its build task. Also `[P]` tasks that touch the same file.
-- Lessons: a lesson in `docs/lessons.md` that applies to this feature but that no plan.md gate or tasks.md task cites by number. Offer the fix (a gate row or a task note) and send it to st-plan.
 
 Offer each fix, never apply it. Say for each finding whether it needs a user decision or goes to st-plan.
 

@@ -145,14 +145,18 @@ README python3	readme	git guard, model overrides hook, phase hook, statusline, h
 EOF
 check "statusline test passes under LC_ALL=C" 'out=$(LC_ALL=C bash "$root/tests/test_statusline.sh" 2>&1); [ $? = 0 ] && ! grep -qv "^ok" <<<"$out"'
 phrases <<'EOF'
-lessons st-plan read	agents/st-plan.md	one gate row for each lesson that applies
-lessons st-plan cite	agents/st-plan.md	names its number in the task line
-lessons st-inspect read	agent	that no plan.md gate or tasks.md task cites by number
-lessons st-close agent	agents/st-close.md	read this file at the next feature's Plan and Inspect
-lessons st-close skill	skills/st-close/SKILL.md	each lesson's Rule line is one testable sentence
-lessons design	DESIGN.md	The Plan and Inspect agents read the file at the next feature.
-lessons readme	readme	cites the lessons that apply
+lessons st-close target	agents/st-close.md	the target file, and the reason for that target
+lessons st-close target	agents/st-close.md	before any file of the app is opened
+lessons st-close write	skills/st-close/SKILL.md	write the rule to the target file yourself
+lessons st-close write	skills/st-close/SKILL.md	`@ORDINANCE.md`
+lessons st-fast	skills/st-fast/SKILL.md	the files a kept lesson went to
+split st-constitution	skills/st-constitution/SKILL.md	| `apps/<app>/ORDINANCE.md`
+split st-constitution	skills/st-constitution/SKILL.md	before any file of the app is opened
+split st-init	skills/st-init/SKILL.md	| `apps/<app>/ORDINANCE.md`
+split st-init	skills/st-init/SKILL.md	before any file of the app is opened
+lessons design	DESIGN.md	each with a target file and the reason
 EOF
+check "no docs/lessons.md" '! grep -rqF -- "docs/lessons.md" "$root/agents" "$root/skills" "$root/DESIGN.md" "$root/README.md"'
 
 phrases <<'EOF'
 H1 st-close constitution	agents/st-close.md	constitution.md`, if present
