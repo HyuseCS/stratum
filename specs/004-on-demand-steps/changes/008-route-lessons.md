@@ -74,7 +74,7 @@ restore. Remove the T2 phrase from the skill once, see T2 go red, restore.
 
 What: st-close writes its proposed lessons to `<project>/.stratum/lessons.md`, a holding file not
 tracked by git. The main session reads them from there in st-close skill step 5, the user decides
-each, then the main session empties the file. Undecided lessons stay for a later decision.
+each. The main session removes each lesson from the file as soon as it is decided. An undecided lesson stays in it.
 Plan and Inspect read no lessons file. `docs/lessons.md` stays untouched and unnamed (T7 stays).
 Decisions A1 to A6.
 
@@ -108,6 +108,7 @@ Decisions A1 to A6.
 ### Tests (written first, must fail before the build)
 Add one `phrases` block and one `check` after `tests/test_inspect.sh:164`. Each phrase must sit on
 one line in the built file.
+The `lessons st-fast skip` row at `tests/test_inspect.sh:157` now reads `` kept no lesson and added no `.gitignore` line `` to match the new skip rule in st-fast step 9. The build changed it with the rule, not test-first.
 - T8 `lessons holding st-close` - `agents/st-close.md` has
   `` lessons to `<project>/.stratum/lessons.md` `` and `` you may write `.stratum/lessons.md` ``.
 - T9 `lessons holding empty` - `skills/st-close/SKILL.md` has
