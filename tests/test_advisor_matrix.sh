@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -u
 root="${ST_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
-tmp=$(mktemp -d)
+tmp=$(mktemp -d) || exit 1
 trap 'rm -rf "$tmp"' EXIT
 fail=0
 check() { if eval "$2"; then echo "ok   $1"; else echo "FAIL $1"; fail=1; fi; }
@@ -244,6 +244,128 @@ approve
 out=$(cd "$wt" && bash "$root/scripts/st-advisor.sh" plan specs/001-demo); rc=$?
 check "(m) linked worktree: risk comes from the main checkout (high)" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "advisors: both (plan, risk high)" ]'
 
-check "no Stratum Codex home is made by any case" '[ ! -e "$tmp/state/stratum/codex-home" ]'
+home="$tmp/state/stratum/codex-home"
+check "no Stratum Codex home is made by cases (a) to (m)" '[ ! -e "$home" ]'
+
+chome() { out=$(cd "${1:-$proj}" && CODEX_HOME="$tmp/user" bash "$root/scripts/st-advisor.sh" codex-home); rc=$?; }
+mkdir -p "$tmp/user"
+chome
+check "(n) codex-home with no login: exact line, exit 1, no folder" '[ $rc = 1 ] && [ "$out" = "no codex login: run codex login, then run this again" ] && [ ! -e "$home" ]'
+printf '{"tokens":"x"}' > "$tmp/user/auth.json"
+chome
+check "(n) codex-home prints codex home: <dir>" '[ $rc = 0 ] && [ "$out" = "codex home: $home" ]'
+check "(n) codex-home folder is mode 700 and holds only auth.json and config.toml" '[ "$(stat -c %a "$home")" = 700 ] && [ "$(ls -A "$home" | tr "\n" " ")" = "auth.json config.toml " ]'
+check "(n) auth.json links to the user login" '[ -L "$home/auth.json" ] && [ "$(readlink "$home/auth.json")" = "$tmp/user/auth.json" ]'
+check "(n) config.toml marks the project untrusted" 'grep -qxF "[projects.\"$proj\"]" "$home/config.toml" && grep -qxF "trust_level = \"untrusted\"" "$home/config.toml"'
+c1=$(cksum < "$home/config.toml")
+chome
+check "(n) second run changes nothing" '[ $rc = 0 ] && [ "$(cksum < "$home/config.toml")" = "$c1" ] && [ "$(grep -cxF "[projects.\"$proj\"]" "$home/config.toml")" = 1 ]'
+printf '\n[tui]\nstatus = "x"\n' >> "$home/config.toml"
+proj2="$tmp/proj2"
+mkdir -p "$proj2"
+git -C "$proj2" init -q
+chome "$proj2"
+check "(n) second project adds its entry, keeps the first and the [tui] keys" '[ $rc = 0 ] && grep -qxF "[projects.\"$proj2\"]" "$home/config.toml" && grep -qxF "[projects.\"$proj\"]" "$home/config.toml" && grep -qxF "[tui]" "$home/config.toml" && grep -qxF "status = \"x\"" "$home/config.toml"'
+nl="$tmp/new"$'\n'"line"
+mkdir -p "$nl"
+c2=$(cksum < "$home/config.toml")
+chome "$nl"
+check "(n) project root with a newline: skip line, config.toml unchanged, exit 0" '[ $rc = 0 ] && [[ "$(head -n1 <<<"$out")" == "project root has "* ]] && [ "$(cksum < "$home/config.toml")" = "$c2" ]'
+out=$(cd "$proj" && CODEX_HOME="$home" bash "$root/scripts/st-advisor.sh" codex-home); rc=$?
+check "(n) CODEX_HOME is the Stratum home: refused, exit 1, auth.json still links to the user login" '[ $rc = 1 ] && [ "$out" = "codex home is your Codex login folder: unset CODEX_HOME, then run this again" ] && [ "$(readlink "$home/auth.json")" = "$tmp/user/auth.json" ]'
+rm "$home/auth.json"
+printf 'copy' > "$home/auth.json"
+chome
+check "(n) auth.json a file, not a link: refused, exit 1, the file kept" '[ $rc = 1 ] && [ "$out" = "$home/auth.json is a file, not a link to your Codex login: run codex login status, move that file away, then run this again" ] && [ ! -L "$home/auth.json" ] && [ "$(cat "$home/auth.json")" = copy ]'
+rm "$home/auth.json"
+chome
+check "(n) auth.json removed: codex-home links it again" '[ $rc = 0 ] && [ "$(readlink "$home/auth.json")" = "$tmp/user/auth.json" ]'
+
+mkdir -p "$tmp/hbin2"
+cat > "$tmp/hbin2/herdr" <<'FAKE'
+#!/usr/bin/env bash
+d=$FAKE_DIR
+printf '%s\n' "$*" >> "$d/herdr.log"
+m=$(cat "$d/hmode" 2>/dev/null)
+case "$1 $2" in
+  "agent list") echo '{"result":{"agents":[]}}' ;;
+  "tab create") echo '{"result":{"tab":{"tab_id":"w1:t2"},"root_pane":{"pane_id":"w1:p2"}}}' ;;
+  "agent start")
+    if [ "$m" = notready ]; then
+      echo '{"error":{"code":"agent_not_ready","message":"agent st-codex-001 is blocked during startup and is not ready for prompts"}}'
+      echo '{"error":{"code":"agent_not_ready","message":"agent st-codex-001 is blocked during startup and is not ready for prompts"}}' >&2
+      exit 1
+    fi
+    echo '{"result":{"agent":"codex","name":"st-codex-001","pane_id":"w1:p2"}}' ;;
+  "agent send-keys") touch "$d/h.entered" ;;
+  "agent prompt") printf '%s\n' "$@" > "$d/h.args"; echo '{"result":{"state":"done"}}' ;;
+  "agent read")
+    if [[ " $* " == *" 400 "* ]]; then
+      [ "$m" = nomarkers ] && { echo "some text without the markers"; exit 0; }
+      pf=$(sed -n 's/.*request in \(.*\) and follow it.*/\1/p' "$d/h.args" | head -n1)
+      nonce=$(grep -o 'ST-ADVISOR-BEGIN-[0-9a-f]\{12\}' "$pf" | tail -n1 | sed 's/ST-ADVISOR-BEGIN-//')
+      echo "ready"
+      echo "ST-ADVISOR-BEGIN-$nonce"
+      cat "$d/answer"; echo
+      echo "ST-ADVISOR-END-$nonce"
+    elif [ "$m" = folder ] && [ ! -e "$d/h.entered" ]; then
+      printf 'Folder access\n› 1. Open restricted\n  2. Back to Agent Command Center\n'
+    elif [ "$m" = notready ]; then
+      echo "Trust this folder?"
+    else
+      echo "chat box"
+    fi ;;
+esac
+exit 0
+FAKE
+chmod +x "$tmp/hbin2/herdr"
+ws=ws$RANDOM
+hrun() {
+  rm -f "$tmp/argv" "$tmp/herdr.log" "$tmp/h.entered" "$tmp/h.args"
+  printf '%s' "$1" > "$tmp/hmode"
+  out=$(cd "$proj" && PATH="${hp:-}$tmp/hbin2:$PATH" HERDR_ENV=1 HERDR_WORKSPACE_ID=$ws bash "${sr:-$root}/scripts/st-advisor.sh" plan specs/001-demo); rc=$?
+}
+setmode '{"mode": "codex"}'
+approve
+h=$(plan_hash)
+hrun folder
+check "(k) tab path: APPROVED, codex exec not run, tab with the Codex home, agent start, one enter" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "APPROVED sha256 $h" ] && [ ! -e "$tmp/argv" ] && grep -qF -- "tab create" "$tmp/herdr.log" && grep -qF -- "--env CODEX_HOME=$home" "$tmp/herdr.log" && grep -q "^agent start st-codex-001 --kind codex" "$tmp/herdr.log" && [ "$(grep -cx "agent send-keys st-codex-001 enter" "$tmp/herdr.log")" = 1 ]'
+hrun nofolder
+check "(k1) tab path, no Folder access screen: APPROVED, no send-keys, codex exec not run" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "APPROVED sha256 $h" ] && [ ! -e "$tmp/argv" ] && grep -q "^agent start st-codex-001" "$tmp/herdr.log" && ! grep -q "send-keys" "$tmp/herdr.log"'
+hrun notready
+check "(k3) agent_not_ready with an unknown screen: ERROR line printed, codex exec runs, verdict APPROVED, no BLOCKED" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "ERROR: Codex stopped at start on a screen Stratum does not know, so the Codex tab is closed. Run the point again, or check Codex." ] && grep -qx "APPROVED sha256 $h" <<<"$out" && ! grep -q "^BLOCKED" <<<"$out" && [ "$(head -n1 "$tmp/argv")" = exec ] && ! grep -q "send-keys" "$tmp/herdr.log"'
+hrun nomarkers
+check "(k6) no markers in the answer: the ERROR line, then codex exec runs and the verdict is APPROVED" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "ERROR: no answer between the markers" ] && grep -qx "APPROVED sha256 $h" <<<"$out" && [ "$(head -n1 "$tmp/argv")" = exec ]'
+printf '%s' '{"verdict":"REVISE","summary":"s","findings":[{"claim":"c","evidence":"e","location":"l","severity":"URGENT"}]}' > "$tmp/answer"
+hrun nofolder
+check "(k8) tab answer with severity URGENT: BLOCKED: malformed answer, codex exec not run" '[ $rc = 1 ] && [ "$(head -n1 <<<"$out")" = "BLOCKED: malformed answer" ] && [ ! -e "$tmp/argv" ]'
+approve
+mkdir -p "$tmp/t124"
+printf '#!/usr/bin/env bash\n[ "$4" = bash ] && exit 124\nshift 3\nexec "$@"\n' > "$tmp/t124/timeout"
+chmod +x "$tmp/t124/timeout"
+hp="$tmp/t124:" hrun folder
+check "(k7) tab path timed out (124): ERROR: Codex tab timed out, then codex exec runs and the verdict is APPROVED" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "ERROR: Codex tab timed out" ] && grep -qx "APPROVED sha256 $h" <<<"$out" && [ "$(head -n1 "$tmp/argv")" = exec ]'
+
+cp "$home/config.toml" "$tmp/config.keep"
+printf '[tui]\nstatus = "x"\n' > "$home/config.toml"
+cp "$home/config.toml" "$tmp/config.noentry"
+hrun folder
+check "(k4) config.toml without the project entry: codex exec runs, herdr not called, config.toml unchanged" '[ $rc = 0 ] && [ "$(head -n1 "$tmp/argv")" = exec ] && [ ! -e "$tmp/herdr.log" ] && cmp -s "$home/config.toml" "$tmp/config.noentry"'
+check "(k4) config.toml without the project entry: one line says so" '[ "$(head -n1 <<<"$out")" = "ERROR: no Stratum Codex home entry for $proj: run st-advisor.sh codex-home" ]'
+cp "$tmp/config.keep" "$home/config.toml"
+
+mkdir -p "$tmp/sc"
+cp -r "$root/scripts" "$tmp/sc/scripts"
+sed -i 's/^  sleep 1$/  :/' "$tmp/sc/scripts/st-lock.sh"
+check "(k5) setup: the copied lock does not sleep" '! grep -q "^  sleep 1$" "$tmp/sc/scripts/st-lock.sh"'
+sleep 120 & holder=$!
+mkdir "$proj/.git/stratum-codex-$ws.lock"
+echo "$holder" > "$proj/.git/stratum-codex-$ws.lock/pid"
+sr="$tmp/sc" hrun folder
+kill "$holder" 2>/dev/null
+wait "$holder" 2>/dev/null
+rm -rf "$proj/.git/stratum-codex-$ws.lock"
+check "(k5) lock held: BLOCKED: Codex agent busy with another review, codex exec not run" '[ "$(head -n1 <<<"$out")" = "BLOCKED: Codex agent busy with another review" ] && [ ! -e "$tmp/argv" ] && [ ! -e "$tmp/herdr.log" ]'
+
 check "no repo writes" '[ "$(git -C "$root" status --porcelain)" = "$repo_before" ]'
 exit $fail

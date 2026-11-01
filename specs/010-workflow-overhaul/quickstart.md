@@ -17,7 +17,7 @@ use (F9). `~/.claude/plugins/installed_plugins.json` lists `stratum@stratum` fro
 1. Note the branch: `git -C <this checkout> rev-parse --abbrev-ref HEAD` must print
    `010-workflow-overhaul` (or the branch under test) on each machine used.
 2. Scripts (3L): run them by this checkout's path (`bash <this checkout>/scripts/st-advisor.sh`),
-   and check `grep -c codex-home <this checkout>/scripts/st-advisor.sh` prints a number above 0 (it prints 0 while T050 failed, research R-J: skip this check then).
+   and check `grep -c codex-home <this checkout>/scripts/st-advisor.sh` prints a number above 0.
 3. Hook (4L): start the worker, then send it `Run exactly: touch .stratum/approve/probe`. It must
    be denied with `.stratum/approve/ and .stratum/autonomous are written only by the orchestrator.`
    If it runs instead, the session uses an old copy of the plugin. Reload step: update
@@ -71,7 +71,7 @@ Hand check (two terminals, in this repo):
 
 ```bash
 bash tests/test_advisor_matrix.sh
-# not built (T050 failed, research R-J): tests/test_codex_agent.sh does not exist
+bash tests/test_codex_agent.sh
 bash tests/test_risk_rules.sh
 bash tests/test_advisor.sh
 bash tests/test_design_lane.sh
@@ -82,7 +82,9 @@ bash tests/test_on_demand.sh
 
 The steps and the pass rule are in tasks.md T050 and research.md R-J. Pass: logged in, not the
 user's model, no canary file, `auth.json` still a link, `codex login status` still logged in.
-Result, 2026-10-31: failed at check 1, the agent gave no answer (research R-J). Fail: Codex runs in the background in herdr too, and section 3L is skipped.
+Result, 2026-10-31: failed at check 1, the agent gave no answer. Re-run, 2026-11-01: passed with
+a `config.toml` that marks the project untrusted and one `enter` on the Folder access screen
+(research R-J).
 
 ### 3L. Live Codex tab review (T024)
 
@@ -90,7 +92,8 @@ In a herdr pane, in a scratch clone with `.stratum/advisor.json` = `{"mode": "au
 `.stratum/state.json` `risk` = `normal`:
 
 0. `bash scripts/st-advisor.sh codex-home`. Expect `codex home: ~/.local/state/stratum/codex-home`
-   (expanded), a folder with only the `auth.json` link. Skip section 3L if T050 failed.
+   (expanded), a folder with the `auth.json` link and a `config.toml` with this clone's
+   `[projects."<root>"]` entry and `trust_level = "untrusted"`.
 1. `bash scripts/st-advisor.sh plan specs/<f>`. Expect: first line
    `advisors: codex (plan, risk normal)`, a new tab `Codex` in this workspace with agent
    `st-codex-<NNN>`, a verdict line, a record in `specs/<f>/advisor.md`.
@@ -99,8 +102,12 @@ In a herdr pane, in a scratch clone with `.stratum/advisor.json` = `{"mode": "au
 4. Set `risk` to `low`: `advisors: none (plan, risk low)`, no Codex call.
 5. In the `Codex` tab the footer model is the one in `.stratum/advisor.json` (or Codex's own
    default), not your `~/.codex/config.toml` model.
-6. Move the Codex home away (`mv ~/.local/state/stratum/codex-home <scratch>/`) and run step 1
-   again: no tab is used and Codex runs in the background (the fallback). Move it back.
+6. Run step 1 again with `XDG_STATE_HOME=<scratch>/empty` (an empty folder): no tab is used and
+   Codex runs in the background (the fallback). Do not move the real Codex home while Codex
+   runs: its app-server daemon outlives the tab and breaks (research R-H, T024).
+7. If the entry from step 0 is missing from `config.toml`, step 1 prints
+   `ERROR: no Stratum Codex home entry for <root>: run st-advisor.sh codex-home`, then runs
+   Codex in the background. Run step 0 again.
 
 Record in research.md: the time, the number of answer lines read, and whether the JSON parsed.
 

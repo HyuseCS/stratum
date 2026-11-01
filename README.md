@@ -190,8 +190,8 @@ copy for that project only. `scripts/st-lock.sh` runs tests marked `[lock]` one 
   With no file the advisor is off and prints `no advisor: mode not set. Write .stratum/advisor.json with "mode": "auto", "codex", "both" or "off".` `st-init` writes the file for new projects. A project set up before this feature has no file, so the advisor stays off until you write it.
   With no `codex` on PATH you get one line, `no advisor: codex not found`, and the flow runs as before, with `/advisor` if you set one.
   Optional `model` and `effort` keys in the same file pick the Codex model and reasoning effort, for example `{"mode": "codex", "model": "gpt-6-astra", "effort": "high"}`. Without them Codex uses its own default.
-  Codex runs in the background, also inside herdr.
-  The call runs with `--ignore-user-config`: neither `~/.codex/config.toml` nor a project `.codex/config.toml` is read, so no MCP server, hook or notify command from them runs during a review, and the model and effort come only from this file. Your Codex login works as before.
+  Inside herdr, Codex runs as an agent in a `Codex` tab of your workspace, read-only and never asking, so you can watch it. The tab uses Stratum's own Codex home, `~/.local/state/stratum/codex-home`, which holds only a link to your Codex login and a `config.toml` that marks the project untrusted: your `~/.codex/config.toml`, `~/.codex/hooks.json` and a project's `.codex/config.toml` do not load there, and the model comes from `.stratum/advisor.json`.
+  The background call runs with `--ignore-user-config`: neither `~/.codex/config.toml` nor a project `.codex/config.toml` is read, so no MCP server, hook or notify command from them runs during a review, and the model and effort come only from this file. Your Codex login works as before.
 - **Git guard.** One mode per command: `commit`, `worktree_remove`, `worktree_prune`,
   `branch_delete`, `reset_hard`, `clean` (`clean -f`), `discard` (`checkout .`, `restore .`), and
   `force_push`. Each is `auto` (runs), `ask`, or `deny` (blocked). The guard reads the repo's
@@ -351,6 +351,7 @@ bash tests/test_test_scope.sh
 bash tests/test_lock.sh
 bash tests/test_lock_rules.sh
 bash tests/test_advisor_matrix.sh
+bash tests/test_codex_agent.sh
 bash tests/test_plan_rules.sh
 bash tests/test_screen_rules.sh
 bash tests/test_triage_rules.sh

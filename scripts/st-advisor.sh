@@ -1,6 +1,26 @@
 #!/usr/bin/env bash
 set -o pipefail
-usage() { echo "usage: st-advisor.sh plan|test|diff|decisions|round|check|continued|waive|note|talk|count ..."; exit 2; }
+SECONDS=0
+usage() { echo "usage: st-advisor.sh plan|test|diff|decisions|round|check|continued|waive|note|talk|count|codex-home ..."; exit 2; }
+dir=${XDG_STATE_HOME:-$HOME/.local/state}/stratum/codex-home
+root=$(pwd -P)
+entry="[projects.\"$root\"]"
+if [ $# = 1 ] && [ "$1" = codex-home ]; then
+  login=${CODEX_HOME:-$HOME/.codex}/auth.json
+  [ -f "$login" ] || { echo "no codex login: run codex login, then run this again"; exit 1; }
+  mkdir -p "$dir" || exit 1
+  [ "$(cd "$dir" && pwd -P)" = "$(cd "$(dirname "$login")" && pwd -P)" ] && { echo "codex home is your Codex login folder: unset CODEX_HOME, then run this again"; exit 1; }
+  [ -e "$dir/auth.json" ] && [ ! -L "$dir/auth.json" ] && { echo "$dir/auth.json is a file, not a link to your Codex login: run codex login status, move that file away, then run this again"; exit 1; }
+  chmod 700 "$dir" || exit 1
+  [ "$(readlink "$dir/auth.json")" = "$login" ] || ln -sfn "$login" "$dir/auth.json" || exit 1
+  if [[ $root = *[[:cntrl:]\"\\]* ]]; then
+    echo "project root has a quote, backslash or control character in its path: no entry, Codex runs in the background here"
+  elif ! grep -qxF "$entry" "$dir/config.toml" 2>/dev/null; then
+    { [ -n "$(tail -c1 "$dir/config.toml" 2>/dev/null)" ] && echo; printf '%s\ntrust_level = "untrusted"\n' "$entry"; } >> "$dir/config.toml" || exit 1
+  fi
+  echo "codex home: $dir"
+  exit 0
+fi
 cmd=run
 case ${1:-} in check|continued|waive|note|round|talk) cmd=$1; shift ;; count) cmd=count ;; esac
 point=${1:-}
@@ -163,8 +183,19 @@ printf '%s\n' '{"type":"object","additionalProperties":false,"required":["verdic
   esac
 } > "$tmp/prompt"
 
-rc=0
-timeout -k 10 540 codex exec -s read-only --ignore-user-config "${opts[@]}" --ephemeral --output-schema "$tmp/schema.json" -o "$tmp/answer.json" - < "$tmp/prompt" > "$tmp/out" 2> "$tmp/err" || rc=$?
+rc=1
+if [ "${HERDR_ENV:-}" = 1 ] && [ -n "${HERDR_WORKSPACE_ID:-}" ] && command -v herdr >/dev/null && [ -L "$dir/auth.json" ]; then
+  rc=0
+  sd=$(dirname "$0")
+  cp "$tmp/prompt" "$tmp/prompt.tab" || block "cannot copy the prompt"
+  timeout -k 10 540 bash "$sd/st-lock.sh" --name "codex-$HERDR_WORKSPACE_ID" --timeout 50 -- bash "$sd/st-codex-agent.sh" "$f" "$tmp/prompt.tab" "$tmp/answer.json" "$dir" "${opts[@]}" > "$tmp/tab" 2>&1 || rc=$?
+  [ $rc = 75 ] && block "Codex agent busy with another review"
+  case $rc in 0) ;; 124|137) echo "ERROR: Codex tab timed out" ;; *) grep -a '^ERROR:' "$tmp/tab" | tail -n1 ;; esac
+fi
+left=$((540 - SECONDS))
+# ponytail: the 60 s floor has no test (it needs a 60 s wait), add one with a fake clock if the budget changes
+[ $rc != 0 ] && [ $left -lt 60 ] && block "timed out"
+[ $rc = 0 ] || { rc=0; timeout -k 10 $left codex exec -s read-only --ignore-user-config "${opts[@]}" --ephemeral --output-schema "$tmp/schema.json" -o "$tmp/answer.json" - < "$tmp/prompt" > "$tmp/out" 2> "$tmp/err" || rc=$?; }
 
 python3 -I - "$label" "$f" "$hash" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$tmp/answer.json" "$rc" "$tmp/err" <<'PY'
 import json, os, sys
@@ -198,7 +229,7 @@ if a.get("verdict") not in ("APPROVED", "REVISE", "BLOCKED"):
     blocked("no verdict")
 keys = ("claim", "evidence", "location", "severity")
 fs = a.get("findings")
-if not isinstance(a.get("summary"), str) or not isinstance(fs, list) or not all(isinstance(x, dict) and all(isinstance(x.get(k), str) for k in keys) for x in fs):
+if not isinstance(a.get("summary"), str) or not isinstance(fs, list) or not all(isinstance(x, dict) and all(isinstance(x.get(k), str) for k in keys) and x["severity"] in ("CRITICAL", "HIGH", "MEDIUM", "LOW") for x in fs):
     blocked("malformed answer")
 if a["verdict"] == "REVISE" and not fs:
     blocked("REVISE with no findings")

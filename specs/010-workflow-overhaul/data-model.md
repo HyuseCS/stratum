@@ -103,12 +103,13 @@ command, FR-005).
 
 ## 9. Stratum Codex home (`${XDG_STATE_HOME:-$HOME/.local/state}/stratum/codex-home/`, outside every repo)
 
-Not built: T050 failed (research R-J). No command makes this folder and no tab uses it. The design stays for a later build.
+Built (T050 re-run passed, research R-J). `st-advisor.sh codex-home` makes this folder; the herdr Codex tab uses it.
 
 | Part | Rule |
 |------|------|
 | folder | mode 700, made only by `st-advisor.sh codex-home` when the user opts in to a Codex advisor (D25) |
 | `auth.json` | a symlink to `${CODEX_HOME:-$HOME/.codex}/auth.json`, the user's Codex login |
+| `config.toml` | one `[projects."<abs project root>"]` entry with `trust_level = "untrusted"` per project root, appended by `codex-home`; Codex adds `[tui]` keys |
 | anything else | written by Codex itself while the tab runs (sessions, logs); never read from the user's `~/.codex` |
 
 Used as `CODEX_HOME` for the herdr Codex tab only. `codex exec` keeps `--ignore-user-config`.
