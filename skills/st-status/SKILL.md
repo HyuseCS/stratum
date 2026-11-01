@@ -23,6 +23,7 @@ block. Change nothing.
    post-commit hook is installed (`graphify hook status`). For graphify too old or missing, give
    `uv tool install --force graphifyy`; for no hook, give `graphify hook install`.
    Design lane: run `bash <plugin root>/scripts/st-design-check.sh` from the project root and print its lines word for word: node 18 or later, `puppeteer-core`, and Chrome or Chromium, each missing one with its install command.
+   FigCraft is optional, for the custom mode: run `bash <plugin root>/scripts/st-figcraft.sh check` and print its lines word for word under `FigCraft (optional, for the custom mode):`, or `FigCraft (optional, for the custom mode): ok` when it prints none.
 5. **Duplicates:** list Stratum skills that also exist outside the plugin and could run twice or
    clash: `~/.claude/skills/{grill-me,grilling,impeccable,graphify,ui-ux-pro-max,hallmark}`, the ponytail
    plugin in `~/.claude/settings.json` `enabledPlugins`, a token-weather plugin. Name them and say

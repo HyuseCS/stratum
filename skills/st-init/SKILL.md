@@ -72,6 +72,13 @@ overwrite an existing file; report it and move on.
    `graphify hook status`. If the user says no, list it under what they still need to do.
 10. **Tool check.** Run the checks from `/stratum:st-status` steps 4 and 5 and report missing tools
    and duplicate installs.
+   Then, when `bash <plugin root>/scripts/st-figcraft.sh check` prints a line, ask one question:
+   install FigCraft for the custom design mode (optional, default no)? Yes: print the install
+   command for this machine from the Install line of `<plugin root>/skills/st-design/design-tool.md`,
+   with `<arch>`, `<rel>`, `<pkg>` and `<install>` filled in. Never run it. List it under what the user still needs to do.
+   On yes, also merge each tool name on the Tools line of `<plugin root>/skills/st-design/design-tool.md`
+   into `permissions.allow` in the project's `.claude/settings.json`. Keep every other key. Those
+   tools then run without a prompt. Other FigCraft tools still ask.
 11. **Advisor.** If `.stratum/advisor.json` is missing, ask the user in one question: advisor mode `auto` (recommended: the risk level picks Codex, `/advisor` or both at each point; needs `codex` logged in for Codex), `codex` (Codex reviews the plan and a test red after 2 tries), `both` (Codex, then `/advisor` if set), or `off` (no Codex, nothing sent to OpenAI)?
    Write `.stratum/advisor.json` as `{"mode": "<answer>"}`. It is committed. New projects get the file here; without it the advisor is off. Say how to change it later: edit the file. Optional `model` and `effort` keys pick the Codex model and reasoning effort; without them Codex uses its own default model and effort.
 12. **Report** in one block: files created, files skipped because they existed, what the user

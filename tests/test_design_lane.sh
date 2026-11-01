@@ -204,4 +204,13 @@ C-FR-014 agent	agents/st-design.md	In the custom mode, do the brief's step as `d
 C-FR-016 SKILL.md	skills/st-design/SKILL.md	with `--custom`
 EOF
 
+phrases <<'EOF'
+C-FR-017 st-status	skills/st-status/SKILL.md	FigCraft is optional, for the custom mode:
+C-FR-017 st-status	skills/st-status/SKILL.md	print its lines word for word under `FigCraft (optional, for the custom mode):`
+C-FR-017 st-init	skills/st-init/SKILL.md	install FigCraft for the custom design mode (optional, default no)?
+C-FR-017 st-init	skills/st-init/SKILL.md	Never run it.
+C-FR-017 st-init	skills/st-init/SKILL.md	On yes, also merge each tool name on the Tools line of
+C-FR-017 st-init	skills/st-init/SKILL.md	into `permissions.allow` in the project's `.claude/settings.json`. Keep every other key.
+EOF
+
 exit $fail
