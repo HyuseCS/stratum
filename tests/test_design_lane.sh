@@ -37,6 +37,22 @@ sys.exit(not (len(ig) == 35 and len(kp) == 27 and len(set(ig)) == 35 and len(set
 PY
 }
 
+mcp_entry() {
+python3 -I - "$root/.claude-plugin/plugin.json" <<'PY'
+import json, sys
+m = json.load(open(sys.argv[1])).get("mcpServers", {}).get("figcraft")
+sys.exit(m != {"command": "bash", "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/st-figcraft.sh", "mcp"]})
+PY
+}
+tool_list() {
+python3 -I - "$root/skills/st-design/design-tool.md" <<'PY'
+import sys
+want = sorted("mcp__plugin_stratum_figcraft__" + n for n in "list_commands run_command batch create_node set_properties inspect_document get_node screenshot open_file save_file undo".split())
+lines = [l for l in open(sys.argv[1], encoding="utf-8") if l.startswith("- **Tools.** ")]
+sys.exit(not (len(lines) == 1 and sorted(t for t in lines[0].split() if t.startswith("mcp__")) == want and not any(w in lines[0] for w in ("pointer", "key", "type_text"))))
+PY
+}
+
 check "FR-017 lock" 'lock'
 check "FR-017 copy" '[ -f "$root/skills/st-hallmark/SKILL.md" ] &&
   grep -qx "name: st-hallmark" "$root/skills/st-hallmark/SKILL.md" &&
@@ -55,6 +71,8 @@ check "FR-001 agent frontmatter" '[ -f "$root/agents/st-design.md" ] && grep -qx
 n_design=$(grep -cF -- '(`stratum:st-design`)' "$root/skills/st-design/SKILL.md" 2>/dev/null)
 n_git=$(grep -cF -- '(`stratum:st-git`)' "$root/skills/st-design/SKILL.md" 2>/dev/null)
 check "FR-001 one start each" '[ "$n_design" = 1 ] && [ "$n_git" = 1 ]'
+check "C-FR-015 mcp entry" 'mcp_entry'
+check "C-FR-015 tool list" 'tool_list'
 
 phrases <<'EOF'
 FR-017 st-sync	skills/st-sync/SKILL.md	Design lane detector map: after an impeccable or hallmark port
@@ -129,6 +147,21 @@ FR-015 st-status	skills/st-status/SKILL.md	from the project root and print its l
 FR-016 SKILL.md	skills/st-design/SKILL.md	Ask for an image key or turn on image generation.
 FR-018 SKILL.md	skills/st-design/SKILL.md	Edit a vendored file under `skills/st-impeccable/` or the engine's skill folder.
 FR-018 agent	agents/st-design.md	Edit a vendored file under `skills/st-impeccable/` or the engine's skill folder.
+EOF
+
+phrases <<'EOF'
+C-FR-005 design-tool.md	skills/st-design/design-tool.md	Never close
+C-FR-006 design-tool.md	skills/st-design/design-tool.md	pass it as `document` on
+C-FR-006 design-tool.md	skills/st-design/design-tool.md	bind each color, font size, gap, padding and radius to a variable.
+C-FR-006 design-tool.md	skills/st-design/design-tool.md	first run the engine's Before step, then draw the current screen
+C-FR-007 design-tool.md	skills/st-design/design-tool.md	the project as its read root and `design/` as its write
+C-FR-008 design-tool.md	skills/st-design/design-tool.md	When the request says
+C-FR-009 design-tool.md	skills/st-design/design-tool.md	`save_file` with `document` and the path `<project>/design/<screen>.figcraft`.
+C-FR-009 design-tool.md	skills/st-design/design-tool.md	Write each variable's value into the file the first design read it from:
+C-FR-010 design-tool.md	skills/st-design/design-tool.md	`<fc> cli convert design/<screen>.figcraft design/.read/<screen>/design.json`,
+C-FR-010 design-tool.md	skills/st-design/design-tool.md	`<fc> cli render design/<screen>.figcraft -o design/.read/<screen>/design.png`,
+C-FR-012 design-tool.md	skills/st-design/design-tool.md	`design/.read/` is never
+C-FR-014 design-tool.md	skills/st-design/design-tool.md	A swap to another tool changes this file,
 EOF
 
 exit $fail

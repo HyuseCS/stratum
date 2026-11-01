@@ -6,6 +6,12 @@
     "name": "HyuseCS"
   },
   "hooks": "./hooks/commands.json",
+  "mcpServers": {
+    "figcraft": {
+      "command": "bash",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/st-figcraft.sh", "mcp"]
+    }
+  },
   "userConfig": {
     "commit": {
       "type": "string",
