@@ -146,7 +146,9 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
    change.
 2. Gap report (optional): unticked tasks or FRs without code and test. The user sends them back
    to Build, defers, or drops them. At most one send-back per feature.
-3. Lessons: append to `docs/lessons.md`. The Plan and Inspect agents read the file at the next feature.
+3. Lessons: proposed in the report and held in `.stratum/lessons.md` (not tracked by git) until the
+   user decides, each with a target file and the reason: repo constitution, app constitution, or
+   app ordinance. On the user's keep, the main session writes the rule there.
    Changes to the constitution or the harness are proposed, never applied by the agent.
 4. Shortcuts: `scripts/st-shortcuts.sh` lists the `ponytail:` markers the feature's diff adds. The
    user picks fix now (st-build, st-verify, st-git commit) or keep (no record: st-ponytail-debt

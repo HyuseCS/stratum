@@ -11,8 +11,8 @@ overwrite an existing file; report it and move on.
 1. **Data files.** Create `.stratum/` and `specs/`. Write `.stratum/state.json` as
    `{"feature_directory": null, "phase": null, "lane": null}`.
 2. **Git ignore.** Ensure `.gitignore` has these lines: `.stratum/handoff.md`,
-   `.stratum/weather.json`, `.stratum/powerline.json`, `.stratum/git-guard.json`,
-   `.stratum/models.json`, `graphify-out/`.
+   `.stratum/lessons.md`, `.stratum/weather.json`, `.stratum/powerline.json`,
+   `.stratum/git-guard.json`, `.stratum/models.json`, `graphify-out/`.
 3. **Git guard.** If `.stratum/git-guard.json` is missing, ask the user in one question: guard
    modes per repo (recommended) or the global plugin options? Per repo: write
    `.stratum/git-guard.json` with all eight keys (`commit`, `worktree_remove`, `worktree_prune`,
@@ -31,6 +31,19 @@ overwrite an existing file; report it and move on.
 5. **Constitution.** If `.stratum/constitution.md` is missing, run `/stratum:st-constitution`: it
    starts from the plugin's constitution template and grills the user for the rules, one question
    at a time.
+
+   Rules live in three files. st-init makes only the first. Close proposes the target for each
+   kept lesson.
+
+   | File | Holds | Loads |
+   | --- | --- | --- |
+   | `.stratum/constitution.md` | Rules for the whole repo | Every session |
+   | `.stratum/<app>-constitution.md` | How we work on one app: git, branches, staging, lanes, proof, PRs, releases | Every session in that app's worktrees |
+   | `apps/<app>/ORDINANCE.md` (loaded by a one-line `apps/<app>/CLAUDE.md` with `@ORDINANCE.md`) | Rules about the app's code and specs | Only when work touches `apps/<app>/` |
+
+   Must the rule apply before any file of the app is opened (a branch, merge or lane decision)?
+   Then a constitution. Otherwise the ordinance. With no `apps/` folder, `.stratum/constitution.md`
+   is the only target.
 6. **Pointers.** If `AGENTS.md` is missing, create it:
    ```markdown
    # <project name>

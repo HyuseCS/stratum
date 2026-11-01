@@ -145,14 +145,38 @@ README python3	readme	git guard, model overrides hook, phase hook, statusline, h
 EOF
 check "statusline test passes under LC_ALL=C" 'out=$(LC_ALL=C bash "$root/tests/test_statusline.sh" 2>&1); [ $? = 0 ] && ! grep -qv "^ok" <<<"$out"'
 phrases <<'EOF'
-lessons st-plan read	agents/st-plan.md	one gate row for each lesson that applies
-lessons st-plan cite	agents/st-plan.md	names its number in the task line
-lessons st-inspect read	agent	that no plan.md gate or tasks.md task cites by number
-lessons st-close agent	agents/st-close.md	read this file at the next feature's Plan and Inspect
-lessons st-close skill	skills/st-close/SKILL.md	each lesson's Rule line is one testable sentence
-lessons design	DESIGN.md	The Plan and Inspect agents read the file at the next feature.
-lessons readme	readme	cites the lessons that apply
+lessons st-close target	agents/st-close.md	the target file, and the reason for that target
+lessons st-close target	agents/st-close.md	before any file of the app is opened
+lessons st-close write	skills/st-close/SKILL.md	write the rule to the target file yourself
+lessons st-close write	skills/st-close/SKILL.md	`@ORDINANCE.md`
+lessons st-fast	skills/st-fast/SKILL.md	the files a kept lesson went to
+lessons st-close no app	agents/st-close.md	If no changed file is under `apps/`, the target
+lessons st-close missing	skills/st-close/SKILL.md	create it with that one rule
+lessons st-close missing	skills/st-close/SKILL.md	show the user the line `@.stratum/<app>-constitution.md`
+lessons st-close missing	skills/st-close/SKILL.md	tell the user and do not write the rule
+lessons st-fast skip	skills/st-fast/SKILL.md	kept no lesson and added no `.gitignore` line
+split st-constitution	skills/st-constitution/SKILL.md	| `apps/<app>/ORDINANCE.md`
+split st-constitution	skills/st-constitution/SKILL.md	before any file of the app is opened
+split st-init	skills/st-init/SKILL.md	| `apps/<app>/ORDINANCE.md`
+split st-init	skills/st-init/SKILL.md	before any file of the app is opened
+lessons design	DESIGN.md	each with a target file and the reason
 EOF
+check "no docs/lessons.md" '! grep -rqF -- "docs/lessons.md" "$root/agents" "$root/skills" "$root/DESIGN.md" "$root/README.md"'
+
+phrases <<'EOF'
+lessons holding st-close	agents/st-close.md	lessons to `<project>/.stratum/lessons.md`
+lessons holding st-close	agents/st-close.md	you may write `.stratum/lessons.md`
+lessons holding empty	skills/st-close/SKILL.md	Remove a dropped lesson from
+lessons holding empty	skills/st-close/SKILL.md	a kept lesson once its rule is in the target file
+lessons holding empty	skills/st-close/SKILL.md	has `.stratum/lessons.md`
+lessons holding st-init	skills/st-init/SKILL.md	`.stratum/lessons.md`,
+lessons holding design	DESIGN.md	`.stratum/lessons.md` (not tracked by git)
+ordinance read	agents/st-plan.md	`<project>/apps/<app>/ORDINANCE.md` for each app the feature touches
+ordinance read	agents/st-inspect.md	`<project>/apps/<app>/ORDINANCE.md` for each app the feature touches
+ordinance rule	agents/st-inspect.md	break a constitution or app ordinance rule
+ordinance rule	agents/st-plan.md	Respect the constitution and the app ordinances
+EOF
+check "no report-only lessons" '! grep -qF -- "Write no lessons file" "$root/agents/st-close.md"'
 
 phrases <<'EOF'
 H1 st-close constitution	agents/st-close.md	constitution.md`, if present
