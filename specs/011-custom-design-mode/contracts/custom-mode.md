@@ -204,7 +204,8 @@ the PATH), so the tests can run it with a stub PATH. No `dirname`, no `sort`.
 - `cli <args…>`: runs the resolved CLI with the args (`exec`). None: the `missing: figcraft-cli`
   line on stderr, exit 127.
 - `mcp`: the same as `cli mcp --attach <port>`.
-- `start <project>` (`<project>` resolved with `cd <project> && pwd -P`):
+- `start <project>` (`<project>` resolved with `cd <project> && pwd -P`; no `<project>`: the
+  usage line below, exit 2):
   1. No `figcraft` on the PATH: the `missing: FigCraft` line, exit 1.
   2. `mkdir -p <project>/design`.
   3. Probe `127.0.0.1:<port>` with `python3 -I -c`: connect (1 s timeout); refused: `free`. Else
@@ -426,27 +427,28 @@ each case has its own port and run dir.
   pid is alive at the end.
 
 `tests/test_design_check.sh` (new K cases; every existing case keeps its exact output, SC-004).
-`run` gains an optional fourth argument passed to the script.
+`run` gains an optional fourth argument passed to the script. Every fake `figcraft` and
+`figcraft-cli` writes `$c/called` when run.
 
 - K14 `--custom`, all present (fake `figcraft`, fake `figcraft-cli` printing `figcraft-cli 0.13.1`):
-  exit 0, `design tools: ok`.
+  exit 0, `design tools: ok`, `$c/called` exists.
 - K15 `--custom`, no `figcraft`, fake `figcraft-cli` printing `figcraft-cli 0.13.1`: exit 1, only
   `missing: FigCraft. Install: https://github.com/storytold/figcraft/releases`.
 - K16 `--custom`, `figcraft` (not an AppImage: `cli --version` exits 1) and no `figcraft-cli`:
   exit 1, `missing: figcraft-cli. Install: https://github.com/storytold/figcraft/releases`.
-- K17 `--custom`, `figcraft-cli 0.12.1`: exit 1,
+- K17 `--custom`, fake `figcraft`, `figcraft-cli 0.12.1`: exit 1,
   `too old: figcraft-cli 0.12.1, needs 0.13.1 or later. Install: https://github.com/storytold/figcraft/releases`.
-- K18 no `--custom`: a fake `figcraft` and `figcraft-cli` that each write `$c/called` when run:
+- K18 no `--custom`, fake `figcraft` and `figcraft-cli`:
   exit 0, `design tools: ok`, `$c/called` absent (SC-004, the check that a new-look run does 0
   FigCraft checks).
 - K19 `--custom`, AppImage only: `figcraft` answers `cli --version` with `figcraft-cli 0.13.1`, no
-  `figcraft-cli`: exit 0, `design tools: ok`.
+  `figcraft-cli`: exit 0, `design tools: ok`, `$c/called` exists.
 - K21 `--custom`, native app only: `figcraft` prints `FigCraft 0.13.1` for any `--version` and
   exits 0, no `figcraft-cli`: exit 1,
   `missing: figcraft-cli. Install: https://github.com/storytold/figcraft/releases`.
-- K22 `--custom`, `figcraft-cli 0.13.0`: exit 1,
+- K22 `--custom`, fake `figcraft`, `figcraft-cli 0.13.0`: exit 1,
   `too old: figcraft-cli 0.13.0, needs 0.13.1 or later. Install: https://github.com/storytold/figcraft/releases`.
-- K23 `--custom`, `figcraft-cli 1.0.0`: exit 0, `design tools: ok`.
+- K23 `--custom`, fake `figcraft`, `figcraft-cli 1.0.0`: exit 0, `design tools: ok`.
 - K20 `--custom`, no node, no `figcraft` and no `figcraft-cli`, Chrome given as in K5: exit 1,
   these four lines in this
   order: the node line, the `puppeteer-core` line,

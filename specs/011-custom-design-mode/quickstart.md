@@ -83,8 +83,8 @@ fail, the fallback taken. A spike that cannot run writes `Not run, <reason>` (le
      error (sharing is off, FR-007, SC-005). Fail: Build stops and asks the user (tasks T004).
   6. End the Claude session that ran step 2: pass if the FigCraft window stays open.
   Fail of 3: Build stops and asks the user (tasks T004). Fail of 2 (taken): the lane runs Start
-  before the session's first FigCraft call. When Start prints `FigCraft: started on port`, the user
-  reconnects plugin:stratum:figcraft with /mcp (or restarts the session) once, then says go
+  before the session's first FigCraft call. When Start prints `FigCraft: started on port`, or the
+  first FigCraft call finds the server not connected, the user reconnects plugin:stratum:figcraft with /mcp (or restarts the session) once, then says go
   (contract section 2, Start). Fail of 6: `setsid` before `nohup` where present.
 - **S5, read-back.** On `<p>/design/s1.figcraft`: the three Read commands of contract section 2.
   Pass: `design.json` holds, for each layer, name, type, x, y, width, height, auto layout,
@@ -129,7 +129,7 @@ picks, with its dev server started by the user. Record each in research.md R16.
 
 - **L1 (US1, SC-001, SC-002, SC-003, SC-005).** A project with a design file, whose
   `.claude/settings.json` holds the D22/D23 allow rule: the 11 names of the `design-tool.md`
-  Tools line (US4 is built later, so the user adds them by hand as contract 7d writes them): `/stratum:st-design a settings screen, custom design`. Answer the grill. FigCraft opens by
+  Tools line (US4 is built later, so the user adds them by hand as contract 7d writes them). Start Claude there and accept the trust dialog first: an untrusted folder ignores the allow rule (spike S2). Then: `/stratum:st-design a settings screen, custom design`. Answer the grill. FigCraft opens by
   itself. At the setup stop, reconnect plugin:stratum:figcraft with /mcp and say go. Record (T014,
   research R16) whether the `st-design` subagent started after the reconnect sees the FigCraft
   tools: the design appears. By hand: move one block, resize one, recolor one. Say "looks

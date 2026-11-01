@@ -12,7 +12,8 @@ spikes (R15) run.
 
 - Decision: support the native packages and an AppImage named `figcraft` on the PATH. "FigCraft
   present" means `figcraft` on the PATH. "figcraft-cli present" means `figcraft-cli` on the PATH,
-  or `figcraft cli --version` answers (an AppImage).
+  or `figcraft cli --version` prints a line that starts `figcraft-cli` (an AppImage; the native
+  app prints `FigCraft …`).
 - Rationale: v0.13.1 ships `.pkg.tar.zst` (pacman, this machine is CachyOS), `.deb`, `.rpm`,
   `.tar.gz`, AppImage, `.flatpak`, a macOS `.dmg` plus a separate `figcraft-cli-…-macos-universal.zip`,
   and Windows `.msi`. `nfpm.yaml` puts `/usr/bin/figcraft` and `/usr/bin/figcraft-cli` in the
@@ -120,7 +121,7 @@ spikes (R15) run.
 
 - Decision: `start` writes `<runtime dir>/st-figcraft-<port>` with the app's pid and the project
   root (`<runtime dir>` = `${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}}`). The app runs under `setsid nohup` (plain
-  `nohup` where there is no `setsid`, S1 step 6) in the background, stderr to `<runtime dir>/st-figcraft-<port>.log`. The script waits up to 20 s for the
+  `nohup` where there is no `setsid`, untested: S1 step 6 ran `setsid nohup` only) in the background, stderr to `<runtime dir>/st-figcraft-<port>.log`. The script waits up to 20 s for the
   port to answer as FigCraft, and fails at once when the pid dies.
 - Rationale: FR-005 (never closed) and FR-007 (confined to this project). The attached MCP server
   drives whatever app owns the port, so the lane must know that app was started with this

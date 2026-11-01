@@ -67,7 +67,7 @@ already shows no CLI and no project access (research R2).
 
 - [X] T012 [US1] In `tests/test_design_lane.sh`, with the `C-` names of contract section 9: add the rows for `skills/st-design/SKILL.md` (C-FR-001, all three C-FR-002 rows with the `[screen: custom]` row and the US2 row, C-FR-004, C-FR-005, C-FR-006, both C-FR-008, C-FR-009, C-FR-010, both C-FR-011, C-FR-012, the four C-FR-013 US3 rows, C-FR-016), the `C-FR-002 st` row for `skills/st/SKILL.md`, and the rows for `agents/st-design.md` (C-FR-010, C-FR-014, both C-FR-007). Change 009's `FR-001 agent frontmatter` check to the `tools:` line of contract 3a. Add the `C-FR-014 one place` check. In `tests/test_plan_rules.sh`, change DL1 to the contract's `DL1|agents/st-plan.md|…` row. Run both: the new rows and checks, the changed agent frontmatter check and DL1 red. One task, because these checks share files with T013. FR-001 to FR-016 (FR-003 through DL1). Test: bash tests/test_design_lane.sh && bash tests/test_plan_rules.sh
 - [X] T013 [US1] Edit `skills/st-design/SKILL.md` per contract 1a to 1h, section 6 written whole (step 3's existing-screen sentence and step 8's change routing included). Add the Custom design row to `skills/st/SKILL.md` per 7a. Edit `agents/st-design.md` per contract 3a to 3f. Edit `agents/st-plan.md` per 7b. Edit `README.md` lines 91 and 92 per 7e, and the `DESIGN.md` `st-design <task>` row per 7f. Security: untrusted design text (plan S5), agent tool scope (S6). Then T012's rows and checks are green, and 009's `FR-001 one start each` check still counts 1. Run negative controls N6, N7 and N9. FR-001 to FR-016. Test: bash tests/test_design_lane.sh && bash tests/test_plan_rules.sh && bash tests/test_inspect.sh
-- [ ] T014 [US1] Live run L1 and both edge runs (quickstart section 4) on this laptop. Start the lane by typing `/stratum:st-design`. Record in `specs/011-custom-design-mode/research.md` R16: the questions, the stop count between "good" and the gate, the three changes in the gate screenshots, the committed paths, `git status` after, the window-closed run and the port-in-use run. SC-001, SC-002, SC-003, SC-005. Test: quickstart section 4 L1 (by hand)
+- [ ] T014 Not run yet (2026-11-02: the user was away; run before the PR merges). [US1] Live run L1 and both edge runs (quickstart section 4) on this laptop. Start the lane by typing `/stratum:st-design`. Record in `specs/011-custom-design-mode/research.md` R16: the questions, the stop count between "good" and the gate, the three changes in the gate screenshots, the committed paths, `git status` after, the window-closed run and the port-in-use run. SC-001, SC-002, SC-003, SC-005. Test: quickstart section 4 L1 (by hand)
 
 **Checkpoint**: a new screen goes from grill to commit through one FigCraft stop.
 
@@ -79,7 +79,7 @@ already shows no CLI and no project access (research R2).
 
 **Independent Test**: quickstart section 4 L2.
 
-- [ ] T015 [US2] Live run L2 (quickstart section 4). Record in `specs/011-custom-design-mode/research.md` R16: the lane line, the first design against the current screen, and the rebuilt screen's diff. FR-002, FR-006. Test: quickstart section 4 L2 (by hand)
+- [ ] T015 Not run yet (2026-11-02: the user was away; run before the PR merges). [US2] Live run L2 (quickstart section 4). Record in `specs/011-custom-design-mode/research.md` R16: the lane line, the first design against the current screen, and the rebuilt screen's diff. FR-002, FR-006. Test: quickstart section 4 L2 (by hand)
 
 ---
 
@@ -89,7 +89,7 @@ already shows no CLI and no project access (research R2).
 
 **Independent Test**: quickstart section 4 L3.
 
-- [ ] T016 [US3] Live run L3 (quickstart section 4). Record in `specs/011-custom-design-mode/research.md` R16: which change stopped in FigCraft, which went to code, and the gate after each. FR-013. Test: quickstart section 4 L3 (by hand)
+- [ ] T016 Not run yet (2026-11-02: the user was away; run before the PR merges). [US3] Live run L3 (quickstart section 4). Record in `specs/011-custom-design-mode/research.md` R16: which change stopped in FigCraft, which went to code, and the gate after each. FR-013. Test: quickstart section 4 L3 (by hand)
 
 ---
 
@@ -101,14 +101,14 @@ already shows no CLI and no project access (research R2).
 
 - [X] T017 [US4] Add the US4 rows of contract section 9 (`C-FR-017`) to `tests/test_design_lane.sh`, both D22/D23 allow-rule rows included. Run it: those red. FR-017, D22, D23. Test: bash tests/test_design_lane.sh
 - [X] T018 [US4] Edit `skills/st-status/SKILL.md` step 4 per contract 7c, and `skills/st-init/SKILL.md` step 10 per contract 7d: the FigCraft offer and, on yes, the D22/D23 merge of each tool name on the Tools line of `skills/st-design/design-tool.md` (the 11 names, in the form T002 recorded) into `permissions.allow` of the project's `.claude/settings.json`, every other key kept. No server-wide `mcp__plugin_stratum_figcraft` entry. Step 12's commit list already holds `.claude/settings.json`. Security: install commands printed, never run (plan S1). Only the 11 tools run without a prompt; `pointer`, `key`, `type_text` and the rest still ask (S6). Then T017's rows are green and `bash tests/test_model_files.sh` stays green (st-init reuses st-status step 4). FR-017. Test: bash tests/test_design_lane.sh && bash tests/test_model_files.sh
-- [ ] T019 [US4] Live run L4 (quickstart section 4). Record in `specs/011-custom-design-mode/research.md` R16: the offer, the command printed, the 11 names in `permissions.allow` of `.claude/settings.json` (and no server-wide entry), the custom stop with the link, the new-look run that went on, and the status lines. SC-004. Test: quickstart section 4 L4 (by hand)
+- [ ] T019 Not run yet (2026-11-02: the user was away; run before the PR merges). [US4] Live run L4 (quickstart section 4). Record in `specs/011-custom-design-mode/research.md` R16: the offer, the command printed, the 11 names in `permissions.allow` of `.claude/settings.json` (and no server-wide entry), the custom stop with the link, the new-look run that went on, and the status lines. SC-004. Test: quickstart section 4 L4 (by hand)
 
 ---
 
 ## Phase 7: Polish & Cross-Cutting Concerns
 
-- [ ] T020 Live run L5 on the PC (SC-006): `git pull`, quickstart section 0 with the PC's package manager, then L1. PC not reachable: `Not run, PC not reachable`, and the user runs it before the PR merges. Record in `specs/011-custom-design-mode/research.md` R16. Test: quickstart section 4 L5 (by hand)
-- [ ] T021 Check that the built texts match contract sections 1 to 7 and every phrase row (lessons L14). Fix drift in `specs/011-custom-design-mode/contracts/custom-mode.md`, not in the built files, unless the built text is wrong. Run the touched suites once more and `git status` (no leftovers). Test: bash tests/test_figcraft.sh && bash tests/test_design_check.sh && bash tests/test_design_lane.sh && bash tests/test_plan_rules.sh && bash tests/test_inspect.sh && bash tests/test_model_files.sh && claude plugin validate .claude-plugin/plugin.json
+- [ ] T020 Not run yet (2026-11-02: the user was away and the PC was not reachable; run before the PR merges). Live run L5 on the PC (SC-006): `git pull`, quickstart section 0 with the PC's package manager, then L1. PC not reachable: `Not run, PC not reachable`, and the user runs it before the PR merges. Record in `specs/011-custom-design-mode/research.md` R16. Test: quickstart section 4 L5 (by hand)
+- [X] T021 Check that the built texts match contract sections 1 to 7 and every phrase row (lessons L14). Fix drift in `specs/011-custom-design-mode/contracts/custom-mode.md`, not in the built files, unless the built text is wrong. Run the touched suites once more and `git status` (no leftovers). Test: bash tests/test_figcraft.sh && bash tests/test_design_check.sh && bash tests/test_design_lane.sh && bash tests/test_plan_rules.sh && bash tests/test_inspect.sh && bash tests/test_model_files.sh && claude plugin validate .claude-plugin/plugin.json
 
 ---
 
