@@ -67,6 +67,7 @@ Setup stops (a missing tool, the one-time /mcp reconnect) do not count.
 5. Start the agent, step save. When it reports the window closed: say "The design tool window was
    closed, so the unsaved changes are lost.", run Start again, start the agent, step draw, from
    the last saved design, and stop again at step 4.
+   Any other failed save, read or token step: show the agent's report and stop, and build no code from an older saved design.
 6. Run section 2 step 4, but do not show the file at its Step 5: the gate shows it.
 7. Build and check (section 4), step build. Every round reads the saved design, not the open
    window.
@@ -183,7 +184,7 @@ Rule: the agent file names FigCraft only on its `tools:` line (check `C-FR-014 o
 
 ## 4. `scripts/st-figcraft.sh` (new)
 
-Bash. Needs only bash builtins, `python3`, `mkdir`, `nohup`, `tail` and `sleep` (`setsid` when on
+Bash. Needs only bash builtins, `python3`, `mkdir`, `nohup`, `tail`, `sleep` and `rm` (`setsid` when on
 the PATH), so the tests can run it with a stub PATH. No `dirname`, no `sort`.
 
 - `port=${ST_FIGCRAFT_PORT:-7979}` with the comment
@@ -219,9 +220,10 @@ the PATH), so the tests can run it with a stub PATH. No `dirname`, no `sort`.
      --automation-write-root <project>/design >/dev/null 2><run>/st-figcraft-<port>.log &`
      (plain `nohup` when `command -v setsid` fails), write
      `<pid> <project>` to the record, then probe every 0.5 s while bash's `SECONDS` (reset to 0
-     before the loop) is below 20:
-     `figcraft`: print `FigCraft: started on port <port>`, exit 0. The pid is gone: print
-     `FigCraft did not start: <last line of the log>`, exit 1. 20 s: print
+     before the loop) is below 20. After each probe, check the pid first: gone: remove the record,
+     print `FigCraft did not start: <last line of the log>`, exit 1, whatever the probe said (the
+     answer can come from another FigCraft that took the port). Pid alive and `figcraft`: print
+     `FigCraft: started on port <port>`, exit 0. 20 s: print
      `FigCraft did not answer on port <port> in 20 s.`, exit 1.
   `<run>` is `${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}}`. The script never stops FigCraft.
 - Any other subcommand: `usage: st-figcraft.sh check|start <project>|cli <args>|mcp` on stderr,
@@ -326,6 +328,7 @@ C-FR-005 design-tool.md	skills/st-design/design-tool.md	or when the first FigCra
 C-FR-006 design-tool.md	skills/st-design/design-tool.md	pass it as `document` on
 C-FR-006 design-tool.md	skills/st-design/design-tool.md	bind each color, font size, gap, padding and radius to a variable.
 C-FR-006 SKILL.md	skills/st-design/SKILL.md	Build no code from a half-drawn design.
+C-FR-006 SKILL.md	skills/st-design/SKILL.md	Any other failed save, read or token step: show the agent's report and stop, and build no code from an older saved design.
 C-FR-007 design-tool.md	skills/st-design/design-tool.md	the project as its read root and `design/` as its write
 C-FR-008 SKILL.md	skills/st-design/SKILL.md	Any reply that says the design is good
 C-FR-008 SKILL.md	skills/st-design/SKILL.md	step change, with the reply, then stop again.
@@ -401,7 +404,7 @@ Checks (not phrases) for `tests/test_design_lane.sh`:
 
 `tests/test_figcraft.sh` (new, frame of `tests/test_design_check.sh`: `root="${ST_ROOT:-…}"`,
 `mktemp -d`, the whole output asserted per case). Stub PATH: `$c/bin` (fakes) and `$c/sys`
-(symlinks to `python3`, `mkdir`, `nohup`, `tail`, `sleep`). `XDG_RUNTIME_DIR=$c/run`. Each case
+(symlinks to `python3`, `mkdir`, `nohup`, `tail`, `sleep`, `rm`). `XDG_RUNTIME_DIR=$c/run`. Each case
 takes a free port from `python3 -c` (bind port 0) as `ST_FIGCRAFT_PORT`. Fake `figcraft`: logs its
 args to `$c/args`, then `exec python3 -I $tmp/answer.py <port>`, a responder that answers each line
 with `{"id": 1, "ok": true, "result": []}`. A trap kills every pid the cases started. No `[lock]`:
@@ -417,6 +420,10 @@ each case has its own port and run dir.
   program. Free it, then say go.`, `$c/args` absent.
 - F5 app exits at once: fake prints `error: unknown option --automation-read-root` on stderr and
   exits 1: exit 1, `FigCraft did not start: error: unknown option --automation-read-root`.
+- F12 app exits, another FigCraft answers: the port is free at the first probe. The fake starts a
+  responder on the port that answers `{"id": 1, "ok": true, "result": []}` only once the fake's pid
+  is gone, waits until it listens, prints `error: port <port> in use` on stderr and exits 1:
+  exit 1, `FigCraft did not start: error: port <port> in use`, the record is gone.
 - F6 no `figcraft`: exit 1, `missing: FigCraft. Install: https://github.com/storytold/figcraft/releases`.
 - F7 `cli` with `figcraft-cli` on the PATH (fake echoes `cli:` and its args): `cli info x` prints
   `cli: info x`.

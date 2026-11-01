@@ -123,6 +123,7 @@ Setup stops (a missing tool, the one-time /mcp reconnect) do not count.
 5. Start the agent, step save. When it reports the window closed: say "The design tool window was
    closed, so the unsaved changes are lost.", run Start again, start the agent, step draw, from
    the last saved design, and stop again at step 4.
+   Any other failed save, read or token step: show the agent's report and stop, and build no code from an older saved design.
 6. Run section 2 step 4, but do not show the file at its Step 5: the gate shows it.
 7. Build and check (section 4), step build. Every round reads the saved design, not the open
    window.

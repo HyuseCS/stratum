@@ -20,7 +20,7 @@ want() {
 mk() {
   c="$tmp/$1"; bin="$c/bin"; sys="$c/sys"; proj="$c/proj"
   mkdir -p "$bin" "$sys" "$c/run" "$proj"
-  for t in python3 mkdir nohup tail sleep; do ln -s "$(command -v "$t")" "$sys/$t"; done
+  for t in python3 mkdir nohup tail sleep rm; do ln -s "$(command -v "$t")" "$sys/$t"; done
   proj=$(cd "$proj" && pwd -P)
   port=$(python3 -c 'import socket; s = socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])')
 }
@@ -41,7 +41,7 @@ SH
 st() { PATH="$c/bin:$c/sys" XDG_RUNTIME_DIR="$c/run" ST_FIGCRAFT_PORT="$port" "$BASH" "$script" "$@" 2>&1; }
 
 cat > "$tmp/answer.py" <<'PY'
-import socket, sys
+import os, socket, sys, time
 s = socket.create_server(("127.0.0.1", int(sys.argv[1])))
 reply = (sys.argv[2] if len(sys.argv) > 2 else '{"id": 1, "ok": true, "result": []}').encode() + b"\n"
 print("ready", flush=True)
@@ -49,6 +49,12 @@ while True:
     c, _ = s.accept()
     with c:
         for _ in c.makefile("rb"):
+            while len(sys.argv) > 3:
+                try:
+                    os.kill(int(sys.argv[3]), 0)
+                    time.sleep(0.05)
+                except OSError:
+                    break
             c.sendall(reply)
 PY
 
@@ -82,6 +88,18 @@ exit 1
 SH
 out=$(st start "$proj"); rc=$?
 want "F5 app exits at once" 1 "FigCraft did not start: error: unknown option --automation-read-root"
+
+mk F12; fake figcraft <<SH
+#!/bin/sh
+python3 -I "$tmp/answer.py" $port '{"id": 1, "ok": true, "result": []}' \$\$ > "$c/ready" &
+echo \$! >> "$tmp/pids"
+until [ -s "$c/ready" ]; do sleep 0.1; done
+echo "error: port $port in use" >&2
+exit 1
+SH
+out=$(st start "$proj"); rc=$?
+want "F12 app exits, another FigCraft answers" 1 "FigCraft did not start: error: port $port in use"
+check "F12 record removed" '[ ! -e "$c/run/st-figcraft-$port" ]'
 
 mk F6
 out=$(st start "$proj"); rc=$?

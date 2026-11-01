@@ -76,8 +76,9 @@ case ${1:-} in
         echo "$pid $proj" > "$rec"
         SECONDS=0
         while (( SECONDS < 20 )); do
-          [ "$(probe)" = figcraft ] && { echo "FigCraft: started on port $port"; exit 0; }
-          kill -0 "$pid" 2>/dev/null || { echo "FigCraft did not start: $(tail -n 1 "$rec.log")"; exit 1; }
+          r=$(probe)
+          kill -0 "$pid" 2>/dev/null || { rm -f "$rec"; echo "FigCraft did not start: $(tail -n 1 "$rec.log")"; exit 1; }
+          [ "$r" = figcraft ] && { echo "FigCraft: started on port $port"; exit 0; }
           sleep 0.5
         done
         echo "FigCraft did not answer on port $port in 20 s."; exit 1 ;;
