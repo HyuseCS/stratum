@@ -56,7 +56,10 @@ CR and LF are replaced: `usage: ...` on stdout, exit 2, nothing recorded, nothin
   newline, for example) skips the entry with one printed line, so that project uses `codex exec`.
   When `<dir>` and the login's folder are the same real folder (`CODEX_HOME` set to `<dir>`, or
   `<dir>` a symlink to `~/.codex`): `codex home is your Codex login folder: unset CODEX_HOME, then run this again`,
-  exit 1, checked right after `mkdir -p` and before any `chmod` or link, so nothing else changes. Only `codex-home` writes `config.toml`; a
+  exit 1, checked right after `mkdir -p` and before any `chmod` or link, so nothing else changes.
+  `<dir>/auth.json` a file, not a symlink (Codex replaced the link with a copy):
+  `<dir>/auth.json is a file, not a link to your Codex login: run codex login status, move that file away, then run this again`,
+  exit 1, checked next, so the file is never replaced. Only `codex-home` writes `config.toml`; a
   review run never writes it. A missing login file:
   `no codex login: run codex login, then run this again`, exit 1, nothing made. Run again from
   the same root: same line, nothing changed. Only this command makes the folder. The skills run it only when the
@@ -116,14 +119,16 @@ other value: first print `risk not set: normal`, then use `normal`.
 
 - Budget: lock wait up to 50 s, then `st-codex-agent.sh` keeps its own start and review under
   480 s (section 2 step 5), so a slow step ends with its own `ERROR:` line, not the outer
-  `timed out`. A `codex exec` fallback after the tab path gets only the time left of the 540 s
-  (`540 - SECONDS`, counted from script start). Under 60 s left: `BLOCKED: timed out`, no
-  `codex exec`. Without the tab path, `codex exec` gets the full 540 s.
+  `timed out`. `codex exec` gets the time left of the 540 s (`540 - SECONDS`, counted from
+  script start), with or without the tab path. Under 60 s left: `BLOCKED: timed out`, no
+  `codex exec`.
 - In herdr (`HERDR_ENV` is `1`, `HERDR_WORKSPACE_ID` is set, `herdr` is on PATH) and with the
-  Stratum Codex home in place (`<dir>/auth.json` is a symlink and `<dir>/config.toml` has the
-  project root's `[projects."<root>"]` entry):
+  Stratum Codex home in place (`<dir>/auth.json` is a symlink):
   `timeout -k 10 540 bash <scripts>/st-lock.sh --name codex-<workspace id> --timeout 50 -- bash <scripts>/st-codex-agent.sh <feature dir> <prompt file> <answer file> <dir> [-m <model>] [-c model_reasoning_effort="<effort>"]`.
-- Else (not in herdr, or no Stratum Codex home, or no `config.toml` entry for the project root):
+  Only `st-codex-agent.sh` checks the `config.toml` entry (section 2 step 3). No entry for the
+  project root: it exits 2 with its one `ERROR:` line, which this script prints before the
+  `codex exec` fallback, so the fallback is never silent.
+- Else (not in herdr, or no Stratum Codex home):
   today's `codex exec -s read-only --ignore-user-config ... --ephemeral --output-schema ... -o ...`.
 - Both write the answer file. The same validator reads it. Exit 75 from the lock:
   `BLOCKED: Codex agent busy with another review`, no fallback. Any other non-zero exit from the
@@ -140,23 +145,32 @@ st-codex-agent.sh <feature dir> <prompt file> <answer file> <codex home> [-m <mo
 
 1. Agent name `st-codex-<NNN>`, `<NNN>` the leading 3 digits of the feature dir's name. None:
    `ERROR: feature dir must start with three digits` on stderr, exit 2.
-2. `herdr agent list`. Agents in `$HERDR_WORKSPACE_ID` whose name starts with `st-codex-`: the one
-   with this exact name is used. Each other one gets `herdr tab close <its tab_id>` first.
+2. `herdr agent list`. Agents in `$HERDR_WORKSPACE_ID` whose name starts with `st-codex-` and
+   whose `cwd` is the project root (`pwd -P`): the one with this exact name is used. Each other
+   one gets `herdr tab close <its tab_id>` first. An `st-codex-*` agent with another `cwd`
+   belongs to another checkout: never used, never closed.
 3. None left: `herdr tab create --workspace <ws> --cwd <pwd> --label Codex --env CODEX_HOME=<codex home> --no-focus`, then
    `herdr agent start <name> --kind codex --pane <root pane> --timeout 120000 -- -s read-only -a never --no-alt-screen [-m ..] [-c ..]`.
    `agent_pane_busy`: retry, 10 tries, 1 s apart (L30). Ids are read from herdr's answers, never
-   built (L26). `<codex home>/auth.json` not a symlink, or `<codex home>/config.toml` without
-   `[projects."<pwd>"]` and `trust_level = "untrusted"`: `ERROR: no Stratum Codex home`, exit 2,
-   before any herdr call.
+   built (L26). `<codex home>/auth.json` not a symlink: `ERROR: no Stratum Codex home`, exit 2,
+   before any herdr call. `<codex home>/config.toml` without `[projects."<pwd>"]` and
+   `trust_level = "untrusted"`:
+   `ERROR: no Stratum Codex home entry for <pwd>: run st-advisor.sh codex-home`, exit 2, before
+   any herdr call. This is the only place that checks the entry.
    Folder access screen: right after `agent start` returns (success, or error `agent_not_ready`),
-   `herdr agent read <name> --source recent-unwrapped --lines 60`, ANSI stripped. If it holds both
-   `Folder access` and `Open restricted`: `herdr agent send-keys <name> enter` (one key, option 1
-   is the default), then poll `agent read` (up to 20 tries, 1 s apart) until the screen no longer
-   holds `Folder access`. At most one `enter` per start. Screen not shown: send nothing.
-   `agent_not_ready` with no Folder access screen (for example the old `Trust this folder?`, or a
-   login screen), or Folder access still shown after the poll:
-   `ERROR: Codex waits for an answer at start in its Codex tab. It did not show the Folder access screen. Check the tab, then run the point again.`,
-   exit 1, no prompt. The script never sends a key for `Trust this folder?` (option 1 there
+   `herdr agent read <name> --source recent-unwrapped --lines 60`, ANSI stripped. Allowlist: the
+   screen must hold all three of the title `Folder access`, the selected line
+   `› 1. Open restricted` (a line matching `^[[:space:]]*› 1\. Open restricted`, the selection
+   mark on option 1), and `2. Back to Agent Command Center`. Then
+   `herdr agent send-keys <name> enter` (one key, picks the selected option 1), then poll
+   `agent read` (up to 20 tries, 1 s apart) until the screen no longer holds `Folder access`.
+   At most one `enter` per start. No `Folder access` and no `agent_not_ready`: send nothing,
+   go on. `agent_not_ready` with no Folder access screen (for example the old
+   `Trust this folder?`, or a login screen), a Folder access screen that fails the allowlist (the
+   mark on another line, other option text), or Folder access still shown after the poll: no key,
+   `ERROR: Codex stopped at start on a screen Stratum does not know, so the Codex tab is closed. Run the point again, or check Codex.`,
+   exit 1, no prompt, and the tab this run created is closed (`herdr tab close <tab_id from tab create>`,
+   errors ignored). The script never sends a key for `Trust this folder?` (option 1 there
    trusts the folder and loads the project config). An existing
    `st-codex-<NNN>` agent from before D25 is reused only if its tab was made by this script
    (label `Codex`); `ponytail:` the script cannot read a running pane's `CODEX_HOME`, so a tab
@@ -167,7 +181,8 @@ st-codex-agent.sh <feature dir> <prompt file> <answer file> <codex home> [-m <mo
 5. `herdr agent prompt <name> "Read the review request in <prompt file> and follow it. Change no file." --wait --until done --until idle --until blocked --timeout <ms>`,
    with `<ms>` = `(480 - SECONDS) * 1000` and `SECONDS=0` at the script's start, so lock wait,
    agent start and review stay inside the caller's 540 s `timeout`.
-   A herdr error: `ERROR: <its first line>`, exit 1. State `blocked`:
+   A herdr error: `ERROR: <its first line>`, exit 1. Error code `timeout` on a tab this run
+   created: that tab is closed first. State `blocked`:
    `ERROR: Codex waits for an answer in its Codex tab.`, exit 1.
 6. After the review, `<codex home>/auth.json` must still be a symlink (F10). If Codex replaced it
    with a file: `ERROR: Codex replaced the login link in <codex home>; your own Codex login may be stale. Run codex login status, then st-advisor.sh codex-home.`,

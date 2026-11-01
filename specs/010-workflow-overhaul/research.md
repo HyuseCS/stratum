@@ -173,7 +173,9 @@ closed after the probe. Scratch files: `<scratchpad>/ra/` (R-A) and `<scratchpad
      `codex login status` in a normal shell still says `Logged in using ChatGPT`.
 - The tab path is built (T050 re-run below). Outside herdr, with no Stratum Codex home, with no
   `config.toml` entry for the project root, or when the tab path fails, Codex runs in the
-  background through `codex exec --ignore-user-config`.
+  background through `codex exec --ignore-user-config`. In herdr with the home in place, a
+  missing entry prints `ERROR: no Stratum Codex home entry for <root>: run st-advisor.sh codex-home`
+  before that fallback.
 - T050 result (live, 2026-10-31 16:38 to 16:44 +08:00, codex-cli 0.166.0, herdr 0.9.4):
   **FAIL. First failed check: 1, the agent gave no answer.**
   - Setup: `<scratch>/cxhome/` held only `auth.json -> /home/hyuse/.codex/auth.json`.
@@ -237,6 +239,29 @@ closed after the probe. Scratch files: `<scratchpad>/ra/` (R-A) and `<scratchpad
     shows. The entry must be in `config.toml`.
   - Not tested in this probe: whether the Folder access screen shows again on a later start
     with the same `CODEX_HOME`. T024 (R-H) answered it: it does, and the one `enter` handles it.
+- Entry check after T024 (live, 2026-11-01, codex-cli 0.166.0, herdr 0.9.4, workspace `w13`,
+  root `/home/hyuse/Desktop/stratum-worker-codex-tab`): the projects entry survives Codex's
+  rewrite of `config.toml`.
+  - Before: `~/.local/state/stratum/codex-home/config.toml` (mode 600, last changed
+    22:45:54 during the T024 run) held only `[tui]` keys. The T024 root's entry was gone. The
+    cause is not known. With that file, the old code skipped the tab and used `codex exec` with
+    no printed line.
+  - `bash scripts/st-advisor.sh codex-home` printed
+    `codex home: /home/hyuse/.local/state/stratum/codex-home` and appended the entry.
+  - Runs 1 and 2 (23:25:37 to 23:25:52, 23:26:08 to 23:26:22): `st-codex-agent.sh` with a
+    one-line prompt, rc 0, answer `{"verdict":"APPROVED","summary":"ok","findings":[]}`. The
+    entry stayed, but the mtime stayed 23:25:37: Codex did not write the file, so these runs
+    do not test the rewrite.
+  - Runs 3 and 4: the `[tui]` keys removed by hand first, so Codex had to write the file.
+    23:31:25 to 23:31:38 and 23:31:44 to 23:31:58, rc 0, the same answer. Codex wrote the file at
+    23:31:29 and 23:31:48 (mode 600): it re-added `[tui] screen_reader_detection_done = true`
+    and `[tui.model_availability_nux] "gpt-6.1-sol" = 1`, then `= 2`. The entry
+    `[projects."/home/hyuse/Desktop/stratum-worker-codex-tab"]` / `trust_level = "untrusted"`
+    stayed both times.
+  - Tabs `w13:t9`, `w13:tA`, `w13:tB`, `w13:tC` were closed. After that, `herdr agent list` had
+    no `st-codex-` agent.
+  - So no re-write before each run. A missing entry now prints one line (section 2 step 3 of
+    contracts/scripts.md) instead of a silent fallback.
 
 ## R-D. A portable test lock
 

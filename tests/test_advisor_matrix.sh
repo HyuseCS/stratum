@@ -273,6 +273,13 @@ chome "$nl"
 check "(n) project root with a newline: skip line, config.toml unchanged, exit 0" '[ $rc = 0 ] && [[ "$(head -n1 <<<"$out")" == "project root has "* ]] && [ "$(cksum < "$home/config.toml")" = "$c2" ]'
 out=$(cd "$proj" && CODEX_HOME="$home" bash "$root/scripts/st-advisor.sh" codex-home); rc=$?
 check "(n) CODEX_HOME is the Stratum home: refused, exit 1, auth.json still links to the user login" '[ $rc = 1 ] && [ "$out" = "codex home is your Codex login folder: unset CODEX_HOME, then run this again" ] && [ "$(readlink "$home/auth.json")" = "$tmp/user/auth.json" ]'
+rm "$home/auth.json"
+printf 'copy' > "$home/auth.json"
+chome
+check "(n) auth.json a file, not a link: refused, exit 1, the file kept" '[ $rc = 1 ] && [ "$out" = "$home/auth.json is a file, not a link to your Codex login: run codex login status, move that file away, then run this again" ] && [ ! -L "$home/auth.json" ] && [ "$(cat "$home/auth.json")" = copy ]'
+rm "$home/auth.json"
+chome
+check "(n) auth.json removed: codex-home links it again" '[ $rc = 0 ] && [ "$(readlink "$home/auth.json")" = "$tmp/user/auth.json" ]'
 
 mkdir -p "$tmp/hbin2"
 cat > "$tmp/hbin2/herdr" <<'FAKE'
@@ -302,7 +309,7 @@ case "$1 $2" in
       cat "$d/answer"; echo
       echo "ST-ADVISOR-END-$nonce"
     elif [ "$m" = folder ] && [ ! -e "$d/h.entered" ]; then
-      printf 'Folder access\n1. Open restricted\n2. Back to Agent Command Center\n'
+      printf 'Folder access\n› 1. Open restricted\n  2. Back to Agent Command Center\n'
     elif [ "$m" = notready ]; then
       echo "Trust this folder?"
     else
@@ -326,7 +333,7 @@ check "(k) tab path: APPROVED, codex exec not run, tab with the Codex home, agen
 hrun nofolder
 check "(k1) tab path, no Folder access screen: APPROVED, no send-keys, codex exec not run" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "APPROVED sha256 $h" ] && [ ! -e "$tmp/argv" ] && grep -q "^agent start st-codex-001" "$tmp/herdr.log" && ! grep -q "send-keys" "$tmp/herdr.log"'
 hrun notready
-check "(k3) agent_not_ready with an unknown screen: ERROR line printed, codex exec runs, verdict APPROVED, no BLOCKED" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "ERROR: Codex waits for an answer at start in its Codex tab. It did not show the Folder access screen. Check the tab, then run the point again." ] && grep -qx "APPROVED sha256 $h" <<<"$out" && ! grep -q "^BLOCKED" <<<"$out" && [ "$(head -n1 "$tmp/argv")" = exec ] && ! grep -q "send-keys" "$tmp/herdr.log"'
+check "(k3) agent_not_ready with an unknown screen: ERROR line printed, codex exec runs, verdict APPROVED, no BLOCKED" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "ERROR: Codex stopped at start on a screen Stratum does not know, so the Codex tab is closed. Run the point again, or check Codex." ] && grep -qx "APPROVED sha256 $h" <<<"$out" && ! grep -q "^BLOCKED" <<<"$out" && [ "$(head -n1 "$tmp/argv")" = exec ] && ! grep -q "send-keys" "$tmp/herdr.log"'
 hrun nomarkers
 check "(k6) no markers in the answer: the ERROR line, then codex exec runs and the verdict is APPROVED" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "ERROR: no answer between the markers" ] && grep -qx "APPROVED sha256 $h" <<<"$out" && [ "$(head -n1 "$tmp/argv")" = exec ]'
 mkdir -p "$tmp/t124"
@@ -340,6 +347,7 @@ printf '[tui]\nstatus = "x"\n' > "$home/config.toml"
 cp "$home/config.toml" "$tmp/config.noentry"
 hrun folder
 check "(k4) config.toml without the project entry: codex exec runs, herdr not called, config.toml unchanged" '[ $rc = 0 ] && [ "$(head -n1 "$tmp/argv")" = exec ] && [ ! -e "$tmp/herdr.log" ] && cmp -s "$home/config.toml" "$tmp/config.noentry"'
+check "(k4) config.toml without the project entry: one line says so" '[ "$(head -n1 <<<"$out")" = "ERROR: no Stratum Codex home entry for $proj: run st-advisor.sh codex-home" ]'
 cp "$tmp/config.keep" "$home/config.toml"
 
 mkdir -p "$tmp/sc"

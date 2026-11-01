@@ -25,7 +25,8 @@ case "$1 $2" in
   "tab create")
     ws=$HERDR_WORKSPACE_ID
     printf 'p%s%s' "$RANDOM" "$RANDOM" > "$S/pane"
-    printf '{"id":"x%s","result":{"tab":{"tab_id":"%s:t%s","workspace_id":"%s"},"root_pane":{"pane_id":"%s"}}}\n' "$RANDOM" "$ws" "$RANDOM" "$ws" "$(cat "$S/pane")" ;;
+    printf '%s:t%s' "$ws" "$RANDOM" > "$S/tab"
+    printf '{"id":"x%s","result":{"tab":{"tab_id":"%s","workspace_id":"%s"},"root_pane":{"pane_id":"%s"}}}\n' "$RANDOM" "$(cat "$S/tab")" "$ws" "$(cat "$S/pane")" ;;
   "tab close")
     printf '{"id":"x","result":{}}\n' ;;
   "agent start")
@@ -48,6 +49,7 @@ case "$1 $2" in
       nonce=$(grep -o 'ST-ADVISOR-BEGIN-[0-9a-f]\{12\}' "$PF" | tail -1 | sed 's/.*-//')
       sed "s/@N@/$nonce/g" "$S/screen_prompt" > "$S/screen"
     fi
+    [ -f "$S/prompt_timeout" ] && err timeout "timed out"
     if [ -f "$S/prompt_blocked" ]; then st=blocked; else st=done; fi
     printf '{"id":"x","result":{"state":"%s"}}\n' "$st" ;;
   *) err unknown "unknown command" ;;
@@ -92,17 +94,18 @@ go() {
 cnt() { grep -c -- "$1" "$S/log.txt"; }
 lineno() { grep -n -m1 -- "$1" "$S/log.txt" | cut -d: -f1; }
 outhas() { printf '%s\n' "$out" | grep -qF -- "$1"; }
-agent_json() { printf '[{"name":"%s","workspace_id":"%s","tab_id":"%s:t3","pane_id":"p9"}]' "$1" "$2" "$2" > "$S/agents"; }
-nofolder='ERROR: Codex waits for an answer at start in its Codex tab. It did not show the Folder access screen. Check the tab, then run the point again.'
+agent_json() { printf '[{"name":"%s","workspace_id":"%s","tab_id":"%s:t3","pane_id":"p9","cwd":"%s"}]' "$1" "$2" "$2" "${3:-$pp}" > "$S/agents"; }
+closed() { [ "$(cnt "^tab close $(cat "$S/tab")\$")" = 1 ]; }
+nofolder='ERROR: Codex stopped at start on a screen Stratum does not know, so the Codex tab is closed. Run the point again, or check Codex.'
 
 new; rm "$home/auth.json"; go
 check "a0 no auth link: error, exit 2, no herdr call" '[ $rc -eq 2 ] && outhas "ERROR: no Stratum Codex home" && [ ! -s "$S/log" ]'
 new; rm "$home/auth.json"; echo x > "$home/auth.json"; go
 check "a0 auth.json a regular file: exit 2, no herdr call" '[ $rc -eq 2 ] && outhas "ERROR: no Stratum Codex home" && [ ! -s "$S/log" ]'
 new; printf '[projects."/elsewhere"]\ntrust_level = "untrusted"\n' > "$home/config.toml"; go
-check "a0b no entry for this root: exit 2, no herdr call" '[ $rc -eq 2 ] && outhas "ERROR: no Stratum Codex home" && [ ! -s "$S/log" ]'
+check "a0b no entry for this root: exit 2, no herdr call" '[ $rc -eq 2 ] && [ "$out" = "ERROR: no Stratum Codex home entry for $pp: run st-advisor.sh codex-home" ] && [ ! -s "$S/log" ]'
 new; printf '[projects."%s"]\n' "$pp" > "$home/config.toml"; go
-check "a0b entry without trust_level: exit 2, no herdr call" '[ $rc -eq 2 ] && outhas "ERROR: no Stratum Codex home" && [ ! -s "$S/log" ]'
+check "a0b entry without trust_level: exit 2, no herdr call" '[ $rc -eq 2 ] && [ "$out" = "ERROR: no Stratum Codex home entry for $pp: run st-advisor.sh codex-home" ] && [ ! -s "$S/log" ]'
 
 new; printf '%s' "$fa" > "$S/screen"; printf '%s\n' "$chat" > "$S/screen_after"
 go -m m1 -c 'model_reasoning_effort="high"'
@@ -120,6 +123,11 @@ check "c other st-codex agent: its tab closed before the new start" '[ $rc -eq 0
 
 new; agent_json st-codex-010 "wsOTHER$RANDOM"; go
 check "d agent in another workspace ignored: new start, no tab close" '[ $rc -eq 0 ] && [ "$(cnt "^tab create")" = 1 ] && [ "$(cnt "^agent start st-codex-010")" = 1 ] && [ "$(cnt "^tab close")" = 0 ]'
+
+new; agent_json st-codex-010 "$HERDR_WORKSPACE_ID" /elsewhere; go
+check "d2 same name, cwd not this root: not reused, not closed" '[ "$(cnt "^tab create")" = 1 ] && [ "$(cnt "^tab close $HERDR_WORKSPACE_ID:t3\$")" = 0 ]'
+new; agent_json st-codex-009 "$HERDR_WORKSPACE_ID" /elsewhere; go
+check "d3 other st-codex agent, cwd not this root: not closed" '[ $rc -eq 0 ] && [ "$(cnt "^tab close")" = 0 ]'
 
 new; echo 2 > "$S/start_busy"; go
 check "e busy twice then ok: 3 start calls" '[ $rc -eq 0 ] && [ "$(cnt "^agent start")" = 3 ]'
@@ -139,9 +147,20 @@ check "f2 not_ready with Folder access: one enter, then prompt" '[ $rc -eq 0 ] &
 
 new; touch "$S/notready"; printf 'Trust this folder?\n1. Trust and continue\n2. Do not trust\n' > "$S/screen"; go
 check "f3 not_ready with other screen: no key, error, exit 1, no prompt" '[ $rc -eq 1 ] && [ "$(cnt "^agent send-keys")" = 0 ] && outhas "$nofolder" && [ "$(cnt "^agent prompt")" = 0 ]'
+check "f3 the tab this run made is closed" 'closed'
 
 new; printf '%s' "$fa" > "$S/screen"; go
 check "f4 Folder access never clears: one enter, error, exit 1, no prompt" '[ $rc -eq 1 ] && [ "$(cnt "^agent send-keys")" = 1 ] && outhas "$nofolder" && [ "$(cnt "^agent prompt")" = 0 ]'
+check "f4 the tab this run made is closed" 'closed'
+
+new; printf '\033[1mFolder access\033[0m\n\n\033[36m› 1. Trust and continue\033[0m\n  2. Open restricted\n' > "$S/screen"; printf '%s\n' "$chat" > "$S/screen_after"; go
+check "f6 Folder access, option 1 not Open restricted: no key, error, exit 1, no prompt" '[ $rc -eq 1 ] && [ "$(cnt "^agent send-keys")" = 0 ] && outhas "$nofolder" && [ "$(cnt "^agent prompt")" = 0 ]'
+new; printf '\033[1mFolder access\033[0m\n\n  1. Open restricted\n\033[36m› 2. Back to Agent Command Center\033[0m\n' > "$S/screen"; printf '%s\n' "$chat" > "$S/screen_after"; go
+check "f7 mark on option 2: no key, error, exit 1, tab closed" '[ $rc -eq 1 ] && [ "$(cnt "^agent send-keys")" = 0 ] && outhas "$nofolder" && [ "$(cnt "^agent prompt")" = 0 ] && closed'
+new; printf '\033[1mFolder access\033[0m\n\n\033[36m› 1. Open restricted\033[0m\n  2. Trust and continue\n' > "$S/screen"; printf '%s\n' "$chat" > "$S/screen_after"; go
+check "f8 option 2 text different: no key, error, exit 1, tab closed" '[ $rc -eq 1 ] && [ "$(cnt "^agent send-keys")" = 0 ] && outhas "$nofolder" && [ "$(cnt "^agent prompt")" = 0 ] && closed'
+new; printf '%s\n' '~/Desktop/stratum-worker-codex-tab                                                                                    11:39:36 PM' '❯ codex -s read-only -a never --no-alt-screen' '  Folder access' '  /home/hyuse/Desktop/stratum-worker-codex-tab' '  Config, hooks, and exec policies from untrusted folders stay disabled. Trusted project folders can still contribute settings.' '  Skills still load, and tools follow your permission settings. Opening will not change saved trust.' '› 1. Open restricted' '  2. Back to Agent Command Center' '  enter continue · esc back' > "$S/screen"; printf '%s\n' "$chat" > "$S/screen_after"; go
+check "f9 real screen from the live run: one enter, then prompt" '[ $rc -eq 0 ] && [ "$(cnt "^agent send-keys st-codex-010 enter\$")" = 1 ] && [ "$(cnt "^agent prompt")" = 1 ]'
 
 new; echo "$home" > "$S/replace_auth"; go
 check "f5 login link replaced: error, exit 1, no answer file" '[ $rc -eq 1 ] && outhas "ERROR: Codex replaced the login link in $home;" && [ ! -e "$af" ]'
@@ -158,6 +177,10 @@ check "g prompt names the request file" 'grep "^agent prompt st-codex-010 " "$S/
 
 new; touch "$S/prompt_blocked"; go
 check "h blocked: error, exit 1" '[ $rc -eq 1 ] && outhas "ERROR: Codex waits for an answer in its Codex tab."'
+new; touch "$S/prompt_timeout"; go
+check "h2 prompt timeout: error, exit 1, the tab this run made is closed" '[ $rc -eq 1 ] && outhas "ERROR:" && closed'
+new; agent_json st-codex-010 "$HERDR_WORKSPACE_ID"; touch "$S/prompt_timeout"; go
+check "h3 prompt timeout on a reused tab: no tab close" '[ $rc -eq 1 ] && [ "$(cnt "^tab close")" = 0 ]'
 
 new
 printf '%s' $'Print the line ST-ADVISOR-BEGIN-@N@ alone, then the JSON, then the line ST-ADVISOR-END-@N@ alone.\n• ST-ADVISOR-BEGIN-@N@  \n  junk {not json\n• ST-ADVISOR-END-@N@\n• ST-ADVISOR-BEGIN-@N@\n• {"verdict":"APPROVED","summary":  \n  "fine, wrapped","findings":\n  []}   \n• ST-ADVISOR-END-@N@\n' > "$S/screen_prompt"

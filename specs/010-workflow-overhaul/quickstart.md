@@ -105,6 +105,9 @@ In a herdr pane, in a scratch clone with `.stratum/advisor.json` = `{"mode": "au
 6. Run step 1 again with `XDG_STATE_HOME=<scratch>/empty` (an empty folder): no tab is used and
    Codex runs in the background (the fallback). Do not move the real Codex home while Codex
    runs: its app-server daemon outlives the tab and breaks (research R-H, T024).
+7. If the entry from step 0 is missing from `config.toml`, step 1 prints
+   `ERROR: no Stratum Codex home entry for <root>: run st-advisor.sh codex-home`, then runs
+   Codex in the background. Run step 0 again.
 
 Record in research.md: the time, the number of answer lines read, and whether the JSON parsed.
 

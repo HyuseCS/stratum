@@ -10,6 +10,7 @@ if [ $# = 1 ] && [ "$1" = codex-home ]; then
   [ -f "$login" ] || { echo "no codex login: run codex login, then run this again"; exit 1; }
   mkdir -p "$dir" || exit 1
   [ "$(cd "$dir" && pwd -P)" = "$(cd "$(dirname "$login")" && pwd -P)" ] && { echo "codex home is your Codex login folder: unset CODEX_HOME, then run this again"; exit 1; }
+  [ -e "$dir/auth.json" ] && [ ! -L "$dir/auth.json" ] && { echo "$dir/auth.json is a file, not a link to your Codex login: run codex login status, move that file away, then run this again"; exit 1; }
   chmod 700 "$dir" || exit 1
   [ "$(readlink "$dir/auth.json")" = "$login" ] || ln -sfn "$login" "$dir/auth.json" || exit 1
   if [[ $root = *[[:cntrl:]\"\\]* ]]; then
@@ -182,17 +183,16 @@ printf '%s\n' '{"type":"object","additionalProperties":false,"required":["verdic
   esac
 } > "$tmp/prompt"
 
-rc=1 tab=
-if [ "${HERDR_ENV:-}" = 1 ] && [ -n "${HERDR_WORKSPACE_ID:-}" ] && command -v herdr >/dev/null && [ -L "$dir/auth.json" ] && h=$entry awk '$0 == ENVIRON["h"] {s = 1; next} /^\[/ {s = 0} s && $0 == "trust_level = \"untrusted\"" {f = 1} END {exit !f}' "$dir/config.toml" 2>/dev/null; then
-  rc=0 tab=1
+rc=1
+if [ "${HERDR_ENV:-}" = 1 ] && [ -n "${HERDR_WORKSPACE_ID:-}" ] && command -v herdr >/dev/null && [ -L "$dir/auth.json" ]; then
+  rc=0
   sd=$(dirname "$0")
   cp "$tmp/prompt" "$tmp/prompt.tab" || block "cannot copy the prompt"
   timeout -k 10 540 bash "$sd/st-lock.sh" --name "codex-$HERDR_WORKSPACE_ID" --timeout 50 -- bash "$sd/st-codex-agent.sh" "$f" "$tmp/prompt.tab" "$tmp/answer.json" "$dir" "${opts[@]}" > "$tmp/tab" 2>&1 || rc=$?
   [ $rc = 75 ] && block "Codex agent busy with another review"
   case $rc in 0) ;; 124|137) echo "ERROR: Codex tab timed out" ;; *) grep -a '^ERROR:' "$tmp/tab" | tail -n1 ;; esac
 fi
-left=540
-[ -n "$tab" ] && left=$((540 - SECONDS))
+left=$((540 - SECONDS))
 # ponytail: the 60 s floor has no test (it needs a 60 s wait), add one with a fake clock if the budget changes
 [ $rc != 0 ] && [ $left -lt 60 ] && block "timed out"
 [ $rc = 0 ] || { rc=0; timeout -k 10 $left codex exec -s read-only --ignore-user-config "${opts[@]}" --ephemeral --output-schema "$tmp/schema.json" -o "$tmp/answer.json" - < "$tmp/prompt" > "$tmp/out" 2> "$tmp/err" || rc=$?; }
