@@ -180,7 +180,7 @@ check "no report-only lessons" '! grep -qF -- "Write no lessons file" "$root/age
 
 phrases <<'EOF'
 H1 st-close constitution	agents/st-close.md	constitution.md`, if present
-H2 st-close skill phase	skills/st-close/SKILL.md	After the commit lands, set `phase` to `done` in `<project>/.stratum/state.json`. Keep the other keys.
+H2 st-close skill phase	skills/st-close/SKILL.md	After the commit lands, set `phase` to `done` in `<project>/.stratum/state.json` with `bash <plugin root>/scripts/st-state.sh <project>/.stratum/state.json phase done`.
 H2 st-close never	agents/st-close.md	`.stratum/constitution.md`, `.stratum/` state, or plugin files.
 H2 readme phase	readme	the `st-close` skill (Full Close) and the `st-fast` skill set `phase` to `done` after their last commit
 H2 design phase	DESIGN.md	The `st-close` skill (Full Close) and the `st-fast` skill set `phase` to `done` after their last commit.

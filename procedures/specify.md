@@ -38,15 +38,7 @@ Given that feature description, do this:
    - Run `<PLUGIN_ROOT>/scripts/resolve-template.sh spec`. It prints the absolute path of the active spec template (project override in `.stratum/templates/spec.md` first, else the plugin copy).
    - Copy that template to `FEATURE_DIRECTORY/spec.md` as the starting point.
    - Set `SPEC_FILE` to `FEATURE_DIRECTORY/spec.md`.
-   - Write `.stratum/state.json` (create `.stratum/` if needed), keeping any other keys already in the file:
-     ```json
-     {
-       "feature_directory": "specs/003-user-auth",
-       "phase": "define",
-       "lane": "full"
-     }
-     ```
-     Use the real directory path. Keep the existing `lane` value if one is set. Later procedures find the feature through this file.
+   - If `.stratum/state.json` does not exist, create `.stratum/` and write `{}` to it. Then run `bash <PLUGIN_ROOT>/scripts/st-state.sh .stratum/state.json feature_directory <FEATURE_DIRECTORY> phase define`, and add `lane full` to that call only if the file has no `lane` value. Later procedures find the feature through this file.
 
    **IMPORTANT**:
    - You must only create one feature per run of the `specify` procedure.
