@@ -234,7 +234,10 @@ the High talk.
   Close the tab. Record every result in research.md R-J. If it fails: T019, T021 and T024 are
   ticked `Not run, T050 failed: <first failed check>` (lessons L24), T018 drops case (k) and
   (n), T023 builds no herdr path and no `codex-home`, and T020 and T022 use the "T050 fails"
-  lines of contracts/phrases.md. Owns: `specs/010-workflow-overhaul/research.md`. Test: the
+  lines of contracts/phrases.md. T050 failed at check 1 on 2026-10-31; the re-run on 2026-11-01
+  passed (research R-J), so PR #62 added T018 cases (k) and (n), the T023 herdr path and
+  `codex-home`, and the R7, R17, R19 and R20 lines as written for T020 and T022, in place of the
+  "T050 fails" lines. Owns: `specs/010-workflow-overhaul/research.md`. Test: the
   commands above. (FR-013, D25, security note S2, lessons L32)
 - [X] T018 [P] [US3] Write `tests/test_advisor_matrix.sh` (setup as T002, plus a
   `.stratum/state.json` with `risk`). In `tests/test_advisor.sh` add
@@ -277,7 +280,7 @@ the High talk.
   Run it: red. Owns: `tests/test_advisor_matrix.sh`, `tests/test_advisor.sh`. Test:
   `bash tests/test_advisor_matrix.sh`. (FR-011, FR-012, FR-013, FR-014, FR-015, FR-016,
   D24, D25, lessons L14, L16, L17, L26, L31)
-- [X] T019 Not run, T050 failed: check 1, the agent gave no answer. [P] [US3] Wave 2, after T050 passed. Write `tests/test_codex_agent.sh` for `scripts/st-codex-agent.sh` with a
+- [X] T019 Built in PR #62 (commit 66b06fd, review fixes 20e5e1e and 605e924). [P] [US3] Wave 2, after T050 passed. Write `tests/test_codex_agent.sh` for `scripts/st-codex-agent.sh` with a
   stub `herdr` whose ids have a random part (lessons L26) and whose `agent read` prints plain
   text (lessons L31), from a temp project with `specs/010-demo/`. Cases from contracts/scripts.md
   section 2, each run with a temp `<codex home>` whose `auth.json` is a symlink: (a0) a
@@ -314,7 +317,7 @@ the High talk.
 
 ### Build
 
-- [X] T021 Not run, T050 failed: check 1, the agent gave no answer. [P] [US3] Wave 3, after T050 passed and T019. Write `scripts/st-codex-agent.sh` (contracts/scripts.md section 2). Owns:
+- [X] T021 Built in PR #62 (commit 66b06fd, review fixes 20e5e1e and 605e924). [P] [US3] Wave 3, after T050 passed and T019. Write `scripts/st-codex-agent.sh` (contracts/scripts.md section 2). Owns:
   `scripts/st-codex-agent.sh`. Test: `bash tests/test_codex_agent.sh`. (FR-013, lessons L26,
   L30, L31, L33)
 - [X] T022 [P] [US3] Write R1 to R3 and R12 in `skills/st/SKILL.md` (R1 replaces the lane line,
@@ -324,7 +327,8 @@ the High talk.
   replaces the "It runs at two points" sentence; R13 in Per story); R14 in `skills/st-fast/SKILL.md`; R15 in
   `skills/st-init/SKILL.md` step 11; R19 in `skills/st-init/SKILL.md` step 11; R20 in the Advisor section of
   `skills/st-build/SKILL.md`; R16 to R18 and R21 (replaces the `--ignore-user-config` sentence at `README.md:182`) in the advisor part of `README.md` (with T050's
-  result: R7 and R17 as written, or their "T050 fails" lines and no R19, R20). Owns:
+  result: R7 and R17 as written, or their "T050 fails" lines and no R19, R20; PR #62 wrote R7,
+  R17, R19 and R20 as written after the T050 re-run passed, research R-J). Owns:
   `skills/st/SKILL.md`, `skills/st-build/SKILL.md`, `skills/st-fast/SKILL.md`,
   `skills/st-init/SKILL.md`, `README.md`. Test:
   `bash tests/test_risk_rules.sh && bash tests/test_on_demand.sh && bash tests/test_design_lane.sh && bash tests/test_advisor_rules.sh && bash tests/test_lock_rules.sh && bash tests/test_test_scope.sh && bash tests/test_shortcuts.sh && bash tests/test_screen_rules.sh && bash tests/test_model_files.sh && ! bash tests/test_inspect.sh | grep '^FAIL' | grep -vxF 'FAIL README tests'`.
@@ -332,12 +336,13 @@ the High talk.
 - [X] T023 [US3] In `scripts/st-advisor.sh` add mode `auto` (missing `mode` = `auto`), the risk
   read, the matrix and the `advisors:` line, Codex at `diff` with the checked hash, `decisions`,
   `round`, `talk`, `codex-home`, the herdr path with `st-lock.sh` and `st-codex-agent.sh` (only
-  with the Stratum Codex home; both only if T050 passed), exit 75 as
+  with the Stratum Codex home; both only if T050 passed; PR #62 added both after the T050 re-run
+  passed, research R-J), exit 75 as
   `BLOCKED: Codex agent busy with another review`, and the new no-file line (contracts/scripts.md
   sections 1.3 to 1.5). Depends on T021. Owns: `scripts/st-advisor.sh`. Test:
   `bash tests/test_advisor_matrix.sh && bash tests/test_advisor.sh && bash tests/test_advisor_waive.sh`.
   (FR-012 to FR-016, security note S1, lessons L14, L16, L17)
-- [X] T024 Not run, T050 failed: check 1, the agent gave no answer. [US3] Only if T050 passed. First run quickstart section 0 step 2 (the scripts in use are
+- [X] T024 PASS live on 2026-11-01 (research R-H). [US3] Only if T050 passed. First run quickstart section 0 step 2 (the scripts in use are
   this branch's); no live result counts before it passes. Then the live run of quickstart section
   3L in a scratch clone in herdr. Record in research.md R-H: the time, the lines read, whether the
   JSON parsed, the tab and agent names, steps 2 to 4, and `test -L ~/.local/state/stratum/codex-home/auth.json`
