@@ -12,3 +12,6 @@ reason: Round 2 LOW fix only: T001 and T002 probes run side by side; no task, st
 
 ## decisions | 2026-11-01T15:13:14Z | /advisor
 summary: US1 decisions: keep 1,3-9; item 2 (setup stops do not count against D21's one stop) goes to the user as yes/no; H2 fix must run the whole README test block; L1 steps must add accepting the trust dialog; make the L1 scratch project now
+
+## diff | 2026-11-01T16:07:59Z | /advisor
+summary: End-of-Build pass c80a21e..HEAD: nothing blocks; US1 fixes, US4 st-init fix and T021 docs each had red-before tests; merge origin/main into 011 before Close and run every README test line

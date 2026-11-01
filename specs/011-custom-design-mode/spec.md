@@ -126,7 +126,8 @@ with the install link. Run a new-look task and see it go on.
 
 1. **Given** `/stratum:st-init`, **When** it reaches the tool step, **Then** it offers FigCraft as
    an optional install, "for the custom design mode", and on yes gives the exact install command
-   for the machine.
+   for the machine. On that yes, or on "allow its 11 tools" when FigCraft is already installed, it
+   allows the 11 FigCraft tools in the project's `.claude/settings.json` (D22, D23).
 2. **Given** FigCraft is missing, **When** a custom-mode run starts, **Then** it stops before any
    work with the install link. **When** a new-look or autonomous run starts, **Then** it does not
    check FigCraft.
@@ -167,8 +168,8 @@ with the install link. Run a new-look task and see it go on.
 - **FR-004**: The custom mode MUST grill the user as the new-look mode does. With a design file or
   styled screens and a task that does not ask for a new look, it MUST skip the theme pick and take
   the first design's colors, fonts and spacing from the design file, or from the code's tokens
-  when there is no design file. For a new look or an overhaul it MUST run the theme pick and use
-  the picked theme's tokens (D16).
+  when there is no design file. For a new look, an overhaul, or a project with no design file and
+  no styled screens, it MUST run the theme pick and use the picked theme's tokens (D16).
 - **FR-005**: The lane MUST start FigCraft itself with its control port when the port does not
   answer, and MUST NOT close it after (D15).
 - **FR-006**: The agent MUST draw the first design live in the open FigCraft window, through
@@ -205,11 +206,14 @@ with the install link. Run a new-look task and see it go on.
 - **FR-015**: The FigCraft MCP server config MUST be in `.claude-plugin/plugin.json`, and the
   `st-design` agent MUST have the FigCraft MCP tools (D18).
 - **FR-016**: A custom-mode run MUST check for the FigCraft app and `figcraft-cli` at the start and
-  stop before any work with the install link when one is missing. New-look and autonomous runs
-  MUST NOT check them (D19).
+  stop before any work with the install link when one is missing or when `figcraft-cli` is older
+  than 0.13.1. New-look and autonomous runs MUST NOT check them (D19).
 - **FR-017**: `st-status` MUST show FigCraft as optional, "for the custom mode". `st-init` MUST
   offer FigCraft as an optional install and, on yes, give the exact install command for the
-  machine (D19).
+  machine (D19). `st-init` MUST merge the 11 FigCraft tool names the agent uses into
+  `permissions.allow` of the project's `.claude/settings.json`, keeping every other key, on that
+  yes or on "allow its 11 tools" when FigCraft is already installed. It MUST NOT add the
+  server-wide `mcp__plugin_stratum_figcraft` name (D22, D23).
 
 ### Key Entities
 
@@ -243,19 +247,23 @@ with the install link. Run a new-look task and see it go on.
 - FigCraft is in alpha (v0.13.1, 2026-10-31). Its commands cover frames, auto layout, components,
   variables and styles, which the custom mode needs.
 - FigCraft's attached MCP server sees the open window's unsaved changes and the user's selection,
-  as `docs/mcp.md` says. Nobody has run it here yet: the plan tests it.
-- A plugin subagent can call MCP tools from the plugin's own config. The plan tests it before the
-  build.
-- The `plugin.json` MCP entry starts in every session of every project. The plan tests that it
-  does not break or warn in sessions where `figcraft-cli` is not installed. If it does, the config
-  moves to a project-level `.mcp.json` that `st-init` writes on the user's yes.
+  as `docs/mcp.md` says. Checked (research R15, S1): it sees the unsaved changes and the selection,
+  but it attaches only to an app that is already open, so after a start the user reconnects once
+  (D24).
+- A plugin subagent can call the plugin's MCP tools, named `mcp__plugin_<plugin>_<server>__<tool>`.
+  Checked (research R15, S2): a per-tool allow rule stops the prompt for that tool only.
+- The `plugin.json` MCP entry starts in every session of every project. Checked (research R15, S3):
+  it neither breaks nor warns where `figcraft-cli` is not installed, so no project `.mcp.json` is
+  written.
 - The MCP config's command must find `figcraft-cli` on both machines: on the PATH from a native
   package, or through an AppImage named `figcraft` (its `cli` command). The Flatpak is not
   supported: it ships no `figcraft-cli` and cannot open a project folder (research R2).
-- `figcraft-cli info --json` lists only the top-level frames. The plan picks the full layer-tree
-  read for the build (an export format, or a `figcraft-cli run` script with read commands).
+- `figcraft-cli info --json` lists only the top-level frames. The build reads the whole layer tree
+  with `figcraft-cli convert` (`design.json`), the picture with `render`, and the variables with a
+  `run` script (`variable.export`). Checked (research R15, S5).
 - FigCraft is installed on Linux from its GitHub release packages (`.pkg.tar.zst`, `.deb`, `.rpm`,
-  or an AppImage). The plan picks the install command per machine. The Flatpak is unsupported
+  or an AppImage). `design-tool.md` gives the install command per package manager (pacman, apt-get,
+  dnf). The Flatpak is unsupported
   (research R2).
 - One saved design file per screen.
 - Out of scope: other design tools (D14), Plan marks for existing screens (D17), and FigCraft's

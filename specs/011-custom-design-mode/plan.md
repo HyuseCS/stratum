@@ -6,13 +6,14 @@
 in [decisions.md](decisions.md), GitHub issue #57.
 
 **Status**: No open decisions. D22 and D23 (decisions.md, 2026-11-01) settle the FigCraft allow rule
-(contract 7d, tasks T017 and T018). Five spikes (S0, S1, S2, S3, S5) run first. Some of their results can change named
-parts of the contract (contract header).
+(contract 7d, tasks T017 and T018). Spikes S0, S2, S3 and S5 passed. S1 step 2 failed, and the
+reconnect fallback was taken (D24, research R15).
 
 ## Summary
 
 A third Design-lane mode, "custom", in `skills/st-design/SKILL.md` section 6. After the new-look
-grill (with the theme branch only for a new look or an overhaul, D16), the lane runs
+grill (with the theme branch only for a new look, an overhaul, or a project with no design file and
+no styled screens, D16), the lane runs
 `scripts/st-figcraft.sh start`. That makes `design/` and starts FigCraft on port 7979 with the
 project as its read root and `design/` as its write root, unless this project's FigCraft already
 answers. The `st-design` agent draws the screen live through FigCraft's MCP server, which the
@@ -41,8 +42,8 @@ new package in Stratum.
 committed), `DESIGN.md`, `.impeccable/design.json`, token files. Machine file: the start record
 `${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}}/st-figcraft-7979` (data-model.md).
 
-**Testing**: `bash tests/test_figcraft.sh` (new, cases F1 to F10), `bash tests/test_design_check.sh`
-(K14 to K20 added), `bash tests/test_design_lane.sh` (rows and checks added),
+**Testing**: `bash tests/test_figcraft.sh` (new, cases F1 to F11), `bash tests/test_design_check.sh`
+(K14 to K23 added), `bash tests/test_design_lane.sh` (rows and checks added),
 `bash tests/test_plan_rules.sh` (DL1 changed), `bash tests/test_inspect.sh` (README two-way checks),
 `bash tests/test_model_files.sh`, `claude plugin validate .claude-plugin/plugin.json`. Spikes and live
 runs by hand (quickstart sections 1 and 4).
@@ -151,6 +152,9 @@ Post-design re-check: all gates pass. Complexity Tracking stays empty.
 - D23 (decisions.md, Q21): that rule lists the 11 tool names the agent uses (research R8, the Tools
   line of `design-tool.md`), not the server-wide `mcp__plugin_stratum_figcraft`. The names follow
   the form S2 records.
+- D24 (decisions.md, Build, S1 step 2): exactly one design stop between the grill and the code
+  build. The lane starts FigCraft only when the port is not open for this project, and asks for the
+  one-time `/mcp` reconnect only when the tools are not connected. No setting for now.
 - No open decisions.
 
 ## Project Structure
@@ -189,8 +193,8 @@ scripts/
 └── st-design-check.sh    # --custom
 .claude-plugin/plugin.json  # mcpServers.figcraft (FR-015)
 tests/
-├── test_figcraft.sh      # new: F1 to F10
-├── test_design_check.sh  # K14 to K20
+├── test_figcraft.sh      # new: F1 to F11
+├── test_design_check.sh  # K14 to K23
 ├── test_design_lane.sh   # rows and checks
 └── test_plan_rules.sh    # DL1
 README.md                 # requirement row, tests block, Design lane lines
