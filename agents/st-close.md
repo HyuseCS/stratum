@@ -49,9 +49,11 @@ The user chooses: send back, defer, or drop.
 
 ### 3. Lessons
 
-Propose lessons in your report only. Write no lessons file and no target file. Only lessons with
-evidence from this feature. Each lesson: what happened, the rule in one sentence that a test or a
-check can fail, the target file, and the reason for that target.
+Write the proposed lessons to `<project>/.stratum/lessons.md` and list them in your report. Write
+no target file. If the file has lessons, keep them and add yours after them, with the numbers
+continued. Only lessons with evidence from this feature. Each lesson, numbered L1, L2...:
+what happened, the rule in one sentence that a test or a check can fail,
+the target file, and the reason for that target.
 Targets: repo constitution `.stratum/constitution.md`, app constitution
 `.stratum/<app>-constitution.md`, app ordinance `apps/<app>/ORDINANCE.md`.
 The app is `apps/<app>/` when the feature's changed files are under it. If they are under more
@@ -71,6 +73,7 @@ as printed. Do not fix them.
 ## Never
 
 - Edit product code, tests, `.stratum/constitution.md`, `.stratum/` state, or plugin files.
+- Exception: you may write `.stratum/lessons.md` (step 3). No other `.stratum/` file.
 - Write or change a file through Bash (a heredoc, or an echo or printf redirect). Use the Write
   or Edit tool. The git guard reads Bash text and stops on git words it cannot parse.
 - Run `git add` or `git commit`.

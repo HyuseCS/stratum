@@ -3,6 +3,7 @@ tsconfig.json
 .stratum/weather.json
 .stratum/powerline.json
 .stratum/handoff.md
+.stratum/lessons.md
 .claude/settings.local.json
 graphify-out/
 .stratum/git-guard.json

@@ -69,3 +69,58 @@ restore. Remove the T2 phrase from the skill once, see T2 go red, restore.
 - The app rule is D2: changed files under `apps/<app>/`. With more than one app, Close names the app the lesson is about.
 - An app constitution target may not exist yet. Step 5 then creates it with that one rule, Version 1.0.0 and today's Last Amended, without the template.
 - The review fixes (the no-changed-file sentence in st-close step 3, the missing-target rules in st-close step 5, the no-lesson skip rule in st-fast step 9) got phrase rows after the review, not test-first.
+
+## Amendment 1: holding file
+
+What: st-close writes its proposed lessons to `<project>/.stratum/lessons.md`, a holding file not
+tracked by git. The main session reads them from there in st-close skill step 5, the user decides
+each, then the main session empties the file. Undecided lessons stay for a later decision.
+Plan and Inspect read no lessons file. `docs/lessons.md` stays untouched and unnamed (T7 stays).
+Decisions A1 to A6.
+
+### Files
+- `agents/st-close.md:52` - replace the sentence
+  `Propose lessons in your report only. Write no lessons file and no target file.` with
+  `Write the proposed lessons to \`<project>/.stratum/lessons.md\` and list them in your report. Write no target file. If the file has lessons, keep them and add yours after them, with the numbers continued.`
+  In line 53, `Each lesson:` becomes `Each lesson, numbered L1, L2...:`. Keep the T1 phrase
+  `the target file, and the reason for that target` on one line.
+- `agents/st-close.md:73` (Never) - do not change this bullet (H2 row at test line 169). Add a
+  bullet after it: `- Exception: you may write \`.stratum/lessons.md\` (step 3). No other \`.stratum/\` file.`
+- `skills/st-close/SKILL.md:33` (step 5) - replace the first sentence with
+  `Make sure \`<project>/.gitignore\` has \`.stratum/lessons.md\`. Read the lessons from \`<project>/.stratum/lessons.md\`. \`st-close\` writes each there with its target file and the reason.`
+  Keep the rest of step 5 as it is. At the end of step 5 add
+  `Remove each lesson from \`.stratum/lessons.md\` as soon as the user decides it. After the last decision the file is empty. An undecided lesson stays in it.`
+- `skills/st-close/SKILL.md:52` (step 8) - `and the files step 5 wrote` becomes
+  `and the files step 5 wrote (never \`.stratum/lessons.md\`)`. The file is ignored, so `git add`
+  on it fails.
+- `skills/st-fast/SKILL.md:36` (step 9) - after `the files a kept lesson went to` add
+  `, and \`.gitignore\` if the Lessons step added the line (never \`.stratum/lessons.md\`)`.
+  The skip rule becomes
+  `If it changed no docs, kept no lesson and added no \`.gitignore\` line, skip this step.`
+  Step 8 needs no change: it already sends a proposed lesson through st-close step 5.
+- `skills/st-init/SKILL.md:13` (step 2) - add `` `.stratum/lessons.md` `` after
+  `` `.stratum/handoff.md` `` in the list.
+- `.gitignore` (this repo) - add the line `.stratum/lessons.md`.
+- `DESIGN.md:149` - `proposed in the report, each with` becomes
+  `proposed in the report and held in \`.stratum/lessons.md\` (not tracked by git) until the user decides, each with`.
+  Keep `each with a target file and the reason` on one line (T6).
+
+### Tests (written first, must fail before the build)
+Add one `phrases` block and one `check` after `tests/test_inspect.sh:164`. Each phrase must sit on
+one line in the built file.
+- T8 `lessons holding st-close` - `agents/st-close.md` has
+  `` lessons to `<project>/.stratum/lessons.md` `` and `` you may write `.stratum/lessons.md` ``.
+- T9 `lessons holding empty` - `skills/st-close/SKILL.md` has
+  `Remove each lesson from` and `` has `.stratum/lessons.md` ``.
+- T10 `lessons holding st-init` - `skills/st-init/SKILL.md` has `` `.stratum/lessons.md`, ``.
+- T11 `lessons holding design` - `DESIGN.md` has `` `.stratum/lessons.md` (not tracked by git) ``.
+- T12 negative: `check "no report-only lessons" '! grep -qF -- "Write no lessons file" "$root/agents/st-close.md"'`.
+Command: `PYTHONDONTWRITEBYTECODE=1 bash tests/test_inspect.sh`. Today: 5 FAIL lines (T8 to T12),
+all other lines `ok`. After the build: all `ok`.
+Manual check after the build: `git check-ignore -q .stratum/lessons.md` exits 0 (today it exits 1).
+Negative control: remove the T9 phrase once, see T9 go red, restore.
+
+### Risks
+- T8 to T12 check text, not behavior. No live Close run is planned.
+- `hooks/st-approve.py:129` `edit_ok` rejects every `.stratum` path. In an autonomous worker session
+  the agent's write to `.stratum/lessons.md` gets the normal permission prompt. No hook change planned.

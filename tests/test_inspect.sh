@@ -154,7 +154,7 @@ lessons st-close no app	agents/st-close.md	If no changed file is under `apps/`, 
 lessons st-close missing	skills/st-close/SKILL.md	create it with that one rule
 lessons st-close missing	skills/st-close/SKILL.md	show the user the line `@.stratum/<app>-constitution.md`
 lessons st-close missing	skills/st-close/SKILL.md	tell the user and do not write the rule
-lessons st-fast skip	skills/st-fast/SKILL.md	If it changed no docs and no lesson was kept, skip this step.
+lessons st-fast skip	skills/st-fast/SKILL.md	kept no lesson and added no `.gitignore` line
 split st-constitution	skills/st-constitution/SKILL.md	| `apps/<app>/ORDINANCE.md`
 split st-constitution	skills/st-constitution/SKILL.md	before any file of the app is opened
 split st-init	skills/st-init/SKILL.md	| `apps/<app>/ORDINANCE.md`
@@ -162,6 +162,16 @@ split st-init	skills/st-init/SKILL.md	before any file of the app is opened
 lessons design	DESIGN.md	each with a target file and the reason
 EOF
 check "no docs/lessons.md" '! grep -rqF -- "docs/lessons.md" "$root/agents" "$root/skills" "$root/DESIGN.md" "$root/README.md"'
+
+phrases <<'EOF'
+lessons holding st-close	agents/st-close.md	lessons to `<project>/.stratum/lessons.md`
+lessons holding st-close	agents/st-close.md	you may write `.stratum/lessons.md`
+lessons holding empty	skills/st-close/SKILL.md	Remove each lesson from
+lessons holding empty	skills/st-close/SKILL.md	has `.stratum/lessons.md`
+lessons holding st-init	skills/st-init/SKILL.md	`.stratum/lessons.md`,
+lessons holding design	DESIGN.md	`.stratum/lessons.md` (not tracked by git)
+EOF
+check "no report-only lessons" '! grep -qF -- "Write no lessons file" "$root/agents/st-close.md"'
 
 phrases <<'EOF'
 H1 st-close constitution	agents/st-close.md	constitution.md`, if present
