@@ -189,8 +189,9 @@ with the install link. Run a new-look task and see it go on.
 - **FR-010**: The code build MUST read the saved design file (its layout and a picture of it) and
   the design file, with no FigCraft window needed. Every fix round MUST read the same saved design
   (D12).
-- **FR-011**: The custom mode MUST have exactly one stop between the grill and the code build: the
-  FigCraft stop. The design file MUST be shown at the gate with the screenshots (D21).
+- **FR-011**: The custom mode MUST have exactly one design stop between the grill and the code
+  build: the FigCraft stop. Setup stops (a missing tool, the one-time /mcp reconnect) do not count.
+  The design file MUST be shown at the gate with the screenshots (D21).
 - **FR-012**: After the build, the custom mode MUST run the same checks, fix rounds, gate and
   commit as the new-look mode. The commit MUST include `design/<screen>.figcraft`.
 - **FR-013**: At the gate, the lane MUST make each change the way the user names: in FigCraft (stop
@@ -225,7 +226,8 @@ with the install link. Run a new-look task and see it go on.
 
 - **SC-001**: Three changes made by hand in FigCraft (one move, one resize, one recolor) all show
   in the built screen's screenshots at the gate.
-- **SC-002**: A custom-mode run has exactly 1 stop between the end of the grill and the gate.
+- **SC-002**: A custom-mode run has exactly 1 design stop between the end of the grill and the
+  gate. Setup stops (a missing tool, the one-time /mcp reconnect) do not count.
 - **SC-003**: The user needs 0 manual steps to open the design tool during a run, after FigCraft is
   installed.
 - **SC-004**: A new-look or autonomous run with FigCraft missing does 0 checks for FigCraft and

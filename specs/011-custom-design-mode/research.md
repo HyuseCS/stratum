@@ -67,10 +67,16 @@ spikes (R15) run.
 
 ## R6. Read-back for the build: layout, picture, variables (FR-010, spec Assumption 6)
 
-- Decision (until S5): three CLI calls on the saved file, outputs in `design/.read/<screen>/`:
+- Decision (S5 passed, R15): three CLI calls on the saved file, outputs in `design/.read/<screen>/`:
   `convert <file> design.json` (FigCraft JSON, pretty-printed, the whole file), `render <file> -o
   design.png`, and `run export.json --in <file>` with one `variable.export {format: "css"}` step
   (its result line carries the CSS text).
+- `design.json` keys (S5): layers in `nodes` by id, each with `name`, `type`, `width`, `height`,
+  `fills`, `parent`, `children`. x and y are the last two numbers of `transform`, and a layer at
+  0,0 has no `transform`. Auto layout is the frame's `layout` (`mode`, `gap`, `padding`, aligns)
+  and the child's `child_layout` (sizing). Text is `characters` and `style` (`font_family`,
+  `font_size`, `line_height`). Bound variables are `bound` (`{field: variable id}`), with names and
+  values in the top-level `variables.variables[]`. Radius is `corners.radii`.
 - Rationale: `info --json` lists only top-level frames (`cli.md`, `info`). `convert` to `.json`
   writes the whole document. `render` gives the picture. All three take the automation roots and
   need no window.
@@ -105,18 +111,23 @@ spikes (R15) run.
   `plugin.json` and the agent names its tools. A named list keeps UI input injection out.
 - S2 measures the real name and whether a subagent can call it. If a wildcard form works, the line
   still lists names (security, fewer tools).
+- S2 result (R15): a plugin subagent calls the tool, and the name form is
+  `mcp__plugin_<plugin>_<server>__<tool>`. A per-tool `permissions.allow` entry allows only the
+  named tool. Claude Code ignores it in a project file of an untrusted workspace, and applies it
+  once the user trusts the workspace.
 
 ## R9. Start record and detached launch
 
 - Decision: `start` writes `<runtime dir>/st-figcraft-<port>` with the app's pid and the project
-  root (`<runtime dir>` = `${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}}`). The app runs under `nohup` in the
-  background, stderr to `<runtime dir>/st-figcraft-<port>.log`. The script waits up to 20 s for the
+  root (`<runtime dir>` = `${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}}`). The app runs under `setsid nohup` (plain
+  `nohup` where there is no `setsid`, S1 step 6) in the background, stderr to `<runtime dir>/st-figcraft-<port>.log`. The script waits up to 20 s for the
   port to answer as FigCraft, and fails at once when the pid dies.
 - Rationale: FR-005 (never closed) and FR-007 (confined to this project). The attached MCP server
   drives whatever app owns the port, so the lane must know that app was started with this
   project's roots. FigCraft has no method that reports its roots (`control-protocol.md` method list).
   The record is the only check that needs no FigCraft feature.
-- S1 checks that the app survives the end of the Bash tool call and of the session.
+- S1 checks that the app survives the end of the Bash tool call and of the session: it does with
+  `setsid nohup` (R15).
 
 ## R10. Port 7979 owned by FigCraft for another project
 
@@ -174,12 +185,79 @@ spikes (R15) run.
 Filled by tasks T001 to T005. Each entry: the command, the output line that decides it, pass or
 fail, and the fallback taken.
 
-- S3 (plugin.json MCP entry, no `figcraft-cli`): not run yet.
-- S2 (plugin subagent calls a plugin MCP tool, tool name form): not run yet.
-- S0 (install gives `figcraft` and `figcraft-cli`, `--version` format): not run yet.
+- S3 (plugin.json MCP entry, no `figcraft-cli`), Claude Code 2.1.312, T001.
+  - Check 1: `claude --plugin-dir <s3>/stratum-spike -p "Say ok."`. Deciding output: exit 0,
+    stdout `ok`, stderr empty. `claude --plugin-dir <s3>/stratum-spike mcp list` shows
+    `plugin:stratum-spike:figcraft: bash .../fail.sh - ✘ Failed to connect`, init status
+    `failed`. PASS, no fallback.
+  - Check 2: `claude --plugin-dir <s3>/stratum-spike -p "Start the stratum-spike:spike-read agent. It reads README.md and reports its first line."`,
+    agent `tools: Read, mcp__plugin_stratum-spike_figcraft__ping`. Deciding output: the agent
+    started, read README.md and reported `# Stratum`. PASS, no fallback.
+  - Start-screen look: the user started `claude --plugin-dir <s3>/stratum-spike` in a terminal.
+    The start screen showed no MCP warning, only the folder trust dialog. PASS in full, no
+    fallback.
+- S2 (plugin subagent calls a plugin MCP tool, tool name form), T002.
+  - Run 1: `claude --plugin-dir <s2>/stratum-spike -p "Start the stratum-spike:spike agent. It calls its ping tool and reports the reply." --allowedTools mcp__plugin_stratum-spike_figcraft__ping`.
+    Deciding output: the subagent called `mcp__plugin_stratum-spike_figcraft__ping` and got
+    `pong`, no denial. Name form `mcp__plugin_<plugin>_<server>__<tool>`, the plan's prefix. PASS,
+    no contract change.
+  - Same run with no `--allowedTools`: denied in `-p` (`Claude requested permissions ... haven't
+    granted it yet`).
+  - Per-tool rule `{"permissions": {"allow": ["mcp__plugin_stratum-spike_figcraft__ping"]}}` in
+    `<s2p>/.claude/settings.json`, untrusted scratch folder: ignored (`Ignoring 1
+    permissions.allow entry from .claude/settings.json: this workspace has not been trusted`).
+  - Same rule through `--settings`: `ping` ran with no prompt, `echo` was denied. The D23 per-tool
+    form works. PASS, no fallback.
+  - Project-file form rerun after the user trusted `<s2p>`, no `--allowedTools`: `ping` ran,
+    reply `pong`, `permission_denials` `[]`. The `echo` call was denied (`permission_denials`
+    holds `echo`). PASS in full: the D23 per-tool rule in the project's `.claude/settings.json`
+    works in a trusted workspace.
+  - Risk: Claude Code ignores project `permissions.allow` in an untrusted workspace. User
+    projects opened interactively are trusted. A headless run in a fresh folder can hit it.
+- S0 (install gives `figcraft` and `figcraft-cli`, `--version` format), T003: installed with the
+  pacman line of quickstart section 0, sha256sum OK. `command -v figcraft figcraft-cli` gives
+  `/usr/bin/figcraft` and `/usr/bin/figcraft-cli`. `figcraft-cli --version` gives
+  `figcraft-cli 0.13.1` (the first `N.N.N` is the version). PASS, no fallback.
 - S1 (attached MCP sees unsaved changes and selection; lazy attach; app survives the Bash call;
-  roots refuse a write outside `design/`): not run yet.
-- S5 (full layer-tree read without a window): not run yet.
+  roots refuse a write outside `design/`), FigCraft 0.13.1, T004. The app was launched with
+  `setsid nohup figcraft --control 7979 --automation-read-root <p> --automation-write-root <p>/design`.
+  - Step 1: `figcraft-cli mcp --attach 7979` with no app exits 1 before `initialize`:
+    `error: can't reach the FigCraft app at 127.0.0.1:7979: Connection refused (os error 111) (start it with `figcraft --control PORT`)`.
+  - Step 2: FAIL, no lazy attach: the server is gone before the app starts. A new client started
+    after the launch attaches, and `inspect_ui` answers. Fallback taken: quickstart S1 "Fail of
+    2" (contract section 2 Start: after `FigCraft: started`, the user reconnects the server once
+    with `/mcp` or restarts the session).
+  - Step 3: PASS. The user dragged "S1 rect" by hand and left it selected without saving.
+    `inspect_document`: `dirty: true`, rect 3 `x: 266.0` (was 20.0), `selection: [3]`, undo
+    history `Move, Create layer, Create layer`.
+  - Step 4: PASS. `save_file` inside `design/` wrote 3942 bytes. `save_file` to `<p>/s1.figcraft`:
+    `automation path rejected: ... is outside the folders`, and no file.
+  - Step 5: PASS. `run_command` `collab.host`: `command `collab.host` is not available right now: automation roots are set: commands don't reach the network (publishing, live sessions, team libraries and plugin directories are off)`.
+  - Step 6: PASS. The launching session ended. FigCraft pid 348750 still ran and 127.0.0.1:7979
+    still listened. Tested with `setsid nohup` only, plain `nohup` not tested. Contract section 4
+    step 6 uses `setsid nohup` where `setsid` exists.
+- S5 (full layer-tree read without a window), T005. The three Read commands of contract section 2,
+  each with `--automation-read-root <p> --automation-write-root <p>/design`, from `<p>`.
+  - On `design/s1.figcraft` (T004's file): all three exit 0. `design.json` holds the whole
+    document. Per layer: `id`, `name`, `type`, `width`, `height`, `fills`, `parent`, `children`.
+    The rect's position is `transform` `[1, 0, 0, 1, 266.0, 178.0]` (x and y are the last two),
+    and a layer at 0,0 (the frame) has no `transform`. `design.png` (400x300) shows the frame and
+    the moved rect. The `run` line: `{"command":"variable.export","ok":true,"result":{"text":""},"step":0}`
+    (s1 has no variables).
+  - s1 has no auto layout, text or variables, so a second file `design/s5.figcraft` was made
+    headless with `figcraft-cli run <script> --out design/s5.figcraft` (a collection, 5 variables,
+    a frame with vertical auto layout and a text layer, 5 bindings, 13 steps all `ok`). The same
+    three commands, all exit 0. `design.json`: the frame has `layout` (`mode: vertical`, `gap: 12.0`,
+    `padding: [16, 16, 16, 16]`, `main_align`, `cross_align`, `wrap`), `corners.radii`, `fills`
+    and `bound: {"cornerRadius": "VariableID:4", "fill": "VariableID:1", "gap": "VariableID:3"}`.
+    The text layer has `characters: "Hello S5"`, `style` (`font_family`, `font_size: 18.0`,
+    `font_style`, `line_height`, `letter_spacing`), `child_layout` (`sizing_h: hug`), `transform`
+    `[1, 0, 0, 1, 16.0, 16.0]` and `bound: {"fill": "VariableID:2", "fontSize": "VariableID:5"}`.
+    Variable names and values are in the top-level `variables.variables[]` (`id`, `name`,
+    `resolvedType`, `values` per mode). `design.png` (320x200) shows the frame, its fill, radius
+    and text. The `run` line's `result.text`: `/* tokens · Mode 1 */\n:root {\n  --color-bg: #112233;\n  --color-fg: #F0E0D0;\n  --space-gap: 12px;\n  --radius-card: 8px;\n  --font-body: 18px;\n}\n`.
+  - PASS, no fallback, no contract change. The pass on auto layout, text and bound variables rests
+    on the headless s5 file, not on a file drawn in the app.
 
 ## R16. Live runs
 

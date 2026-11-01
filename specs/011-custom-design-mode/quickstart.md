@@ -82,9 +82,10 @@ fail, the fallback taken. A spike that cannot run writes `Not run, <reason>` (le
   5. `run_command {command: "collab.host"}`: pass if refused with the `automation roots are set`
      error (sharing is off, FR-007, SC-005). Fail: Build stops and asks the user (tasks T004).
   6. End the Claude session that ran step 2: pass if the FigCraft window stays open.
-  Fail of 3: Build stops and asks the user (tasks T004). Fail of 2: the lane runs Start before the
-  session's first FigCraft call and the user restarts the session once (a note in
-  `design-tool.md`). Fail of 6: `setsid` before `nohup` where present.
+  Fail of 3: Build stops and asks the user (tasks T004). Fail of 2 (taken): the lane runs Start
+  before the session's first FigCraft call. When Start prints `FigCraft: started on port`, the user
+  reconnects plugin:stratum:figcraft with /mcp (or restarts the session) once, then says go
+  (contract section 2, Start). Fail of 6: `setsid` before `nohup` where present.
 - **S5, read-back.** On `<p>/design/s1.figcraft`: the three Read commands of contract section 2.
   Pass: `design.json` holds, for each layer, name, type, x, y, width, height, auto layout,
   fills, text and bound variables; `design.png` shows the frame; the `run` line's `result.text`
@@ -129,8 +130,11 @@ picks, with its dev server started by the user. Record each in research.md R16.
 - **L1 (US1, SC-001, SC-002, SC-003, SC-005).** A project with a design file, whose
   `.claude/settings.json` holds the D22/D23 allow rule: the 11 names of the `design-tool.md`
   Tools line (US4 is built later, so the user adds them by hand as contract 7d writes them): `/stratum:st-design a settings screen, custom design`. Answer the grill. FigCraft opens by
-  itself and the design appears. By hand: move one block, resize one, recolor one. Say "looks
-  good". Pass: no stop between "looks good" and the gate; the gate's screenshots show all three
+  itself. At the setup stop, reconnect plugin:stratum:figcraft with /mcp and say go. Record (T014,
+  research R16) whether the `st-design` subagent started after the reconnect sees the FigCraft
+  tools: the design appears. By hand: move one block, resize one, recolor one. Say "looks
+  good". Pass: one design stop between the grill and the gate (the reconnect is a setup stop and
+  does not count); no stop between "looks good" and the gate; the gate's screenshots show all three
   changes; the gate shows `DESIGN.md`; on yes the commit holds the screen, `DESIGN.md`,
   `.impeccable/design.json`, the token file and `design/settings.figcraft`; after the commit
   `git status` shows only `design/.read/` untracked; the run asked 0 permission prompts for
@@ -149,5 +153,6 @@ picks, with its dev server started by the user. Record each in research.md R16.
   `FigCraft (optional, for the custom mode):`.
 - **L5 (SC-006).** L1 again on the PC, after `git pull` and section 0 there.
 - **Edge runs.** During L1's stop, close the FigCraft window, then say "good": the lane says the
-  changes are lost, FigCraft opens on the last saved design, and the lane stops again. Run a custom
+  changes are lost, FigCraft opens on the last saved design, and the lane stops again. Record (T014,
+  research R16, spike finding F3) whether that second Start asks for a /mcp reconnect again. Run a custom
   task while another program holds port 7979 (`python3 -m http.server 7979`): the port line.

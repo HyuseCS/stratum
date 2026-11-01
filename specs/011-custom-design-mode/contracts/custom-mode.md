@@ -5,8 +5,8 @@ phrase table (section 9) in the same commit (lessons L14). Every phrase row is a
 text in this file (lessons L1). The checks grep one line at a time, so wrap the built files so
 that each phrase row sits on one line. `<…>` is a placeholder the text keeps as written.
 
-Spike results can change four items, and only these: the MCP tool name form (sections 2, 3, 7d
-and 9, from S2), the `plugin.json` entry (section 6, from S3), the agent's `tools:` line (section 3a and
+Spike results can change five items, and only these: the MCP tool name form (sections 2, 3, 7d
+and 9, from S2), the Start step and the launch line (sections 2 and 4, from S1 steps 2 and 6), the `plugin.json` entry (section 6, from S3), the agent's `tools:` line (section 3a and
 009's `FR-001 agent frontmatter` check and the `C-FR-015 agent tools` check, from S3: dropped when an agent that
 names an absent server's tools cannot start), and the Read commands (section 2, from S5). The task
 that applies a spike result changes this file first.
@@ -48,7 +48,8 @@ second sentence serves US2, and step 8's sentences after `Yes: commit (section 5
 ## 6. Custom
 
 Read `design-tool.md` beside this file: it names the design tool, its install link and its steps.
-The user is stopped once between the grill and the gate: the design tool stop (step 4).
+The user has one design stop between the grill and the gate: the design tool stop (step 4).
+Setup stops (a missing tool, the one-time /mcp reconnect) do not count.
 
 1. Grill as in section 2 step 1. A task that asks for a new look or an overhaul, or a project with
    no design file and no styled screens: run section 2 steps 2 and 3, and the first design takes
@@ -113,7 +114,10 @@ attached to the app that Start runs: `mcp__plugin_stratum_figcraft__<tool>`.
 - **Start.** `<fc> start <project root>`. It makes `design/`. When port 7979 does not answer, it
   starts FigCraft with that control port, the project as its read root and `design/` as its write
   root, so sharing is off. It prints one line. Exit 1: print the line and stop. Never close
-  FigCraft.
+  FigCraft. Run it before the session's first FigCraft call. After `FigCraft: started on port`,
+  this session's FigCraft MCP server started while FigCraft was down and has failed: say
+  "FigCraft is open. Run /mcp, reconnect plugin:stratum:figcraft (or restart this session), then
+  say go." and stop. On go, go on.
 - **Draw.** Open `<project>/design/<screen>.figcraft` with `open_file` when it exists, else make a
   new file with `run_command` `file.new`. Keep the document's `id` and pass it as `document` on
   every call. Make the tokens the brief names FigCraft variables (`list_commands` with filter
@@ -178,8 +182,8 @@ Rule: the agent file names FigCraft only on its `tools:` line (check `C-FR-014 o
 
 ## 4. `scripts/st-figcraft.sh` (new)
 
-Bash. Needs only bash builtins, `python3`, `mkdir`, `nohup`, `tail` and `sleep`, so the tests can
-run it with a stub PATH. No `dirname`, no `sort`.
+Bash. Needs only bash builtins, `python3`, `mkdir`, `nohup`, `tail` and `sleep` (`setsid` when on
+the PATH), so the tests can run it with a stub PATH. No `dirname`, no `sort`.
 
 - `port=${ST_FIGCRAFT_PORT:-7979}` with the comment
   `# ponytail: the port override is a test seam, the plugin.json attach port stays 7979`.
@@ -208,8 +212,9 @@ run it with a stub PATH. No `dirname`, no `sort`.
      project: print `FigCraft: running on port <port>`, exit 0. Else print
      `FigCraft on port <port> was not started for this project. Close it, then say go.`, exit 1.
   5. `other`: print `Port <port> is in use by another program. Free it, then say go.`, exit 1.
-  6. `free`: run `nohup figcraft --control <port> --automation-read-root <project>
-     --automation-write-root <project>/design >/dev/null 2><run>/st-figcraft-<port>.log &`, write
+  6. `free`: run `setsid nohup figcraft --control <port> --automation-read-root <project>
+     --automation-write-root <project>/design >/dev/null 2><run>/st-figcraft-<port>.log &`
+     (plain `nohup` when `command -v setsid` fails), write
      `<pid> <project>` to the record, then probe every 0.5 s for up to 20 s:
      `figcraft`: print `FigCraft: started on port <port>`, exit 0. The pid is gone: print
      `FigCraft did not start: <last line of the log>`, exit 1. 20 s: print
@@ -325,7 +330,8 @@ C-FR-010 design-tool.md	skills/st-design/design-tool.md	`<fc> cli convert design
 C-FR-010 design-tool.md	skills/st-design/design-tool.md	`<fc> cli render design/<screen>.figcraft -o design/.read/<screen>/design.png`,
 C-FR-010 agent	agents/st-design.md	Each fix round runs Read again.
 C-FR-010 SKILL.md	skills/st-design/SKILL.md	Every round reads the saved design, not the open
-C-FR-011 SKILL.md	skills/st-design/SKILL.md	The user is stopped once between the grill and the gate: the design tool stop (step 4).
+C-FR-011 SKILL.md	skills/st-design/SKILL.md	The user has one design stop between the grill and the gate: the design tool stop (step 4).
+C-FR-011 SKILL.md	skills/st-design/SKILL.md	Setup stops (a missing tool, the one-time /mcp reconnect) do not count.
 C-FR-011 SKILL.md	skills/st-design/SKILL.md	the theme pick if one ran, the report and `DESIGN.md`.
 C-FR-012 SKILL.md	skills/st-design/SKILL.md	the commit adds the saved design on the design tool's Files line.
 C-FR-012 design-tool.md	skills/st-design/design-tool.md	`design/.read/` is never
