@@ -41,6 +41,7 @@ project, offers to upgrade graphify, installs its post-commit hook, and checks y
 | `git`, `python3` | git guard, model overrides hook, phase hook, statusline, handoff facts, scripts |
 | `node` | ponytail hooks |
 | `puppeteer-core` (`npm i -g puppeteer-core`), Chrome or Chromium | the Design lane's render check |
+| FigCraft 0.13.1 or later with `figcraft-cli` (`/stratum:st-init` gives the install command) | optional, the Design lane's custom mode |
 | `bunx` (Bun) | statusline bar (falls back to markers only) |
 | `graphify` 0.9.74 or later (`uv tool install graphifyy`) | code navigation graph, Dart support |
 | `gh` | optional, for `st-issues` and `st-pr` |
@@ -88,8 +89,8 @@ The lane follows the highest impact area the change touches.
 
 **Quick lane:** one file, no gate, related tests, commit. A small fix across a few files goes to `st-build` in brief mode. It moves up a lane if it needs a change plan.
 
-**Design lane:** a new look or a new page or screen. New look: a grill for the design file, one reference screen, its checks, your yes. Autonomous: the page in the existing look, checked, then your OK.
-In the Full lane, a task that makes a new screen goes to the Design lane (`st-design`) in the mode you pick at Plan: autonomous or new look.
+**Design lane:** a new look or a new page or screen. New look: a grill for the design file, one reference screen, its checks, your yes. Autonomous: the page in the existing look, checked, then your OK. Custom: you change the design by hand in FigCraft, then the screen is built from it, checked, then your yes.
+In the Full lane, a task that makes a new screen goes to the Design lane (`st-design`) in the mode you pick at Plan: autonomous, new look or custom.
 
 **Build with workers:** say `build with workers`, or name a machine ("US2 on the laptop"). Build sends each phase's `[P]` tasks to `st-worker`, one worker per task.
 
@@ -333,6 +334,7 @@ python3 tests/test_approve_hook.py
 bash tests/test_advisor.sh
 bash tests/test_design_check.sh
 bash tests/test_design_lane.sh
+bash tests/test_figcraft.sh
 bash tests/test_model_files.sh
 bash tests/test_herdr_workspace.sh
 bash tests/test_inspect.sh

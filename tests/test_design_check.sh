@@ -13,17 +13,20 @@ mk() { c="$tmp/$1"; bin="$c/bin"; proj="$c/proj"; glob="$c/global"; mkdir -p "$b
 tool() { : > "$bin/$1"; chmod +x "$bin/$1"; }
 fake_node() { printf '#!/bin/sh\ncase "$1" in -p) echo %s;; *) exit 1;; esac\n' "$1" > "$bin/node"; chmod +x "$bin/node"; }
 fake_npm() { printf '#!/bin/sh\ncase "$1 $2" in "root -g") echo %s;; *) exit 1;; esac\n' "$glob" > "$bin/npm"; chmod +x "$bin/npm"; }
+fake_fc() { printf '#!/bin/sh\n: > %s\nexit 1\n' "$c/called" > "$bin/figcraft"; chmod +x "$bin/figcraft"; }
+fake_appimage() { printf '#!/bin/sh\n: > %s\ncase "$1 $2" in "cli --version") echo figcraft-cli 0.13.1;; *) exit 1;; esac\n' "$c/called" > "$bin/figcraft"; chmod +x "$bin/figcraft"; }
+fake_cli() { printf '#!/bin/sh\n: > %s\ncase "$1" in --version) echo figcraft-cli %s;; *) exit 1;; esac\n' "$c/called" "$1" > "$bin/figcraft-cli"; chmod +x "$bin/figcraft-cli"; }
 run() {
   (
     cd "$1" || exit 99
     unset CHROME_PATH
     [ -n "${3:-}" ] && export CHROME_PATH=$3
-    PATH=$2 "$BASH" "$script" 2>&1
+    PATH=$2 "$BASH" "$script" ${4:+"$4"} 2>&1
   )
 }
 kcase() {
   local out rc
-  out=$(run "$4" "$5" "${6:-}"); rc=$?
+  out=$(run "$4" "$5" "${6:-}" "${7:-}"); rc=$?
   if [ "$rc" = "$2" ] && [ "$out" = "$3" ]; then echo "ok   $1"; return 0; fi
   echo "FAIL $1: exit $rc, want exit $2"
   printf '     got:  %s\n     want: %s\n' "$out" "$3"
@@ -65,6 +68,40 @@ kcase "K12 parent puppeteer" 0 "design tools: ok" "$proj" "$bin" "$chrome_ok"
 
 mk K13; fake_node 20.11.1; fake_npm; mkdir -p "$glob/puppeteer-core"; tool pacman; : > "$c/chrome"
 linux_only "K13 CHROME_PATH not executable" && kcase "K13 CHROME_PATH not executable" 1 "missing: Chrome or Chromium. Install: sudo pacman -S chromium" "$proj" "$bin" "$c/chrome"
+
+mk K14; fake_node 20.11.1; fake_npm; mkdir -p "$glob/puppeteer-core"; fake_fc; fake_cli 0.13.1
+kcase "K14 --custom all present" 0 "design tools: ok" "$proj" "$bin" "$chrome_ok" --custom
+check "K14 FigCraft checked" '[ -e "$c/called" ]'
+
+mk K15; fake_node 20.11.1; fake_npm; mkdir -p "$glob/puppeteer-core"; fake_cli 0.13.1
+kcase "K15 --custom no FigCraft" 1 "missing: FigCraft. Install: https://github.com/storytold/figcraft/releases" "$proj" "$bin" "$chrome_ok" --custom
+
+mk K16; fake_node 20.11.1; fake_npm; mkdir -p "$glob/puppeteer-core"; fake_fc
+kcase "K16 --custom no figcraft-cli" 1 "missing: figcraft-cli. Install: https://github.com/storytold/figcraft/releases" "$proj" "$bin" "$chrome_ok" --custom
+
+mk K17; fake_node 20.11.1; fake_npm; mkdir -p "$glob/puppeteer-core"; fake_fc; fake_cli 0.12.1
+kcase "K17 --custom too old" 1 "too old: figcraft-cli 0.12.1, needs 0.13.1 or later. Install: https://github.com/storytold/figcraft/releases" "$proj" "$bin" "$chrome_ok" --custom
+
+mk K18; fake_node 20.11.1; fake_npm; mkdir -p "$glob/puppeteer-core"; fake_fc; fake_cli 0.13.1
+kcase "K18 no --custom, no FigCraft call" 0 "design tools: ok" "$proj" "$bin" "$chrome_ok"
+check "K18 FigCraft not run" '[ ! -e "$c/called" ]'
+
+mk K19; fake_node 20.11.1; fake_npm; mkdir -p "$glob/puppeteer-core"; fake_appimage
+kcase "K19 --custom AppImage only" 0 "design tools: ok" "$proj" "$bin" "$chrome_ok" --custom
+check "K19 AppImage checked" '[ -e "$c/called" ]'
+
+mk K21; fake_node 20.11.1; fake_npm; mkdir -p "$glob/puppeteer-core"
+printf '#!/bin/sh\ncase "$*" in *--version*) echo FigCraft 0.13.1;; *) exit 1;; esac\n' > "$bin/figcraft"; chmod +x "$bin/figcraft"
+kcase "K21 --custom native app, no figcraft-cli" 1 "missing: figcraft-cli. Install: https://github.com/storytold/figcraft/releases" "$proj" "$bin" "$chrome_ok" --custom
+
+mk K22; fake_node 20.11.1; fake_npm; mkdir -p "$glob/puppeteer-core"; fake_fc; fake_cli 0.13.0
+kcase "K22 --custom 0.13.0 too old" 1 "too old: figcraft-cli 0.13.0, needs 0.13.1 or later. Install: https://github.com/storytold/figcraft/releases" "$proj" "$bin" "$chrome_ok" --custom
+
+mk K23; fake_node 20.11.1; fake_npm; mkdir -p "$glob/puppeteer-core"; fake_fc; fake_cli 1.0.0
+kcase "K23 --custom 1.0.0 ok" 0 "design tools: ok" "$proj" "$bin" "$chrome_ok" --custom
+
+mk K20; tool apt-get
+kcase "K20 --custom no node, no FigCraft" 1 $'missing: node 18 or later. Install: sudo apt install nodejs npm\nmissing: puppeteer-core. Install: npm i -g puppeteer-core\nmissing: FigCraft. Install: https://github.com/storytold/figcraft/releases\nmissing: figcraft-cli. Install: https://github.com/storytold/figcraft/releases' "$proj" "$bin" "$chrome_ok" --custom
 
 git_after=$(git -C "$root" status --porcelain)
 check "K11 no writes" '[ "$git_before" = "$git_after" ] && [ "$k1" = 0 ]'

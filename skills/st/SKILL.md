@@ -24,6 +24,7 @@ The highest area wins:
 |-------------|----------|-------------|
 | Privacy and access | access rules, data model, contracts, sign-in, personal or minors' data | Full |
 | New look, page or screen | a new look, or a page or screen the project does not have yet, when the screen is the whole task | Design |
+| Custom design | a task that asks for custom design, also for a page or screen the project has | Design |
 | New user story or feature | anything not in a current spec | Full |
 | Core runtime | background services, offline queue, workers, notices | Fast |
 | Screens | layout, components, navigation | Fast (Quick for a small fix in a few files) |

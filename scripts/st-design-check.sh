@@ -52,5 +52,9 @@ if [ "$found" = 0 ]; then
   missing=1
 fi
 
+if [ "${1:-}" = --custom ]; then
+  "$BASH" "${0%/*}/st-figcraft.sh" check || missing=1
+fi
+
 [ "$missing" = 0 ] && echo "design tools: ok"
 exit "$missing"
