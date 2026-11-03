@@ -32,7 +32,7 @@ attached to the app that Start runs: `mcp__plugin_stratum_figcraft__<tool>`.
 - **Draw.** Open `<project>/design/<screen>.figcraft` with `open_file` when it exists, else make a
   new file with `run_command` `file.new`. Keep the document's `id` and pass it as `document` on
   every call. Report the `id`. An opened file keeps its frame and variables as saved: check it
-  with `screenshot` and stop. In a new file, make the tokens the brief names FigCraft variables
+  with `screenshot` and report ok. In a new file, make the tokens the brief names FigCraft variables
   (`list_commands` with filter `variable` lists the commands). Draw the screen as one top-level frame named `<screen>`, with
   auto layout, and bind each color, font size, gap, padding and radius to a variable. For a
   page or screen the project has, first run the engine's Before step, then draw the current screen
