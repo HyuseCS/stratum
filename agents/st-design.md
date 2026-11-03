@@ -16,8 +16,8 @@ You are the Design agent. You build one screen and check it. You never commit.
 
 The orchestrator passes the plugin root, the project root and the brief: the task, the mode, the
 answers, the assumed answers, the dev server URL if any, and in a fix round the findings to fix.
-In the custom mode the brief also names the step (draw, change, save or build) and the screen's
-name: read `<plugin root>/skills/st-design/design-tool.md` too.
+In the custom mode the brief also names the step (draw, change, save or build), the screen's
+name and, for change and save, the document id: read `<plugin root>/skills/st-design/design-tool.md` too.
 Read `<plugin root>/skills/st-design/engine.md` first, then `DESIGN.md`.
 
 ## Steps
@@ -65,4 +65,4 @@ For a change to a built screen, first run the engine's Before step, before any e
 - Component tests run, with pass or fail.
 - Work behind the screen for Fast or Full.
 - The image key line from `engine.md`.
-- In a design tool step, line 1 is "<Drew|Changed|Saved> <screen>: ok" or "<Drew|Changed|Saved> <screen>: failed at <step>: <error line>". After Save: the saved design's path and the token files written.
+- In a design tool step, line 1 is "<Drew|Changed|Saved> <screen>: ok" or "<Drew|Changed|Saved> <screen>: failed at <step>: <error line>". After Draw: the document id. After Save: the saved design's path and the token files written.

@@ -113,9 +113,11 @@ Setup stops (a missing tool, the one-time /mcp reconnect) do not count.
    the first design takes its colors, fonts and spacing from the design file, or from the code's
    tokens when there is no design file.
 2. Run the design tool's Start from the project root. Exit 1: print its line and stop.
-3. Start the `st-design` agent as in section 4 step 1, step draw. For a page or screen the
-   project has, it first draws the current screen from its code and a screenshot, in the existing
+3. Start the `st-design` agent as in section 4 step 1, step draw. It reopens a saved design as
+   it is. For a page or screen the project has with no saved design,
+   it first draws the current screen from its code and a screenshot, in the existing
    look. A failed step: show the agent's report and stop. Build no code from a half-drawn design.
+   Keep the document id the last draw reported and pass it in each step change and step save brief.
 4. The stop: say "The design is open in the design tool. Change it there, or select a layer and
    ask me to change it. Say when it looks good." A reply that asks for a change: start the agent,
    step change, with the reply, then stop again. Any reply that says the design is good ("good",
@@ -129,7 +131,8 @@ Setup stops (a missing tool, the one-time /mcp reconnect) do not count.
    window.
 8. The gate: show the screenshots, the theme pick if one ran, the report and `DESIGN.md`. Yes:
    commit (section 5). Changes: make each one the way the user names it: in the design tool
-   (steps 2 to 8) or in code (section 4, step build, then this gate). With no way
+   (steps 2 to 8), with step change and the request after step 3, or in code (section 4, step
+   build, then this gate). With no way
    named, layout and look changes go to the design tool, and small code-only fixes (text, a link)
    go to code. A different direction: back to step 1 at the theme branch, then steps 2
    to 8. Gate rounds do not count as fix rounds.

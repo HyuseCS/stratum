@@ -31,16 +31,18 @@ attached to the app that Start runs: `mcp__plugin_stratum_figcraft__<tool>`.
   say go." and stop. On go, go on.
 - **Draw.** Open `<project>/design/<screen>.figcraft` with `open_file` when it exists, else make a
   new file with `run_command` `file.new`. Keep the document's `id` and pass it as `document` on
-  every call. Make the tokens the brief names FigCraft variables (`list_commands` with filter
-  `variable` lists the commands). Draw the screen as one top-level frame named `<screen>`, with
+  every call. Report the `id`. An opened file keeps its frame and variables as saved: check it
+  with `screenshot` and stop. In a new file, make the tokens the brief names FigCraft variables
+  (`list_commands` with filter `variable` lists the commands). Draw the screen as one top-level frame named `<screen>`, with
   auto layout, and bind each color, font size, gap, padding and radius to a variable. For a
   page or screen the project has, first run the engine's Before step, then draw the current screen
   from its code and those screenshots. Check with `screenshot`. Then run Save. A failed call:
   report the step and its error, and stop.
-- **Change.** Read the selection with `inspect_document` (`selection`). When the request says
+- **Change.** Pass the brief's document `id` as `document` on every call. Read the selection with `inspect_document` (`selection`). When the request says
   "this" or "the selected", change those layers, else the layers the request names. Check with
   `screenshot`. Do not save.
-- **Save.** `save_file` with `document` and the path `<project>/design/<screen>.figcraft`. A call
+- **Save.** `save_file` with `document` and the path `<project>/design/<screen>.figcraft`.
+  `document` is the brief's document `id`. A call
   that fails because the app is gone: report `Design tool window closed.` and stop.
 - **Read.** In the project root, write `design/.read/<screen>/export.json` as
   `[{"command": "variable.export", "params": {"format": "css"}}]`. Then run, each with
