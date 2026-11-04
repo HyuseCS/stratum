@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-usage() { echo "usage: st-worker.sh start <id> --task <file> --test <cmd> --lane <text> --roster <file> [--machine <m> --repo <path>] [--model <name>] [--autonomous] | goal <id> --test <cmd> [--machine <m>] | wait <id> [--machine <m>] | answer <id> [--machine <m>] --keys <key>... | --text <text> | result <id> [--machine <m>] | close <id> [--machine <m>] | list [--machine <m>] | headless <id> --task <file> --test <cmd> [--model <name>] | approve <id> --request <rid> --input-stdin --record <file> [--machine <m>] | pass <id> --request <rid> [--machine <m>] | autonomous-off --roster <file>" >&2; exit 2; }
+usage() { echo "usage: st-worker.sh start <id> --task <file> --test <cmd> --lane <text> --roster <file> [--machine <m> --repo <path>] [--model <name>] [--autonomous] | goal <id> --test <cmd> [--machine <m>] | wait <id> [--machine <m>] | answer <id> [--machine <m>] --keys <key>... | --text <text> | result <id> [--machine <m>] | close <id> [--machine <m>] | list [--machine <m>] | headless <id> --task <file> --test <cmd> [--model <name>] | approve <id> --request <rid> --input-stdin --record <file> [--machine <m>] | pass <id> --request <rid> [--machine <m>] | autonomous-off [--roster <file>]" >&2; exit 2; }
 fail() { echo "$1" >&2; exit 1; }
 [ $# -gt 0 ] || usage
 cmd=$1; shift
@@ -46,7 +46,6 @@ case $cmd in
   answer) [ "${text+x}${keys+x}" = x ] || usage ;;
   approve) [ -n "${rid+x}" ] && [ -n "${record+x}" ] && [ -n "$instdin" ] || usage ;;
   pass) [ -n "${rid+x}" ] || usage ;;
-  autonomous-off) [ -n "${roster+x}" ] || usage ;;
 esac
 for v in ${text+"$text"} ${keys+"${keys[@]}"}; do [[ $v != -* ]] || { echo 'Answer values must not start with -.' >&2; exit 2; }; done
 
@@ -436,7 +435,7 @@ approve | pass)
   fi
   ;;
 autonomous-off)
-  [ -f "$roster" ] || fail "Roster not found: $roster"
+  [ -z "${roster+x}" ] || [ -f "$roster" ] || fail "Roster not found: $roster"
   declare -A seen=()
   bad=0
   while IFS= read -r l || [ -n "$l" ]; do
@@ -446,13 +445,15 @@ autonomous-off)
     [ "$mm" = local ] || k+=$'\t'${f[4]:-}
     [ -n "$mm" ] && [ -z "${seen[$k]:-}" ] || continue
     seen[$k]=1
-    msg=
+    msg= held=
     if [ "$mm" = local ]; then
       F=$MAIN/.stratum/autonomous
       if [ -z "$MAIN" ]; then
         msg="not in a git repo"
       elif [ -f "$F" ] && [ "$(head -n 1 "$F")" = "$SID" ]; then
         rm -f "$F" 2>"$e" || msg=$(head -1 "$e")
+      elif [ -f "$F" ]; then
+        held=$(head -n 1 "$F")
       fi
     elif [ -z "${f[4]:-}" ]; then
       msg="Roster row for ${f[0]} needs the repo path as a fifth field."
@@ -463,15 +464,18 @@ autonomous-off)
       msg="Unknown machine: $mm."
     else
       quote "${f[4]}"
-      sshq "[ ! -L $Q/.stratum ] || { echo \"$Q/.stratum is a symlink\" >&2; exit 3; }; [ ! -L $Q/.stratum/autonomous ] || { echo \"$Q/.stratum/autonomous is a symlink\" >&2; exit 3; }; [ ! -f $Q/.stratum/autonomous ] || [ \"\$(head -n 1 $Q/.stratum/autonomous)\" != $(printf %q "$SID") ] || rm -f $Q/.stratum/autonomous" </dev/null || { rc=$?; msg=$(head -1 "$e"); msg=${msg:-exit $rc}; }
+      sshq "[ ! -L $Q/.stratum ] || { echo \"$Q/.stratum is a symlink\" >&2; exit 3; }; [ ! -L $Q/.stratum/autonomous ] || { echo \"$Q/.stratum/autonomous is a symlink\" >&2; exit 3; }; [ ! -f $Q/.stratum/autonomous ] || { h=\$(head -n 1 $Q/.stratum/autonomous); if [ \"\$h\" = $(printf %q "$SID") ]; then rm -f $Q/.stratum/autonomous; else printf '%s\n' \"\$h\"; fi; }" </dev/null >"$t" || { rc=$?; msg=$(head -1 "$e"); msg=${msg:-exit $rc}; }
+      [ -n "$msg" ] || held=$(head -n 1 "$t")
     fi
     if [ -n "$msg" ]; then
       printf 'autonomous off failed\t%s\t%s\n' "$mm" "$msg"
       bad=1
+    elif [ -n "$held" ]; then
+      printf 'autonomous off skipped\t%s\tflag held by %s\n' "$mm" "$held"
     else
       printf 'autonomous off\t%s\n' "$mm"
     fi
-  done <"$roster"
+  done < <(if [ -n "${roster+x}" ]; then cat -- "$roster"; else printf -- '-\tlocal\n'; fi)
   exit "$bad"
   ;;
 headless)

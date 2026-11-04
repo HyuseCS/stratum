@@ -1188,6 +1188,12 @@ check "AO1 both flags with this session id are removed" '[ ! -e "$repo/.stratum/
 xsetup; autoset other-session; printf '%s\n' other-session > "$rrepo/.stratum/autonomous"
 STUB_SSH_EXEC=1 CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-off --roster "$aoroster"
 check "AO2 flags with another id are kept: exit 0" '[ $rc = 0 ] && [ -e "$repo/.stratum/autonomous" ] && [ -e "$rrepo/.stratum/autonomous" ]'
+check "AO2 each kept flag names the id that holds it" 'hasline "autonomous off skipped\tlocal\tflag held by other-session" && hasline "autonomous off skipped\tlaptop\tflag held by other-session" && ! grep -q "^autonomous off	" <<<"$out"'
+reset; : > "$tmp/ssh"; CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-off
+check "AO5 no roster, another id: exit 0, the skipped line, flag kept, no ssh" '[ $rc = 0 ] && [ "$out" = "$(printf "autonomous off skipped\tlocal\tflag held by other-session")" ] && [ -e "$repo/.stratum/autonomous" ] && [ ! -s "$tmp/ssh" ]'
+autoset "$sid"
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-off
+check "AO5 no roster, this id: exit 0, the local line, flag removed" '[ $rc = 0 ] && [ "$out" = "$(printf "autonomous off\tlocal")" ] && [ ! -e "$repo/.stratum/autonomous" ]'
 xsetup; autoset "$sid"; printf '%s\n' "$sid" > "$rrepo/.stratum/autonomous"
 STUB_SSH_RC=255 CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-off --roster "$aoroster"
 check "AO3 ssh down: exit 1, the failed laptop line, local removed, laptop flag kept" '[ $rc = 1 ] && hasline "autonomous off failed\tlaptop\tssh: stub failure" && hasline "autonomous off\tlocal" && [ ! -e "$repo/.stratum/autonomous" ] && [ -e "$rrepo/.stratum/autonomous" ]'

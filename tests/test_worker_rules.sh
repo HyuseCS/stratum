@@ -15,7 +15,7 @@ W5|skills/st-worker/SKILL.md|Never approve a push, a force-push, deleting a bran
 W6|skills/st-worker/SKILL.md|If a permission check or the classifier blocks the `approve` call, try no other way: tell the user the workspace, the tab and the prompt.
 W7|skills/st-worker/SKILL.md|At the end of the run, show the approvals file word for word.
 W8|skills/st/SKILL.md|Autonomous build mode turns on only when the user says so in their own words for this run ("build with workers, autonomous", "autonomous mode"). Then run `printf '%s\n' "$CLAUDE_CODE_SESSION_ID" > "$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/.stratum/autonomous"` (the main checkout's flag, also from a linked worktree) and say `Autonomous build mode: on for this run`.
-W9|skills/st/SKILL.md|It ends when the Build or worker run ends, or when the user says "stop autonomous": run `bash <plugin root>/scripts/st-worker.sh autonomous-off --roster <roster file>` if workers ran, then `rm -f "$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/.stratum/autonomous"`, and say `Autonomous build mode: off`. A new session never starts in it.
+W9|skills/st/SKILL.md|It ends when the Build or worker run ends, or when the user says "stop autonomous": run `bash <plugin root>/scripts/st-worker.sh autonomous-off --roster <roster file>` if workers ran, else `bash <plugin root>/scripts/st-worker.sh autonomous-off`. It removes only a flag that holds this session's id. Show its lines word for word, and say `Autonomous build mode: off`. A new session never starts in it.
 W10|skills/st-build/SKILL.md|When the user said "build with workers" or named a machine ("US2 on the laptop"), run the phase's `[P]` tasks with `/stratum:st-worker` (Skill tool), one worker per task. Otherwise use subagents:
 W11|skills/st-worker/SKILL.md|`/stratum:st-build` sends a phase's `[P]` tasks here when the user says "build with workers" or names a machine. Pass `--autonomous` to `start` only while autonomous build mode is on.
 W12|skills/st/SKILL.md|When the user asks to open workspaces for agents to work in by themselves, use `/stratum:st-worker` with autonomous build mode on, and a worker on a whole issue opens its own PR. `/stratum:st-herdr-workspace` stays a tool the user runs by hand.
@@ -32,6 +32,7 @@ done <<'TABLE'
 G1|skills/st-worker/SKILL.md|pick the one-time yes
 G2|skills/st-worker/SKILL.md|a tool permission for the task's own command
 G3|skills/st-worker/SKILL.md|The build loop (/stratum:st-build) does not use workers.
+G4|skills/st/SKILL.md|rm -f "$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/.stratum/autonomous"
 TABLE
 
 bare=$(grep -oE '(>|\brm( -f)?) +"?[^"]*\.stratum/autonomous' "$root/skills/st/SKILL.md")
