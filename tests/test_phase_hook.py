@@ -41,11 +41,11 @@ class PhaseHookTest(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         return r.stdout
 
-    def prompt(self, text, cwd=None):
-        return self.run_hook({"hook_event_name": "UserPromptSubmit", "prompt": text}, cwd)
+    def prompt(self, text, cwd=None, sid="s1"):
+        return self.run_hook({"hook_event_name": "UserPromptSubmit", "prompt": text, "session_id": sid}, cwd)
 
-    def skill(self, name):
-        return self.run_hook({"hook_event_name": "PreToolUse", "tool_name": "Skill",
+    def skill(self, name, sid="s1"):
+        return self.run_hook({"hook_event_name": "PreToolUse", "tool_name": "Skill", "session_id": sid,
                               "tool_input": {"skill": name, "args": "x"}})
 
     def context(self, out, event):
@@ -99,7 +99,7 @@ class PhaseHookTest(unittest.TestCase):
     def test_non_phase_changes_nothing(self):
         self.write_state(feature_directory="specs/001-x", phase="done", lane="full")
         before = self.raw()
-        for text in ("/stratum:st-status", "/stratum:st", "/stratum:st-planner", "please run /stratum:st-build", "stratum:st-plan",
+        for text in ("/stratum:st", "/stratum:st-planner", "please run /stratum:st-build", "stratum:st-plan",
                      "/stratum:st-build-x", "hello", "", "/stratum:st-quick-x", "please run /stratum:st-fast", "/stratum:st-fuller"):
             self.assertEqual(self.prompt(text).strip(), "", text)
         for name in ("stratum:st-status", "stratum:st-fastx", "other:st-quick", "st-close", "other:st-build", ""):
@@ -114,6 +114,56 @@ class PhaseHookTest(unittest.TestCase):
             self.assertEqual(self.context(self.prompt("what next?"), "UserPromptSubmit"),
                              f"Start your reply with {label}.", phase)
             self.assertEqual(self.raw(), before)
+
+    def test_lane_label_beats_phase(self):
+        for lane, phase, label in (("fast", "build", "[Fast lane]"), ("fast", "close", "[Fast lane]"),
+                                   ("quick", "build", "[Quick lane]"), ("full", "build", "[Full lane | Build]")):
+            self.write_state(feature_directory="specs/001-x", phase=phase, lane=lane)
+            self.assertEqual(self.context(self.prompt("what next?"), "UserPromptSubmit"),
+                             f"Start your reply with {label}.", lane + "/" + phase)
+
+    def test_held_skill_labels_until_cleared(self):
+        for name in ("st-worker", "st-build"):
+            self.write_state(feature_directory="specs/001-x", phase="done", lane="full")
+            self.assertEqual(self.skill("stratum:" + name).strip(), "", name)
+            self.assertEqual(self.read_state(), {"feature_directory": "specs/001-x", "phase": "done", "lane": "none",
+                                                 "skill": name, "skill_session": "s1"}, name)
+            self.assertEqual(self.context(self.prompt("what next?"), "UserPromptSubmit"),
+                             f"Start your reply with [{name}].", name)
+            self.assertEqual(self.prompt("what next?", sid="s2").strip(), "", name + " new session")
+            state = self.read_state()
+            state["skill"] = ""
+            self.write_state(**state)
+            self.assertEqual(self.prompt("what next?").strip(), "", name + " cleared")
+        self.write_state(feature_directory=None, phase=None, lane=None)
+        self.assertEqual(self.context(self.prompt("/stratum:st-build T001"), "UserPromptSubmit"),
+                         "Start your reply with [st-build].")
+        self.assertEqual(self.read_state()["phase"], None)
+
+    def test_held_skill_keeps_running_lane(self):
+        for lane, phase in (("full", "build"), ("fast", "fast")):
+            self.write_state(feature_directory="specs/001-x", phase=phase, lane=lane)
+            before = self.raw()
+            self.skill("stratum:st-worker")
+            self.assertEqual(self.raw(), before, lane)
+
+    def test_phase_after_held_skill_is_full_lane(self):
+        self.write_state(feature_directory="specs/001-x", phase="done", lane="none", skill="st-worker", skill_session="s1")
+        self.assertEqual(self.context(self.prompt("/stratum:st-define x"), "UserPromptSubmit"),
+                         "Start your reply with [Full lane | Define].")
+        self.assertEqual(self.read_state()["lane"], "full")
+
+    def test_typed_skill_labels_its_reply(self):
+        self.write_state(feature_directory="specs/001-x", phase="done", lane="none", skill="st-worker", skill_session="s1")
+        before = self.raw()
+        self.assertEqual(self.context(self.prompt("/stratum:st-status"), "UserPromptSubmit"),
+                         "Start your reply with [st-status].")
+        self.assertEqual(self.raw(), before)
+        self.assertEqual(self.skill("stratum:st-status").strip(), "")
+        self.assertEqual(self.raw(), before)
+        self.write_state(feature_directory="specs/001-x", phase="build", lane="full")
+        self.assertEqual(self.context(self.prompt("/stratum:st-status"), "UserPromptSubmit"),
+                         "Start your reply with [Full lane | Build].")
 
     def test_no_label_when_no_lane_runs(self):
         for phase in ("done", None, "implement"):
