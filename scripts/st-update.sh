@@ -329,7 +329,13 @@ if cmd == "audit":
         if f in det:
             return (f, kind, name, "skip", "detached HEAD, no branch to commit on")
         d = dirty(f, n)
-        return (f, kind, name, "skip", d) if d else r
+        if d:
+            return (f, kind, name, "skip", d)
+        if kind in ("ignore", "pointer") and name not in [l.strip() for l in (read(f"{f}/{n}") or "").splitlines()]:
+            p = git("-C", f, "log", "-1", "--no-show-signature", "--first-parent", "--format=%h", "-G^" + re.sub(r"([.\[\]()*+?{}|^$\\])", r"\\\1", name) + "$", "--", n)
+            if p.returncode == 0 and p.stdout.strip():
+                return (f, kind, name, state, f"removed in {clean(p.stdout.strip())}")
+        return r
 
     print("\n".join("\t".join(mark(r)) for r in ROWS))
     sys.exit()

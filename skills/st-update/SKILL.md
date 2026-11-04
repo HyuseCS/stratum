@@ -20,16 +20,20 @@ script and to git (folder, kind, name, paths, message).
    A folder with `worker` in a detail is a worker worktree: say so on its rows and its count line.
 3. **Gate.** A `marketplace-branch` row: above the question, warn
    `The marketplace folder <installLocation> is on branch <branch>, not main. The update installs that branch.`
-   Then ask one question: OK to update all, or `skip <worktree>` (one or more), or no.
+   Then ask one question: OK to update all, or `skip <worktree>` or `skip <folder> <kind> <name>` (one or more each), or no.
    No: stop, nothing changed.
    Change nothing before the OK.
-   A skipped worktree is left out of every step after the gate, and the report names it.
-4. **Plugin.** For each folder with an `install` row that is `outdated`, skipped worktrees left out,
+   A skipped worktree or item is left out of every step after the gate, and the report names it.
+   An item is named by its folder, kind and name, as the table shows them.
+   An `allow` item is named as `fix` names it: `skip <folder> allow <settings file>:<entry>`.
+   A skip that names no row: say so and ask again.
+4. **Plugin.** For each folder with an `install` row that is `outdated`, skipped worktrees and skipped `install` items left out,
    run `bash <script> plugin <folder>`. Exit 0 prints `ok <version> <installPath>`.
    Exit 1 prints the message and a `Run:` command on stderr. Keep both for the report and
    go on with the next folder.
    Then run the step 1 audit once more, with the same argument.
    Steps 5 to 7 take their rows from this second audit.
+   Leave the skipped worktrees and items out of these rows.
 5. **Ask.**
    For each `ask` row: show the old and the new `statusLine` command and ask. Yes: `fix ... --force`. No: leave it.
 6. **Fix.** For every `outdated`, `new` and `discontinued` row, `statusline` rows included and
@@ -55,6 +59,7 @@ script and to git (folder, kind, name, paths, message).
    A denied commit: quote the deny reason and give the exact command (D11).
    Name no personal script. Never work around it.
 8. **Report.** Per folder: what changed, what was skipped and why, the commands the user must run.
+   Name each worktree and item skipped at the gate.
    Last line: `Restart running Claude Code sessions in these folders to load Stratum <version>.`
 
 Never: change a user data file (FR-013), write before the gate, stage a path it did not change, run `claude plugin update` in a folder without its own record, edit `installed_plugins.json`.

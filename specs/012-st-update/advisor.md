@@ -14,3 +14,7 @@ summary: US2/US3 decisions: accept 1,2,4-8,10,12; 3 skip rows need their reason 
 
 ## diff | 2026-11-04T09:05:53Z | /advisor
 summary: /advisor unavailable in this session, diff d4b00a8..ef7b47c not reviewed by an advisor
+
+## change | 2026-11-04T10:00:51Z | sha256 997da512e8acc43e194f6f8444fd64034cf5d29407cd923a4f519feafc777e1d | REVISE
+summary: The history lookup fits the existing audit flow, but the proposed item selector does not uniquely identify every audit row.
+- [MEDIUM] specs/012-st-update/changes/001-skip-item-removed-in.md:12: Disambiguate item skips when the same allow entry appears in both settings files. Evidence: The plan identifies an item solely by folder, kind and name. scripts/st-update.sh:297-304 emits separate allow rows for .claude/settings.json and .claude/settings.local.json with identical values for those three fields; only detail distinguishes them. The fix caller already requires detail:name (skills/st-update/SKILL.md:38). Consequently, the proposed selector cannot skip just one of these items. Specify a file discriminator or explicitly define that matching rows are skipped together, and add coverage for this case.

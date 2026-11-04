@@ -483,4 +483,41 @@ printf 'corrupt\n' > "$tmp/u24/.git/index"
 audit "$tmp/u24"
 check "U15 corrupt index audit exits 0" [ "$rc" = 0 ]
 check "U15 corrupt index gives a skip row with the git status detail" exits 0 [ "$(rowsof "$tmp/u24" pointer @.stratum/constitution.md | cut -f4,5)" = "skip	git status failed for CLAUDE.md" ]
+git init -q -b main "$tmp/u25"
+mkdir -p "$tmp/u25/.stratum"
+printf 'node_modules/\n.stratum/models.json\n.stratum/weather.json.bak\nxstratum/handoff_md\nx/.stratum/powerline.json\n.stratum/lessons.md\n!.stratum/lessons.md\n' > "$tmp/u25/.gitignore"
+printf '@AGENTS.md\n@.stratum/constitution.md\n' > "$tmp/u25/CLAUDE.md"
+printf 'Agents.\n' > "$tmp/u25/AGENTS.md"
+git -C "$tmp/u25" add -A
+git -C "$tmp/u25" commit -qm init
+printf 'node_modules/\n.stratum/lessons.md\n!.stratum/lessons.md\n' > "$tmp/u25/.gitignore"
+printf '@AGENTS.md\n' > "$tmp/u25/CLAUDE.md"
+git -C "$tmp/u25" commit -qam "fixture: drop the stratum lines"
+sha=$(git -C "$tmp/u25" log -1 --format=%h)
+audit "$tmp/u25"
+check "U25 ignore .stratum/models.json removed in the commit that dropped it" [ "$(rowsof "$tmp/u25" ignore .stratum/models.json | cut -f4,5)" = "$(printf 'new\tremoved in %s' "$sha")" ]
+check "U25 pointer @.stratum/constitution.md removed in the commit that dropped it" [ "$(rowsof "$tmp/u25" pointer @.stratum/constitution.md | cut -f4,5)" = "$(printf 'new\tremoved in %s' "$sha")" ]
+check "U25 ignore never committed keeps .gitignore" [ "$(rowsof "$tmp/u25" ignore .stratum/handoff.md | cut -f4,5)" = "$(printf 'new\t.gitignore')" ]
+check "U25 ignore whose only removed line is a longer .bak keeps .gitignore" [ "$(rowsof "$tmp/u25" ignore .stratum/weather.json | cut -f4,5)" = "$(printf 'new\t.gitignore')" ]
+check "U25 ignore whose line is in the file now keeps .gitignore" [ "$(rowsof "$tmp/u25" ignore .stratum/lessons.md | cut -f4,5)" = "$(printf 'new\t.gitignore')" ]
+check "U25 ignore whose only removed line has a prefix keeps .gitignore" [ "$(rowsof "$tmp/u25" ignore .stratum/powerline.json | cut -f4,5)" = "$(printf 'new\t.gitignore')" ]
+audit "$tmp/u23"
+check "U25 non-git folder pointer keeps CLAUDE.md" [ "$(rowsof "$tmp/u23" pointer @.stratum/constitution.md | cut -f5)" = CLAUDE.md ]
+printf 'x\n' >> "$tmp/u25/.gitignore"
+audit "$tmp/u25"
+check "U25 uncommitted .gitignore wins over the lookup" [ "$(rowsof "$tmp/u25" ignore .stratum/models.json | cut -f4,5)" = "$(printf 'skip\t.gitignore has uncommitted changes')" ]
+check "U25 no ignore or pointer name holds an ERE special character but ." [ -z "$(bash "$script" items | awk -F'\t' '$1 == "ignore" || $1 == "pointer" { print $2 }' | grep -E '[][(){}*+?|^$\\]')" ]
+
+mkdir -p "$tmp/u26/.stratum" "$tmp/u26/.claude"
+printf '{"permissions": {"allow": ["Skill(stratum:st-gone)"]}}\n' > "$tmp/u26/.claude/settings.json"
+printf '{"permissions": {"allow": ["Skill(stratum:st-gone)"]}}\n' > "$tmp/u26/.claude/settings.local.json"
+audit "$tmp/u26"
+check "U26 audit gives the dead allow entry in both settings files" [ "$(rowsof "$tmp/u26" allow 'Skill(stratum:st-gone)' | cut -f4,5)" = "$(printf 'discontinued\t.claude/settings.json\ndiscontinued\t.claude/settings.local.json')" ]
+jsonsum=$(sha256sum "$tmp/u26/.claude/settings.json")
+run fix "$tmp/u26" allow ".claude/settings.local.json:Skill(stratum:st-gone)"
+check "U26 fix of the local row exits 0 and changes that file" exits 0 contains "$out" "changed .claude/settings.local.json"
+check "U26 the skipped settings.json row is byte-equal" [ "$jsonsum" = "$(sha256sum "$tmp/u26/.claude/settings.json")" ]
+audit "$tmp/u26"
+check "U26 second audit keeps only the settings.json row" [ "$(rowsof "$tmp/u26" allow 'Skill(stratum:st-gone)' | cut -f4,5)" = "$(printf 'discontinued\t.claude/settings.json')" ]
+
 exit "$fail"

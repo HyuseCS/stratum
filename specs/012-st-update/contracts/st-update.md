@@ -50,6 +50,12 @@ output.
   `git status` that fails gives `skip` with the detail `git status failed for <file>`. On a
   detached HEAD, every non-current committed-file row of that checkout gets `skip` with the
   detail `detached HEAD, no branch to commit on` (FR-017, D8).
+- A `new` `ignore` or `pointer` row of a git checkout whose name is not a line of its file now
+  (`.gitignore` or `CLAUDE.md`, where `fix` appends, not `AGENTS.md` or `CLAUDE.local.md`) gets
+  the detail `removed in <sha>` when
+  `git log -1 --no-show-signature --first-parent --format=%h -G^<line>$ -- <file>` finds a commit
+  that added or removed that line (a merge counts against its first parent). Every POSIX ERE special character in the line is escaped. The
+  state stays `new`. Read only. A `skip` from the checks above wins.
 - Exit 0. Writes nothing (FR-010). `claude` is not called.
 - Never prints the value of a key it does not check (settings files can hold `env` secrets).
 
@@ -115,12 +121,16 @@ to the script and to git (folder, kind, name, paths, message).
    current items. `worker` folders say so.
 3. **Gate.** A `marketplace-branch` row: above the question, warn `The marketplace folder
    <installLocation> is on branch <branch>, not main. The update installs that branch.` One
-   question: OK to update all, or `skip <worktree>` (one or more), or no. No: stop, nothing
-   changed (FR-010). A skipped worktree (`skip <worktree>`) is left out of every step after the gate, and the report names it.
-4. **Plugin.** For each folder with an `install` row that is `outdated` (skipped worktrees left
-   out): `bash <script> plugin <folder>`. Exit 1: keep its message and command for the report,
-   go on with the next folder. Then run the step 1 audit once more, with the same argument.
-   Steps 5 to 7 take their rows from this second audit.
+   question: OK to update all, or `skip <worktree>` or `skip <folder> <kind> <name>` (one or more
+   each), or no. No: stop, nothing changed (FR-010). A skipped worktree or item is left out of
+   every step after the gate, and the report names it. An item is named by its folder, kind and
+   name, as the table shows them. An `allow` item is named as `fix` names it:
+   `skip <folder> allow <settings file>:<entry>`. A skip that names no row: say so and ask again.
+4. **Plugin.** For each folder with an `install` row that is `outdated` (skipped worktrees and
+   skipped `install` items left out): `bash <script> plugin <folder>`. Exit 1: keep its message
+   and command for the report, go on with the next folder. Then run the step 1 audit once more,
+   with the same argument. Steps 5 to 7 take their rows from this second audit. Leave the
+   skipped worktrees and items out of these rows.
 5. **Ask.** For each `ask` row: show the old and the new `statusLine` command and ask. Yes:
    `fix ... --force`. No: leave it.
 6. **Fix.** Every `outdated`, `new` and `discontinued` row, `statusline` rows included and
@@ -142,6 +152,7 @@ to the script and to git (folder, kind, name, paths, message).
    `--amend`, no `--no-verify`, no push. A denied commit: quote the deny reason and
    give the exact command (D11). Name no personal script. Never work around it.
 8. **Report.** Per folder: what changed, what was skipped and why, the commands the user must run.
+   Name each worktree and item skipped at the gate.
    Last line: `Restart running Claude Code sessions in these folders to load Stratum <version>.`
 
 Never: change a user data file (FR-013), write before the gate, stage a path it did not change,
@@ -174,6 +185,8 @@ run `claude plugin update` in a folder without its own record, edit `installed_p
 | U19 | script runs no `git add`, `git commit`, `git push` (grep of the script) | FR-016 |
 | U20 | fake marketplace folder is a git repo on branch `feat-x`: `marketplace-branch` row `warn` naming `feat-x`; on `main`: no row; not a git repo: no row | Edge case (branch) |
 | U21 | `pointer` fix on a folder with no `AGENTS.md`: `CLAUDE.md` gets only `@.stratum/constitution.md` | FR-013 |
+| U25 | a git checkout whose second commit drops `.stratum/models.json`, `.stratum/weather.json.bak`, `xstratum/handoff_md` from `.gitignore` and `@.stratum/constitution.md` from `CLAUDE.md`: the `ignore .stratum/models.json` and `pointer @.stratum/constitution.md` rows are `new` with `removed in <sha>`; `ignore .stratum/handoff.md` (an unescaped `.` would match `xstratum/handoff_md`) and `ignore .stratum/weather.json` keep `.gitignore`; `ignore .stratum/lessons.md`, whose line and a `!` line are in both commits, keeps `.gitignore`; `ignore .stratum/powerline.json`, whose only removed line is `x/.stratum/powerline.json`, keeps `.gitignore`; a non-git folder pointer keeps `CLAUDE.md`; an uncommitted `.gitignore` gives `skip`; no `ignore` or `pointer` name holds an ERE special character but `.` | FR-004 |
+| U26 | the same dead `allow` entry in both settings files: two `discontinued` rows; `fix` of the `.claude/settings.local.json` row changes only that file; a second `audit` keeps only the `.claude/settings.json` row | FR-009 |
 | Build extras (no U number) | `tests/test_st_update.sh` also checks: an unsafe `plugins-off` key is `invalid`; a tracked path named in `.gitignore` is `current` and `fix ignore` on it prints `same`; `plugin` with an `ok` outcome and an unmoved record exits 1; `fix` on an outdated `install` row exits 3; `gone-file` on a directory exits 3; `audit` never calls `claude`; a JSON write through a symlink outside the checkout exits 3 and leaves the target byte-equal, through a symlink inside the checkout changes the link target and keeps the link, a planted `<file>.tmp` symlink is not followed, a new file gets mode 644 and an existing one keeps its mode; an append through a `CLAUDE.md` symlink outside the checkout exits 3, inside writes into the target; a lone surrogate in a JSON write exits 3, leaves no `.tmp` file and the file byte-equal; a folder that is not a git repo gets no `skip` row; a corrupt `.git/index` gives `git status failed for CLAUDE.md` as the `skip` detail | FR-003, FR-011, FR-013, FR-017 |
 
 `tests/test_update_rules.sh`: phrase rows on `skills/st-update/SKILL.md` for steps 1 to 8 above,
@@ -184,14 +197,21 @@ like `tests/test_plan_rules.sh`:
 | R1 | `audit` call and the stop line for exit 1 | FR-001 |
 | R2 | one table, only rows not `current`, one count line per folder | FR-009 |
 | R3 | one gate, `skip <worktree>`, no change before the OK | FR-009, FR-010, D8 |
+| R3c | the gate takes `skip <folder> <kind> <name>` | FR-009 |
+| R3d | an item is named by its folder, kind and name, as the table shows them | FR-009 |
+| R3e | a skipped worktree or item is left out of every step after the gate | FR-009 |
+| R3f | an `allow` item: `skip <folder> allow <settings file>:<entry>` | FR-009 |
+| R3g | a skip that names no row: say so and ask again | FR-009 |
 | R4 | the branch warning text | Edge case (branch) |
 | R5 | `plugin` per folder, go on after a failure, a second `audit` whose rows steps 5 to 7 use | FR-011, FR-012 |
+| R5d | the skipped worktrees and items left out of the second audit's rows | FR-009 |
 | R6 | `ask` rows: show the old and new command, `--force` only on yes | FR-006 |
 | R7 | st-init steps 3, 4, 7, 11 questions, one at a time, `skip` leaves the file missing; `/stratum:st-constitution` | FR-014 |
 | R8 | the commit command with `git -C` that ends with `-- <paths>`, the fixed path list, no `-A`, `--amend`, `--no-verify`, push | FR-016 |
 | R9 | denied commit: quote the reason, give the command, name no personal script; gone: no `veent-commit-ask` text | D11 |
 | R10 | blocked Bash call: give the exact `fix` command | FR-018 |
 | R11 | report per folder and the restart line | FR-019 |
+| R11c | the report names each worktree and item skipped at the gate | FR-019 |
 | R12 | Never list: user data files, `installed_plugins.json` | FR-013 |
 | R13 | `README.md` has `claude plugin update stratum@stratum -s local`, `claude plugin update stratum@stratum -s project`, and the three test lines | FR-021 |
 
