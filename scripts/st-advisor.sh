@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -o pipefail
 SECONDS=0
-usage() { echo "usage: st-advisor.sh plan|test|diff|decisions|round|check|continued|waive|note|talk|count|codex-home ..."; exit 2; }
+usage() { echo "usage: st-advisor.sh plan|test|diff|decisions|change|round|check|continued|waive|note|talk|count|codex-home ..."; exit 2; }
 dir=${XDG_STATE_HOME:-$HOME/.local/state}/stratum/codex-home
 root=$(pwd -P)
 entry="[projects.\"$root\"]"
@@ -27,7 +27,7 @@ fi
 cmd=run
 case ${1:-} in check|continued|waive|note|round|talk) cmd=$1; shift ;; count) cmd=count ;; esac
 point=${1:-}
-case "$cmd $point $#" in "run plan 2"|"run test 6"|"run diff 3"|"run decisions 3"|"round plan 4"|"round test 4"|"round diff 4"|"round decisions 4"|"check plan 2"|"continued plan 2"|"continued test 2"|"continued diff 2"|"continued decisions 2"|"waive plan 3"|"note plan 3"|"note test 3"|"note diff 3"|"note decisions 3"|"talk plan 3"|"talk test 3"|"talk diff 3"|"talk decisions 3"|"count count 2") ;; *) usage ;; esac
+case "$cmd $point $#" in "run plan 2"|"run test 6"|"run diff 3"|"run decisions 3"|"run change 3"|"round plan 4"|"round test 4"|"round diff 4"|"round decisions 4"|"round change 4"|"check plan 2"|"continued plan 2"|"continued test 2"|"continued diff 2"|"continued decisions 2"|"continued change 2"|"waive plan 3"|"note plan 3"|"note test 3"|"note diff 3"|"note decisions 3"|"note change 3"|"talk plan 3"|"talk test 3"|"talk diff 3"|"talk decisions 3"|"talk change 3"|"count count 2") ;; *) usage ;; esac
 at=$point
 label=$point
 [ $cmd = round ] && { at=round; label="$point round $3"; }
@@ -72,7 +72,7 @@ fi
 case $cmd-$point in
   round-*) [[ $3 =~ ^[1-3]$ ]] && [ -f "$4" ] && [ -r "$4" ] || usage ;;
   *-plan) [ -f "$f/plan.md" ] && [ -r "$f/plan.md" ] && [ -f "$f/tasks.md" ] && [ -r "$f/tasks.md" ] || usage ;;
-  *-decisions) [ -f "$3" ] && [ -r "$3" ] || usage ;;
+  *-decisions|*-change) [ -f "$3" ] && [ -r "$3" ] || usage ;;
   *-test) [ -f "$3" ] && [ -r "$3" ] && [ -f "$5" ] && [ -r "$5" ] && [ -f "$6" ] && [ -r "$6" ] || usage ;;
   *-diff) git rev-parse --verify --quiet "$3^{commit}" >/dev/null || usage
     git diff --quiet "$3" HEAD --
@@ -114,8 +114,8 @@ PY
       [ -n "$risk" ] || { echo "risk not set: normal"; risk=normal; }
       case $at-$risk in
         round-*) aset=codex ;;
-        plan-high|decisions-high|diff-high) aset=both ;;
-        *-none|plan-low) aset=none ;;
+        plan-high|decisions-high|diff-high|change-high) aset=both ;;
+        *-none|plan-low|change-low) aset=none ;;
         *-low) aset=/advisor ;;
         *) aset=codex ;;
       esac
@@ -136,7 +136,7 @@ trap 'rm -rf "$tmp"' EXIT
 
 case $cmd-$point in
   round-*) hash=$(sha256sum < "$4") || { echo "cannot hash inputs"; exit 2; } ;;
-  *-decisions) hash=$(sha256sum < "$3") || { echo "cannot hash inputs"; exit 2; } ;;
+  *-decisions|*-change) hash=$(sha256sum < "$3") || { echo "cannot hash inputs"; exit 2; } ;;
   *-plan) hash=$({ cat "$f/spec.md" && awk '/^```/{f=!f} !f&&/^## Validate$/{s=1;next} !f&&/^## /{s=0} !s' "$f/plan.md" && cat "$f/tasks.md"; } | sha256sum) || { echo "cannot hash inputs"; exit 2; } ;;
   *-test) hash=$(cat "$5" "$6" | sha256sum) || { echo "cannot hash inputs"; exit 2; } ;;
   *-diff) hash=$(git diff --no-ext-diff --no-color "$3" HEAD -- | sha256sum) || { echo "cannot hash inputs"; exit 2; } ;;
@@ -184,6 +184,10 @@ printf '%s\n' '{"type":"object","additionalProperties":false,"required":["verdic
       printf '%s\n' \
         'Point: plan. Advise only on how the plan could be built better or done differently for a better outcome: a simpler or better approach, tasks to cut or merge. Do not check correctness, coverage or risks: the Inspect phase does that.' \
         "Inputs: $f/spec.md, $f/plan.md, $f/tasks.md" ;;
+    *-change)
+      printf '%s\n' \
+        "Point: change. Review this change plan inside an existing feature: is the approach right and the simplest, and does it miss a test, a file or a caller? Do not build or fix." \
+        "Inputs: $f/spec.md, $3" ;;
     *-test)
       printf '%s\n' 'Point: test. This task'"'"'s test is still red after two build tries. Root cause or rabbit hole?' "Test: $4" 'Task:' "$(cat "$3")" 'Failure output 1:' "$(cat "$5")" 'Failure output 2:' "$(cat "$6")" ;;
   esac

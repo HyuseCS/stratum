@@ -86,8 +86,9 @@ The advisor is Codex (the `codex` CLI), a model from another vendor. In mode `au
 | test red after 2 tries | Codex, then both if still red | Codex | `/advisor` | none |
 | story small decisions | both | Codex | `/advisor` | none |
 | diff at the end of Build | both | Codex | `/advisor` | none |
+| Fast-lane change plan before its gate (`st-fast` step 2) | both | Codex | none | none |
 
-Every Fast-lane point uses `/advisor`. The Quick lane has no advisor.
+The other Fast-lane points use `/advisor`. The Quick lane has no advisor.
 
 - Run `bash <plugin root>/scripts/st-advisor.sh <point> ...` from the project root in the foreground, with a Bash timeout of 600000 ms, and wait for it. No background run, no polling.
 - Codex only reviews, in the read-only sandbox. Never run `codex` to build or fix. In herdr, with the Stratum Codex home in place, Codex runs as the `st-codex-<folder>` agent (the feature folder name, cut to 20 characters) in the `Codex` tab of this workspace, read-only and never asking, and the user can watch it there. Otherwise it runs in the background as before.

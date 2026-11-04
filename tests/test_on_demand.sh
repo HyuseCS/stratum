@@ -305,7 +305,7 @@ phrases <<'EOF'
 #18 plan-only st-fast diff point	skills/st-fast/SKILL.md	advisor is set, consult it on the diff: hidden regressions? Handle its notes like findings.
 EOF
 check "#18 plan-only st-inspect no plan run" '! grep -qF "st-advisor.sh plan <feature dir>" "$root/skills/st-inspect/SKILL.md" && grep -qF "st-advisor.sh check plan <feature dir>" "$root/skills/st-inspect/SKILL.md"'
-check "#18 plan-only st-fast no script" '! grep -qF "st-advisor.sh" "$root/skills/st-fast/SKILL.md"'
+check "#18 st-fast runs only the change point" '[ "$(grep -oE "st-advisor\.sh [a-z]+" "$root/skills/st-fast/SKILL.md" | sort -u)" = "st-advisor.sh change" ]'
 check "#18 plan-only st-build no diff point" '! grep -F "st-advisor.sh diff" "$root/skills/st-build/SKILL.md" | grep -qvF "the changes after the last review only" && ! grep -qF "check diff" "$root/skills/st-build/SKILL.md"'
 check "#18 FR-001 quick lane" '! grep -qF st-advisor "$root/skills/st-quick/SKILL.md"'
 check "#18 FR-016 st-inspect old advisor text gone" '! grep -qF "If an advisor is set (\`/advisor\`)" "$root/skills/st-inspect/SKILL.md"'

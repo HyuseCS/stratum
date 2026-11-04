@@ -106,6 +106,17 @@ printf 'FAILTWO2' > "$tmp/f2.txt"
 run test specs/001-demo "$tmp/task.txt" tests/x_test.sh "$tmp/f1.txt" "$tmp/f2.txt"
 check "test point labels on their own line" '[ "$(grep -xn -e "Task:" -e "Failure output 1:" -e "Failure output 2:" "$tmp/prompt" | cut -d: -f2- | paste -sd,)" = "Task:,Failure output 1:,Failure output 2:" ] && cmp -s "$tmp/prompt" "$tmp/prompt_nl"'
 
+mkdir -p "$proj/specs/001-demo/changes"
+printf '# change\nCHANGEBODY9c1\n' > "$proj/specs/001-demo/changes/001-x.md"
+run change specs/001-demo specs/001-demo/changes/001-x.md
+ch=$(sha256sum < "$proj/specs/001-demo/changes/001-x.md" | cut -d' ' -f1)
+check "change point: verdict with the change file hash, record header" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "APPROVED sha256 $ch" ] && last_header change | grep -qE "^## change \| [^|]* \| sha256 $ch \| APPROVED$"'
+check "change point prompt names the spec and the change file, no change text" 'grep -qF "Point: change." "$tmp/prompt" && grep -qxF "Inputs: specs/001-demo/spec.md, specs/001-demo/changes/001-x.md" "$tmp/prompt" && ! grep -qF CHANGEBODY9c1 "$tmp/prompt"'
+run change specs/001-demo specs/001-demo/changes/missing.md
+check "change point with no change file: usage, exit 2" '[ $rc = 2 ] && grep -q "^usage:" <<<"$out"'
+run note change specs/001-demo "advisor agreed"
+check "note on the change point" '[ $rc = 0 ] && [ "$out" = "noted: change /advisor" ]'
+
 
 mkdir -p "$tmp/sys"
 IFS=: read -ra pdirs <<<"$PATH"

@@ -79,7 +79,12 @@ decisions none none
 diff high both
 diff normal codex
 diff low /advisor
-diff none none"
+diff none none
+change high both
+change normal codex
+change low none
+change none none"
+printf '# change 001\nCHANGEBODY\n' > "$tmp/change.md"
 grid() {
   local ok=1 pt lvl aset calls
   while read -r pt lvl aset <&3; do
@@ -90,6 +95,7 @@ grid() {
       test) run test specs/001-demo "$tmp/task.txt" tests/x_test.sh "$tmp/f1.txt" "$tmp/f2.txt" ;;
       decisions) run decisions specs/001-demo "$tmp/list.txt" ;;
       diff) run diff specs/001-demo "$first" ;;
+      change) run change specs/001-demo "$tmp/change.md" ;;
     esac
     case $aset in codex|both) calls=1 ;; *) calls=0 ;; esac
     { [ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "advisors: $aset ($pt, risk $lvl)" ] && calls_ok $calls; } || { ok=0; echo "  bad case: $pt risk $lvl set $aset rc=$rc first=$(head -n1 <<<"$out")" >&2; }
