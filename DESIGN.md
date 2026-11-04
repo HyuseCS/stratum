@@ -76,7 +76,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 
 ## 3. Skills
 
-- **D9.** Twenty-five entry skills:
+- **D9.** Twenty-six entry skills:
 
 | Skill | Job |
 |-------|-----|
@@ -89,6 +89,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 | `st-theme <name>` | Set the color theme of the statusline and Token Weather. |
 | `st-model <agent> <value>...` | Set an agent's model or effort in `.stratum/models.json`. |
 | `st-init` | Set up a project: data files, constitution (grilled), tool check. |
+| `st-update [folder]` | Audit the project's Stratum files in every checkout, then update the install, statusline and harness lines after one OK. |
 | `st-template <name>` | Copy a plugin template into `.stratum/templates/` to edit. |
 | `st-handoff` | Write the session handoff. |
 | `st-pr [base]` | Open a PR: facts from git and the spec, one gate, a draft that becomes ready when CI passes. |
@@ -184,7 +185,8 @@ dependency.
   worktree has none. `link`: the session start hook links the main checkout's file into a
   worktree that has none. `own`: each checkout has its own on purpose.
   A feature that adds a `.stratum/` file adds its row. `tests/test_local_files.sh` fails on a
-  file with no row.
+  file with no row. A change that removes a feature which wrote a project file adds that file to
+  the discontinued list in `scripts/st-update.sh`.
 
   | File | Worktree | Why |
   |------|----------|-----|
@@ -199,6 +201,7 @@ dependency.
   | `.stratum/weather.json` | own | The statusline cache of that checkout. |
   | `.stratum/handoff.md` | own | Each checkout's session writes its own. |
   | `.stratum/decisions.md` | own | Grill decisions when no feature is set. |
+  | `.stratum/commit-mode` | own | Discontinued. `st-update` removes it from each checkout. |
   | `.stratum/lessons.md` | link | Lessons written in a worktree go to the main checkout's file. |
   | `.stratum/constitution.md` | link | The project rules, also each `<app>-constitution.md`. |
   | `.stratum/templates` | link | The project's own templates. |

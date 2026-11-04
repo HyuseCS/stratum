@@ -34,6 +34,25 @@ constitution), writes the `AGENTS.md` and `CLAUDE.md` pointers, sets the statusl
 theme, shape and Token Weather line, turns off a global ponytail or Token Weather plugin for this
 project, offers to upgrade graphify, installs its post-commit hook, and checks your tools.
 
+If your install has no `st-update` yet, update it once by hand. In your project folder, run only
+the command for the scope you installed with. For a personal install:
+
+```bash
+claude plugin update stratum@stratum -s local
+```
+
+For the `--scope project` install above:
+
+```bash
+claude plugin update stratum@stratum -s project
+```
+
+Then restart the session and run:
+
+```text
+/stratum:st-update
+```
+
 ### Requirements
 
 | Tool | Used for |
@@ -118,6 +137,7 @@ When a change touches shared config, test setup, a schema or migration, middlewa
 | `st-model <agent> <value>...` | Set an agent's model or effort for this project. Plain words work too: "make st-close use opus". |
 | `st-handoff` | Write the session handoff. |
 | `st-init` | Set up a project. |
+| `st-update [folder]` | Audit the project's Stratum files in every checkout, then update the install, statusline and harness lines after one OK. |
 | `st-template <name>` | Copy a template into the project to edit it. |
 | `st-constitution` | Amend the project rules. |
 | `st-issues` | Turn tasks into GitHub issues. |
@@ -370,6 +390,9 @@ bash tests/test_no_frontend_design.sh
 bash tests/test_risk_rules.sh
 bash tests/test_worker_rules.sh
 bash tests/test_local_files.sh
+bash tests/test_st_update.sh
+bash tests/test_update_rules.sh
+bash tests/test_update_items.sh
 node tests/test_token_weather.mjs
 node tests/test_pr_workflow.mjs
 claude plugin validate .claude-plugin/plugin.json
