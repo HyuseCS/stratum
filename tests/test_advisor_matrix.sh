@@ -216,7 +216,7 @@ setmode '{"mode": "codex"}'
 approve
 rm -f "$tmp/argv" "$tmp/herdr.log"
 out=$(cd "$proj" && PATH="$tmp/hbin:$PATH" HERDR_ENV=1 HERDR_WORKSPACE_ID=ws$RANDOM bash "$root/scripts/st-advisor.sh" plan specs/001-demo); rc=$?
-check "(k2) herdr env, no Stratum Codex home: codex exec runs, herdr is not called" '[ $rc = 0 ] && [ "$(head -n1 "$tmp/argv")" = exec ] && [ ! -e "$tmp/herdr.log" ]'
+check "(k2) herdr env, no Stratum Codex home: BLOCKED names codex-home, codex exec not run, herdr is not called" '[ $rc = 1 ] && [ "$(head -n1 <<<"$out")" = "BLOCKED: no Stratum Codex home: run st-advisor.sh codex-home" ] && [ ! -e "$tmp/argv" ] && [ ! -e "$tmp/herdr.log" ]'
 
 rm -f "$mf"
 r18='no advisor: mode not set. Write .stratum/advisor.json with "mode": "auto", "codex", "both" or "off".'
@@ -350,9 +350,12 @@ cp "$home/config.toml" "$tmp/config.keep"
 printf '[tui]\nstatus = "x"\n' > "$home/config.toml"
 cp "$home/config.toml" "$tmp/config.noentry"
 hrun folder
-check "(k4) config.toml without the project entry: codex exec runs, herdr not called, config.toml unchanged" '[ $rc = 0 ] && [ "$(head -n1 "$tmp/argv")" = exec ] && [ ! -e "$tmp/herdr.log" ] && cmp -s "$home/config.toml" "$tmp/config.noentry"'
-check "(k4) config.toml without the project entry: one line says so" '[ "$(head -n1 <<<"$out")" = "ERROR: no Stratum Codex home entry for $proj: run st-advisor.sh codex-home" ]'
+check "(k4) config.toml without the project entry: the point adds it, the tab runs, codex exec not run" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "APPROVED sha256 $h" ] && [ ! -e "$tmp/argv" ] && grep -q "^agent start st-codex-001" "$tmp/herdr.log" && [ "$(head -n2 "$home/config.toml")" = "$(cat "$tmp/config.noentry")" ] && grep -qxF "[projects.\"$proj\"]" "$home/config.toml" && grep -A1 -xF "[projects.\"$proj\"]" "$home/config.toml" | grep -qx "trust_level = \"untrusted\""'
 cp "$tmp/config.keep" "$home/config.toml"
+mv "$home/auth.json" "$tmp/auth.keep"
+hrun folder
+check "(k9) no Codex login link inside herdr: BLOCKED names codex-home, no tab, codex exec not run" '[ $rc = 1 ] && [ "$(head -n1 <<<"$out")" = "BLOCKED: no Stratum Codex home: run st-advisor.sh codex-home" ] && [ ! -e "$tmp/argv" ] && [ ! -e "$tmp/herdr.log" ]'
+mv "$tmp/auth.keep" "$home/auth.json"
 
 mkdir -p "$tmp/sc"
 cp -r "$root/scripts" "$tmp/sc/scripts"

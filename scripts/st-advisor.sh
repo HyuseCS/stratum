@@ -5,6 +5,13 @@ usage() { echo "usage: st-advisor.sh plan|test|diff|decisions|round|check|contin
 dir=${XDG_STATE_HOME:-$HOME/.local/state}/stratum/codex-home
 root=$(pwd -P)
 entry="[projects.\"$root\"]"
+add_entry() {
+  if [[ $root = *[[:cntrl:]\"\\]* ]]; then
+    echo "project root has a quote, backslash or control character in its path: no entry, Codex runs in the background here"
+  elif ! grep -qxF "$entry" "$dir/config.toml" 2>/dev/null; then
+    { [ -n "$(tail -c1 "$dir/config.toml" 2>/dev/null)" ] && echo; printf '%s\ntrust_level = "untrusted"\n' "$entry"; } >> "$dir/config.toml"
+  fi
+}
 if [ $# = 1 ] && [ "$1" = codex-home ]; then
   login=${CODEX_HOME:-$HOME/.codex}/auth.json
   [ -f "$login" ] || { echo "no codex login: run codex login, then run this again"; exit 1; }
@@ -13,11 +20,7 @@ if [ $# = 1 ] && [ "$1" = codex-home ]; then
   [ -e "$dir/auth.json" ] && [ ! -L "$dir/auth.json" ] && { echo "$dir/auth.json is a file, not a link to your Codex login: run codex login status, move that file away, then run this again"; exit 1; }
   chmod 700 "$dir" || exit 1
   [ "$(readlink "$dir/auth.json")" = "$login" ] || ln -sfn "$login" "$dir/auth.json" || exit 1
-  if [[ $root = *[[:cntrl:]\"\\]* ]]; then
-    echo "project root has a quote, backslash or control character in its path: no entry, Codex runs in the background here"
-  elif ! grep -qxF "$entry" "$dir/config.toml" 2>/dev/null; then
-    { [ -n "$(tail -c1 "$dir/config.toml" 2>/dev/null)" ] && echo; printf '%s\ntrust_level = "untrusted"\n' "$entry"; } >> "$dir/config.toml" || exit 1
-  fi
+  add_entry || exit 1
   echo "codex home: $dir"
   exit 0
 fi
@@ -187,7 +190,9 @@ printf '%s\n' '{"type":"object","additionalProperties":false,"required":["verdic
 } > "$tmp/prompt"
 
 rc=1
-if [ "${HERDR_ENV:-}" = 1 ] && [ -n "${HERDR_WORKSPACE_ID:-}" ] && command -v herdr >/dev/null && [ -L "$dir/auth.json" ]; then
+if [ "${HERDR_ENV:-}" = 1 ] && [ -n "${HERDR_WORKSPACE_ID:-}" ] && command -v herdr >/dev/null; then
+  [ -L "$dir/auth.json" ] || block "no Stratum Codex home: run st-advisor.sh codex-home"
+  add_entry || block "cannot write $dir/config.toml"
   rc=0
   sd=$(dirname "$0")
   cp "$tmp/prompt" "$tmp/prompt.tab" || block "cannot copy the prompt"
