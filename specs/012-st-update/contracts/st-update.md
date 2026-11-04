@@ -39,7 +39,8 @@ output.
   sibling of the main checkout named `<main checkout name>-*` (research R7). Other missing
   folders get no row.
 - A discontinued name gets its row only when it matches `^[A-Za-z0-9_.:@/*()-]+$`. Any other
-  name gets an `invalid` row with no fix (research R9).
+  name gets an `invalid` row with no fix (research R9). A `Skill(stratum:<name>)` name with `/`
+  in `<name>` is `invalid`: listed, never fixed.
 - A worktree on a `worker-*` branch has `worker` in the detail of its `install` row, or of its
   first row when it has no record.
 - Committed files (`.gitignore`, `AGENTS.md`, `CLAUDE.md`, `.claude/settings.json`): when
@@ -109,12 +110,15 @@ to the script and to git (folder, kind, name, paths, message).
    changed (FR-010).
 4. **Plugin.** For each folder with an `install` row that is `outdated` (skipped worktrees left
    out): `bash <script> plugin <folder>`. Exit 1: keep its message and command for the report,
-   go on with the next folder. Exit 0: run `fix <folder> statusline statusLine` for that folder
-   when its `statusLine` row is `outdated` or `new`.
+   go on with the next folder. Then run the step 1 audit once more, with the same argument.
+   Steps 5 to 7 take their rows from this second audit.
 5. **Ask.** For each `ask` row: show the old and the new `statusLine` command and ask. Yes:
    `fix ... --force`. No: leave it.
-6. **Fix.** Every other `outdated`, `new` and `discontinued` row: `bash <script> fix <folder>
-   <kind> <name>`. Never run `fix` on a `skip` row. Report each `skip` row with its detail. For a `file` row of `git-guard.json`, `models.json`, `powerline.json` or
+6. **Fix.** Every `outdated`, `new` and `discontinued` row, `statusline` rows included and
+   `install` rows left out (they have no fix): `bash <script> fix <folder> <kind> <name>`. An
+   `allow` row: the name is `<detail>:<name>`, the settings file in its detail, a colon, then the
+   entry in its name. `fix statusline` exits 3 when the folder's install is not at the marketplace
+   version. Never run `fix` on a `skip` row. Report each `skip` row with its detail. For a `file` row of `git-guard.json`, `models.json`, `powerline.json` or
    `advisor.json`: ask the question of st-init step 3, 4, 7 or 11, one at a time, each with a
    `skip` answer. Skip: leave the file missing. Else write it as that st-init step does. A
    `constitution.md` row: tell the user to run `/stratum:st-constitution`. Exit 3: keep the reason.
@@ -124,7 +128,7 @@ to the script and to git (folder, kind, name, paths, message).
    `.stratum/advisor.json` when `git check-ignore` does not ignore them. Never
    `.claude/settings.local.json`, never `.stratum/models.json`. Per checkout with such a file, one
    Bash call:
-   `git -C <checkout> add -- <paths> && git -C <checkout> commit -m "chore(stratum): update harness files to <version>" -m "<one line per item>" -- <paths>`.
+   `git -C <checkout> add -- <paths> && git -C <checkout> commit -m 'chore(stratum): update harness files to <version>' -m '<one line per item>' -- <paths>`.
    The commit ends with `-- <paths>`, so files the user staged before stay out of it. No `-A`, no
    `--amend`, no `--no-verify`, no push. A denied commit: quote the deny reason and
    give the exact command (D11). Name no personal script. Never work around it.
@@ -171,7 +175,7 @@ like `tests/test_plan_rules.sh`:
 | R2 | one table, only rows not `current`, one count line per folder | FR-009 |
 | R3 | one gate, `skip <worktree>`, no change before the OK | FR-009, FR-010, D8 |
 | R4 | the branch warning text | Edge case (branch) |
-| R5 | `plugin` per folder, go on after a failure, `statusline` only after `plugin` exits 0 | FR-011, FR-012 |
+| R5 | `plugin` per folder, go on after a failure, a second `audit` whose rows steps 5 to 7 use | FR-011, FR-012 |
 | R6 | `ask` rows: show the old and new command, `--force` only on yes | FR-006 |
 | R7 | st-init steps 3, 4, 7, 11 questions, one at a time, `skip` leaves the file missing; `/stratum:st-constitution` | FR-014 |
 | R8 | the commit command with `git -C` that ends with `-- <paths>`, the fixed path list, no `-A`, `--amend`, `--no-verify`, push | FR-016 |

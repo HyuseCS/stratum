@@ -16,12 +16,12 @@ R3b|skills/st-update/SKILL.md|No: stop, nothing
 R4|skills/st-update/SKILL.md|is on branch <branch>, not main. The update installs that branch.
 R5|skills/st-update/SKILL.md|bash <script> plugin <folder>
 R5b|skills/st-update/SKILL.md|go on with the next folder.
-R5c|skills/st-update/SKILL.md|Exit 0: run `fix <folder> statusline statusLine` for that folder
+R5c|skills/st-update/SKILL.md|Steps 5 to 7 take their rows from this second audit.
 R6|skills/st-update/SKILL.md|For each `ask` row: show the old and the new `statusLine` command and ask. Yes: `fix ... --force`. No: leave it.
 R7|skills/st-update/SKILL.md|ask the question of st-init step 3, 4, 7 or 11, one at a time
 R7b|skills/st-update/SKILL.md|Skip: leave the file missing.
 R7c|skills/st-update/SKILL.md|tell the user to run `/stratum:st-constitution`
-R8|skills/st-update/SKILL.md|git -C <checkout> add -- <paths> && git -C <checkout> commit -m "chore(stratum): update harness files to <version>" -m "<one line per item>" -- <paths>
+R8|skills/st-update/SKILL.md|git -C <checkout> add -- <paths> && git -C <checkout> commit -m 'chore(stratum): update harness files to <version>' -m '<one line per item>' -- <paths>
 R8b|skills/st-update/SKILL.md|The commit ends with `-- <paths>`, so files the user staged before stay out of it.
 R8c|skills/st-update/SKILL.md|No `-A`, no
 R8d|skills/st-update/SKILL.md|`--amend`, no `--no-verify`, no push

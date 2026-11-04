@@ -135,7 +135,8 @@ the marketplace branch.
 - Anything else, for example a `Bash(...)` rule that names a Stratum path, is the user's.
 - A discontinued name gets its row only when it matches `^[A-Za-z0-9_.:@/*()-]+$`. Any other
   name gets an `invalid` row and no fix, since it would go into a command line. The skill puts
-  single quotes around every argument it passes to the script and to git.
+  single quotes around every argument it passes to the script and to git. A
+  `Skill(stratum:<name>)` name with `/` in `<name>` is `invalid`: listed, never fixed.
 - Only FigCraft names are in allow lists on this machine today (`st-l1-scratch`).
 
 ## R10. FigCraft allow entries (FR-003)
@@ -165,7 +166,7 @@ the marketplace branch.
 ## R13. Commits (FR-016, FR-017, CHK004, CHK011)
 
 - Decision: the script never runs git commands that change the repo. The skill runs, per checkout,
-  one Bash call: `git -C <checkout> add -- <paths> && git -C <checkout> commit -m "<message>" -- <paths>`,
+  one Bash call: `git -C <checkout> add -- <paths> && git -C <checkout> commit -m '<message>' -- <paths>`,
   so `hooks/st-git-guard.py` and the project's own hooks see it. The commit ends with
   `-- <paths>`, so files the user staged before the run stay staged and stay out of Stratum's
   commit (found at Inspect). `<paths>` are the files from this
@@ -174,12 +175,13 @@ the marketplace branch.
   `git check-ignore` does not ignore them (st-init step 12). Never `.claude/settings.local.json`
   (it holds this machine's path, st-init step 7) and never `.stratum/models.json`.
 - Message: `chore(stratum): update harness files to <version>`, then one body line per changed
-  item.
+  item, each in single quotes:
+  `-m 'chore(stratum): update harness files to <version>' -m '<one line per item>'`.
 - Before any change, `audit` checks `git status --porcelain -- <file>` for each committed file and
   the branch. Uncommitted changes or a detached HEAD: the rows for that file get `skip` with the
   reason, and the skill never runs `fix` on them.
 - A commit a hook denies (D11): the skill quotes the deny reason and gives the exact command
-  `git -C <checkout> add -- <paths> && git -C <checkout> commit -m "<message>" -- <paths>`. It names no
+  `git -C <checkout> add -- <paths> && git -C <checkout> commit -m '<message>' -- <paths>`. It names no
   personal script and never retries another way.
 - Halfway stop (CHK012): every step reads the files again, so a second run audits and does only
   what is left.

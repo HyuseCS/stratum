@@ -28,13 +28,16 @@ script and to git (folder, kind, name, paths, message).
    run `bash <script> plugin <folder>`. Exit 0 prints `ok <version> <installPath>`.
    Exit 1 prints the message and a `Run:` command on stderr. Keep both for the report and
    go on with the next folder.
-   Exit 0: run `fix <folder> statusline statusLine` for that folder
-   when its `statusLine` row is `outdated` or `new`.
+   Then run the step 1 audit once more, with the same argument.
+   Steps 5 to 7 take their rows from this second audit.
 5. **Ask.**
    For each `ask` row: show the old and the new `statusLine` command and ask. Yes: `fix ... --force`. No: leave it.
-6. **Fix.** For every other `outdated`, `new` and `discontinued` row, run
+6. **Fix.** For every `outdated`, `new` and `discontinued` row, `statusline` rows included and
+   `install` rows left out (they have no fix), run
    `bash <script> fix <folder> <kind> <name>`. It prints `changed <file>` or `same <file>`.
+   An `allow` row: pass `<detail>:<name>` as the name, the settings file in its detail, a colon, then the entry in its name.
    Exit 3 prints `skip: <reason>` on stderr. Keep the reason for the report.
+   `fix statusline` exits 3 when the folder's install is not at the marketplace version.
    Never run `fix` on a `skip` row. Report each `skip` row with its detail.
    A `file` row of `git-guard.json`, `models.json`, `powerline.json` or `advisor.json`:
    ask the question of st-init step 3, 4, 7 or 11, one at a time, each with a `skip` answer.
@@ -46,7 +49,7 @@ script and to git (folder, kind, name, paths, message).
    `.stratum/advisor.json` when `git check-ignore` does not ignore them.
    Never `.claude/settings.local.json`, never `.stratum/models.json`.
    Per checkout with such a file, one Bash call:
-   `git -C <checkout> add -- <paths> && git -C <checkout> commit -m "chore(stratum): update harness files to <version>" -m "<one line per item>" -- <paths>`
+   `git -C <checkout> add -- <paths> && git -C <checkout> commit -m 'chore(stratum): update harness files to <version>' -m '<one line per item>' -- <paths>`
    The commit ends with `-- <paths>`, so files the user staged before stay out of it.
    No `-A`, no `--amend`, no `--no-verify`, no push.
    A denied commit: quote the deny reason and give the exact command (D11).
