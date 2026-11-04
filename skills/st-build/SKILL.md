@@ -46,7 +46,7 @@ When the user said "build with workers" or named a machine ("US2 on the laptop")
 
 When the project is this session's own repo, run each `[P]` task of a phase in its own subagent
 with `isolation: "worktree"`, all started in one message.
-The worktree can start from `main`, not the feature branch. Before a `[P]` task runs in a worktree, check `git -C <worktree> cat-file -e HEAD:<test path>` for each test file the task names. If one fails, run the task in the feature checkout.
+The worktree can start from `main`, not the feature branch. Before a `[P]` task runs in a worktree, check `git -C <worktree> merge-base --is-ancestor <feature branch HEAD> HEAD`. If it fails, run the task in the feature checkout.
 User stories that tasks.md says share no files run at the same time.
 Each runs the per-task steps in its worktree, except step 4: a subagent whose test is still red after 2 tries stops and reports both failures.
 Then check each branch (tests green, no added comments) and merge it into the feature branch yourself. Keep each worktree and branch after the merge. Delete one only when the user says so.

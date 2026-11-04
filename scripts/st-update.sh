@@ -26,7 +26,7 @@ FILES = [".stratum/state.json", ".stratum/git-guard.json", ".stratum/models.json
 GONE = [".stratum/commit-mode"]
 FN = {"ignore": ".gitignore", "pointer": "CLAUDE.md", "statusline": ".claude/settings.local.json",
       "plugins-off": ".claude/settings.json", "figcraft": ".claude/settings.json", "models-key": ".stratum/models.json"}
-COMMITTED = (".gitignore", "AGENTS.md", "CLAUDE.md", ".claude/settings.json")
+COMMITTED = (".gitignore", "AGENTS.md", "CLAUDE.md", ".claude/settings.json", ".stratum/state.json", ".stratum/advisor.json")
 if cmd == "items":
     for r in [("install", "stratum@stratum", "install record"), ("statusline", "statusLine", FN["statusline"]),
               *[("ignore", n, ".gitignore") for n in IGNORE],
@@ -40,7 +40,7 @@ if cmd == "items":
         print("\t".join(r))
     sys.exit()
 SAFE = re.compile(r"[A-Za-z0-9_.:@/*()-]+")
-STRATUM_SL = re.compile(r"bash +\S*/statusline/st-statusline\.sh")
+STRATUM_SL = re.compile(r"bash +(\S*/statusline/st-statusline\.sh|'[^']*/statusline/st-statusline\.sh')")
 SKILL = re.compile(r"Skill\(stratum:(.+?)(?::\*)?\)")
 MCP = re.compile(r"mcp__plugin_stratum_(.+?)(?:__(.+))?")
 
@@ -202,6 +202,10 @@ def install(f, r, extra=""):
         f"{r.get('scope')} {v}" + ("" if v == ver else f" -> {ver}") + extra)
 
 
+def slcmd(target):
+    return "bash " + shlex.quote(f"{target['installPath']}/statusline/st-statusline.sh")
+
+
 def statusline(f, target, only_stratum=False):
     TARGET[f] = target
     s = load(f"{f}/.claude/settings.local.json")
@@ -216,7 +220,7 @@ def statusline(f, target, only_stratum=False):
         return
     if not target or not isinstance(target.get("installPath"), str):
         return row(f, "statusline", "statusLine", "listed", "no install")
-    want = f"bash {target['installPath']}/statusline/st-statusline.sh"
+    want = slcmd(target)
     if "statusLine" not in s:
         row(f, "statusline", "statusLine", "new", want)
     elif cmd == want:
@@ -323,12 +327,15 @@ if cmd == "audit":
 
     def mark(r):
         f, kind, name, state, detail = r
-        n = detail if kind == "allow" else FN.get(kind)
+        n = detail if kind == "allow" else name if kind == "file" else FN.get(kind)
         if wt.returncode or f not in paths or n not in COMMITTED or state in ("invalid", "current"):
+            return r
+        if kind == "file" and git("-C", f, "check-ignore", "--no-index", "--", n).returncode == 0:
             return r
         if f in det:
             return (f, kind, name, "skip", "detached HEAD, no branch to commit on")
-        d = dirty(f, n)
+        rp = os.path.relpath(os.path.realpath(f"{f}/{n}"), os.path.realpath(f))
+        d = dirty(f, n if rp.split(os.sep)[0] == ".." else rp)
         if d:
             return (f, kind, name, "skip", d)
         if kind in ("ignore", "pointer") and name not in [l.strip() for l in (read(f"{f}/{n}") or "").splitlines()]:
@@ -374,8 +381,9 @@ if state == "ask" and len(args) < 4:
     refuse("skip: not a Stratum statusline")
 if state not in ("outdated", "new", "discontinued", "ask"):
     refuse(f"skip: {kind} {name} is not an item to fix in {folder}")
-real = os.path.realpath(path)
-if kind != "gone-file" and os.path.commonpath([real, os.path.realpath(folder)]) != os.path.realpath(folder):
+top = os.path.realpath(folder)
+real = os.path.join(os.path.realpath(os.path.dirname(path)), os.path.basename(path)) if kind == "gone-file" else os.path.realpath(path)
+if os.path.commonpath([real, top]) != top:
     refuse(f"skip: {fn} points outside {folder}")
 
 if kind in ("ignore", "pointer"):
@@ -390,7 +398,7 @@ elif kind == "gone-file":
 elif kind == "file":
     data = {"feature_directory": None, "phase": None, "lane": None}
 elif kind == "statusline":
-    data["statusLine"] = {"type": "command", "command": f"bash {t['installPath']}/statusline/st-statusline.sh"}
+    data["statusLine"] = {"type": "command", "command": slcmd(t)}
 elif kind == "plugins-off":
     if not isinstance(data.setdefault("enabledPlugins", {}), dict):
         refuse("skip: enabledPlugins in .claude/settings.json is not an object")
@@ -420,5 +428,5 @@ if data is not None:
         if tmp and os.path.exists(tmp):
             os.remove(tmp)
         refuse(f"skip: cannot write {fn}: {getattr(e, 'strerror', None) or e}")
-print(f"changed {fn}")
+print(f"changed {os.path.relpath(real, top)}")
 PY

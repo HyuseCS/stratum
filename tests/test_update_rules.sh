@@ -31,6 +31,7 @@ R8|skills/st-update/SKILL.md|git -C <checkout> add -- <paths> && git -C <checkou
 R8b|skills/st-update/SKILL.md|The commit ends with `-- <paths>`, so files the user staged before stay out of it.
 R8c|skills/st-update/SKILL.md|No `-A`, no
 R8d|skills/st-update/SKILL.md|`--amend`, no `--no-verify`, no push
+R8e|skills/st-update/SKILL.md|`<paths>` are the files that `fix` printed in its `changed <file>` lines for this checkout
 R9|skills/st-update/SKILL.md|A denied commit: quote the deny reason and
 R9b|skills/st-update/SKILL.md|give the exact command (D11)
 R9c|skills/st-update/SKILL.md|Name no personal script.

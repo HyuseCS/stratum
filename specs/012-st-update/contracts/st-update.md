@@ -43,10 +43,15 @@ output.
   in `<name>` is `invalid`: listed, never fixed. A plugins-off key from `<config>/settings.json` that does not match the pattern is `invalid`, with no fix. A settings file that is not a JSON object gives an `invalid` row and is never written. An invalid `.claude/settings.local.json` counts as empty for `plugins-off`.
 - A worktree on a `worker-*` branch has `worker` in the detail of its `install` row, or of its
   first row when it has no record.
-- Committed files (`.gitignore`, `AGENTS.md`, `CLAUDE.md`, `.claude/settings.json`), in a git
+- Committed files (`.gitignore`, `AGENTS.md`, `CLAUDE.md`, `.claude/settings.json`,
+  `.stratum/state.json`, `.stratum/advisor.json`; the file of a `file` row is its name), in a git
   checkout only (`git worktree list` succeeds; a folder that is not a git repo gets no `skip`):
   when `git -C <folder> status --porcelain -- <file>` is not empty, every row that would change
-  that file gets the state `skip` with the detail `<file> has uncommitted changes`. A
+  that file gets the state `skip` with the detail `<file> has uncommitted changes`. `<file>` is the
+  path of the real file (symlinks resolved) relative to the checkout, so `CLAUDE.md ->
+  docs/instructions.md` checks `docs/instructions.md`; a real file outside the checkout keeps the
+  link path. A `file` row whose file `git check-ignore --no-index` ignores stays as it is, on a
+detached HEAD too. A
   `git status` that fails gives `skip` with the detail `git status failed for <file>`. On a
   detached HEAD, every non-current committed-file row of that checkout gets `skip` with the
   detail `detached HEAD, no branch to commit on` (FR-017, D8).
@@ -75,7 +80,10 @@ output.
 ### 1d. `fix <folder> <kind> <name> [--force]`
 
 Each call changes one item in one folder, or nothing. Prints one line `changed <file>` or
-`same <file>`, exit 0. Refusals print the reason, exit 3, and write nothing.
+`same <file>`, exit 0. In `changed <file>`, `<file>` is the path of the file it changed (symlinks
+resolved, a `gone-file` link itself) relative to the folder's real path, so an append through
+`CLAUDE.md -> docs/instructions.md` prints `changed docs/instructions.md`. Refusals print the
+reason, exit 3, and write nothing.
 
 `fix` does not check for uncommitted changes or a detached HEAD: `audit` does (1b), before any
 change, so a second fix to the same file in one run is not refused by the first fix's change.
@@ -89,13 +97,16 @@ the file. A write that fails (an OS error, or text that cannot be encoded as UTF
 lone surrogate) removes the temp file: `skip: cannot write <file>: <reason>`, exit 3.
 
 JSON files and the `ignore` and `pointer` appends: the file's real path (symlinks resolved)
-outside the folder's real path: `skip: <file> points outside <folder>`, exit 3.
+outside the folder's real path: `skip: <file> points outside <folder>`, exit 3. `gone-file`: the
+real path of the file's parent folder outside the folder's real path (such as `.stratum ->
+../outside`): the same refusal, exit 3. A `gone-file` that is itself a symlink is removed, and its
+target is not touched.
 
 | Kind | Name | Change |
 |------|------|--------|
 | `ignore` | the line | Append the line to `<folder>/.gitignore` (create the file if missing). |
 | `pointer` | `@AGENTS.md` or `@.stratum/constitution.md` | Append the line to `<folder>/CLAUDE.md` (create the file if missing). `@AGENTS.md` only when `<folder>/AGENTS.md` exists. The fix never creates `AGENTS.md`. |
-| `statusline` | `statusLine` | Set `statusLine` in `<folder>/.claude/settings.local.json` to `{"type": "command", "command": "bash <installPath>/statusline/st-statusline.sh"}` from the target record (research R8). Create the file with only that key if missing (not in a record subfolder). Refuse, exit 3: the target record's version is not the marketplace version (`skip: install not updated`); the current command is not a Stratum statusline and no `--force` (`skip: not a Stratum statusline`). |
+| `statusline` | `statusLine` | Set `statusLine` in `<folder>/.claude/settings.local.json` to `{"type": "command", "command": "bash <installPath>/statusline/st-statusline.sh"}` from the target record (research R8). The script path is shell-quoted (`shlex.quote`), so a path with a space gets single quotes and a path without one is unchanged. `audit` takes a quoted or unquoted path as a Stratum statusline. Create the file with only that key if missing (not in a record subfolder). Refuse, exit 3: the target record's version is not the marketplace version (`skip: install not updated`); the current command is not a Stratum statusline and no `--force` (`skip: not a Stratum statusline`). |
 | `plugins-off` | the plugin key | Set `enabledPlugins.<key>` to `false` in `<folder>/.claude/settings.json`. |
 | `figcraft` | the tool name | Append the name to `permissions.allow` in `<folder>/.claude/settings.json` when it is not there. |
 | `file` | `.stratum/state.json` | Write `{"feature_directory": null, "phase": null, "lane": null}` when missing. Other `file` names are refused, exit 3: the skill writes them after st-init's question. |
@@ -142,11 +153,10 @@ to the script and to git (folder, kind, name, paths, message).
    `skip` answer. Skip: leave the file missing. Else write it as that st-init step does. A
    `constitution.md` row: tell the user to run `/stratum:st-constitution`. Exit 3: keep the reason.
    A Bash call a hook or the classifier blocks: keep the exact command for the user (FR-018).
-7. **Commit.** `<paths>` are the files of this list that st-update changed in the checkout:
-   `.gitignore`, `AGENTS.md`, `CLAUDE.md`, `.claude/settings.json`, and `.stratum/state.json` and
-   `.stratum/advisor.json` when `git check-ignore` does not ignore them. Never
-   `.claude/settings.local.json`, never `.stratum/models.json`. Per checkout with such a file, one
-   Bash call:
+7. **Commit.** `<paths>` are the files that `fix` printed in its `changed <file>` lines for this
+   checkout, and `.stratum/advisor.json` when step 6 wrote it, minus each file that
+   `git check-ignore` ignores. Never `.claude/settings.local.json`, never `.stratum/models.json`,
+   never `.stratum/commit-mode`. Per checkout with such a file, one Bash call:
    `git -C <checkout> add -- <paths> && git -C <checkout> commit -m 'chore(stratum): update harness files to <version>' -m '<one line per item>' -- <paths>`.
    The commit ends with `-- <paths>`, so files the user staged before stay out of it. No `-A`, no
    `--amend`, no `--no-verify`, no push. A denied commit: quote the deny reason and
@@ -187,7 +197,7 @@ run `claude plugin update` in a folder without its own record, edit `installed_p
 | U21 | `pointer` fix on a folder with no `AGENTS.md`: `CLAUDE.md` gets only `@.stratum/constitution.md` | FR-013 |
 | U25 | a git checkout whose second commit drops `.stratum/models.json`, `.stratum/weather.json.bak`, `xstratum/handoff_md` from `.gitignore` and `@.stratum/constitution.md` from `CLAUDE.md`: the `ignore .stratum/models.json` and `pointer @.stratum/constitution.md` rows are `new` with `removed in <sha>`; `ignore .stratum/handoff.md` (an unescaped `.` would match `xstratum/handoff_md`) and `ignore .stratum/weather.json` keep `.gitignore`; `ignore .stratum/lessons.md`, whose line and a `!` line are in both commits, keeps `.gitignore`; `ignore .stratum/powerline.json`, whose only removed line is `x/.stratum/powerline.json`, keeps `.gitignore`; a non-git folder pointer keeps `CLAUDE.md`; an uncommitted `.gitignore` gives `skip`; no `ignore` or `pointer` name holds an ERE special character but `.` | FR-004 |
 | U26 | the same dead `allow` entry in both settings files: two `discontinued` rows; `fix` of the `.claude/settings.local.json` row changes only that file; a second `audit` keeps only the `.claude/settings.json` row | FR-009 |
-| Build extras (no U number) | `tests/test_st_update.sh` also checks: an unsafe `plugins-off` key is `invalid`; a tracked path named in `.gitignore` is `current` and `fix ignore` on it prints `same`; `plugin` with an `ok` outcome and an unmoved record exits 1; `fix` on an outdated `install` row exits 3; `gone-file` on a directory exits 3; `audit` never calls `claude`; a JSON write through a symlink outside the checkout exits 3 and leaves the target byte-equal, through a symlink inside the checkout changes the link target and keeps the link, a planted `<file>.tmp` symlink is not followed, a new file gets mode 644 and an existing one keeps its mode; an append through a `CLAUDE.md` symlink outside the checkout exits 3, inside writes into the target; a lone surrogate in a JSON write exits 3, leaves no `.tmp` file and the file byte-equal; a folder that is not a git repo gets no `skip` row; a corrupt `.git/index` gives `git status failed for CLAUDE.md` as the `skip` detail | FR-003, FR-011, FR-013, FR-017 |
+| Build extras (no U number) | `tests/test_st_update.sh` also checks: an unsafe `plugins-off` key is `invalid`; a tracked path named in `.gitignore` is `current` and `fix ignore` on it prints `same`; `plugin` with an `ok` outcome and an unmoved record exits 1; `fix` on an outdated `install` row exits 3; `gone-file` on a directory exits 3; `audit` never calls `claude`; a JSON write through a symlink outside the checkout exits 3 and leaves the target byte-equal, through a symlink inside the checkout changes the link target and keeps the link, a planted `<file>.tmp` symlink is not followed, a new file gets mode 644 and an existing one keeps its mode; an append through a `CLAUDE.md` symlink outside the checkout exits 3 and `audit` keeps that row `new` with the detail `CLAUDE.md`, inside writes into the target; `gone-file` through a `.stratum` symlink to a folder outside the checkout exits 3 and the outside file stays, a `commit-mode` that is a symlink is removed, `fix` prints `changed .stratum/commit-mode` and the target stays byte-equal; a deleted tracked `.stratum/state.json` is `skip` with `.stratum/state.json has uncommitted changes`; on a detached main checkout an ignored missing `.stratum/state.json` stays `new` and a tracked missing `.stratum/advisor.json` is `skip` with the detached reason; a committed `CLAUDE.md -> docs/instructions.md` with a dirty target is `skip` with `docs/instructions.md has uncommitted changes`, with a clean target `fix` prints `changed docs/instructions.md`; an install path with a space: `fix statusline` writes `bash '<path>/statusline/st-statusline.sh'`, a second `audit` is `current`, the command runs the script, and a quoted command at an old path is `outdated`; a lone surrogate in a JSON write exits 3, leaves no `.tmp` file and the file byte-equal; a folder that is not a git repo gets no `skip` row; a corrupt `.git/index` gives `git status failed for CLAUDE.md` as the `skip` detail | FR-003, FR-011, FR-013, FR-017 |
 
 `tests/test_update_rules.sh`: phrase rows on `skills/st-update/SKILL.md` for steps 1 to 8 above,
 like `tests/test_plan_rules.sh`:
@@ -207,7 +217,8 @@ like `tests/test_plan_rules.sh`:
 | R5d | the skipped worktrees and items left out of the second audit's rows | FR-009 |
 | R6 | `ask` rows: show the old and new command, `--force` only on yes | FR-006 |
 | R7 | st-init steps 3, 4, 7, 11 questions, one at a time, `skip` leaves the file missing; `/stratum:st-constitution` | FR-014 |
-| R8 | the commit command with `git -C` that ends with `-- <paths>`, the fixed path list, no `-A`, `--amend`, `--no-verify`, push | FR-016 |
+| R8 | the commit command with `git -C` that ends with `-- <paths>`, no `-A`, `--amend`, `--no-verify`, push | FR-016 |
+| R8e | `<paths>` are the files `fix` printed in its `changed <file>` lines for the checkout | FR-016 |
 | R9 | denied commit: quote the reason, give the command, name no personal script; gone: no `veent-commit-ask` text | D11 |
 | R10 | blocked Bash call: give the exact `fix` command | FR-018 |
 | R11 | report per folder and the restart line | FR-019 |

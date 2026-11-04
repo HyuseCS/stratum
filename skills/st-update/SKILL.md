@@ -48,10 +48,9 @@ script and to git (folder, kind, name, paths, message).
    Skip: leave the file missing. Else write it as that st-init step does.
    A `constitution.md` row: tell the user to run `/stratum:st-constitution`.
    A Bash call a hook or the classifier blocks: keep the exact command for the user.
-7. **Commit.** `<paths>` are the files of this list that st-update changed in the checkout:
-   `.gitignore`, `AGENTS.md`, `CLAUDE.md`, `.claude/settings.json`, and `.stratum/state.json` and
-   `.stratum/advisor.json` when `git check-ignore` does not ignore them.
-   Never `.claude/settings.local.json`, never `.stratum/models.json`.
+7. **Commit.** `<paths>` are the files that `fix` printed in its `changed <file>` lines for this checkout,
+   and `.stratum/advisor.json` when step 6 wrote it, minus each file that `git check-ignore` ignores.
+   Never `.claude/settings.local.json`, never `.stratum/models.json`, never `.stratum/commit-mode`.
    Per checkout with such a file, one Bash call:
    `git -C <checkout> add -- <paths> && git -C <checkout> commit -m 'chore(stratum): update harness files to <version>' -m '<one line per item>' -- <paths>`
    The commit ends with `-- <paths>`, so files the user staged before stay out of it.

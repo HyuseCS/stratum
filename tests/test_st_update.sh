@@ -457,6 +457,8 @@ ln -s ../u22-victim "$tmp/u22/CLAUDE.md"
 git -C "$tmp/u22" add -A
 git -C "$tmp/u22" commit -qm init
 victimsum=$(sha256sum "$tmp/u22-victim")
+audit "$tmp/u22"
+check "audit of a committed CLAUDE.md symlink outside the checkout keeps new" [ "$(rowsof "$tmp/u22" pointer @.stratum/constitution.md | cut -f4,5)" = "$(printf 'new\tCLAUDE.md')" ]
 run fix "$tmp/u22" pointer @.stratum/constitution.md
 check "append through a committed CLAUDE.md symlink outside the checkout exits 3" exits 3 contains "$out" "skip: CLAUDE.md points outside $tmp/u22"
 check "append leaves the outside file byte-equal" [ "$victimsum" = "$(sha256sum "$tmp/u22-victim")" ]
@@ -519,5 +521,71 @@ check "U26 fix of the local row exits 0 and changes that file" exits 0 contains 
 check "U26 the skipped settings.json row is byte-equal" [ "$jsonsum" = "$(sha256sum "$tmp/u26/.claude/settings.json")" ]
 audit "$tmp/u26"
 check "U26 second audit keeps only the settings.json row" [ "$(rowsof "$tmp/u26" allow 'Skill(stratum:st-gone)' | cut -f4,5)" = "$(printf 'discontinued\t.claude/settings.json')" ]
+
+git init -q -b main "$tmp/u27"
+mkdir -p "$tmp/u27-out"
+printf 'auto\n' > "$tmp/u27-out/commit-mode"
+ln -s ../u27-out "$tmp/u27/.stratum"
+run fix "$tmp/u27" gone-file .stratum/commit-mode
+check "gone-file through a .stratum symlink outside the checkout exits 3" exits 3 contains "$out" "skip: .stratum/commit-mode points outside $tmp/u27"
+check "gone-file through a .stratum symlink keeps the outside file" [ -e "$tmp/u27-out/commit-mode" ]
+rm "$tmp/u27/.stratum"
+mkdir -p "$tmp/u27/.stratum"
+ln -s ../../u27-out/commit-mode "$tmp/u27/.stratum/commit-mode"
+outsum=$(sha256sum "$tmp/u27-out/commit-mode")
+run fix "$tmp/u27" gone-file .stratum/commit-mode
+check "gone-file on a commit-mode symlink removes the link" exits 0 [ ! -L "$tmp/u27/.stratum/commit-mode" ]
+check "gone-file on a commit-mode symlink prints the link path" contains "$out" "changed .stratum/commit-mode"
+check "gone-file on a commit-mode symlink keeps the target byte-equal" [ "$outsum" = "$(sha256sum "$tmp/u27-out/commit-mode")" ]
+
+git init -q -b main "$tmp/u29"
+mkdir -p "$tmp/u29/.stratum" "$tmp/u29/docs"
+printf 'mine\n' > "$tmp/u29/docs/instructions.md"
+ln -s docs/instructions.md "$tmp/u29/CLAUDE.md"
+printf '{"feature_directory": null, "phase": null, "lane": null}\n' > "$tmp/u29/.stratum/state.json"
+git -C "$tmp/u29" add -A
+git -C "$tmp/u29" commit -qm init
+rm "$tmp/u29/.stratum/state.json"
+audit "$tmp/u29"
+check "deleted tracked state.json is skip" [ "$(rowsof "$tmp/u29" file .stratum/state.json | cut -f4,5)" = "$(printf 'skip\t.stratum/state.json has uncommitted changes')" ]
+printf '{"feature_directory": null, "phase": null, "lane": null}\n' > "$tmp/u29/.stratum/state.json"
+printf 'user edit\n' >> "$tmp/u29/docs/instructions.md"
+audit "$tmp/u29"
+check "dirty target of a CLAUDE.md symlink is skip" [ "$(rowsof "$tmp/u29" pointer @.stratum/constitution.md | cut -f4,5)" = "$(printf 'skip\tdocs/instructions.md has uncommitted changes')" ]
+printf 'mine\n' > "$tmp/u29/docs/instructions.md"
+audit "$tmp/u29"
+check "clean target of a CLAUDE.md symlink is new" [ "$(state "$tmp/u29" pointer @.stratum/constitution.md)" = new ]
+run fix "$tmp/u29" pointer @.stratum/constitution.md
+check "fix through a CLAUDE.md symlink prints the real file" exits 0 [ "$out" = "changed docs/instructions.md" ]
+
+git init -q -b main "$tmp/u30"
+mkdir -p "$tmp/u30/.stratum"
+printf '.stratum/state.json\n' > "$tmp/u30/.gitignore"
+printf '{}\n' > "$tmp/u30/.stratum/advisor.json"
+git -C "$tmp/u30" add -A
+git -C "$tmp/u30" commit -qm init
+git -C "$tmp/u30" checkout -q --detach
+rm "$tmp/u30/.stratum/advisor.json"
+audit "$tmp/u30"
+check "detached checkout with an ignored missing state.json keeps new" [ "$(rowsof "$tmp/u30" file .stratum/state.json | cut -f4,5)" = "$(printf 'new\tmissing')" ]
+check "detached checkout with a tracked missing advisor.json is skip" [ "$(rowsof "$tmp/u30" file .stratum/advisor.json | cut -f4,5)" = "$(printf 'skip\tdetached HEAD, no branch to commit on')" ]
+
+sp="$tmp/sp ace/0.7.0"
+mkdir -p "$sp/statusline" "$tmp/u28/.stratum"
+printf 'echo ran\n' > "$sp/statusline/st-statusline.sh"
+cat > "$tmp/cfg/plugins/installed_plugins.json" <<EOF
+{"version": 2, "plugins": {"stratum@stratum": [
+{"scope": "local", "projectPath": "$tmp/u28", "installPath": "$sp", "version": "0.7.0"}
+]}}
+EOF
+run fix "$tmp/u28" statusline statusLine
+cmd=$(pyq "$tmp/u28/.claude/settings.local.json" 'd["statusLine"]["command"]')
+check "statusline fix with a space in the install path quotes the script" exits 0 [ "$cmd" = "bash '$sp/statusline/st-statusline.sh'" ]
+audit "$tmp/u28"
+check "statusline with a quoted path is current on a second audit" [ "$(state "$tmp/u28" statusline statusLine)" = current ]
+check "quoted statusline command runs the script" [ "$(bash -c "$cmd" 2>&1)" = ran ]
+printf '{"statusLine": {"type": "command", "command": "bash '"'"'%s/statusline/st-statusline.sh'"'"'"}}\n' "$tmp/old cache" > "$tmp/u28/.claude/settings.local.json"
+audit "$tmp/u28"
+check "quoted statusline at an old path is outdated" [ "$(state "$tmp/u28" statusline statusLine)" = outdated ]
 
 exit "$fail"
