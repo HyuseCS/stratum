@@ -75,7 +75,7 @@ One audit output line: one item in one folder.
 | folder | absolute path, or `-` for the header rows |
 | kind | as above, or `marketplace` and `marketplace-branch` (header) |
 | name | as above |
-| state | `current`, `outdated`, `discontinued`, `new`, `ask`, `invalid`, `gone`, `listed`, `warn` |
+| state | `current`, `outdated`, `discontinued`, `new`, `ask`, `invalid`, `gone`, `listed`, `warn`, `skip` |
 | detail | one line: the version, the old and new value, or the reason |
 
 States:
@@ -92,11 +92,14 @@ States:
 - `listed`: a `user` or `managed` record, or a folder with no install. Never touched. Listed.
 - `warn`: header only. The marketplace folder is a git checkout not on `main` (research R16).
   Shown at the gate. Nothing to fix.
+- `skip`: a row that would change a committed file with uncommitted changes, or any committed-file
+  row of a checkout on a detached HEAD. Set by `audit` before any change. Never fixed. Reported
+  with its detail.
 
 Transitions: `outdated`, `discontinued` and `new` become `current` after a fix. A fix that exits 3
-(uncommitted changes, detached HEAD) leaves the row as it was and the report gives the reason. A
-second audit after a full run shows only `current`, `ask` rows the user said no to, `new` rows the
-user answered "skip", skipped rows, and `invalid`, `gone`, `listed` rows (SC-001).
+leaves the row as it was and the report gives the reason. A second audit after a full run shows
+only `current`, `ask` rows the user said no to, `new` rows the user answered "skip", `skip` rows,
+and `invalid`, `gone`, `listed` rows (SC-001).
 
 ## Discontinued file list
 

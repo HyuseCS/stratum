@@ -175,8 +175,9 @@ the marketplace branch.
   (it holds this machine's path, st-init step 7) and never `.stratum/models.json`.
 - Message: `chore(stratum): update harness files to <version>`, then one body line per changed
   item.
-- Before a committed file is changed, `fix` checks `git status --porcelain -- <file>` and the
-  branch. Uncommitted changes or a detached HEAD: exit 3 with the reason, nothing written.
+- Before any change, `audit` checks `git status --porcelain -- <file>` for each committed file and
+  the branch. Uncommitted changes or a detached HEAD: the rows for that file get `skip` with the
+  reason, and the skill never runs `fix` on them.
 - A commit a hook denies (D11): the skill quotes the deny reason and gives the exact command
   `git -C <checkout> add -- <paths> && git -C <checkout> commit -m "<message>" -- <paths>`. It names no
   personal script and never retries another way.

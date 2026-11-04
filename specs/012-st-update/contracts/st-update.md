@@ -42,6 +42,11 @@ output.
   name gets an `invalid` row with no fix (research R9).
 - A worktree on a `worker-*` branch has `worker` in the detail of its `install` row, or of its
   first row when it has no record.
+- Committed files (`.gitignore`, `AGENTS.md`, `CLAUDE.md`, `.claude/settings.json`): when
+  `git -C <folder> status --porcelain -- <file>` is not empty, every row that would change that
+  file gets the state `skip` with the detail `<file> has uncommitted changes`. On a detached HEAD,
+  every committed-file row of that checkout gets `skip` with the detail
+  `detached HEAD, no branch to commit on` (FR-017, D8).
 - Exit 0. Writes nothing (FR-010). `claude` is not called.
 - Never prints the value of a key it does not check (settings files can hold `env` secrets).
 
@@ -63,10 +68,10 @@ output.
 Each call changes one item in one folder, or nothing. Prints one line `changed <file>` or
 `same <file>`, exit 0. Refusals print the reason, exit 3, and write nothing.
 
-Before a change to a committed file (`.gitignore`, `AGENTS.md`, `CLAUDE.md`,
-`.claude/settings.json`):
-- `git -C <folder> status --porcelain -- <file>` not empty: `skip: <file> has uncommitted changes`, exit 3.
-- Detached HEAD: `skip: detached HEAD, no branch to commit on`, exit 3.
+`fix` does not check for uncommitted changes or a detached HEAD: `audit` does (1b), before any
+change, so a second fix to the same file in one run is not refused by the first fix's change.
+`ponytail: the dirty and detached check runs at audit time; a file the user edits between the
+audit and the fix is not caught; upgrade if that is seen.`
 
 JSON files: not valid JSON or not an object: `skip: <file> is not valid JSON`, exit 3. Writes keep
 every other key and value, `indent=2`, key order kept (research R12).
@@ -109,7 +114,7 @@ to the script and to git (folder, kind, name, paths, message).
 5. **Ask.** For each `ask` row: show the old and the new `statusLine` command and ask. Yes:
    `fix ... --force`. No: leave it.
 6. **Fix.** Every other `outdated`, `new` and `discontinued` row: `bash <script> fix <folder>
-   <kind> <name>`. For a `file` row of `git-guard.json`, `models.json`, `powerline.json` or
+   <kind> <name>`. Never run `fix` on a `skip` row. Report each `skip` row with its detail. For a `file` row of `git-guard.json`, `models.json`, `powerline.json` or
    `advisor.json`: ask the question of st-init step 3, 4, 7 or 11, one at a time, each with a
    `skip` answer. Skip: leave the file missing. Else write it as that st-init step does. A
    `constitution.md` row: tell the user to run `/stratum:st-constitution`. Exit 3: keep the reason.
@@ -149,7 +154,7 @@ run `claude plugin update` in a folder without its own record, edit `installed_p
 | U12 | `fix` of each kind keeps other lines and keys; user data files byte-equal | FR-013, SC-003 |
 | U13 | `fix file .stratum/state.json` writes st-init's value; `fix file .stratum/advisor.json` exit 3 | FR-014 |
 | U14 | `fix models-key st-gone` leaves `st-build`; `fix gone-file .stratum/commit-mode` deletes it; `fix gone-file .stratum/lessons.md` exit 3 | FR-015 |
-| U15 | `fix pointer` in the worktree with a dirty `CLAUDE.md`: exit 3, the reason, file the same; detached HEAD: exit 3 | FR-017 |
+| U15 | `audit` with a dirty `CLAUDE.md` in the worktree: each row that would change `CLAUDE.md` there is `skip` with the detail `CLAUDE.md has uncommitted changes`, rows of its other files are not; a detached HEAD in a second worktree: every committed-file row there is `skip` with the detail `detached HEAD, no branch to commit on`; `CLAUDE.md` byte-equal | FR-017 |
 | U16 | `fix statusline` with a custom command: exit 3; with `--force`: changed | FR-006, US3 |
 | U17 | full run (stub plugin, every fix), then `audit`: only `current`, `gone`, `listed` | SC-001 |
 | U18 | `claude` not on `PATH`: `plugin` prints the command, exit 1; `fix` still works | Edge case |

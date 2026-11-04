@@ -27,7 +27,7 @@ Each must go red, then green again after the undo. Undo with the Edit tool, not 
 | N1 | Add `` `.stratum/zz-drift.json` `` to step 2 of `skills/st-init/SKILL.md` | Covered by the built-in control of `tests/test_update_items.sh` (T013, contract section 4 step 4), which runs on every green run. Not run by hand |
 | N2 | Remove the line `graphify-out/` from the `items` list in `scripts/st-update.sh` | `bash tests/test_update_items.sh` exits 1 and names `graphify-out/` |
 | N3 | In `scripts/st-update.sh` `fix statusline`, drop the check that the record is updated | U11 in `bash tests/test_st_update.sh` fails |
-| N4 | In `fix`, drop the `git status` check | U15 fails |
+| N4 | In `audit`, drop the `git status` check | U15 fails |
 | N5 | In `plugin`, drop the check of other records | U10 fails |
 | N6 | Delete the README row for `st-update` | `bash tests/test_inspect.sh` fails "README skills" |
 | N7 | In `audit`, drop the `marketplace-branch` row | U20 fails |
