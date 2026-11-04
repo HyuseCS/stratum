@@ -21,3 +21,30 @@ script and to git (folder, kind, name, paths, message).
    Then ask one question: OK to update all, or `skip <worktree>` (one or more), or no.
    No: stop, nothing changed.
    Change nothing before the OK.
+4. **Plugin.** For each folder with an `install` row that is `outdated`, skipped worktrees left out,
+   run `bash <script> plugin <folder>`. Exit 0 prints `ok <version> <installPath>`.
+   Exit 1 prints the message and a `Run:` command on stderr. Keep both for the report and
+   go on with the next folder.
+   Exit 0: run `fix <folder> statusline statusLine` for that folder
+   when its `statusLine` row is `outdated` or `new`.
+6. **Fix.** For every other `outdated`, `new` and `discontinued` row, run
+   `bash <script> fix <folder> <kind> <name>`. It prints `changed <file>` or `same <file>`.
+   Exit 3 prints `skip: <reason>` on stderr. Keep the reason for the report.
+   Never run `fix` on a `skip` row. Report each `skip` row with its detail.
+   A `file` row of `git-guard.json`, `models.json`, `powerline.json` or `advisor.json`:
+   ask the question of st-init step 3, 4, 7 or 11, one at a time, each with a `skip` answer.
+   Skip: leave the file missing. Else write it as that st-init step does.
+   A `constitution.md` row: tell the user to run `/stratum:st-constitution`.
+   A Bash call a hook or the classifier blocks: keep the exact command for the user.
+7. **Commit.** `<paths>` are the files of this list that st-update changed in the checkout:
+   `.gitignore`, `AGENTS.md`, `CLAUDE.md`, `.claude/settings.json`, and `.stratum/state.json` and
+   `.stratum/advisor.json` when `git check-ignore` does not ignore them.
+   Never `.claude/settings.local.json`, never `.stratum/models.json`.
+   Per checkout with such a file, one Bash call:
+   `git -C <checkout> add -- <paths> && git -C <checkout> commit -m "chore(stratum): update harness files to <version>" -m "<one line per item>" -- <paths>`
+   The commit ends with `-- <paths>`, so files the user staged before stay out of it.
+   No `-A`, no `--amend`, no `--no-verify`, no push.
+   A denied commit: quote the deny reason and give the exact command (D11).
+   Name no personal script. Never work around it.
+8. **Report.** Per folder: what changed, what was skipped and why, the commands the user must run.
+   Last line: `Restart running Claude Code sessions in these folders to load Stratum <version>.`
