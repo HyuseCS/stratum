@@ -1,10 +1,17 @@
 #!/usr/bin/env bash
 set -o pipefail
 SECONDS=0
-usage() { echo "usage: st-advisor.sh plan|test|diff|decisions|round|check|continued|waive|note|talk|count|codex-home ..."; exit 2; }
+usage() { echo "usage: st-advisor.sh plan|test|diff|decisions|change|round|check|continued|waive|note|talk|count|codex-home ..."; exit 2; }
 dir=${XDG_STATE_HOME:-$HOME/.local/state}/stratum/codex-home
 root=$(pwd -P)
 entry="[projects.\"$root\"]"
+add_entry() {
+  if [[ $root = *[[:cntrl:]\"\\]* ]]; then
+    echo "project root has a quote, backslash or control character in its path: no entry, Codex runs in the background here"
+  elif ! grep -qxF "$entry" "$dir/config.toml" 2>/dev/null; then
+    { [ -n "$(tail -c1 "$dir/config.toml" 2>/dev/null)" ] && echo; printf '%s\ntrust_level = "untrusted"\n' "$entry"; } >> "$dir/config.toml"
+  fi
+}
 if [ $# = 1 ] && [ "$1" = codex-home ]; then
   login=${CODEX_HOME:-$HOME/.codex}/auth.json
   [ -f "$login" ] || { echo "no codex login: run codex login, then run this again"; exit 1; }
@@ -13,18 +20,14 @@ if [ $# = 1 ] && [ "$1" = codex-home ]; then
   [ -e "$dir/auth.json" ] && [ ! -L "$dir/auth.json" ] && { echo "$dir/auth.json is a file, not a link to your Codex login: run codex login status, move that file away, then run this again"; exit 1; }
   chmod 700 "$dir" || exit 1
   [ "$(readlink "$dir/auth.json")" = "$login" ] || ln -sfn "$login" "$dir/auth.json" || exit 1
-  if [[ $root = *[[:cntrl:]\"\\]* ]]; then
-    echo "project root has a quote, backslash or control character in its path: no entry, Codex runs in the background here"
-  elif ! grep -qxF "$entry" "$dir/config.toml" 2>/dev/null; then
-    { [ -n "$(tail -c1 "$dir/config.toml" 2>/dev/null)" ] && echo; printf '%s\ntrust_level = "untrusted"\n' "$entry"; } >> "$dir/config.toml" || exit 1
-  fi
+  add_entry || exit 1
   echo "codex home: $dir"
   exit 0
 fi
 cmd=run
 case ${1:-} in check|continued|waive|note|round|talk) cmd=$1; shift ;; count) cmd=count ;; esac
 point=${1:-}
-case "$cmd $point $#" in "run plan 2"|"run test 6"|"run diff 3"|"run decisions 3"|"round plan 4"|"round test 4"|"round diff 4"|"round decisions 4"|"check plan 2"|"continued plan 2"|"continued test 2"|"continued diff 2"|"continued decisions 2"|"waive plan 3"|"note plan 3"|"note test 3"|"note diff 3"|"note decisions 3"|"talk plan 3"|"talk test 3"|"talk diff 3"|"talk decisions 3"|"count count 2") ;; *) usage ;; esac
+case "$cmd $point $#" in "run plan 2"|"run test 6"|"run diff 3"|"run decisions 3"|"run change 3"|"round plan 4"|"round test 4"|"round diff 4"|"round decisions 4"|"round change 4"|"check plan 2"|"continued plan 2"|"continued test 2"|"continued diff 2"|"continued decisions 2"|"continued change 2"|"waive plan 3"|"note plan 3"|"note test 3"|"note diff 3"|"note decisions 3"|"note change 3"|"talk plan 3"|"talk test 3"|"talk diff 3"|"talk decisions 3"|"talk change 3"|"count count 2") ;; *) usage ;; esac
 at=$point
 label=$point
 [ $cmd = round ] && { at=round; label="$point round $3"; }
@@ -69,7 +72,7 @@ fi
 case $cmd-$point in
   round-*) [[ $3 =~ ^[1-3]$ ]] && [ -f "$4" ] && [ -r "$4" ] || usage ;;
   *-plan) [ -f "$f/plan.md" ] && [ -r "$f/plan.md" ] && [ -f "$f/tasks.md" ] && [ -r "$f/tasks.md" ] || usage ;;
-  *-decisions) [ -f "$3" ] && [ -r "$3" ] || usage ;;
+  *-decisions|*-change) [ -f "$3" ] && [ -r "$3" ] || usage ;;
   *-test) [ -f "$3" ] && [ -r "$3" ] && [ -f "$5" ] && [ -r "$5" ] && [ -f "$6" ] && [ -r "$6" ] || usage ;;
   *-diff) git rev-parse --verify --quiet "$3^{commit}" >/dev/null || usage
     git diff --quiet "$3" HEAD --
@@ -81,12 +84,15 @@ if [ $cmd = waive ]; then
 fi
 bad=0 say=
 if [ $cmd = run ] || [ $cmd = round ]; then
-  [ -e .stratum/advisor.json ] || { echo 'no advisor: mode not set. Write .stratum/advisor.json with "mode": "auto", "codex", "both" or "off".'; exit 0; }
-  common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) && sf=$(dirname "$common")/.stratum/state.json || sf=.stratum/state.json
-  cfg=$(python3 -I - "$sf" <<'PY'
+  common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) && main=$(dirname "$common") || main=.
+  af=.stratum/advisor.json
+  [ -e "$af" ] || af=$main/.stratum/advisor.json
+  [ -e "$af" ] || { echo 'no advisor: mode not set. Write .stratum/advisor.json with "mode": "auto", "codex", "both" or "off".'; exit 0; }
+  sf=$main/.stratum/state.json
+  cfg=$(python3 -I - "$sf" "$af" <<'PY'
 import json, re, sys
 try:
-    s = json.loads(open(".stratum/advisor.json", "rb").read())
+    s = json.loads(open(sys.argv[2], "rb").read())
 except (OSError, ValueError, RecursionError):
     sys.exit(1)
 if not (isinstance(s, dict) and set(s) <= {"mode", "model", "effort"} and all(isinstance(v, str) for v in s.values())
@@ -108,8 +114,8 @@ PY
       [ -n "$risk" ] || { echo "risk not set: normal"; risk=normal; }
       case $at-$risk in
         round-*) aset=codex ;;
-        plan-high|decisions-high|diff-high) aset=both ;;
-        *-none|plan-low) aset=none ;;
+        plan-high|decisions-high|diff-high|change-high) aset=both ;;
+        *-none|plan-low|change-low) aset=none ;;
         *-low) aset=/advisor ;;
         *) aset=codex ;;
       esac
@@ -130,7 +136,7 @@ trap 'rm -rf "$tmp"' EXIT
 
 case $cmd-$point in
   round-*) hash=$(sha256sum < "$4") || { echo "cannot hash inputs"; exit 2; } ;;
-  *-decisions) hash=$(sha256sum < "$3") || { echo "cannot hash inputs"; exit 2; } ;;
+  *-decisions|*-change) hash=$(sha256sum < "$3") || { echo "cannot hash inputs"; exit 2; } ;;
   *-plan) hash=$({ cat "$f/spec.md" && awk '/^```/{f=!f} !f&&/^## Validate$/{s=1;next} !f&&/^## /{s=0} !s' "$f/plan.md" && cat "$f/tasks.md"; } | sha256sum) || { echo "cannot hash inputs"; exit 2; } ;;
   *-test) hash=$(cat "$5" "$6" | sha256sum) || { echo "cannot hash inputs"; exit 2; } ;;
   *-diff) hash=$(git diff --no-ext-diff --no-color "$3" HEAD -- | sha256sum) || { echo "cannot hash inputs"; exit 2; } ;;
@@ -178,19 +184,26 @@ printf '%s\n' '{"type":"object","additionalProperties":false,"required":["verdic
       printf '%s\n' \
         'Point: plan. Advise only on how the plan could be built better or done differently for a better outcome: a simpler or better approach, tasks to cut or merge. Do not check correctness, coverage or risks: the Inspect phase does that.' \
         "Inputs: $f/spec.md, $f/plan.md, $f/tasks.md" ;;
+    *-change)
+      printf '%s\n' \
+        "Point: change. Review this change plan inside an existing feature: is the approach right and the simplest, and does it miss a test, a file or a caller? Do not build or fix." \
+        "Inputs: $f/spec.md, $3" ;;
     *-test)
       printf '%s\n' 'Point: test. This task'"'"'s test is still red after two build tries. Root cause or rabbit hole?' "Test: $4" 'Task:' "$(cat "$3")" 'Failure output 1:' "$(cat "$5")" 'Failure output 2:' "$(cat "$6")" ;;
   esac
 } > "$tmp/prompt"
 
-rc=1
-if [ "${HERDR_ENV:-}" = 1 ] && [ -n "${HERDR_WORKSPACE_ID:-}" ] && command -v herdr >/dev/null && [ -L "$dir/auth.json" ]; then
+rc=1 via="codex: headless (not in herdr)"
+if [ "${HERDR_ENV:-}" = 1 ] && [ -n "${HERDR_WORKSPACE_ID:-}" ] && command -v herdr >/dev/null; then
+  [ -L "$dir/auth.json" ] || block "no Stratum Codex home: run st-advisor.sh codex-home"
+  add_entry || block "cannot write $dir/config.toml"
   rc=0
   sd=$(dirname "$0")
   cp "$tmp/prompt" "$tmp/prompt.tab" || block "cannot copy the prompt"
   timeout -k 10 540 bash "$sd/st-lock.sh" --name "codex-$HERDR_WORKSPACE_ID" --timeout 50 -- bash "$sd/st-codex-agent.sh" "$f" "$tmp/prompt.tab" "$tmp/answer.json" "$dir" "${opts[@]}" > "$tmp/tab" 2>&1 || rc=$?
   [ $rc = 75 ] && block "Codex agent busy with another review"
-  case $rc in 0) ;; 124|137) echo "ERROR: Codex tab timed out" ;; *) grep -a '^ERROR:' "$tmp/tab" | tail -n1 ;; esac
+  case $rc in 0) via=$(grep -a '^codex: tab ' "$tmp/tab" | tail -n1) ;; 124|137) echo "ERROR: Codex tab timed out" ;; *) grep -a '^ERROR:' "$tmp/tab" | tail -n1 ;; esac
+  [ $rc = 0 ] || via="codex: headless (Codex tab failed)"
 fi
 left=$((540 - SECONDS))
 # ponytail: the 60 s floor has no test (it needs a 60 s wait), add one with a fake clock if the budget changes
@@ -243,3 +256,6 @@ head = [f"BLOCKED: {summary}"] if v == "BLOCKED" else [f"{v} sha256 {h}", f"summ
 print("\n".join(head + found + [f"record: {f}/advisor.md"]))
 sys.exit(1 if v == "BLOCKED" else 0)
 PY
+rc=$?
+echo "$via"
+exit $rc

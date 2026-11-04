@@ -184,14 +184,16 @@ copy for that project only. `scripts/st-lock.sh` runs tests marked `[lock]` one 
   It answers `APPROVED`, `REVISE` (findings, checked against the source like any finding; one more run only when a CRITICAL or HIGH fix changed the plan, two rounds at most), or `BLOCKED` (the orchestrator stops and asks you).
   A failed, empty, malformed or late answer (540 seconds) is `BLOCKED`, never approval.
   Each run appends the point, a SHA256 of the input, the verdict and the findings to `specs/<feature>/advisor.md`. An approval of a plan that changed since then is stale.
-  What leaves the machine: each call sends the prompt and the files Codex reads to OpenAI, on your Codex login and quota (about 37,000 tokens per plan review). At the plan point the prompt names the plan files and Codex reads them; at the test point it holds the task text, the test path and both failure outputs. At the diff point Codex reads the diff since the last review, and at the decisions and round points the prompt holds the list or the views text.
+  What leaves the machine: each call sends the prompt and the files Codex reads to OpenAI, on your Codex login and quota (about 37,000 tokens per plan review). At the plan point the prompt names the plan files and Codex reads them; at the test point it holds the task text, the test path and both failure outputs. At the diff point Codex reads the diff since the last review, and at the decisions and round points the prompt holds the list or the views text. At the change point (Fast lane, before its gate) the prompt names the spec and the change plan, and Codex reads them.
   The prompt tells Codex to stay inside the named inputs, never open env or secret files, and never quote a secret value. The sandbox does not block reads.
   Whether Codex's own shell sees your environment variables is not checked.
   `.stratum/advisor.json` sets the mode. `{"mode": "auto"}` (the default when the file has no `mode`): the risk level picks the advisors at each point. The others are `{"mode": "codex"}`, `{"mode": "both"}` (Codex, then `/advisor` if you set one), or `{"mode": "off"}`. `"mode": "off"` is the off switch: nothing goes to OpenAI.
-  With no file the advisor is off and prints `no advisor: mode not set. Write .stratum/advisor.json with "mode": "auto", "codex", "both" or "off".` `st-init` writes the file for new projects. A project set up before this feature has no file, so the advisor stays off until you write it.
+  A worktree with no file reads the main checkout's file. With no file in either, the point prints `no advisor: mode not set. Write .stratum/advisor.json with "mode": "auto", "codex", "both" or "off".` and the lane stops to ask you the mode, then writes it to the main checkout. `st-init` writes the file for new projects.
   With no `codex` on PATH you get one line, `no advisor: codex not found`, and the flow runs as before, with `/advisor` if you set one.
   Optional `model` and `effort` keys in the same file pick the Codex model and reasoning effort, for example `{"mode": "codex", "model": "gpt-6-astra", "effort": "high"}`. Without them Codex uses its own default.
   Inside herdr, Codex runs as an agent in a `Codex` tab of your workspace, read-only and never asking, so you can watch it. The tab uses Stratum's own Codex home, `~/.local/state/stratum/codex-home`, which holds only a link to your Codex login and a `config.toml` that marks the project untrusted: your `~/.codex/config.toml`, `~/.codex/hooks.json` and a project's `.codex/config.toml` do not load there, and the model comes from `.stratum/advisor.json`.
+  The last line of each Codex point says where Codex ran: `codex: tab st-codex-<folder>` or `codex: headless (<reason>)`.
+  A new project folder or worktree gets its `untrusted` entry at its first Codex point. Inside herdr with no login link, the point stops with `BLOCKED: no Stratum Codex home: run st-advisor.sh codex-home`.
   The background call runs with `--ignore-user-config`: neither `~/.codex/config.toml` nor a project `.codex/config.toml` is read, so no MCP server, hook or notify command from them runs during a review, and the model and effort come only from this file. Your Codex login works as before.
 - **Git guard.** One mode per command: `commit`, `worktree_remove`, `worktree_prune`,
   `branch_delete`, `reset_hard`, `clean` (`clean -f`), `discard` (`checkout .`, `restore .`), and
@@ -361,6 +363,7 @@ bash tests/test_triage_rules.sh
 bash tests/test_no_frontend_design.sh
 bash tests/test_risk_rules.sh
 bash tests/test_worker_rules.sh
+bash tests/test_local_files.sh
 node tests/test_token_weather.mjs
 node tests/test_pr_workflow.mjs
 claude plugin validate .claude-plugin/plugin.json

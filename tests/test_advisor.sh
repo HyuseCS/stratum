@@ -59,6 +59,7 @@ answer '{"verdict":"APPROVED","summary":"fine","findings":[]}'
 run plan specs/001-demo
 h=$(plan_hash)
 check "plan APPROVED: exit 0, verdict line with the plan hash" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "APPROVED sha256 $h" ]'
+check "G5 outside herdr the last line says headless" '[ "$(tail -n1 <<<"$out")" = "codex: headless (not in herdr)" ]'
 check "plan record header" 'last_header plan | grep -qE "^## plan \| [0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z \| sha256 $h \| APPROVED$"'
 check "FR-012 argv read-only" '[ "$(head -n1 "$tmp/argv" 2>/dev/null)" = exec ] && grep -x -A1 -- "-s" "$tmp/argv" | grep -qx read-only && grep -qx -- "--ephemeral" "$tmp/argv" && grep -qx -- "--output-schema" "$tmp/argv" && grep -qx -- "-o" "$tmp/argv" && [ "$(tail -n1 "$tmp/argv")" = "-" ]'
 check "D23 argv ignore-user-config after read-only" 'grep -x -A1 -- read-only "$tmp/argv" | grep -qx -- --ignore-user-config'
@@ -105,6 +106,17 @@ printf 'FAILONE1' > "$tmp/f1.txt"
 printf 'FAILTWO2' > "$tmp/f2.txt"
 run test specs/001-demo "$tmp/task.txt" tests/x_test.sh "$tmp/f1.txt" "$tmp/f2.txt"
 check "test point labels on their own line" '[ "$(grep -xn -e "Task:" -e "Failure output 1:" -e "Failure output 2:" "$tmp/prompt" | cut -d: -f2- | paste -sd,)" = "Task:,Failure output 1:,Failure output 2:" ] && cmp -s "$tmp/prompt" "$tmp/prompt_nl"'
+
+mkdir -p "$proj/specs/001-demo/changes"
+printf '# change\nCHANGEBODY9c1\n' > "$proj/specs/001-demo/changes/001-x.md"
+run change specs/001-demo specs/001-demo/changes/001-x.md
+ch=$(sha256sum < "$proj/specs/001-demo/changes/001-x.md" | cut -d' ' -f1)
+check "change point: verdict with the change file hash, record header" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "APPROVED sha256 $ch" ] && last_header change | grep -qE "^## change \| [^|]* \| sha256 $ch \| APPROVED$"'
+check "change point prompt names the spec and the change file, no change text" 'grep -qF "Point: change." "$tmp/prompt" && grep -qxF "Inputs: specs/001-demo/spec.md, specs/001-demo/changes/001-x.md" "$tmp/prompt" && ! grep -qF CHANGEBODY9c1 "$tmp/prompt"'
+run change specs/001-demo specs/001-demo/changes/missing.md
+check "change point with no change file: usage, exit 2" '[ $rc = 2 ] && grep -q "^usage:" <<<"$out"'
+run note change specs/001-demo "advisor agreed"
+check "note on the change point" '[ $rc = 0 ] && [ "$out" = "noted: change /advisor" ]'
 
 
 mkdir -p "$tmp/sys"
@@ -314,6 +326,17 @@ n0=$(nrec)
 run plan specs/001-demo
 printf '{"mode": "codex"}' > "$mf"
 check "no mode file: no advisor, exit 0, no codex" '[ $rc = 0 ] && [ "$out" = "no advisor: mode not set. Write .stratum/advisor.json with \"mode\": \"auto\", \"codex\", \"both\" or \"off\"." ] && [ ! -e "$tmp/argv" ] && [ "$(nrec)" = "$n0" ]'
+
+git -C "$proj" worktree add -q --detach "$tmp/wt"
+rm -f "$tmp/wt/.stratum/advisor.json"
+printf '{"mode": "off"}' > "$mf"
+out=$(cd "$tmp/wt" && bash "$root/scripts/st-advisor.sh" plan specs/001-demo); rc=$?
+check "worktree with no mode file reads the main checkout's file" '[ $rc = 0 ] && [ "$out" = "no advisor: mode off" ]'
+printf '{"mode": "off"}' > "$tmp/wt/.stratum/advisor.json"
+printf '{"mode": "codex"}' > "$mf"
+out=$(cd "$tmp/wt" && bash "$root/scripts/st-advisor.sh" plan specs/001-demo); rc=$?
+check "worktree mode file wins over the main checkout's" '[ $rc = 0 ] && [ "$out" = "no advisor: mode off" ]'
+git -C "$proj" worktree remove --force "$tmp/wt"
 
 rm -f "$tmp/argv"
 run plan specs/001-demo

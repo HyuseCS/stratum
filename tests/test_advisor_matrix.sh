@@ -79,7 +79,12 @@ decisions none none
 diff high both
 diff normal codex
 diff low /advisor
-diff none none"
+diff none none
+change high both
+change normal codex
+change low none
+change none none"
+printf '# change 001\nCHANGEBODY\n' > "$tmp/change.md"
 grid() {
   local ok=1 pt lvl aset calls
   while read -r pt lvl aset <&3; do
@@ -90,6 +95,7 @@ grid() {
       test) run test specs/001-demo "$tmp/task.txt" tests/x_test.sh "$tmp/f1.txt" "$tmp/f2.txt" ;;
       decisions) run decisions specs/001-demo "$tmp/list.txt" ;;
       diff) run diff specs/001-demo "$first" ;;
+      change) run change specs/001-demo "$tmp/change.md" ;;
     esac
     case $aset in codex|both) calls=1 ;; *) calls=0 ;; esac
     { [ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "advisors: $aset ($pt, risk $lvl)" ] && calls_ok $calls; } || { ok=0; echo "  bad case: $pt risk $lvl set $aset rc=$rc first=$(head -n1 <<<"$out")" >&2; }
@@ -216,7 +222,7 @@ setmode '{"mode": "codex"}'
 approve
 rm -f "$tmp/argv" "$tmp/herdr.log"
 out=$(cd "$proj" && PATH="$tmp/hbin:$PATH" HERDR_ENV=1 HERDR_WORKSPACE_ID=ws$RANDOM bash "$root/scripts/st-advisor.sh" plan specs/001-demo); rc=$?
-check "(k2) herdr env, no Stratum Codex home: codex exec runs, herdr is not called" '[ $rc = 0 ] && [ "$(head -n1 "$tmp/argv")" = exec ] && [ ! -e "$tmp/herdr.log" ]'
+check "(k2) herdr env, no Stratum Codex home: BLOCKED names codex-home, codex exec not run, herdr is not called" '[ $rc = 1 ] && [ "$(head -n1 <<<"$out")" = "BLOCKED: no Stratum Codex home: run st-advisor.sh codex-home" ] && [ ! -e "$tmp/argv" ] && [ ! -e "$tmp/herdr.log" ]'
 
 rm -f "$mf"
 r18='no advisor: mode not set. Write .stratum/advisor.json with "mode": "auto", "codex", "both" or "off".'
@@ -292,11 +298,11 @@ case "$1 $2" in
   "tab create") echo '{"result":{"tab":{"tab_id":"w1:t2"},"root_pane":{"pane_id":"w1:p2"}}}' ;;
   "agent start")
     if [ "$m" = notready ]; then
-      echo '{"error":{"code":"agent_not_ready","message":"agent st-codex-001 is blocked during startup and is not ready for prompts"}}'
-      echo '{"error":{"code":"agent_not_ready","message":"agent st-codex-001 is blocked during startup and is not ready for prompts"}}' >&2
+      echo '{"error":{"code":"agent_not_ready","message":"agent st-codex-001-demo is blocked during startup and is not ready for prompts"}}'
+      echo '{"error":{"code":"agent_not_ready","message":"agent st-codex-001-demo is blocked during startup and is not ready for prompts"}}' >&2
       exit 1
     fi
-    echo '{"result":{"agent":"codex","name":"st-codex-001","pane_id":"w1:p2"}}' ;;
+    echo '{"result":{"agent":"codex","name":"st-codex-001-demo","pane_id":"w1:p2"}}' ;;
   "agent send-keys") touch "$d/h.entered" ;;
   "agent prompt") printf '%s\n' "$@" > "$d/h.args"; echo '{"result":{"state":"done"}}' ;;
   "agent read")
@@ -329,11 +335,13 @@ setmode '{"mode": "codex"}'
 approve
 h=$(plan_hash)
 hrun folder
-check "(k) tab path: APPROVED, codex exec not run, tab with the Codex home, agent start, one enter" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "APPROVED sha256 $h" ] && [ ! -e "$tmp/argv" ] && grep -qF -- "tab create" "$tmp/herdr.log" && grep -qF -- "--env CODEX_HOME=$home" "$tmp/herdr.log" && grep -q "^agent start st-codex-001 --kind codex" "$tmp/herdr.log" && [ "$(grep -cx "agent send-keys st-codex-001 enter" "$tmp/herdr.log")" = 1 ]'
+check "(k) tab path: APPROVED, codex exec not run, tab with the Codex home, agent start, one enter" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "APPROVED sha256 $h" ] && [ ! -e "$tmp/argv" ] && grep -qF -- "tab create" "$tmp/herdr.log" && grep -qF -- "--env CODEX_HOME=$home" "$tmp/herdr.log" && grep -q "^agent start st-codex-001-demo --kind codex" "$tmp/herdr.log" && [ "$(grep -cx "agent send-keys st-codex-001-demo enter" "$tmp/herdr.log")" = 1 ]'
+check "(k) G5 tab path: the last line names the tab" '[ "$(tail -n1 <<<"$out")" = "codex: tab st-codex-001-demo" ]'
 hrun nofolder
-check "(k1) tab path, no Folder access screen: APPROVED, no send-keys, codex exec not run" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "APPROVED sha256 $h" ] && [ ! -e "$tmp/argv" ] && grep -q "^agent start st-codex-001" "$tmp/herdr.log" && ! grep -q "send-keys" "$tmp/herdr.log"'
+check "(k1) tab path, no Folder access screen: APPROVED, no send-keys, codex exec not run" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "APPROVED sha256 $h" ] && [ ! -e "$tmp/argv" ] && grep -q "^agent start st-codex-001-demo" "$tmp/herdr.log" && ! grep -q "send-keys" "$tmp/herdr.log"'
 hrun notready
 check "(k3) agent_not_ready with an unknown screen: ERROR line printed, codex exec runs, verdict APPROVED, no BLOCKED" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "ERROR: Codex stopped at start on a screen Stratum does not know, so the Codex tab is closed. Run the point again, or check Codex." ] && grep -qx "APPROVED sha256 $h" <<<"$out" && ! grep -q "^BLOCKED" <<<"$out" && [ "$(head -n1 "$tmp/argv")" = exec ] && ! grep -q "send-keys" "$tmp/herdr.log"'
+check "(k3) G5 failed tab: the last line says headless" '[ "$(tail -n1 <<<"$out")" = "codex: headless (Codex tab failed)" ]'
 hrun nomarkers
 check "(k6) no markers in the answer: the ERROR line, then codex exec runs and the verdict is APPROVED" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "ERROR: no answer between the markers" ] && grep -qx "APPROVED sha256 $h" <<<"$out" && [ "$(head -n1 "$tmp/argv")" = exec ]'
 printf '%s' '{"verdict":"REVISE","summary":"s","findings":[{"claim":"c","evidence":"e","location":"l","severity":"URGENT"}]}' > "$tmp/answer"
@@ -350,9 +358,12 @@ cp "$home/config.toml" "$tmp/config.keep"
 printf '[tui]\nstatus = "x"\n' > "$home/config.toml"
 cp "$home/config.toml" "$tmp/config.noentry"
 hrun folder
-check "(k4) config.toml without the project entry: codex exec runs, herdr not called, config.toml unchanged" '[ $rc = 0 ] && [ "$(head -n1 "$tmp/argv")" = exec ] && [ ! -e "$tmp/herdr.log" ] && cmp -s "$home/config.toml" "$tmp/config.noentry"'
-check "(k4) config.toml without the project entry: one line says so" '[ "$(head -n1 <<<"$out")" = "ERROR: no Stratum Codex home entry for $proj: run st-advisor.sh codex-home" ]'
+check "(k4) config.toml without the project entry: the point adds it, the tab runs, codex exec not run" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "APPROVED sha256 $h" ] && [ ! -e "$tmp/argv" ] && grep -q "^agent start st-codex-001-demo" "$tmp/herdr.log" && [ "$(head -n2 "$home/config.toml")" = "$(cat "$tmp/config.noentry")" ] && grep -qxF "[projects.\"$proj\"]" "$home/config.toml" && grep -A1 -xF "[projects.\"$proj\"]" "$home/config.toml" | grep -qx "trust_level = \"untrusted\""'
 cp "$tmp/config.keep" "$home/config.toml"
+mv "$home/auth.json" "$tmp/auth.keep"
+hrun folder
+check "(k9) no Codex login link inside herdr: BLOCKED names codex-home, no tab, codex exec not run" '[ $rc = 1 ] && [ "$(head -n1 <<<"$out")" = "BLOCKED: no Stratum Codex home: run st-advisor.sh codex-home" ] && [ ! -e "$tmp/argv" ] && [ ! -e "$tmp/herdr.log" ]'
+mv "$tmp/auth.keep" "$home/auth.json"
 
 mkdir -p "$tmp/sc"
 cp -r "$root/scripts" "$tmp/sc/scripts"
