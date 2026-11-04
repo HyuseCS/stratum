@@ -5,8 +5,8 @@ die() { echo "$1" >&2; exit "${2:-1}"; }
 fd=$1 pf=$2 af=$3 home=$4
 shift 4
 base=$(basename "$fd")
-[[ $base =~ ^[0-9]{3} ]] || die "ERROR: feature dir must start with three digits" 2
-name=st-codex-${base:0:3}
+base=${base//[!A-Za-z0-9-]/-}
+name=st-codex-${base:0:20}
 root=$(pwd -P)
 [ -L "$home/auth.json" ] || die "ERROR: no Stratum Codex home" 2
 h="[projects.\"$root\"]" awk '$0 == ENVIRON["h"] {s = 1; next} /^\[/ {s = 0} s && $0 == "trust_level = \"untrusted\"" {f = 1} END {exit !f}' "$home/config.toml" 2>/dev/null || die "ERROR: no Stratum Codex home entry for $root: run st-advisor.sh codex-home" 2

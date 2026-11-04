@@ -292,11 +292,11 @@ case "$1 $2" in
   "tab create") echo '{"result":{"tab":{"tab_id":"w1:t2"},"root_pane":{"pane_id":"w1:p2"}}}' ;;
   "agent start")
     if [ "$m" = notready ]; then
-      echo '{"error":{"code":"agent_not_ready","message":"agent st-codex-001 is blocked during startup and is not ready for prompts"}}'
-      echo '{"error":{"code":"agent_not_ready","message":"agent st-codex-001 is blocked during startup and is not ready for prompts"}}' >&2
+      echo '{"error":{"code":"agent_not_ready","message":"agent st-codex-001-demo is blocked during startup and is not ready for prompts"}}'
+      echo '{"error":{"code":"agent_not_ready","message":"agent st-codex-001-demo is blocked during startup and is not ready for prompts"}}' >&2
       exit 1
     fi
-    echo '{"result":{"agent":"codex","name":"st-codex-001","pane_id":"w1:p2"}}' ;;
+    echo '{"result":{"agent":"codex","name":"st-codex-001-demo","pane_id":"w1:p2"}}' ;;
   "agent send-keys") touch "$d/h.entered" ;;
   "agent prompt") printf '%s\n' "$@" > "$d/h.args"; echo '{"result":{"state":"done"}}' ;;
   "agent read")
@@ -329,9 +329,9 @@ setmode '{"mode": "codex"}'
 approve
 h=$(plan_hash)
 hrun folder
-check "(k) tab path: APPROVED, codex exec not run, tab with the Codex home, agent start, one enter" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "APPROVED sha256 $h" ] && [ ! -e "$tmp/argv" ] && grep -qF -- "tab create" "$tmp/herdr.log" && grep -qF -- "--env CODEX_HOME=$home" "$tmp/herdr.log" && grep -q "^agent start st-codex-001 --kind codex" "$tmp/herdr.log" && [ "$(grep -cx "agent send-keys st-codex-001 enter" "$tmp/herdr.log")" = 1 ]'
+check "(k) tab path: APPROVED, codex exec not run, tab with the Codex home, agent start, one enter" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "APPROVED sha256 $h" ] && [ ! -e "$tmp/argv" ] && grep -qF -- "tab create" "$tmp/herdr.log" && grep -qF -- "--env CODEX_HOME=$home" "$tmp/herdr.log" && grep -q "^agent start st-codex-001-demo --kind codex" "$tmp/herdr.log" && [ "$(grep -cx "agent send-keys st-codex-001-demo enter" "$tmp/herdr.log")" = 1 ]'
 hrun nofolder
-check "(k1) tab path, no Folder access screen: APPROVED, no send-keys, codex exec not run" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "APPROVED sha256 $h" ] && [ ! -e "$tmp/argv" ] && grep -q "^agent start st-codex-001" "$tmp/herdr.log" && ! grep -q "send-keys" "$tmp/herdr.log"'
+check "(k1) tab path, no Folder access screen: APPROVED, no send-keys, codex exec not run" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "APPROVED sha256 $h" ] && [ ! -e "$tmp/argv" ] && grep -q "^agent start st-codex-001-demo" "$tmp/herdr.log" && ! grep -q "send-keys" "$tmp/herdr.log"'
 hrun notready
 check "(k3) agent_not_ready with an unknown screen: ERROR line printed, codex exec runs, verdict APPROVED, no BLOCKED" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "ERROR: Codex stopped at start on a screen Stratum does not know, so the Codex tab is closed. Run the point again, or check Codex." ] && grep -qx "APPROVED sha256 $h" <<<"$out" && ! grep -q "^BLOCKED" <<<"$out" && [ "$(head -n1 "$tmp/argv")" = exec ] && ! grep -q "send-keys" "$tmp/herdr.log"'
 hrun nomarkers
@@ -350,7 +350,7 @@ cp "$home/config.toml" "$tmp/config.keep"
 printf '[tui]\nstatus = "x"\n' > "$home/config.toml"
 cp "$home/config.toml" "$tmp/config.noentry"
 hrun folder
-check "(k4) config.toml without the project entry: the point adds it, the tab runs, codex exec not run" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "APPROVED sha256 $h" ] && [ ! -e "$tmp/argv" ] && grep -q "^agent start st-codex-001" "$tmp/herdr.log" && [ "$(head -n2 "$home/config.toml")" = "$(cat "$tmp/config.noentry")" ] && grep -qxF "[projects.\"$proj\"]" "$home/config.toml" && grep -A1 -xF "[projects.\"$proj\"]" "$home/config.toml" | grep -qx "trust_level = \"untrusted\""'
+check "(k4) config.toml without the project entry: the point adds it, the tab runs, codex exec not run" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "APPROVED sha256 $h" ] && [ ! -e "$tmp/argv" ] && grep -q "^agent start st-codex-001-demo" "$tmp/herdr.log" && [ "$(head -n2 "$home/config.toml")" = "$(cat "$tmp/config.noentry")" ] && grep -qxF "[projects.\"$proj\"]" "$home/config.toml" && grep -A1 -xF "[projects.\"$proj\"]" "$home/config.toml" | grep -qx "trust_level = \"untrusted\""'
 cp "$tmp/config.keep" "$home/config.toml"
 mv "$home/auth.json" "$tmp/auth.keep"
 hrun folder

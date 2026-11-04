@@ -114,21 +114,21 @@ go -m m1 -c 'model_reasoning_effort="high"'
 pane=$(cat "$S/pane" 2>/dev/null)
 check "a rc 0 and answer written" '[ $rc -eq 0 ] && [ -s "$af" ]'
 check "a tab create line" '[ "$(cnt "^tab create --workspace $HERDR_WORKSPACE_ID --cwd $pp --label Codex --env CODEX_HOME=$home --no-focus\$")" = 1 ]'
-check "a agent start line with -m -c after --no-alt-screen" '[ "$(cnt "^agent start st-codex-010 --kind codex --pane $pane --timeout 120000 -- -s read-only -a never --no-alt-screen -m m1 -c model_reasoning_effort=\"high\"\$")" = 1 ]'
+check "a agent start line with -m -c after --no-alt-screen" '[ "$(cnt "^agent start st-codex-010-demo --kind codex --pane $pane --timeout 120000 -- -s read-only -a never --no-alt-screen -m m1 -c model_reasoning_effort=\"high\"\$")" = 1 ]'
 check "a tab create comes before agent start" '[ "$(lineno "^tab create")" -lt "$(lineno "^agent start")" ]'
 rec="$home/agents/$(cat "$S/tab")"
-check "a ownership record: name, root, launch options, mode 600" '[ "$(cat "$rec")" = "$(printf "%s\n" st-codex-010 "$pp" -m m1 -c "model_reasoning_effort=\"high\"")" ] && [ "$(stat -c %a "$rec")" = 600 ]'
+check "a ownership record: name, root, launch options, mode 600" '[ "$(cat "$rec")" = "$(printf "%s\n" st-codex-010-demo "$pp" -m m1 -c "model_reasoning_effort=\"high\"")" ] && [ "$(stat -c %a "$rec")" = 600 ]'
 
-new; agent_json st-codex-010 "$HERDR_WORKSPACE_ID"; own st-codex-010; go
-check "b existing agent with a matching record reused: no tab create, no agent start" '[ $rc -eq 0 ] && [ "$(cnt "^tab create")" = 0 ] && [ "$(cnt "^agent start")" = 0 ] && [ "$(cnt "^agent prompt st-codex-010")" = 1 ]'
+new; agent_json st-codex-010-demo "$HERDR_WORKSPACE_ID"; own st-codex-010-demo; go
+check "b existing agent with a matching record reused: no tab create, no agent start" '[ $rc -eq 0 ] && [ "$(cnt "^tab create")" = 0 ] && [ "$(cnt "^agent start")" = 0 ] && [ "$(cnt "^agent prompt st-codex-010-demo")" = 1 ]'
 
-new; agent_json st-codex-010 "$HERDR_WORKSPACE_ID"; go
-check "b1 same-name agent with no record is foreign: not reused, not closed, own tab started" '[ $rc -eq 0 ] && [ "$(cnt "^tab create")" = 1 ] && [ "$(cnt "^agent start st-codex-010")" = 1 ] && [ "$(cnt "^tab close")" = 0 ]'
-new; agent_json st-codex-010 "$HERDR_WORKSPACE_ID"; own st-codex-010 -m m1; go -m m2
+new; agent_json st-codex-010-demo "$HERDR_WORKSPACE_ID"; go
+check "b1 same-name agent with no record is foreign: not reused, not closed, own tab started" '[ $rc -eq 0 ] && [ "$(cnt "^tab create")" = 1 ] && [ "$(cnt "^agent start st-codex-010-demo")" = 1 ] && [ "$(cnt "^tab close")" = 0 ]'
+new; agent_json st-codex-010-demo "$HERDR_WORKSPACE_ID"; own st-codex-010-demo -m m1; go -m m2
 check "b2 changed model: our old tab closed, new agent started with -m m2" '[ $rc -eq 0 ] && [ "$(cnt "^tab close $HERDR_WORKSPACE_ID:t3\$")" = 1 ] && [ "$(lineno "^tab close")" -lt "$(lineno "^tab create")" ] && [ "$(cnt " --no-alt-screen -m m2\$")" = 1 ] && [ ! -e "$home/agents/$HERDR_WORKSPACE_ID:t3" ] && [ -f "$home/agents/$(cat "$S/tab")" ]'
-new; agent_json st-codex-010 "$HERDR_WORKSPACE_ID"; own st-codex-010; printf '%s\n' st-codex-010 /other > "$home/agents/$HERDR_WORKSPACE_ID:t3"; go
+new; agent_json st-codex-010-demo "$HERDR_WORKSPACE_ID"; own st-codex-010-demo; printf '%s\n' st-codex-010-demo /other > "$home/agents/$HERDR_WORKSPACE_ID:t3"; go
 check "b3 record for another root is foreign: not reused, not closed" '[ "$(cnt "^tab create")" = 1 ] && [ "$(cnt "^tab close $HERDR_WORKSPACE_ID:t3\$")" = 0 ]'
-new; agent_json st-codex-010 "$HERDR_WORKSPACE_ID"; touch "$S/dup"; go
+new; agent_json st-codex-010-demo "$HERDR_WORKSPACE_ID"; touch "$S/dup"; go
 check "b4 foreign agent and herdr refuses the name: error, exit 1, our tab closed, foreign tab kept, no prompt" '[ $rc -eq 1 ] && outhas "ERROR:" && closed && [ "$(cnt "^tab close $HERDR_WORKSPACE_ID:t3\$")" = 0 ] && [ "$(cnt "^agent prompt")" = 0 ]'
 
 new; agent_json st-codex-009 "$HERDR_WORKSPACE_ID"; own st-codex-009; go
@@ -136,10 +136,10 @@ check "c other st-codex agent of ours: its tab closed before the new start" '[ $
 new; agent_json st-codex-009 "$HERDR_WORKSPACE_ID"; go
 check "c1 other st-codex agent with no record: not closed" '[ $rc -eq 0 ] && [ "$(cnt "^tab close")" = 0 ]'
 
-new; agent_json st-codex-010 "wsOTHER$RANDOM"; go
-check "d agent in another workspace ignored: new start, no tab close" '[ $rc -eq 0 ] && [ "$(cnt "^tab create")" = 1 ] && [ "$(cnt "^agent start st-codex-010")" = 1 ] && [ "$(cnt "^tab close")" = 0 ]'
+new; agent_json st-codex-010-demo "wsOTHER$RANDOM"; go
+check "d agent in another workspace ignored: new start, no tab close" '[ $rc -eq 0 ] && [ "$(cnt "^tab create")" = 1 ] && [ "$(cnt "^agent start st-codex-010-demo")" = 1 ] && [ "$(cnt "^tab close")" = 0 ]'
 
-new; agent_json st-codex-010 "$HERDR_WORKSPACE_ID" /elsewhere; go
+new; agent_json st-codex-010-demo "$HERDR_WORKSPACE_ID" /elsewhere; go
 check "d2 same name, cwd not this root: not reused, not closed" '[ "$(cnt "^tab create")" = 1 ] && [ "$(cnt "^tab close $HERDR_WORKSPACE_ID:t3\$")" = 0 ]'
 new; agent_json st-codex-009 "$HERDR_WORKSPACE_ID" /elsewhere; go
 check "d3 other st-codex agent, cwd not this root: not closed" '[ $rc -eq 0 ] && [ "$(cnt "^tab close")" = 0 ]'
@@ -150,15 +150,15 @@ new; echo 999 > "$S/start_busy"; go
 check "e busy always: 10 start calls, ERROR, exit 1" '[ $rc -eq 1 ] && [ "$(cnt "^agent start")" = 10 ] && outhas "ERROR:" && [ "$(cnt "^agent prompt")" = 0 ]'
 
 new; printf '%s' "$fa" > "$S/screen"; printf '%s\n' "$chat" > "$S/screen_after"; go
-check "f exactly one enter" '[ $rc -eq 0 ] && [ "$(cnt "^agent send-keys")" = 1 ] && [ "$(cnt "^agent send-keys st-codex-010 enter\$")" = 1 ]'
+check "f exactly one enter" '[ $rc -eq 0 ] && [ "$(cnt "^agent send-keys")" = 1 ] && [ "$(cnt "^agent send-keys st-codex-010-demo enter\$")" = 1 ]'
 check "f enter after start, before prompt" '[ "$(lineno "^agent start")" -lt "$(lineno "^agent send-keys")" ] && [ "$(lineno "^agent send-keys")" -lt "$(lineno "^agent prompt")" ]'
 
 new; go
-check "f1 no Folder access: no send-keys, prompt runs" '[ $rc -eq 0 ] && [ "$(cnt "^agent send-keys")" = 0 ] && [ "$(cnt "^agent prompt st-codex-010")" = 1 ]'
+check "f1 no Folder access: no send-keys, prompt runs" '[ $rc -eq 0 ] && [ "$(cnt "^agent send-keys")" = 0 ] && [ "$(cnt "^agent prompt st-codex-010-demo")" = 1 ]'
 check "f1 start line ends at --no-alt-screen without -m/-c" '[ "$(cnt " -- -s read-only -a never --no-alt-screen\$")" = 1 ]'
 
 new; touch "$S/notready"; printf '%s' "$fa" > "$S/screen"; printf '%s\n' "$chat" > "$S/screen_after"; go
-check "f2 not_ready with Folder access: one enter, then prompt" '[ $rc -eq 0 ] && [ "$(cnt "^agent send-keys st-codex-010 enter\$")" = 1 ] && [ "$(cnt "^agent prompt")" = 1 ] && [ "$(lineno "^agent send-keys")" -lt "$(lineno "^agent prompt")" ]'
+check "f2 not_ready with Folder access: one enter, then prompt" '[ $rc -eq 0 ] && [ "$(cnt "^agent send-keys st-codex-010-demo enter\$")" = 1 ] && [ "$(cnt "^agent prompt")" = 1 ] && [ "$(lineno "^agent send-keys")" -lt "$(lineno "^agent prompt")" ]'
 
 new; touch "$S/notready"; printf 'Trust this folder?\n1. Trust and continue\n2. Do not trust\n' > "$S/screen"; go
 check "f3 not_ready with other screen: no key, error, exit 1, no prompt" '[ $rc -eq 1 ] && [ "$(cnt "^agent send-keys")" = 0 ] && outhas "$nofolder" && [ "$(cnt "^agent prompt")" = 0 ]'
@@ -175,7 +175,7 @@ check "f7 mark on option 2: no key, error, exit 1, tab closed" '[ $rc -eq 1 ] &&
 new; printf '\033[1mFolder access\033[0m\n\n\033[36m› 1. Open restricted\033[0m\n  2. Trust and continue\n' > "$S/screen"; printf '%s\n' "$chat" > "$S/screen_after"; go
 check "f8 option 2 text different: no key, error, exit 1, tab closed" '[ $rc -eq 1 ] && [ "$(cnt "^agent send-keys")" = 0 ] && outhas "$nofolder" && [ "$(cnt "^agent prompt")" = 0 ] && closed'
 new; printf '%s\n' '~/Desktop/stratum-worker-codex-tab                                                                                    11:39:36 PM' '❯ codex -s read-only -a never --no-alt-screen' '  Folder access' '  /home/hyuse/Desktop/stratum-worker-codex-tab' '  Config, hooks, and exec policies from untrusted folders stay disabled. Trusted project folders can still contribute settings.' '  Skills still load, and tools follow your permission settings. Opening will not change saved trust.' '› 1. Open restricted' '  2. Back to Agent Command Center' '  enter continue · esc back' > "$S/screen"; printf '%s\n' "$chat" > "$S/screen_after"; go
-check "f9 real screen from the live run: one enter, then prompt" '[ $rc -eq 0 ] && [ "$(cnt "^agent send-keys st-codex-010 enter\$")" = 1 ] && [ "$(cnt "^agent prompt")" = 1 ]'
+check "f9 real screen from the live run: one enter, then prompt" '[ $rc -eq 0 ] && [ "$(cnt "^agent send-keys st-codex-010-demo enter\$")" = 1 ] && [ "$(cnt "^agent prompt")" = 1 ]'
 
 new; echo "$home" > "$S/replace_auth"; go
 check "f5 login link replaced: error, exit 1, no answer file" '[ $rc -eq 1 ] && outhas "ERROR: Codex replaced the login link in $home;" && [ ! -e "$af" ]'
@@ -188,13 +188,13 @@ check "g prompt argv ends with wait/until flags and timeout <= 478000 after 2 s 
 new; go
 ms=$(grep '^agent prompt' "$S/log.txt" | awk '{print $NF}')
 check "g timeout at most 480000" '[ "$ms" -le 480000 ] && [ "$ms" -ge 400000 ]'
-check "g prompt names the request file" 'grep "^agent prompt st-codex-010 " "$S/log.txt" | grep -qF "Read the review request in $pf and follow it. Change no file."'
+check "g prompt names the request file" 'grep "^agent prompt st-codex-010-demo " "$S/log.txt" | grep -qF "Read the review request in $pf and follow it. Change no file."'
 
 new; touch "$S/prompt_blocked"; go
 check "h blocked: error, exit 1" '[ $rc -eq 1 ] && outhas "ERROR: Codex waits for an answer in its Codex tab."'
 new; touch "$S/prompt_timeout"; go
 check "h2 prompt timeout: error, exit 1, the tab this run made is closed" '[ $rc -eq 1 ] && outhas "ERROR:" && closed'
-new; agent_json st-codex-010 "$HERDR_WORKSPACE_ID"; own st-codex-010; touch "$S/prompt_timeout"; go
+new; agent_json st-codex-010-demo "$HERDR_WORKSPACE_ID"; own st-codex-010-demo; touch "$S/prompt_timeout"; go
 check "h3 prompt timeout on a reused tab: no tab close" '[ $rc -eq 1 ] && [ "$(cnt "^tab close")" = 0 ]'
 
 new
@@ -208,6 +208,8 @@ new; printf 'no markers here\nPrint the line ST-ADVISOR-BEGIN-@N@ alone then ST-
 check "j no pair: error, exit 1, no answer file" '[ $rc -eq 1 ] && outhas "ERROR: no answer between the markers" && [ ! -s "$af" ]'
 
 new; feat=specs/demo; go
-check "k feature dir without digits: error, exit 2" '[ $rc -eq 2 ] && outhas "ERROR: feature dir must start with three digits"'
+check "k feature dir without digits: tab named from the folder" '[ $rc -eq 0 ] && [ "$(cnt "^agent start st-codex-demo --kind codex")" = 1 ]'
+new; feat="specs/parasat_free installation-2462"; go
+check "k1 long folder name: other characters become -, cut to 20" '[ $rc -eq 0 ] && [ "$(cnt "^agent start st-codex-parasat-free-install --kind codex")" = 1 ]'
 
 exit $fail

@@ -90,7 +90,7 @@ The advisor is Codex (the `codex` CLI), a model from another vendor. In mode `au
 Every Fast-lane point uses `/advisor`. The Quick lane has no advisor.
 
 - Run `bash <plugin root>/scripts/st-advisor.sh <point> ...` from the project root in the foreground, with a Bash timeout of 600000 ms, and wait for it. No background run, no polling.
-- Codex only reviews, in the read-only sandbox. Never run `codex` to build or fix. In herdr, with the Stratum Codex home in place, Codex runs as the `st-codex-<NNN>` agent in the `Codex` tab of this workspace, read-only and never asking, and the user can watch it there. Otherwise it runs in the background as before.
+- Codex only reviews, in the read-only sandbox. Never run `codex` to build or fix. In herdr, with the Stratum Codex home in place, Codex runs as the `st-codex-<folder>` agent (the feature folder name, cut to 20 characters) in the `Codex` tab of this workspace, read-only and never asking, and the user can watch it there. Otherwise it runs in the background as before.
 - When the user asks to add a Codex advisor, or sets a mode that uses Codex, run `bash <plugin root>/scripts/st-advisor.sh codex-home` and show its line word for word. Never run it on your own.
 - `no advisor: codex not found` or `no advisor: mode off`: go on as before; consult `/advisor` only if the user set one.
 - `no advisor: mode not set`: stop. Ask the user the advisor question of `/stratum:st-init` step 11, write the answer to `"$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/.stratum/advisor.json"`, then run the point again.
