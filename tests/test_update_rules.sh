@@ -32,6 +32,11 @@ R10|skills/st-update/SKILL.md|A Bash call a hook or the classifier blocks: keep 
 R11|skills/st-update/SKILL.md|Per folder: what changed, what was skipped and why, the commands the user must run.
 R11b|skills/st-update/SKILL.md|Restart running Claude Code sessions in these folders to load Stratum <version>.
 R12|skills/st-update/SKILL.md|Never: change a user data file (FR-013), write before the gate, stage a path it did not change, run `claude plugin update` in a folder without its own record, edit `installed_plugins.json`.
+R13|README.md|claude plugin update stratum@stratum -s local
+R13b|README.md|claude plugin update stratum@stratum -s project
+R13c|README.md|bash tests/test_st_update.sh
+R13d|README.md|bash tests/test_update_rules.sh
+R13e|README.md|bash tests/test_update_items.sh
 ROWS
 
 check "front matter skills/st-update/SKILL.md" 'head -n 5 "$root/skills/st-update/SKILL.md" | grep -qx "name: st-update"'
