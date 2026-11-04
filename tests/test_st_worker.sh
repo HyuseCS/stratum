@@ -85,7 +85,11 @@ case "$1 $2" in
   printf 'pane\t%s\n' "$p" >> "$T/made"
   jq -nc --arg p "$p" '{result:{type:"pane_created",pane:{pane_id:$p}}}' ;;
 "agent read")
-  if [ -e "$T/pane.txt" ]; then tail -n "$7" "$T/pane.txt"; else printf 'STUB PANE %s\n' "$X"; fi ;;
+  if [ "$5" = visible ]; then cat "$T/pane.txt" 2>/dev/null || printf 'STUB PANE %s\n' "$X"
+  elif [ -e "$T/pane.txt" ]; then tail -n "$7" "$T/pane.txt"; else printf 'STUB PANE %s\n' "$X"; fi ;;
+"agent send-keys")
+  [ ! -e "$T/pane.after" ] || [ "${*: -1}" != enter ] || mv "$T/pane.after" "$T/pane.txt"
+  echo '{"result":{}}' ;;
 "agent wait")
   if [[ " $* " == *" --until "* ]] && [ -e "$T/resume_result" ]; then
     printf 'RESULT FILE %s\n' "$X" > "$(jq -r .result.worktree.path "$T/wc.json")/result.md"
@@ -192,7 +196,7 @@ sargs=(T004 --task "$task" --test "$testcmd" --lane "$lane" --roster "$roster")
 reset() { : > "$tmp/calls"; : > "$tmp/gh_calls"; }
 states() { rm -f "$tmp/n_get"; printf '%s\n' "$@" > "$tmp/states"; }
 fresh() {
-  rm -rf "$tmp"/repo-worker-* "$tmp"/n_* "$tmp/closed" "$tmp/resume_result" "$tmp/wc.json" "$tmp/s2" "$tmp/pane.txt" "$tmp/made" "$tmp/order"
+  rm -rf "$tmp"/repo-worker-* "$tmp"/n_* "$tmp/closed" "$tmp/resume_result" "$tmp/wc.json" "$tmp/s2" "$tmp/pane.txt" "$tmp/pane.after" "$tmp/made" "$tmp/order"
   printf 'x%s\n' "$RANDOM$RANDOM" > "$tmp/x"
   printf 'TASK BODY %s\n' "$(cat "$tmp/x")" > "$task"
   jq -nc '[{workspace_id:"stubDecoyWS",label:"notaworker"}]' > "$tmp/ws.json"
@@ -219,6 +223,11 @@ never() {
   [ "$(cnt '^workspace\tclose\t')" = "$1" ] && [ "$(cnt '^agent\tprompt\t')" = "$2" ]
 }
 nopane() { ! grep -q 'STUB PANE' <<<"$out"; }
+nb=$'\xc2\xa0'
+rule=$(printf '─%.0s' {1..40})
+unsentpane() { printf '%s\n' '' "$rule" "❯$nb$P" "$rule" '  [PONYTAIL]' '  ⏵⏵ auto mode on (shift+tab to cycle)'; }
+sentpane() { printf '%s\n' "❯$nb$P" '● Working on it.' "$rule" "❯$nb" "$rule" '  ⏵⏵ auto mode on (shift+tab to cycle)'; }
+dialogpane() { printf '%s\n' ' ☐ Worker folder' '│ Which folder holds the brief.md?' '❯ 1. Newest brief.md folder (Recommended)' '     I pick the newest one.' '  2. I will type the path' '  3. Type something.' "$rule" '  4. Chat about this' 'Enter to select · ↑/↓ to navigate · Esc to cancel'; }
 paneshown() { grep -qxF 'pane text:' <<<"$out" && grep -qxF "STUB PANE $(rnd)" <<<"$out"; }
 
 prej() {
@@ -300,6 +309,13 @@ check "S5 exit 1" '[ $rc = 1 ]'
 check "S5 stopped line" 'grep -q "^stopped: .*stub refused" <<<"$out"'
 check "S5 worker line with ids" 'hasline "worker\tworker-t004\tlocal\t%s\t%s\tworker-t004\t%s" "$(wsid)" "$(pane)" "$(wt)"'
 check "S5 one prompt only, nothing closed" 'never 0 1'
+
+fresh; unsentpane > "$tmp/pane.txt"; sentpane > "$tmp/pane.after"
+STUB_FAIL="agent prompt" STUB_FAIL_CODE=agent_prompt_stalled run bash "$script" start "${sargs[@]}"
+check "S5b stalled prompt in the box: one Enter, no second paste, exit 0, state working" '[ $rc = 0 ] && [ "$(cnt "^agent\tsend-keys\tworker-t004\tenter$")" = 1 ] && never 0 1 && hasline "state\tworking\tworker-t004\t%s" "$(pane)"'
+fresh; unsentpane > "$tmp/pane.txt"
+STUB_FAIL="agent prompt" STUB_FAIL_CODE=agent_prompt_stalled run bash "$script" start "${sargs[@]}"
+check "S5c prompt still in the box after the Enter: exit 7, worker line, state unsent, pane text" '[ $rc = 7 ] && [ "$(cnt "^agent\tsend-keys\tworker-t004\tenter$")" = 1 ] && never 0 1 && hasline "worker\tworker-t004\tlocal\t%s\t%s\tworker-t004\t%s" "$(wsid)" "$(pane)" "$(wt)" && hasline "state\tunsent\tworker-t004\t%s" "$(pane)" && grep -qxF "pane text:" <<<"$out"'
 
 fresh
 jq -nc '[{workspace_id:"stubExistWS",label:"worker-t004"}]' > "$tmp/ws.json"
@@ -448,6 +464,28 @@ check "W5 exit 4" '[ $rc = 4 ]'
 check "W5 state blocked with the worker name, pane text" 'hasline "state\tblocked\tworker-t004\t%s" "$(pane)" && paneshown'
 check "W5 never-list" 'never 0 0'
 
+mk; states idle; unsentpane > "$tmp/pane.txt"
+run bash "$script" wait T004
+check "W7 idle with the /goal prompt in the box: exit 7, state unsent, pane text, no key sent" '[ $rc = 7 ] && hasline "state\tunsent\tworker-t004\t%s" "$(pane)" && grep -qxF "pane text:" <<<"$out" && [ "$(cnt "^agent\tsend-keys\t")" = 0 ] && never 0 0'
+mk; states done; dialogpane > "$tmp/pane.txt"; printf 'RESULT FILE %s\n' "$(rnd)" > "$(wt)/result.md"
+run bash "$script" wait T004
+check "W8 done with an open question and a result file: exit 4, state blocked, not finished" '[ $rc = 4 ] && hasline "state\tblocked\tworker-t004\t%s" "$(pane)" && ! grep -q "^state	finished" <<<"$out"'
+mk; states idle; sentpane > "$tmp/pane.txt"
+STUB_FAIL_UNTIL="agent wait" STUB_FAIL_CODE=timeout run bash "$script" wait T004
+check "W9 a sent /goal in the history and an empty box is not unsent: exit 5, state stopped" '[ $rc = 5 ] && hasline "state\tstopped\tworker-t004\t%s" "$(pane)"'
+mk; unsentpane > "$tmp/pane.txt"
+run bash "$script" goal T004 --test "$testcmd"
+check "GO1 goal with the prompt still in the box: exit 1, the resend line, no prompt" '[ $rc = 1 ] && [ "$out" = "The /goal prompt is still in the input box of worker-t004. Run resend." ] && never 0 0'
+mk; states idle working; unsentpane > "$tmp/pane.txt"; sentpane > "$tmp/pane.after"
+run bash "$script" resend T004
+check "RS1 resend: one Enter, no paste, exit 0, state working" '[ $rc = 0 ] && [ "$(cnt "^agent\tsend-keys\tworker-t004\tenter$")" = 1 ] && [ "$(cnt "^pane\tsend-text\t")" = 0 ] && never 0 0 && hasline "state\tworking\tworker-t004\t%s" "$(pane)"'
+mk; states idle; sentpane > "$tmp/pane.txt"
+run bash "$script" resend T004
+check "RS2 resend with an empty box: exit 1, the line, no key sent" '[ $rc = 1 ] && [ "$out" = "No unsent prompt in worker-t004: idle" ] && [ "$(cnt "^agent\tsend-keys\t")" = 0 ]'
+mk; states idle; unsentpane > "$tmp/pane.txt"
+run bash "$script" resend T004
+check "RS3 resend and the prompt stays: exit 7, state unsent" '[ $rc = 7 ] && [ "$(cnt "^agent\tsend-keys\tworker-t004\tenter$")" = 1 ] && hasline "state\tunsent\tworker-t004\t%s" "$(pane)"'
+
 fresh; states idle
 STUB_WT_LINK=resultfile run bash "$script" start "${sargs[@]}"
 check "W6 start with a pre-existing result.md stops: exit 1, already exists" '[ $rc = 1 ] && [ "$(grep -c "^stopped:" <<<"$out")" = 1 ] && hasline "stopped: %s/result.md already exists" "$(wt)"'
@@ -557,6 +595,11 @@ check "L1 exit 0" '[ $rc = 0 ]'
 check "L1 two found lines, states from the stub" '[ "$(grep -cP "^found\t" <<<"$out")" = 2 ] && hasline "found\tworker-t004\tlocal\tstubA%s\tstubA%s:p1\tblocked\t/stub/a%s" "$x" "$x" "$x" && hasline "found\tworker-t005\tlocal\tstubB%s\t-\tgone\t/stub/b%s" "$x" "$x"'
 check "L1 the other workspace is absent" '! grep -q notaworker <<<"$out" && ! grep -q "stubC" <<<"$out"'
 check "L1 never-list, no prompt, no close" 'never 0 0'
+jq '.[0].agent_status = "idle"' "$tmp/agents.json" > "$tmp/a.new" && mv "$tmp/a.new" "$tmp/agents.json"
+unsentpane > "$tmp/pane.txt"; run bash "$script" list
+check "L2 idle worker with the prompt in the box shows unsent" '[ $rc = 0 ] && hasline "found\tworker-t004\tlocal\tstubA%s\tstubA%s:p1\tunsent\t/stub/a%s" "$x" "$x" "$x"'
+dialogpane > "$tmp/pane.txt"; run bash "$script" list
+check "L2 idle worker with an open question shows blocked" '[ $rc = 0 ] && hasline "found\tworker-t004\tlocal\tstubA%s\tstubA%s:p1\tblocked\t/stub/a%s" "$x" "$x" "$x"'
 
 sendlog() { grep -P '^(agent\t(get|send-keys|wait)|pane\tsend-text)\t' "$tmp/calls"; }
 a1() {
@@ -585,6 +628,18 @@ a3() {
 a1 "$script"
 a2 "$script"
 a3 "$script"
+mk; states done working; dialogpane > "$tmp/pane.txt"
+run bash "$script" answer T004 --text "use main"
+check "AQ1 open question while done: --text picks Type something, types and sends, in one call" '[ $rc = 0 ] && [ "$(sendlog)" = "$(printf "agent\tget\tworker-t004\nagent\tsend-keys\tworker-t004\t3\npane\tsend-text\t%s\tuse main\nagent\tsend-keys\tworker-t004\tenter\nagent\twait\tworker-t004\t--until\tworking\t--timeout\t5000\nagent\tget\tworker-t004" "$(pane)")" ]'
+mk; states done working; dialogpane > "$tmp/pane.txt"
+run bash "$script" answer T004 --keys 2
+check "AQ2 open question while done: --keys sends the key" '[ $rc = 0 ] && hascall "agent\tsend-keys\tworker-t004\t2"'
+mk; states done; dialogpane | grep -v 'Type something' > "$tmp/pane.txt"
+run bash "$script" answer T004 --text "use main"
+check "AQ3 no Type something option: exit 1, the line, nothing sent" '[ $rc = 1 ] && [ "$out" = "The question has no \"Type something.\" option. Answer with --keys." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+mk; states done; { printf '%s\n' ' Do you want to proceed?' '❯ 1. Yes' '  2. No'; echo 'Enter to select · Esc to cancel'; } > "$tmp/pane.txt"
+run bash "$script" answer T004 --keys 1
+check "AQ4 permission dialog while done is not a question: exit 1, not blocked, nothing sent" '[ $rc = 1 ] && [ "$out" = "not blocked: done" ] && [ "$(cnt "^agent\tsend-keys\t")" = 0 ]'
 for a in --keys --text; do
   fresh; reset
   run bash "$script" answer T004 $a -x

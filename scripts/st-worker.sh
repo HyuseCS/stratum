@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
-usage() { echo "usage: st-worker.sh start <id> --task <file> --test <cmd> --lane <text> --roster <file> [--machine <m> --repo <path>] [--model <name>] [--autonomous] | goal <id> --test <cmd> [--machine <m>] | wait <id> [--machine <m>] | answer <id> [--machine <m>] --keys <key>... | --text <text> | result <id> [--machine <m>] | close <id> [--machine <m>] | list [--machine <m>] | headless <id> --task <file> --test <cmd> [--model <name>] | approve <id> --request <rid> --input-stdin --record <file> [--machine <m>] | pass <id> --request <rid> [--machine <m>] | autonomous-off [--roster <file>]" >&2; exit 2; }
+usage() { echo "usage: st-worker.sh start <id> --task <file> --test <cmd> --lane <text> --roster <file> [--machine <m> --repo <path>] [--model <name>] [--autonomous] | goal <id> --test <cmd> [--machine <m>] | resend <id> [--machine <m>] | wait <id> [--machine <m>] | answer <id> [--machine <m>] --keys <key>... | --text <text> | result <id> [--machine <m>] | close <id> [--machine <m>] | list [--machine <m>] | headless <id> --task <file> --test <cmd> [--model <name>] | approve <id> --request <rid> --input-stdin --record <file> [--machine <m>] | pass <id> --request <rid> [--machine <m>] | autonomous-off [--roster <file>]" >&2; exit 2; }
 fail() { echo "$1" >&2; exit 1; }
 [ $# -gt 0 ] || usage
 cmd=$1; shift
 case $cmd in
-  start | goal | wait | answer | result | close | headless | approve | pass) [ $# -gt 0 ] || usage; id=$1; shift ;;
+  start | goal | resend | wait | answer | result | close | headless | approve | pass) [ $# -gt 0 ] || usage; id=$1; shift ;;
   list | autonomous-off) ;;
   *) usage ;;
 esac
@@ -148,7 +148,16 @@ panetext() {
 }
 st() {
   printf 'state\t%s\t%s\t%s\n' "$1" "$N" "$PANE"
-  case $1 in blocked | stopped) panetext ;; esac
+  case $1 in blocked | stopped | unsent) panetext ;; esac
+}
+PERM='^([[:space:]]|│)*Do you want to (proceed|make this edit|create|allow|run)|don.t ask again|tell Claude what to do differently'
+readpane() { "${H[@]}" agent read "$N" --source visible >"$t" 2>/dev/null; }
+unsent() { readpane && grep -a '^❯' "$t" | tail -n 1 | grep -qaE '^❯.{0,2}/goal '; }
+question() { readpane && ! grep -qaE "$PERM" "$t" && grep -qa 'Enter to select' "$t"; }
+push() {
+  h agent send-keys "$N" enter
+  "${H[@]}" agent wait "$N" --until working --until blocked --timeout 10000 >/dev/null 2>&1 || true # ponytail: fixed 10 s for a resent prompt to leave the input box, raise it if a live run measures a slower start
+  ! unsent
 }
 noresult() {
   echo "no result file: $WT/result.md"
@@ -181,7 +190,14 @@ approval() {
 }
 prompt() {
   "${H[@]}" agent prompt "$N" "$P" --wait --until working --until blocked --timeout 30000 >/dev/null 2>"$e" && return
-  [ "$(code)" = agent_blocked ] || stop "$(head -1 "$e")"
+  if [ "$(code)" != agent_blocked ]; then
+    unsent || stop "$(head -1 "$e")"
+    push && return
+    [ "$cmd" != start ] || worker
+    look
+    st unsent
+    exit 7
+  fi
   if [ "$cmd" = start ]; then worker; else look; fi
   st blocked
   exit 4
@@ -276,7 +292,17 @@ start)
   [ "$S" != blocked ] || exit 4
   ;;
 goal)
+  ! unsent || fail "The /goal prompt is still in the input box of $N. Run resend."
   prompt
+  look
+  [ "$S" = blocked ] || S=working
+  st "$S"
+  [ "$S" != blocked ] || exit 4
+  ;;
+resend)
+  look
+  unsent || fail "No unsent prompt in $N: $S"
+  push || { st unsent; exit 7; }
   look
   [ "$S" = blocked ] || S=working
   st "$S"
@@ -308,9 +334,17 @@ wait)
         exit 4
         ;;
       idle | done)
+        if question; then
+          st blocked
+          exit 4
+        fi
         if { [ -z "$m" ] && [ -f "$WT/result.md" ]; } || { [ -n "$m" ] && rsh test -f "$Q/result.md"; }; then
           st finished
           exit 0
+        fi
+        if unsent; then
+          st unsent
+          exit 7
         fi
         "${H[@]}" agent wait "$N" --until working --until blocked --timeout "$resume" >/dev/null 2>&1 || {
           st stopped
@@ -322,11 +356,19 @@ wait)
   ;;
 answer)
   look
-  [ "$S" = blocked ] || fail "not blocked: $S"
-  "${H[@]}" agent read "$N" --source recent-unwrapped --lines 15 >"$t" 2>"$e" && ! grep -qE '^([[:space:]]|│)*Do you want to (proceed|make this edit|create|allow|run)|don.t ask again|tell Claude what to do differently' "$t" || fail "This is a permission prompt. Tell the user the workspace, the tab and the prompt; do not answer it."
+  q=
+  ! question || q=1
+  [ -n "$q" ] || [ "$S" = blocked ] || fail "not blocked: $S"
+  "${H[@]}" agent read "$N" --source recent-unwrapped --lines 15 >"$t" 2>"$e" && ! grep -qE "$PERM" "$t" || fail "This is a permission prompt. Tell the user the workspace, the tab and the prompt; do not answer it."
   if [ -n "${keys+x}" ]; then
     h agent send-keys "$N" "${keys[@]}"
   else
+    if [ -n "$q" ]; then
+      readpane || fail "Cannot read the pane of $N."
+      k=$(sed -nE 's/^[^0-9]*([0-9]+)\. Type something\.[[:space:]]*$/\1/p' "$t" | tail -n 1)
+      [ -n "$k" ] || fail "The question has no \"Type something.\" option. Answer with --keys."
+      h agent send-keys "$N" "$k"
+    fi
     h pane send-text "$PANE" "$text"
     h agent send-keys "$N" enter
   fi
@@ -393,6 +435,12 @@ list)
     h worktree list --workspace "$w"
     p=$(jq -r --arg w "$w" 'first(.result.worktrees[] | select(.open_workspace_id == $w) | .path) // "-"' <<<"$r")
     a=$(jq -r --arg n "$l" 'first(.result.agents[] | select(.name == $n) | "\(.pane_id // "-")\t\(.agent_status)") // "-\tgone"' <<<"$ag")
+    case ${a#*$'\t'} in
+      idle | done)
+        N=$l
+        if question; then a=${a%$'\t'*}$'\tblocked'; elif unsent; then a=${a%$'\t'*}$'\tunsent'; fi
+        ;;
+    esac
     printf 'found\t%s\t%s\t%s\t%s\t%s\n' "$l" "${m:-local}" "$w" "$a" "$p"
     n=$((n + 1))
   done 3<<<"$x"
