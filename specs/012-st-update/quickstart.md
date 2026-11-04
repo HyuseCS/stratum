@@ -15,7 +15,7 @@ bash tests/test_local_files.sh
 claude plugin validate .claude-plugin/plugin.json
 ```
 
-Expected: every line `ok`, exit 0. Cases are in [contracts/st-update.md](contracts/st-update.md)
+Expected: every check line `ok`, exit 0. Cases are in [contracts/st-update.md](contracts/st-update.md)
 section 3.
 
 ## 2. Negative controls

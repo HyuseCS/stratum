@@ -17,8 +17,7 @@ records and the marketplace, and prints one row per harness item with its state.
 nothing. The skill shows the rows that are not current in one table and asks once. After the OK, the
 script's `plugin` runs `claude plugin update --json -s <scope> stratum@stratum` in each folder with
 its own record and checks that only that record moved. Then `fix` repoints `statusLine` at the
-updated record's path and fixes each other row, one line or key at a time, and refuses dirty
-committed files and detached HEADs. The skill asks st-init's questions for missing `.stratum/`
+updated record's path and fixes each other row, one line or key at a time. `audit` marks a dirty committed file or a detached HEAD `skip` before any change, and the skill never runs `fix` on a `skip` row. The skill asks st-init's questions for missing `.stratum/`
 files, commits the changed files once per branch through the commit guard, and reports. A drift
 test fails when st-init names something the item list lacks. Version 0.7.0.
 
@@ -38,7 +37,7 @@ names the branch (research R16).
 **Storage**: Reads `<config>/plugins/installed_plugins.json`, `<config>/plugins/known_marketplaces.json`,
 `<config>/settings.json`, the marketplace's `plugin.json`. Writes only Stratum lines and keys in
 `.gitignore`, `CLAUDE.md`, `.claude/settings.json`, `.claude/settings.local.json`,
-`.stratum/models.json`, `.stratum/state.json`, and deletes `.stratum/commit-mode` (data-model.md).
+`.stratum/models.json`, `.stratum/state.json`, and deletes `.stratum/commit-mode` (data-model.md). The four st-init question files are written by the skill after st-init's question, never by the script (`fix` refuses those names).
 
 **Testing**: `bash tests/test_st_update.sh` (new, fixture with a `claude` stub, cases U1 to U21),
 `bash tests/test_update_rules.sh` (new, skill phrases), `bash tests/test_update_items.sh` (new,
@@ -53,7 +52,7 @@ FR-020 with a built-in negative control), existing `bash tests/test_inspect.sh`,
 **Performance Goals**: N/A. One `claude plugin update` per folder, about 2 s each.
 
 **Constraints**: No comments except `ponytail:` markers. Minimal diff. st-init unchanged (D9).
-The script runs no git command that changes the repo (research R13). Nothing changes before the
+The script runs no git command that changes a commit, branch or file (`git status` may refresh `.git/index`, research R13). Nothing changes before the
 gate (FR-010).
 
 **Scale/Scope**: New: `skills/st-update/SKILL.md`, `scripts/st-update.sh`,
@@ -79,7 +78,7 @@ agent rules.
 | G5. Security notes | Pass. S1 to S7 below |
 | G6. No speculative work | Pass. No tool installs (spec Assumption 4), no marketplace refresh, no per-worktree questions, no hash records (D1 rejected O2), no other config folder |
 | G7. Ground in the installed code and versions | Pass. CLI 2.1.316 probed (research R4). One unknown: how the CLI picks a record in a folder with no exact match. The script never runs it there and checks the result (F1) |
-| G8. Each new check has a negative control | Pass. Quickstart section 2, N1 to N6, and the built-in control in `tests/test_update_items.sh` |
+| G8. Each new check has a negative control | Pass. Quickstart section 2, N1 to N8, and the built-in control in `tests/test_update_items.sh` |
 | G9. Tests leave no files | Pass. All fixtures under one temp folder, removed on exit |
 | G10. Open decisions settled | Pass. D10, D11 |
 | G11. No live install change in tests or build | Pass. Tests use a fake `CLAUDE_CONFIG_DIR` and a `claude` stub. Only the user's live run (quickstart section 3) calls the real CLI |
@@ -106,7 +105,7 @@ agent rules.
   files and detached HEADs are skipped. A denied commit is reported, never worked around.
 - **S6. Untrusted paths and names.** Folder paths come from `git worktree list` and the records.
   Discontinued names come from project files, which can come from a cloned repo. The script quotes
-  paths, uses `cd -- "$dir"` and `git -C "$dir"`, and runs no `eval`. `audit` gives a name row only
+  paths as list arguments, never through a shell, uses `git -C "$dir"`, and runs no `eval`. `audit` gives a name or plugins-off row only
   when the name matches `^[A-Za-z0-9_.:@/*()-]+$`, else an `invalid` row with no fix (case U5).
   The skill puts single quotes around every argument it passes to the script and to git. JSON is
   parsed by `python3 -I`, never by `source`.

@@ -28,10 +28,10 @@ output.
 - `<folder>` defaults to the current directory. It resolves to the main checkout of its repo.
 - No `<main>/.stratum/`: prints `Not a Stratum project: <folder>. Run /stratum:st-init there.` on
   stderr, exit 1. No change.
-- No marketplace `stratum`, or no readable `plugin.json`: one line on stderr, exit 1.
+- No marketplace `stratum`, or no readable `plugin.json`, `agents/` or `skills/`: one line on stderr, exit 1. An `installed_plugins.json` that is not a JSON object: one line on stderr, exit 1.
 - Else prints rows, one per line, tab-separated: `<folder>\t<kind>\t<name>\t<state>\t<detail>`.
   The first row is `-\tmarketplace\tstratum\tcurrent\t<version> <installLocation>`. When the
-  source is `directory` and that folder is a git checkout not on `main`, the second row is
+  source is `directory` and that folder is the top level of a git checkout not on `main`, the second row is
   `-\tmarketplace-branch\t<branch or detached>\twarn\t<installLocation>` (research R16). Then the rows
   of each checkout (main first), its record subfolders, and the `gone` and `listed` records.
   Current rows are printed too: the skill counts them.
@@ -40,7 +40,7 @@ output.
   folders get no row.
 - A discontinued name gets its row only when it matches `^[A-Za-z0-9_.:@/*()-]+$`. Any other
   name gets an `invalid` row with no fix (research R9). A `Skill(stratum:<name>)` name with `/`
-  in `<name>` is `invalid`: listed, never fixed.
+  in `<name>` is `invalid`: listed, never fixed. A plugins-off key from `<config>/settings.json` that does not match the pattern is `invalid`, with no fix. A settings file that is not a JSON object gives an `invalid` row and is never written. An invalid `.claude/settings.local.json` counts as empty for `plugins-off`.
 - A worktree on a `worker-*` branch has `worker` in the detail of its `install` row, or of its
   first row when it has no record.
 - Committed files (`.gitignore`, `AGENTS.md`, `CLAUDE.md`, `.claude/settings.json`): when
@@ -60,7 +60,7 @@ output.
   exit 1.
 - Runs, in `<folder>`: `claude plugin update --json -s <scope> stratum@stratum`.
 - Success: exit 0 of the CLI, `outcome` `ok`, the folder's record now has `version` equal to
-  `newVersion`, and no other `stratum@stratum` record changed `lastUpdated` (research R4). Prints
+  `newVersion`, and no other `stratum@stratum` record changed `lastUpdated` or was added or removed (research R4). Prints
   `ok <newVersion> <installPath>`, exit 0.
 - Else prints the CLI's `message` (or its stderr), then
   `Run: cd <folder> && claude plugin update stratum@stratum -s <scope>`, exit 1.
@@ -77,7 +77,7 @@ audit and the fix is not caught; upgrade if that is seen.`
 
 JSON files: not valid JSON or not an object: `skip: <file> is not valid JSON`, exit 3. Writes keep
 every other key and value, `indent=2`, key order kept (research R12). The write goes through a
-new temp file in the same folder, keeps the old file's mode (a new file gets 644), and replaces
+new temp file in the folder of the file's real path (a symlink is followed), keeps the old file's mode (a new file gets 644), and replaces
 the file. A write that fails removes the temp file: `skip: cannot write <file>: <reason>`, exit 3.
 
 JSON files and the `ignore` and `pointer` appends: the file's real path (symlinks resolved)
@@ -95,7 +95,7 @@ outside the folder's real path: `skip: <file> points outside <folder>`, exit 3.
 | `allow` | `<settings file>:<entry>` | Remove that entry from `permissions.allow` in that settings file when it is discontinued (research R9). Refuse any other entry. |
 | `gone-file` | the path | Delete it when it is on the discontinued file list. Refuse any other path. |
 
-The script refuses a `fix` whose item is current (`same <file>`, exit 0), so a second run changes
+An `install` row that is `outdated` has no fix (exit 3). Rows with state `invalid`, `gone`, `listed`, `warn` or `skip` are refused (exit 3). The script refuses a `fix` whose item is current (`same <file>`, exit 0), so a second run changes
 nothing.
 
 ## 2. `skills/st-update/SKILL.md`
@@ -107,13 +107,14 @@ to the script and to git (folder, kind, name, paths, message).
 1. **Audit.** Run `bash <script> audit <folder>` (the argument, else the project root). Exit 1:
    show the line and stop. No row other than `current`, `gone` and `listed`: say every item is
    current and stop. No gate.
+   Only `warn`, `invalid` or `skip` rows besides those: show those rows with their details, say st-update can change nothing here, and stop. No gate.
 2. **Table.** One table: the header (marketplace version and folder, config folder), then per
    folder only the rows that are not `current`, then one line per folder with the count of its
    current items. `worker` folders say so.
 3. **Gate.** A `marketplace-branch` row: above the question, warn `The marketplace folder
    <installLocation> is on branch <branch>, not main. The update installs that branch.` One
    question: OK to update all, or `skip <worktree>` (one or more), or no. No: stop, nothing
-   changed (FR-010).
+   changed (FR-010). A skipped worktree (`skip <worktree>`) is left out of every step after the gate, and the report names it.
 4. **Plugin.** For each folder with an `install` row that is `outdated` (skipped worktrees left
    out): `bash <script> plugin <folder>`. Exit 1: keep its message and command for the report,
    go on with the next folder. Then run the step 1 audit once more, with the same argument.
@@ -171,6 +172,7 @@ run `claude plugin update` in a folder without its own record, edit `installed_p
 | U19 | script runs no `git add`, `git commit`, `git push` (grep of the script) | FR-016 |
 | U20 | fake marketplace folder is a git repo on branch `feat-x`: `marketplace-branch` row `warn` naming `feat-x`; on `main`: no row; not a git repo: no row | Edge case (branch) |
 | U21 | `pointer` fix on a folder with no `AGENTS.md`: `CLAUDE.md` gets only `@.stratum/constitution.md` | FR-013 |
+| Build extras (no U number) | `tests/test_st_update.sh` also checks: an unsafe `plugins-off` key is `invalid`; a tracked path named in `.gitignore` is `current` and `fix ignore` on it prints `same`; `plugin` with an `ok` outcome and an unmoved record exits 1; `fix` on an outdated `install` row exits 3; `gone-file` on a directory exits 3; `audit` never calls `claude`; a JSON write through a symlink outside the checkout exits 3 and leaves the target byte-equal, through a symlink inside the checkout changes the link target and keeps the link, a planted `<file>.tmp` symlink is not followed, a new file gets mode 644 and an existing one keeps its mode; an append through a `CLAUDE.md` symlink outside the checkout exits 3, inside writes into the target | FR-003, FR-011, FR-013 |
 
 `tests/test_update_rules.sh`: phrase rows on `skills/st-update/SKILL.md` for steps 1 to 8 above,
 like `tests/test_plan_rules.sh`:

@@ -57,7 +57,7 @@ The list, from st-init:
 |------|-------|-------|------|
 | `install` | `stratum@stratum` | install record | FR-005 |
 | `statusline` | `statusLine` | `.claude/settings.local.json` | research R8 |
-| `ignore` | `.stratum/handoff.md`, `.stratum/lessons.md`, `.stratum/weather.json`, `.stratum/powerline.json`, `.stratum/git-guard.json`, `.stratum/models.json`, `graphify-out/` | `.gitignore` (checked with `git check-ignore`, any source) | D10, research R1 |
+| `ignore` | `.stratum/handoff.md`, `.stratum/lessons.md`, `.stratum/weather.json`, `.stratum/powerline.json`, `.stratum/git-guard.json`, `.stratum/models.json`, `graphify-out/` | `.gitignore` (checked with `git check-ignore --no-index`, any source) | D10, research R1 |
 | `pointer` | `@AGENTS.md`, `@.stratum/constitution.md` | `CLAUDE.md` (checked in `AGENTS.md`, `CLAUDE.md`, `CLAUDE.local.md`) | D10, research R2 |
 | `plugins-off` | each `ponytail@ponytail` or `*token-weather*` key that is `true` in `<config>/settings.json` `enabledPlugins` | `.claude/settings.json` (checked in it and `.claude/settings.local.json`) | D10, research R3 |
 | `figcraft` | each Tools-line name of `skills/st-design/design-tool.md` | `.claude/settings.json` `permissions.allow` | research R10 |
@@ -86,13 +86,13 @@ States:
 - `new`: missing. The fix adds it, or the skill asks st-init's question first (FR-014).
 - `ask`: a value Stratum did not write (a non-Stratum `statusLine`). The skill shows the diff and
   asks. Only a yes runs the fix, with `--force`.
-- `invalid`: the file is not valid JSON or not an object. Never touched. Reported.
+- `invalid`: the file is not valid JSON or not an object. Never touched. Reported. An unsafe name (research R9) or an unsafe `plugins-off` key from the config folder is `invalid` too, with no fix.
 - `gone`: an install record whose folder does not exist and whose path is under a checkout or is
   a sibling of the main checkout named `<main checkout name>-*`. Never touched. Listed.
 - `listed`: a `user` or `managed` record, or a folder with no install. Never touched. Listed.
-- `warn`: header only. The marketplace folder is a git checkout not on `main` (research R16).
+- `warn`: header only. The marketplace folder is the top level of a git checkout not on `main` (research R16).
   Shown at the gate. Nothing to fix.
-- `skip`: a row that would change a committed file with uncommitted changes, or any committed-file
+- `skip`: a row that would change a committed file with uncommitted changes, or any non-current committed-file
   row of a checkout on a detached HEAD. Set by `audit` before any change. Never fixed. Reported
   with its detail.
 

@@ -11,14 +11,14 @@ the marketplace branch.
 
 ## R1. When a `.gitignore` item is current (D10)
 
-- Decision: current when `git -C <checkout> check-ignore -q -- <path>` says the path is ignored,
+- Decision: current when `git -C <checkout> check-ignore --no-index -- <path>` lists the path as ignored,
   from any source (`.gitignore`, `.git/info/exclude`, the global excludes file). For a line that
   ends in `/` the check uses `<path>x` (a file inside it). A new item appends the st-init line to
   `<checkout>/.gitignore`.
 - Rationale: v2-veent ignores Stratum's files with `.stratum/` and `graphify-out/` in
   `.git/info/exclude` (lines 18 and 20, "Stratum (local install, personal)"). Its `.gitignore` has
   none of st-init's seven lines. A literal rule would commit seven lines to 8 branches (the main checkout and 7 linked worktrees today) of a team
-  repo (rejected O22).
+  repo (rejected O22). `--no-index` also makes a tracked path count by its ignore rule: without it the line is appended on every run and SC-001 never settles.
 
 ## R2. When a pointer item is current (D10)
 
@@ -44,7 +44,7 @@ the marketplace branch.
   folder as the working directory, only for a folder that has a record with exactly that
   `projectPath`. After the run it reads the records again. The run counts as done only when the
   folder's record has the `newVersion` from the JSON line and no other `stratum@stratum` record
-  changed its `lastUpdated`. Else it reports a failure with the CLI's message and the command.
+  changed its `lastUpdated` or was added or removed. Else it reports a failure with the CLI's message and the command.
 - Rationale: a probe from a folder with no record (the scratch folder, `-s local`) updated
   v2-veent's record from 0.5.2 to 0.6.0. The CLI fell back to another folder's record. The CLI
   code matches `scope` and `projectPath` first (`j()`), then the same path under another spelling
@@ -87,7 +87,7 @@ the marketplace branch.
   - Checkouts: the main checkout and each linked worktree from
     `git worktree list --porcelain` whose folder exists. A worktree on a `worker-*` branch is
     marked `worker` in the table, so the user can skip it at the gate (CHK013).
-  - Record subfolders: each `stratum@stratum` record whose `projectPath` is under a checkout.
+  - Record subfolders: each `stratum@stratum` record whose folder exists and whose `projectPath` is under a checkout.
     They get the install item, and the `statusLine` item only when their own
     `.claude/settings.local.json` has a Stratum `statusLine`. st-update creates no file in a
     subfolder.
@@ -161,11 +161,11 @@ the marketplace branch.
   the row is `invalid`.
 - The user data files (`constitution.md`, `state.json` once it exists, `lessons.md`,
   `handoff.md`, and the values in `git-guard.json`, `models.json`, `powerline.json`,
-  `advisor.json`) are never written. The one write into `models.json` removes a dead key.
+  `advisor.json`) are never written. The one write into `models.json` removes a dead key. JSON writes (build): the new content goes to a temp file in the real path's folder, the old file's mode is copied (a new file gets 644), and the temp file replaces the file. A symlink is followed. A real path outside the checkout is refused (exit 3) for JSON writes and for the ignore and pointer appends.
 
 ## R13. Commits (FR-016, FR-017, CHK004, CHK011)
 
-- Decision: the script never runs git commands that change the repo. The skill runs, per checkout,
+- Decision: the script runs no git command that changes a commit, branch or file (`git status` may refresh the stat data in `.git/index`; the no-change test does not hash `.git`). The skill runs, per checkout,
   one Bash call: `git -C <checkout> add -- <paths> && git -C <checkout> commit -m '<message>' -- <paths>`,
   so `hooks/st-git-guard.py` and the project's own hooks see it. The commit ends with
   `-- <paths>`, so files the user staged before the run stay staged and stay out of Stratum's
@@ -203,9 +203,9 @@ the marketplace branch.
 
 ## R16. Marketplace on a branch other than `main` (spec edge case)
 
-- Decision: when the marketplace source is `directory` and `git -C <installLocation> branch
+- Decision: when the marketplace source is `directory`, `<installLocation>` is the top level of its git repo, and `git -C <installLocation> branch
   --show-current` is not `main`, `audit` prints a header row `-\tmarketplace-branch\t<branch>\twarn\t<installLocation>`.
-  A detached HEAD prints `detached` as the branch. Not a git repo, or a non-directory source: no
+  A detached HEAD prints `detached` as the branch. Not a git repo, a folder inside a repo, or a non-directory source: no
   row. The skill shows the warning above the table and names the branch in the gate question. It
   changes nothing for the warning: the user decides at the gate.
 - Rationale: `claude plugin update` installs what the folder holds. The source repo is on
