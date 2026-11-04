@@ -181,7 +181,8 @@ dependency.
 - **D13a. Local files in a worktree.** A project can keep `.stratum/` out of git, so a new
   worktree may have none of these files. Each `.stratum/` file that Stratum reads has one row
   here, with how a worktree gets it. `main`: the code reads the main checkout's file when the
-  worktree has none. `own`: each checkout has its own on purpose. `git`: it comes with the commit.
+  worktree has none. `link`: the session start hook links the main checkout's file into a
+  worktree that has none. `own`: each checkout has its own on purpose.
   A feature that adds a `.stratum/` file adds its row. `tests/test_local_files.sh` fails on a
   file with no row.
 
@@ -197,9 +198,9 @@ dependency.
   | `.stratum/weather.json` | own | The statusline cache of that checkout. |
   | `.stratum/handoff.md` | own | Each checkout's session writes its own. |
   | `.stratum/decisions.md` | own | Grill decisions when no feature is set. |
-  | `.stratum/lessons.md` | own | Gap: lessons that `st-close` writes in a worktree stay in that worktree. |
-  | `.stratum/constitution.md` | git | Gap when `.stratum/` is not in git: the worktree has no rules. |
-  | `.stratum/templates` | git | Gap when `.stratum/` is not in git: the worktree uses the plugin templates. |
+  | `.stratum/lessons.md` | link | Lessons written in a worktree go to the main checkout's file. |
+  | `.stratum/constitution.md` | link | The project rules, also each `<app>-constitution.md`. |
+  | `.stratum/templates` | link | The project's own templates. |
 
 ## 6. Display, comms, and safety
 

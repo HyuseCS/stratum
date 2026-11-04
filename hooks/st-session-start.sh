@@ -8,6 +8,14 @@ if [ -f "$sr" ] && ! cmp -s "$sr" "$HOME/.claude/sr-opus-5.md"; then
   echo
 fi
 
+top=$(git -C "$project" rev-parse --show-toplevel 2>/dev/null) && common=$(git -C "$project" rev-parse --path-format=absolute --git-common-dir 2>/dev/null) && main=$(dirname "$common") || main=
+if [ -n "$main" ] && [ "$main" != "$top" ] && [ -d "$main/.stratum" ]; then
+  for f in "$main"/.stratum/*constitution.md "$main/.stratum/lessons.md" "$main/.stratum/templates"; do
+    t=$project/.stratum/${f##*/}
+    [ -e "$f" ] && [ ! -e "$t" ] && [ ! -L "$t" ] && mkdir -p "$project/.stratum" && ln -s "$f" "$t"
+  done
+fi
+
 if [ -f "$project/.stratum/handoff.md" ]; then
   echo "# Session handoff"
   echo

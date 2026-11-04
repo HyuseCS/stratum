@@ -50,4 +50,23 @@ check "sr-opus-5 printed when different" 'grep -qF -- "$marker" <<<"$out"'
 out=$(HOME="$tmp/home" CLAUDE_PROJECT_DIR="$noproj" bash "$root/hooks/st-session-start.sh")
 check "no .stratum, no label rule" '! grep -qF "[Orchestrator]" <<<"$out"'
 
+mkdir -p "$proj/.stratum/templates"
+printf 'rules\n' > "$proj/.stratum/constitution.md"
+printf 'app rules\n' > "$proj/.stratum/crm-constitution.md"
+printf 'lessons\n' > "$proj/.stratum/lessons.md"
+wt="$tmp/wt"
+git -C "$proj" worktree add -q --detach "$wt"
+out=$(HOME="$tmp/home" CLAUDE_PROJECT_DIR="$wt" bash "$root/hooks/st-session-start.sh")
+for f in constitution.md crm-constitution.md lessons.md templates; do
+  check "worktree links $f from the main checkout" '[ "$(readlink "$wt/.stratum/$f")" = "$proj/.stratum/$f" ]'
+done
+check "worktree gets the label rule" 'grep -qF "[Orchestrator]" <<<"$out"'
+check "worktree does not link state.json" '[ ! -e "$wt/.stratum/state.json" ]'
+rm "$wt/.stratum/lessons.md"
+printf 'own\n' > "$wt/.stratum/lessons.md"
+HOME="$tmp/home" CLAUDE_PROJECT_DIR="$wt" bash "$root/hooks/st-session-start.sh" >/dev/null
+check "worktree keeps its own file" '[ ! -L "$wt/.stratum/lessons.md" ] && [ "$(cat "$wt/.stratum/lessons.md")" = own ]'
+HOME="$tmp/home" bash "$root/hooks/st-session-start.sh" >/dev/null
+check "main checkout links nothing" '[ -z "$(find "$proj/.stratum" -type l)" ]'
+
 exit $fail
