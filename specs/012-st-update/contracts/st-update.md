@@ -45,8 +45,9 @@ output.
   first row when it has no record.
 - Committed files (`.gitignore`, `AGENTS.md`, `CLAUDE.md`, `.claude/settings.json`): when
   `git -C <folder> status --porcelain -- <file>` is not empty, every row that would change that
-  file gets the state `skip` with the detail `<file> has uncommitted changes`. On a detached HEAD,
-  every committed-file row of that checkout gets `skip` with the detail
+  file gets the state `skip` with the detail `<file> has uncommitted changes`. A `git status` that
+  fails counts as not empty. On a detached HEAD, every non-current committed-file row of that
+  checkout gets `skip` with the detail
   `detached HEAD, no branch to commit on` (FR-017, D8).
 - Exit 0. Writes nothing (FR-010). `claude` is not called.
 - Never prints the value of a key it does not check (settings files can hold `env` secrets).
@@ -75,7 +76,12 @@ change, so a second fix to the same file in one run is not refused by the first 
 audit and the fix is not caught; upgrade if that is seen.`
 
 JSON files: not valid JSON or not an object: `skip: <file> is not valid JSON`, exit 3. Writes keep
-every other key and value, `indent=2`, key order kept (research R12).
+every other key and value, `indent=2`, key order kept (research R12). The write goes through a
+new temp file in the same folder, keeps the old file's mode (a new file gets 644), and replaces
+the file. A write that fails removes the temp file: `skip: cannot write <file>: <reason>`, exit 3.
+
+JSON files and the `ignore` and `pointer` appends: the file's real path (symlinks resolved)
+outside the folder's real path: `skip: <file> points outside <folder>`, exit 3.
 
 | Kind | Name | Change |
 |------|------|--------|
@@ -158,7 +164,7 @@ run `claude plugin update` in a folder without its own record, edit `installed_p
 | U12 | `fix` of each kind keeps other lines and keys; user data files byte-equal | FR-013, SC-003 |
 | U13 | `fix file .stratum/state.json` writes st-init's value; `fix file .stratum/advisor.json` exit 3 | FR-014 |
 | U14 | `fix models-key st-gone` leaves `st-build`; `fix gone-file .stratum/commit-mode` deletes it; `fix gone-file .stratum/lessons.md` exit 3 | FR-015 |
-| U15 | `audit` with a dirty `CLAUDE.md` in the worktree: each row that would change `CLAUDE.md` there is `skip` with the detail `CLAUDE.md has uncommitted changes`, rows of its other files are not; a detached HEAD in a second worktree: every committed-file row there is `skip` with the detail `detached HEAD, no branch to commit on`; `CLAUDE.md` byte-equal | FR-017 |
+| U15 | `audit` with a dirty `CLAUDE.md` in the worktree: each row that would change `CLAUDE.md` there is `skip` with the detail `CLAUDE.md has uncommitted changes`, rows of its other files are not; a detached HEAD in a second worktree: every non-current committed-file row there is `skip` with the detail `detached HEAD, no branch to commit on`, `current` rows stay `current`; `CLAUDE.md` byte-equal | FR-017 |
 | U16 | `fix statusline` with a custom command: exit 3; with `--force`: changed | FR-006, US3 |
 | U17 | full run (stub plugin, every fix), then `audit`: only `current`, `gone`, `listed` | SC-001 |
 | U18 | `claude` not on `PATH`: `plugin` prints the command, exit 1; `fix` still works | Edge case |

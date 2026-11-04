@@ -276,6 +276,7 @@ check "U11 its statusLine is the main record's new path" [ "$(pyq "$tmp/proj-nor
 run fix "$tmp/proj" file .stratum/state.json
 check "U13 fix file state.json exits 0" [ "$rc" = 0 ]
 check "U13 state.json holds the st-init value" [ "$(pyq "$tmp/proj/.stratum/state.json" 'd == {"feature_directory": None, "phase": None, "lane": None}')" = true ]
+check "U13 new state.json has mode 644" [ "$(stat -c %a "$tmp/proj/.stratum/state.json")" = 644 ]
 run fix "$tmp/proj" file .stratum/advisor.json
 check "U13 fix file advisor.json exits 3 and writes nothing" exits 3 [ ! -e "$tmp/proj/.stratum/advisor.json" ]
 
@@ -397,7 +398,9 @@ check "U15 current CLAUDE.md row in the dirty worktree stays current" [ "$(state
 check "U15 other rows of the dirty worktree are not skip" [ -z "$(awk -F'\t' -v f="$tmp/u3-dirty" '$1 == f && $4 == "skip" && $2 != "pointer"' <<<"$rows")" ]
 check "U15 dirty CLAUDE.md is byte-equal after audit" [ "$dirtysum" = "$(sha256sum "$tmp/u3-dirty/CLAUDE.md")" ]
 check "U15 detached worktree has committed-file rows" [ -n "$(awk -F'\t' -v f="$tmp/u3-det" '$1 == f && $2 == "ignore"' <<<"$rows")" ]
-check "U15 committed-file rows of the detached worktree are skip with the detached reason" [ -z "$(awk -F'\t' -v f="$tmp/u3-det" '$1 == f && ($2 == "ignore" || $2 == "pointer" || $2 == "plugins-off" || $2 == "figcraft" || $2 == "allow") && ($4 != "skip" || $5 != "detached HEAD, no branch to commit on")' <<<"$rows")" ]
+check "U15 non-current committed-file rows of the detached worktree are skip with the detached reason" [ -z "$(awk -F'\t' -v f="$tmp/u3-det" '$1 == f && ($2 == "ignore" || $2 == "pointer" || $2 == "plugins-off" || $2 == "figcraft" || $2 == "allow") && $4 != "current" && ($4 != "skip" || $5 != "detached HEAD, no branch to commit on")' <<<"$rows")" ]
+check "U15 detached worktree has a non-current committed-file row" [ -n "$(awk -F'\t' -v f="$tmp/u3-det" '$1 == f && $2 == "pointer" && $4 == "skip"' <<<"$rows")" ]
+check "U15 current CLAUDE.md row in the detached worktree stays current" [ "$(state "$tmp/u3-det" pointer @AGENTS.md)" = current ]
 
 git init -q -b main "$tmp/u21"
 git -C "$tmp/u21" commit -q --allow-empty -m init
@@ -412,9 +415,50 @@ check "U21 no AGENTS.md after the constitution fix" [ ! -e "$tmp/u21/AGENTS.md" 
 
 printf '{"st-gone": {}, "st-build": {}}\n' > "$tmp/u21-models.json"
 ln -s "$tmp/u21-models.json" "$tmp/u21/.stratum/models.json"
+outsum=$(sha256sum "$tmp/u21-models.json")
+run fix "$tmp/u21" models-key st-gone
+check "JSON write through a symlink outside the checkout exits 3" exits 3 contains "$out" "skip: .stratum/models.json points outside $tmp/u21"
+check "JSON write leaves the outside file byte-equal" [ "$outsum" = "$(sha256sum "$tmp/u21-models.json")" ]
+rm "$tmp/u21/.stratum/models.json"
+printf '{"st-gone": {}, "st-build": {}}\n' > "$tmp/u21/models-real.json"
+chmod 600 "$tmp/u21/models-real.json"
+ln -s ../models-real.json "$tmp/u21/.stratum/models.json"
 run fix "$tmp/u21" models-key st-gone
 check "JSON write through a symlink exits 0" [ "$rc" = 0 ]
 check "JSON write keeps the symlink" [ -L "$tmp/u21/.stratum/models.json" ]
-check "JSON write changes the link target" [ "$(pyq "$tmp/u21-models.json" 'sorted(d)')" = '["st-build"]' ]
+check "JSON write changes the link target" [ "$(pyq "$tmp/u21/models-real.json" 'sorted(d)')" = '["st-build"]' ]
+check "JSON write keeps mode 600" [ "$(stat -c %a "$tmp/u21/models-real.json")" = 600 ]
 check "JSON write leaves no .tmp file" [ -z "$(find "$tmp" -name '*.tmp')" ]
+
+mkdir -p "$tmp/u21/.claude"
+printf '{}\n' > "$tmp/u21/.claude/settings.json"
+chmod 644 "$tmp/u21/.claude/settings.json"
+printf 'victim\n' > "$tmp/victim"
+victimsum=$(sha256sum "$tmp/victim")
+ln -s ../../victim "$tmp/u21/.claude/settings.json.tmp"
+run fix "$tmp/u21" plugins-off ponytail@ponytail
+check "JSON write with a planted .tmp symlink exits 0" [ "$rc" = 0 ]
+check "JSON write does not follow the .tmp symlink" [ "$victimsum" = "$(sha256sum "$tmp/victim")" ]
+check "JSON write leaves settings.json not a symlink" [ ! -L "$tmp/u21/.claude/settings.json" ]
+check "JSON write turns the plugin off in settings.json" [ "$(pyq "$tmp/u21/.claude/settings.json" 'd["enabledPlugins"]["ponytail@ponytail"]')" = false ]
+check "JSON write keeps mode 644" [ "$(stat -c %a "$tmp/u21/.claude/settings.json")" = 644 ]
+rm "$tmp/u21/.claude/settings.json.tmp"
+
+git init -q -b main "$tmp/u22"
+mkdir -p "$tmp/u22/.stratum" "$tmp/u22/docs"
+printf 'victim\n' > "$tmp/u22-victim"
+ln -s ../u22-victim "$tmp/u22/CLAUDE.md"
+git -C "$tmp/u22" add -A
+git -C "$tmp/u22" commit -qm init
+victimsum=$(sha256sum "$tmp/u22-victim")
+run fix "$tmp/u22" pointer @.stratum/constitution.md
+check "append through a committed CLAUDE.md symlink outside the checkout exits 3" exits 3 contains "$out" "skip: CLAUDE.md points outside $tmp/u22"
+check "append leaves the outside file byte-equal" [ "$victimsum" = "$(sha256sum "$tmp/u22-victim")" ]
+rm "$tmp/u22/CLAUDE.md"
+printf 'mine\n' > "$tmp/u22/docs/claude.md"
+ln -s docs/claude.md "$tmp/u22/CLAUDE.md"
+run fix "$tmp/u22" pointer @.stratum/constitution.md
+check "append through a CLAUDE.md symlink inside the checkout exits 0" [ "$rc" = 0 ]
+check "append writes the line into the link target" grep -qxF '@.stratum/constitution.md' "$tmp/u22/docs/claude.md"
+check "append keeps the CLAUDE.md symlink" [ -L "$tmp/u22/CLAUDE.md" ]
 exit "$fail"

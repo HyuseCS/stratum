@@ -17,7 +17,7 @@ if [ "$1" = audit ] || [ "$1" = fix ]; then
   [ -d "${main:=$folder}/.stratum" ] || { echo "Not a Stratum project: $folder. Run /stratum:st-init there." >&2; exit 1; }
 fi
 exec python3 -I - "$cfg" "$main" "$@" <<'PY'
-import functools, json, os, re, shlex, shutil, subprocess, sys
+import functools, json, os, re, shlex, shutil, subprocess, sys, tempfile
 cfg, main, cmd, *args = sys.argv[1:]
 IGNORE = [".stratum/handoff.md", ".stratum/lessons.md", ".stratum/weather.json", ".stratum/powerline.json",
           ".stratum/git-guard.json", ".stratum/models.json", "graphify-out/"]
@@ -315,14 +315,15 @@ for p, state, detail in tail:
 if cmd == "audit":
     @functools.cache
     def dirty(c, n):
-        return bool(git("-C", c, "status", "--porcelain", "--", n).stdout.strip())
+        p = git("-C", c, "status", "--porcelain", "--", n)
+        return p.returncode != 0 or bool(p.stdout.strip())
 
     def mark(r):
         f, kind, name, state, detail = r
         n = detail if kind == "allow" else FN.get(kind)
         if f not in paths or n not in COMMITTED or state == "invalid":
             return r
-        if f in det:
+        if f in det and state != "current":
             return (f, kind, name, "skip", "detached HEAD, no branch to commit on")
         if state != "current" and dirty(f, n):
             return (f, kind, name, "skip", f"{n} has uncommitted changes")
@@ -365,6 +366,9 @@ if state == "ask" and len(args) < 4:
     refuse("skip: not a Stratum statusline")
 if state not in ("outdated", "new", "discontinued", "ask"):
     refuse(f"skip: {kind} {name} is not an item to fix in {folder}")
+real = os.path.realpath(path)
+if kind != "gone-file" and os.path.commonpath([real, os.path.realpath(folder)]) != os.path.realpath(folder):
+    refuse(f"skip: {fn} points outside {folder}")
 
 if kind in ("ignore", "pointer"):
     old = read(path) or ""
@@ -393,10 +397,20 @@ else:
     refuse(f"skip: {kind} has no fix")
 if data is not None:
     text = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
-    real = os.path.realpath(path)
-    os.makedirs(os.path.dirname(real), exist_ok=True)
-    with open(real + ".tmp", "w", encoding="utf-8") as fh:
-        fh.write(text)
-    os.replace(real + ".tmp", real)
+    tmp = None
+    try:
+        os.makedirs(os.path.dirname(real), exist_ok=True)
+        fd, tmp = tempfile.mkstemp(dir=os.path.dirname(real))
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write(text)
+        if os.path.exists(real):
+            shutil.copymode(real, tmp)
+        else:
+            os.chmod(tmp, 0o644)
+        os.replace(tmp, real)
+    except OSError as e:
+        if tmp and os.path.exists(tmp):
+            os.remove(tmp)
+        refuse(f"skip: cannot write {fn}: {e.strerror}")
 print(f"changed {fn}")
 PY
