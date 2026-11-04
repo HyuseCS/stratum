@@ -21,8 +21,28 @@ done
 
 cat > "$tmp/bin/claude" <<EOF
 #!/usr/bin/env bash
-echo "\$*" >> "$tmp/claude.log"
-exit 9
+echo "\$(pwd -P) \$*" >> "$tmp/claude.log"
+[ "\$1 \$2 \$3" = "plugin update --json" ] || exit 9
+scope=\$5
+if [ -n "\${STUB_FAIL:-}" ]; then
+  echo '{"command":"update","outcome":"failed","message":"stub refused the update","failureCode":"not_found"}'
+  exit 1
+fi
+target=\$(pwd -P)
+[ -n "\${STUB_OTHER:-}" ] && target="$tmp/other-x"
+python3 -I - "$tmp/cfg/plugins/installed_plugins.json" "\$target" "\$scope" "$tmp/cfg/plugins/cache/stratum/stratum/0.7.0" <<'PY' || { echo '{"command":"update","outcome":"failed","message":"no record for this folder","failureCode":"not_found"}'; exit 1; }
+import datetime, json, sys
+path, target, scope, cache = sys.argv[1:]
+doc = json.load(open(path))
+hit = [r for r in doc["plugins"]["stratum@stratum"] if r["projectPath"] == target and r["scope"] == scope]
+if not hit:
+    sys.exit(1)
+for rec in hit:
+    rec.update(version="0.7.0", installPath=cache, lastUpdated=datetime.datetime.now(datetime.timezone.utc).isoformat())
+with open(path, "w") as f:
+    json.dump(doc, f, indent=2)
+PY
+printf '{"command":"update","outcome":"ok","scope":"%s","message":"Updated stratum@stratum","updateOutcome":"updated","oldVersion":"0.1.22","newVersion":"0.7.0"}\n' "\$scope"
 EOF
 chmod +x "$tmp/bin/claude"
 
@@ -161,4 +181,109 @@ audit "$tmp/proj"
 check "U20 plain folder has no marketplace-branch row" exits 0 [ -z "$(kindrows - marketplace-branch)" ]
 
 check "no audit calls claude" exits 0 [ ! -e "$tmp/claude.log" ]
+
+calls() { cat "$tmp/claude.log" 2>/dev/null | wc -l; }
+calledwith() { grep -qxF -- "$1" "$tmp/claude.log" 2>/dev/null; }
+run() { out=$(bash "$script" "$@" 2>&1); rc=$?; }
+rec() { python3 -I -c 'import json, sys
+for r in json.load(open(sys.argv[1]))["plugins"]["stratum@stratum"]:
+    if r["projectPath"] == sys.argv[2] and r["scope"] == "local":
+        print(r.get(sys.argv[3], ""))' "$tmp/cfg/plugins/installed_plugins.json" "$1" "$2"; }
+pyq() { python3 -I -c 'import json, sys
+v = eval(sys.argv[2], {"d": json.load(open(sys.argv[1]))})
+print(v if isinstance(v, str) else json.dumps(v))' "$1" "$2" 2>/dev/null; }
+fullrun() {
+  local f k n s d
+  audit "$tmp/proj"
+  while IFS=$'\t' read -r f k n s d; do
+    [ "$k" = install ] && [ "$s" = outdated ] && bash "$script" plugin "$f" >/dev/null 2>&1 </dev/null
+  done <<< "$rows"
+  audit "$tmp/proj"
+  while IFS=$'\t' read -r f k n s d; do
+    case "$s" in outdated|new|discontinued) ;; *) continue ;; esac
+    case "$k" in
+      statusline) bash "$script" fix "$f" statusline "$n" >/dev/null 2>&1 </dev/null ;;
+      allow) bash "$script" fix "$f" allow "$d:$n" >/dev/null 2>&1 </dev/null ;;
+      ignore|pointer|plugins-off|figcraft|file|models-key|gone-file) bash "$script" fix "$f" "$k" "$n" >/dev/null 2>&1 </dev/null ;;
+    esac
+  done <<< "$rows"
+  audit "$tmp/proj"
+}
+cache7="$tmp/cfg/plugins/cache/stratum/stratum/0.7.0"
+
+run plugin "$tmp/proj"
+check "U9 plugin exits 0" [ "$rc" = 0 ]
+check "U9 plugin prints ok, the new version and path" contains "$out" "ok 0.7.0 $cache7"
+check "U9 claude runs in the folder with the record scope" calledwith "$tmp/proj plugin update --json -s local stratum@stratum"
+check "U9 record version moves to 0.7.0" [ "$(rec "$tmp/proj" version)" = 0.7.0 ]
+check "U9 record path moves to the 0.7.0 cache" [ "$(rec "$tmp/proj" installPath)" = "$cache7" ]
+before=$(calls); run plugin "$tmp/proj/apps/gone"
+check "U9 gone record under a checkout exits 1, claude not called" exits 1 [ "$(calls)" = "$before" ]
+before=$(calls); run plugin "$tmp/proj-worker-w1a"
+check "U9 gone sibling exits 1, claude not called" exits 1 [ "$(calls)" = "$before" ]
+before=$(calls); run plugin "$tmp/user-home"
+check "U9 user record exits 1, claude not called" exits 1 [ "$(calls)" = "$before" ]
+before=$(calls); run plugin "$tmp/proj-norec"
+check "U9 folder with no record exits 1, claude not called" exits 1 [ "$(calls)" = "$before" ]
+out=$(STUB_FAIL=1 bash "$script" plugin "$tmp/proj/apps/a" 2>&1); rc=$?
+check "U9 failed CLI update exits 1 and leaves the record at 0.1.22" exits 1 [ "$(rec "$tmp/proj/apps/a" version)" = 0.1.22 ]
+check "U9 failed CLI update prints the CLI message" contains "$out" "stub refused the update"
+check "U9 failed CLI update prints the command" contains "$out" "Run: cd $tmp/proj/apps/a && claude plugin update stratum@stratum -s local"
+
+out=$(STUB_OTHER=1 bash "$script" plugin "$tmp/proj-wt" 2>&1); rc=$?
+check "U10 update of another record exits 1" [ "$rc" = 1 ]
+check "U10 prints the command" contains "$out" "Run: cd $tmp/proj-wt && claude plugin update stratum@stratum -s local"
+
+run fix "$tmp/proj/apps/a" statusline statusLine
+check "U11 fix statusline before plugin exits 3 with the reason" exits 3 contains "$out" "skip: install not updated"
+check "U11 fix statusline before plugin writes nothing" exits 3 [ ! -e "$tmp/proj/apps/a/.claude/settings.local.json" ]
+run fix "$tmp/proj" statusline statusLine
+check "U11 fix statusline after plugin exits 0" [ "$rc" = 0 ]
+check "U11 statusLine points at the record's new path" [ "$(pyq "$tmp/proj/.claude/settings.local.json" 'd["statusLine"]["command"]')" = "bash $cache7/statusline/st-statusline.sh" ]
+check "U11 other keys kept" exits 0 [ "$(pyq "$tmp/proj/.claude/settings.local.json" 'd["enabledPlugins"]["ponytail@ponytail"]')" = false ]
+run fix "$tmp/proj-norec" statusline statusLine
+check "U11 fix statusline with no settings.local.json exits 0" [ "$rc" = 0 ]
+check "U11 that new file holds only statusLine" [ "$(pyq "$tmp/proj-norec/.claude/settings.local.json" 'sorted(d)')" = '["statusLine"]' ]
+check "U11 its statusLine is the main record's new path" [ "$(pyq "$tmp/proj-norec/.claude/settings.local.json" 'd["statusLine"]["command"]')" = "bash $cache7/statusline/st-statusline.sh" ]
+
+run fix "$tmp/proj" file .stratum/state.json
+check "U13 fix file state.json exits 0" [ "$rc" = 0 ]
+check "U13 state.json holds the st-init value" [ "$(pyq "$tmp/proj/.stratum/state.json" 'd == {"feature_directory": None, "phase": None, "lane": None}')" = true ]
+run fix "$tmp/proj" file .stratum/advisor.json
+check "U13 fix file advisor.json exits 3 and writes nothing" exits 3 [ ! -e "$tmp/proj/.stratum/advisor.json" ]
+
+run fix "$tmp/proj" models-key st-gone
+check "U14 fix models-key st-gone exits 0" [ "$rc" = 0 ]
+check "U14 models-key keeps st-build and drops st-gone" [ "$(pyq "$tmp/proj/.stratum/models.json" 'd == {"st-build": {"model": "opus"}}')" = true ]
+printf 'auto\n' > "$tmp/proj/.stratum/commit-mode"
+run fix "$tmp/proj" gone-file .stratum/commit-mode
+check "U14 gone-file commit-mode exits 0 and deletes it" exits 0 [ ! -e "$tmp/proj/.stratum/commit-mode" ]
+printf 'lessons\n' > "$tmp/proj/.stratum/lessons.md"
+run fix "$tmp/proj" gone-file .stratum/lessons.md
+check "U14 gone-file lessons.md exits 3 and keeps it" exits 3 [ -e "$tmp/proj/.stratum/lessons.md" ]
+
+mkdir -p "$tmp/bin18"
+for b in /usr/bin/*; do [ "${b##*/}" = claude ] || ln -s "$b" "$tmp/bin18/${b##*/}"; done
+out=$(PATH="$tmp/bin18" bash "$script" plugin "$tmp/proj/apps/a" 2>&1); rc=$?
+check "U18 no claude on PATH: plugin exits 1" [ "$rc" = 1 ]
+check "U18 no claude on PATH: plugin prints the command" contains "$out" "claude not found. Run: cd $tmp/proj/apps/a && claude plugin update stratum@stratum -s local"
+out=$(PATH="$tmp/bin18" bash "$script" fix "$tmp/proj-norec" plugins-off ponytail@ponytail 2>&1); rc=$?
+check "U18 no claude on PATH: fix exits 0 and changes a file" exits 0 contains "$out" "changed"
+check "U18 no claude on PATH: the fix wrote the plugin key" [ "$(pyq "$tmp/proj-norec/.claude/settings.json" 'd["enabledPlugins"]["ponytail@ponytail"]')" = false ]
+
+printf '{"permissions": {"allow": ["Skill(stratum:st-gone)", "mcp__plugin_stratum_figcraft__get_node", "mcp__plugin_stratum_figcraft__gone_tool"]}}\n' > "$tmp/proj/.claude/settings.json"
+git -C "$tmp/proj" commit -qam "fixture: settings"
+printf '{}\n' > "$tmp/proj/.stratum/git-guard.json"
+printf '{}\n' > "$tmp/proj/.stratum/powerline.json"
+printf '{}\n' > "$tmp/proj/.stratum/advisor.json"
+fullrun
+check "U17 audit exits 0" [ "$rc" = 0 ]
+check "U17 main install is current" [ "$(state "$tmp/proj" install stratum@stratum)" = current ]
+bad=$(awk -F'\t' '$4 != "current" && $4 != "gone" && $4 != "listed"' <<<"$rows")
+check "U17 only current, gone and listed rows" [ -z "$bad" ]
+[ -z "$bad" ] || printf '%s\n' "$bad"
+
+noggit() { ! grep -Eq '\bgit\b.*\b(add|commit|push)\b' "$script"; }
+check "U19 script has the fix subcommand" grep -q '^ *fix)' "$script"
+check "U19 script runs no git add, commit or push" noggit
 exit "$fail"
