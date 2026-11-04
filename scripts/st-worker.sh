@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
-usage() { echo "usage: st-worker.sh start <id> --task <file> --test <cmd> --lane <text> --roster <file> [--machine <m> --repo <path>] [--model <name>] [--autonomous] | goal <id> --test <cmd> [--machine <m>] | resend <id> [--machine <m>] | wait <id> [--machine <m>] | answer <id> [--machine <m>] --keys <key>... | --text <text> | result <id> [--machine <m>] | close <id> [--machine <m>] | list [--machine <m>] | headless <id> --task <file> --test <cmd> [--model <name>] | approve <id> --request <rid> --input-stdin --record <file> [--machine <m>] | pass <id> --request <rid> [--machine <m>] | autonomous-off [--roster <file>]" >&2; exit 2; }
+usage() { echo "usage: st-worker.sh start <id> --task <file> --test <cmd> --lane <text> --roster <file> [--machine <m> --repo <path>] [--model <name>] [--autonomous] | goal <id> --test <cmd> [--machine <m>] | resend <id> [--machine <m>] | followup <id> --task <file> --test <cmd> [--machine <m>] | wait <id> [--machine <m>] | answer <id> [--machine <m>] --keys <key>... | --text <text> | result <id> [--machine <m>] | close <id> [--machine <m>] | list [--machine <m>] | headless <id> --task <file> --test <cmd> [--model <name>] | approve <id> --request <rid> --input-stdin --record <file> [--machine <m>] | pass <id> --request <rid> [--machine <m>] | autonomous-off [--roster <file>]" >&2; exit 2; }
 fail() { echo "$1" >&2; exit 1; }
 [ $# -gt 0 ] || usage
 cmd=$1; shift
 case $cmd in
-  start | goal | resend | wait | answer | result | close | headless | approve | pass) [ $# -gt 0 ] || usage; id=$1; shift ;;
+  start | goal | resend | followup | wait | answer | result | close | headless | approve | pass) [ $# -gt 0 ] || usage; id=$1; shift ;;
   list | autonomous-off) ;;
   *) usage ;;
 esac
@@ -17,8 +17,8 @@ while [ $# -gt 0 ]; do
   esac
   [ $# -ge 2 ] || usage
   case "$cmd $1" in
-    "start --task" | "headless --task") task=$2 ;;
-    "start --test" | "goal --test" | "headless --test") test=$2 ;;
+    "start --task" | "followup --task" | "headless --task") task=$2 ;;
+    "start --test" | "goal --test" | "followup --test" | "headless --test") test=$2 ;;
     "start --lane") lane=$2 ;;
     "start --roster" | "autonomous-off --roster") roster=$2 ;;
     "approve --request" | "pass --request") rid=$2 ;;
@@ -42,7 +42,7 @@ done
 case $cmd in
   start) [ -n "${task+x}" ] && [ -n "${test+x}" ] && [ -n "${lane+x}" ] && [ -n "${roster+x}" ] && { [ -z "$repo" ] || [ -n "$m" ]; } || usage ;;
   goal) [ -n "${test+x}" ] || usage ;;
-  headless) [ -n "${task+x}" ] && [ -n "${test+x}" ] || usage ;;
+  headless | followup) [ -n "${task+x}" ] && [ -n "${test+x}" ] || usage ;;
   answer) [ "${text+x}${keys+x}" = x ] || usage ;;
   approve) [ -n "${rid+x}" ] && [ -n "${record+x}" ] && [ -n "$instdin" ] || usage ;;
   pass) [ -n "${rid+x}" ] || usage ;;
@@ -69,10 +69,10 @@ if [ "$cmd" = approve ]; then
   IFS= read -r -d '' input || true
   input=${input%$'\n'}
 fi
-if [ "$cmd" = start ] || [ "$cmd" = headless ]; then
+if [ "$cmd" = start ] || [ "$cmd" = followup ] || [ "$cmd" = headless ]; then
   [ -f "$task" ] && [ -s "$task" ] || fail "Task file not found or empty: $task"
 fi
-if [ "$cmd" = start ] || [ "$cmd" = goal ] || [ "$cmd" = headless ]; then
+if [ "$cmd" = start ] || [ "$cmd" = goal ] || [ "$cmd" = followup ] || [ "$cmd" = headless ]; then
   [[ -n $test && $test != *$'\n'* && $test != *[\(\)]* ]] || fail "Test command must be one line with no ( or )."
 fi
 [ "$cmd" != headless ] || [[ $test != *\** ]] || fail "Test command must not contain * for headless."
@@ -96,7 +96,7 @@ if [ "$cmd" = start ]; then
   [ -n "$own" ] || fail "Roster has no line for $N."
   [ -z "$auto" ] || [ -z "$m" ] || [ "$orepo" = "$repo" ] || fail "Roster row for $N needs the repo path as a fifth field."
 fi
-if [ "$cmd" = start ] || [ "$cmd" = goal ]; then
+if [ "$cmd" = start ] || [ "$cmd" = goal ] || [ "$cmd" = followup ]; then
   P="/goal \`$test\` exits 0, the change is committed on branch $N, and result.md is written; read brief.md in this folder first and follow it"
   [ ${#P} -le 4000 ] || fail "The /goal prompt is over 4000 characters."
 fi
@@ -315,6 +315,33 @@ resend)
   look
   unsent || fail "No unsent prompt in $N: $S"
   push || { st unsent; exit 7; }
+  look
+  [ "$S" = blocked ] || S=working
+  st "$S"
+  [ "$S" != blocked ] || exit 4
+  ;;
+followup)
+  find_worker
+  look
+  rx() { if [ -n "$m" ]; then rsh "$1"; else bash -c "$1"; fi; }
+  case $S in idle | done) ;; *) fail "Worker $N is $S, not finished. Followup refused." ;; esac
+  ! question || fail "Worker $N has an open question. Answer it first."
+  rx "[ -f $Q/result.md ]" || fail "Worker $N has no result.md, not finished. Followup refused."
+  O=()
+  if rx "[ -d $Q/.stratum/approve ]"; then
+    [ -n "${CLAUDE_CODE_SESSION_ID:-}" ] && [ "$(rx "head -n 1 -- $Q/.stratum/approve/session")" = "$CLAUDE_CODE_SESSION_ID" ] || fail "Worker $N is not in this autonomous run."
+    sha=$(git rev-parse -q --verify "refs/heads/$N" || git rev-parse HEAD)
+    chkowns
+  fi
+  r=$(($(rx "ls -A -- $Q" | grep -c '^result-round[0-9]*\.md$' || :) + 2))
+  {
+    printf '## Round %s\n\n%s\n\n' "$r" "Round $r: do this task now. The rest of this brief still applies. Write result.md again when done."
+    cat -- "$task"
+    printf '\n'
+  } | rx "[ ! -L $Q/brief.md ] && [ ! -L $Q/result.md ] && [ ! -e $Q/brief.new ] && [ ! -e $Q/result-round$((r - 1)).md ] && mv -- $Q/result.md $Q/result-round$((r - 1)).md && { cat; cat -- $Q/brief.md; } >$Q/brief.new && mv -- $Q/brief.new $Q/brief.md" || stop "cannot write the round $r brief in $WT"
+  [ ${#O[@]} = 0 ] || printf '%s\n' "${O[@]}" | rx "[ ! -L $Q/.stratum/approve/owns ] && cat >>$Q/.stratum/approve/owns" || stop "cannot add the Owns paths to $WT/.stratum/approve/owns"
+  printf 'round\t%s\t%s\n' "$N" "$r"
+  prompt
   look
   [ "$S" = blocked ] || S=working
   st "$S"

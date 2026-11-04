@@ -1305,6 +1305,41 @@ STUB_SSH_RC=255 axrun
 check "AM6 ssh down on the repo flag write: exit 1, the line, no worktree create or agent start" '[ $rc = 1 ] && hasline "cannot write .stratum/autonomous on laptop: ssh: stub failure" && [ "$(cnt "^--machine\tlaptop\tworktree\tcreate\t")" = 0 ] && [ "$(cnt "^--machine\tlaptop\tagent\tstart\t")" = 0 ]'
 autoclr
 
+round="$tmp/round.md"
+printf 'Fix the null check in src/a.py.\nOwns: `src/b.py`.\n' > "$round"
+fuP="/goal \`$testcmd\` exits 0, the change is committed on branch worker-t004, and result.md is written; read brief.md in this folder first and follow it"
+mk; states done working; printf 'ROUND1 RESULT\n' > "$lw/result.md"; cp "$lw/brief.md" "$tmp/brief.before"
+run bash "$script" followup T004 --task "$round" --test "$testcmd"
+check "FU1 exit 0, round 2 line, state working" '[ $rc = 0 ] && hasline "round\tworker-t004\t2" && hasline "state\tworking\tworker-t004\t%s" "$(pane)"'
+check "FU1 brief starts with the round 2 text, then the old brief" '[ "$(head -n 1 "$lw/brief.md")" = "## Round 2" ] && grep -qxF "Fix the null check in src/a.py." "$lw/brief.md" && [ "$(tail -n "$(wc -l < "$tmp/brief.before")" "$lw/brief.md")" = "$(cat "$tmp/brief.before")" ]'
+check "FU1 result.md moved to result-round1.md" '[ ! -e "$lw/result.md" ] && [ "$(cat "$lw/result-round1.md")" = "ROUND1 RESULT" ]'
+check "FU1 one /goal prompt" 'hascall "agent\tprompt\tworker-t004\t%s\t--wait\t--until\tworking\t--until\tblocked\t--timeout\t30000" "$fuP" && never 0 1'
+states done working; printf 'ROUND2 RESULT\n' > "$lw/result.md"; reset
+run bash "$script" followup T004 --task "$round" --test "$testcmd"
+check "FU2 a second followup is round 3, result-round2.md" '[ $rc = 0 ] && hasline "round\tworker-t004\t3" && [ "$(head -n 1 "$lw/brief.md")" = "## Round 3" ] && [ "$(cat "$lw/result-round2.md")" = "ROUND2 RESULT" ] && [ "$(cat "$lw/result-round1.md")" = "ROUND1 RESULT" ]'
+mk; states working; printf 'R\n' > "$lw/result.md"; cp "$lw/brief.md" "$tmp/brief.before"
+run bash "$script" followup T004 --task "$round" --test "$testcmd"
+check "FU3 working worker: exit 1, refused, brief and result unchanged, no prompt" '[ $rc = 1 ] && [ "$out" = "Worker worker-t004 is working, not finished. Followup refused." ] && cmp -s "$lw/brief.md" "$tmp/brief.before" && [ -e "$lw/result.md" ] && never 0 0'
+mk; states done
+run bash "$script" followup T004 --task "$round" --test "$testcmd"
+check "FU4 no result.md: exit 1, refused, no prompt" '[ $rc = 1 ] && [ "$out" = "Worker worker-t004 has no result.md, not finished. Followup refused." ] && never 0 0'
+mk; states done; printf 'R\n' > "$lw/result.md"; dialogpane > "$tmp/pane.txt"
+run bash "$script" followup T004 --task "$round" --test "$testcmd"
+check "FU5 open question: exit 1, refused, result kept" '[ $rc = 1 ] && [ "$out" = "Worker worker-t004 has an open question. Answer it first." ] && [ -e "$lw/result.md" ] && never 0 0'
+mk; states done working; printf 'R\n' > "$lw/result.md"; apd; printf '%s\n' "$sid" > "$lw/.stratum/approve/session"; printf 'src/a.py\n' > "$lw/.stratum/approve/owns"
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" followup T004 --task "$round" --test "$testcmd"
+check "FU6 autonomous worker: the round Owns paths are added" '[ $rc = 0 ] && [ "$(cat "$lw/.stratum/approve/owns")" = "$(printf "src/a.py\nsrc/b.py")" ]'
+mk; states done; printf 'R\n' > "$lw/result.md"; apd; printf 'other\n' > "$lw/.stratum/approve/session"; printf 'src/a.py\n' > "$lw/.stratum/approve/owns"
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" followup T004 --task "$round" --test "$testcmd"
+check "FU7 another session's run: exit 1, refused, owns and result unchanged" '[ $rc = 1 ] && [ "$out" = "Worker worker-t004 is not in this autonomous run." ] && [ "$(cat "$lw/.stratum/approve/owns")" = src/a.py ] && [ -e "$lw/result.md" ] && never 0 0'
+mk; states done; printf 'R\n' > "$lw/result.md"; apd; printf '%s\n' "$sid" > "$lw/.stratum/approve/session"; printf 'Fix it.\nOwns: `src/*.py`.\n' > "$tmp/round-bad.md"
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" followup T004 --task "$tmp/round-bad.md" --test "$testcmd"
+check "FU8 a bad round Owns path: exit 1, the line, result kept" '[ $rc = 1 ] && [ "$out" = "Owns path src/*.py must be repo-relative, with no glob." ] && [ -e "$lw/result.md" ] && never 0 0'
+rfresh; xsetup; STUB_WT_PATH="$tmp/rwt" STUB_SSH_EXEC=1 rrun bash "$script" start "${rsargs[@]}"
+states done working; printf 'REMOTE R1\n' > "$tmp/rwt/result.md"; reset
+STUB_WT_PATH="$tmp/rwt" STUB_SSH_EXEC=1 rrun bash "$script" followup T004 --task "$round" --test "$testcmd" --machine laptop
+check "FU9 saved machine: exit 0, the brief and result change on the machine, prompt on the machine" '[ $rc = 0 ] && [ "$(head -n 1 "$tmp/rwt/brief.md")" = "## Round 2" ] && [ "$(cat "$tmp/rwt/result-round1.md")" = "REMOTE R1" ] && [ ! -e "$tmp/rwt/result.md" ] && [ "$(rcnt "agent\tprompt\t")" = 1 ]'
+
 fresh; run bash "$script" start "${sargs[@]}"
 check "LY1 exit 0" '[ $rc = 0 ]'
 check "LY1 layout calls after worktree create and before agent start, in order" '[ "$(grep -P "^(worktree\tcreate\t|tab\t|pane\t|agent\tstart\t)" "$tmp/calls" | cut -f1-2)" = "$(printf "worktree\tcreate\ntab\trename\npane\tsplit\npane\trun\ntab\tcreate\npane\tsplit\ntab\tcreate\npane\tsplit\nagent\tstart")" ]'
