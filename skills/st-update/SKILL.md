@@ -12,7 +12,9 @@ script and to git (folder, kind, name, paths, message).
 1. **Audit.** Run `bash <script> audit <folder>`, with the argument as `<folder>`, else the project root.
    Exit 1: show the line and stop.
    No row other than `current`, `gone` and `listed`: say every item is current and stop. No gate.
+   Only `warn` or `invalid` rows besides those: show those rows, say there is nothing to update, and stop. No gate.
 2. **Table.** Show one table. The header: the marketplace version and folder, and the config folder.
+   The config folder is `$CLAUDE_CONFIG_DIR`, else `~/.claude`.
    Then, per folder, only the rows that are not `current`: folder, kind, name, state, detail.
    Then one line per folder with the count of its `current` items.
    A folder with `worker` in a detail is a worker worktree: say so on its rows and its count line.
@@ -21,12 +23,15 @@ script and to git (folder, kind, name, paths, message).
    Then ask one question: OK to update all, or `skip <worktree>` (one or more), or no.
    No: stop, nothing changed.
    Change nothing before the OK.
+   A skipped worktree is left out of every step after the gate, and the report names it.
 4. **Plugin.** For each folder with an `install` row that is `outdated`, skipped worktrees left out,
    run `bash <script> plugin <folder>`. Exit 0 prints `ok <version> <installPath>`.
    Exit 1 prints the message and a `Run:` command on stderr. Keep both for the report and
    go on with the next folder.
    Exit 0: run `fix <folder> statusline statusLine` for that folder
    when its `statusLine` row is `outdated` or `new`.
+5. **Ask.**
+   For each `ask` row: show the old and the new `statusLine` command and ask. Yes: `fix ... --force`. No: leave it.
 6. **Fix.** For every other `outdated`, `new` and `discontinued` row, run
    `bash <script> fix <folder> <kind> <name>`. It prints `changed <file>` or `same <file>`.
    Exit 3 prints `skip: <reason>` on stderr. Keep the reason for the report.
@@ -48,3 +53,5 @@ script and to git (folder, kind, name, paths, message).
    Name no personal script. Never work around it.
 8. **Report.** Per folder: what changed, what was skipped and why, the commands the user must run.
    Last line: `Restart running Claude Code sessions in these folders to load Stratum <version>.`
+
+Never: change a user data file (FR-013), write before the gate, stage a path it did not change, run `claude plugin update` in a folder without its own record, edit `installed_plugins.json`.

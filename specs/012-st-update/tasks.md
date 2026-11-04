@@ -98,12 +98,12 @@ branch gets one commit, and the report says to restart.
 ### Tests for User Story 3
 
 - [ ] T009 [P] [US3] Add cases U12, U15, U16 and U21 to `tests/test_st_update.sh` exactly as the contract table says. U12 gives the fixture an edited `.stratum/constitution.md`, `state.json`, `lessons.md`, `handoff.md`, `git-guard.json`, `powerline.json`, `advisor.json`, a user line in `.gitignore` and `CLAUDE.md`, and user keys (including an `env` key) in both settings files, runs every `fix`, and checks those files byte-equal and those lines and keys kept; it also checks `audit` output does not contain the `env` value. U15 makes `CLAUDE.md` dirty in the worktree and puts a second worktree on a detached HEAD, runs `audit`, and checks: each row that would change `CLAUDE.md` in the first worktree is `skip` with the detail `CLAUDE.md has uncommitted changes` (rows of its other files are not `skip`), every committed-file row of the second worktree is `skip` with the detail `detached HEAD, no branch to commit on`, and `CLAUDE.md` is byte-equal. Red on the new cases. Owns: `tests/test_st_update.sh`. Test: bash tests/test_st_update.sh.
-- [ ] T010 [P] [US3] Add rows R6 and R12 to `tests/test_update_rules.sh`. Red on the new rows. Owns: `tests/test_update_rules.sh`. Test: bash tests/test_update_rules.sh.
+- [X] T010 [P] [US3] Add rows R6 and R12 to `tests/test_update_rules.sh`. Red on the new rows. Owns: `tests/test_update_rules.sh`. Test: bash tests/test_update_rules.sh.
 
 ### Implementation for User Story 3
 
 - [ ] T011 [US3] In `scripts/st-update.sh` `audit` (not `fix`, contract 1b): for each of `.gitignore`, `AGENTS.md`, `CLAUDE.md` and `.claude/settings.json` whose `git -C <folder> status --porcelain -- <file>` is not empty, give every row that would change that file the state `skip` with the detail `<file> has uncommitted changes`; on a detached HEAD, give every committed-file row of that checkout `skip` with the detail `detached HEAD, no branch to commit on`. `fix` has no dirty or detached check. In `fix`: `fix statusline` refuses a non-Stratum command (`skip: not a Stratum statusline`) unless `--force`; `fix pointer` writes `@AGENTS.md` only when `AGENTS.md` exists and never creates `AGENTS.md`; invalid JSON is refused with `skip: <file> is not valid JSON`. Test: bash tests/test_st_update.sh.
-- [ ] T012 [US3] Add contract section 2 step 5 (each `ask` row: show the old and the new `statusLine` command, ask, `fix ... --force` only on yes) and the Never list to `skills/st-update/SKILL.md`. Test: bash tests/test_update_rules.sh.
+- [X] T012 [US3] Add contract section 2 step 5 (each `ask` row: show the old and the new `statusLine` command, ask, `fix ... --force` only on yes) and the Never list to `skills/st-update/SKILL.md`. Test: bash tests/test_update_rules.sh.
 
 **Checkpoint**: user content survives a full run.
 

@@ -17,6 +17,7 @@ R4|skills/st-update/SKILL.md|is on branch <branch>, not main. The update install
 R5|skills/st-update/SKILL.md|bash <script> plugin <folder>
 R5b|skills/st-update/SKILL.md|go on with the next folder.
 R5c|skills/st-update/SKILL.md|Exit 0: run `fix <folder> statusline statusLine` for that folder
+R6|skills/st-update/SKILL.md|For each `ask` row: show the old and the new `statusLine` command and ask. Yes: `fix ... --force`. No: leave it.
 R7|skills/st-update/SKILL.md|ask the question of st-init step 3, 4, 7 or 11, one at a time
 R7b|skills/st-update/SKILL.md|Skip: leave the file missing.
 R7c|skills/st-update/SKILL.md|tell the user to run `/stratum:st-constitution`
@@ -30,6 +31,7 @@ R9c|skills/st-update/SKILL.md|Name no personal script.
 R10|skills/st-update/SKILL.md|A Bash call a hook or the classifier blocks: keep the exact command for the user
 R11|skills/st-update/SKILL.md|Per folder: what changed, what was skipped and why, the commands the user must run.
 R11b|skills/st-update/SKILL.md|Restart running Claude Code sessions in these folders to load Stratum <version>.
+R12|skills/st-update/SKILL.md|Never: change a user data file (FR-013), write before the gate, stage a path it did not change, run `claude plugin update` in a folder without its own record, edit `installed_plugins.json`.
 ROWS
 
 check "front matter skills/st-update/SKILL.md" 'head -n 5 "$root/skills/st-update/SKILL.md" | grep -qx "name: st-update"'
