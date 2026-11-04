@@ -85,7 +85,8 @@ A maintainer who changes what st-init writes gets a red test until the st-update
 - A subfolder of a worktree has its own install record (`v2-veent-parasat/apps/parasat`): it is updated like any other folder.
 - `.stratum/models.json` has dead agent keys and live ones: only the dead keys are removed.
 - A worktree is on a detached HEAD: its committed files are skipped and reported. There is no branch to commit on.
-- The commit guard denies a commit (v2-veent's own hook): st-update says so and tells the user to run `~/.claude/veent-commit-ask.sh`, without working around it.
+- A project hook denies a commit: st-update quotes the hook's deny reason and gives the exact `git -C <checkout> add -- <paths> && git -C <checkout> commit` command, without working around it (D11).
+- The marketplace is a local directory whose checkout is not on `main`: the plugin update would install that branch, so st-update warns at the gate and names the branch.
 - The plugin update fails in a folder: that folder's `statusLine` is left as it was, so it never points at an install that does not exist.
 - st-update stops halfway: a second run audits again and does only what is still left.
 - `.claude/settings.local.json` is missing: `statusLine` is new and the file is created with only that key. The file is not valid JSON: st-update does not touch it and reports it.
