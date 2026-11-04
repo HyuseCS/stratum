@@ -26,7 +26,7 @@ R16|README.md|`{"mode": "auto"}` (the default when the file has no `mode`): the 
 R17|README.md|Inside herdr, Codex runs as an agent in a `Codex` tab of your workspace, read-only and never asking, so you can watch it. The tab uses Stratum's own Codex home, `~/.local/state/stratum/codex-home`, which holds only a link to your Codex login and a `config.toml` that marks the project untrusted: your `~/.codex/config.toml`, `~/.codex/hooks.json` and a project's `.codex/config.toml` do not load there, and the model comes from `.stratum/advisor.json`.
 R19|skills/st-init/SKILL.md|If the answer is `auto`, `codex` or `both`, run `bash <plugin root>/scripts/st-advisor.sh codex-home` and show its line word for word.
 R20|skills/st-build/SKILL.md|When the user asks to add a Codex advisor, or sets a mode that uses Codex, run `bash <plugin root>/scripts/st-advisor.sh codex-home` and show its line word for word. Never run it on your own.
-R18|README.md|With no file the advisor is off and prints `no advisor: mode not set. Write .stratum/advisor.json with "mode": "auto", "codex", "both" or "off".`
+R18|README.md|With no file in either, the point prints `no advisor: mode not set. Write .stratum/advisor.json with "mode": "auto", "codex", "both" or "off".`
 R21|README.md|The background call runs with `--ignore-user-config`: neither `~/.codex/config.toml` nor a project `.codex/config.toml` is read
 K1|skills/st-build/SKILL.md|First line `mode both: also consult /advisor if one is set`
 TABLE

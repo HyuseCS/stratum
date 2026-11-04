@@ -178,6 +178,28 @@ dependency.
   creates the worktree and branch and links shared settings and Claude memory. Worktrees and
   branches stay on the machine until the user says to delete them, even when merged, done, or
   unused. Agents never delete a remote branch: the user does.
+- **D13a. Local files in a worktree.** A project can keep `.stratum/` out of git, so a new
+  worktree may have none of these files. Each `.stratum/` file that Stratum reads has one row
+  here, with how a worktree gets it. `main`: the code reads the main checkout's file when the
+  worktree has none. `own`: each checkout has its own on purpose. `git`: it comes with the commit.
+  A feature that adds a `.stratum/` file adds its row. `tests/test_local_files.sh` fails on a
+  file with no row.
+
+  | File | Worktree | Why |
+  |------|----------|-----|
+  | `.stratum/advisor.json` | main | One advisor mode for the project (`st-advisor.sh`). |
+  | `.stratum/autonomous` | main | Only the main checkout holds the flag (`st-approve.py`, `st-worker.sh`). |
+  | `.stratum/state.json` | own | Each checkout runs its own phase. `st-advisor.sh` reads `risk` from the main checkout's file. |
+  | `.stratum/git-guard.json` | own | `st-worker.sh start` writes each worker's own. |
+  | `.stratum/approve` | own | `st-worker.sh start` writes each worker's own. |
+  | `.stratum/models.json` | own | Worktree agents use the plugin defaults. |
+  | `.stratum/powerline.json` | own | The statusline look of that checkout. |
+  | `.stratum/weather.json` | own | The statusline cache of that checkout. |
+  | `.stratum/handoff.md` | own | Each checkout's session writes its own. |
+  | `.stratum/decisions.md` | own | Grill decisions when no feature is set. |
+  | `.stratum/lessons.md` | own | Gap: lessons that `st-close` writes in a worktree stay in that worktree. |
+  | `.stratum/constitution.md` | git | Gap when `.stratum/` is not in git: the worktree has no rules. |
+  | `.stratum/templates` | git | Gap when `.stratum/` is not in git: the worktree uses the plugin templates. |
 
 ## 6. Display, comms, and safety
 

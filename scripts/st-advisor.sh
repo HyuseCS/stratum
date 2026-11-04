@@ -81,12 +81,15 @@ if [ $cmd = waive ]; then
 fi
 bad=0 say=
 if [ $cmd = run ] || [ $cmd = round ]; then
-  [ -e .stratum/advisor.json ] || { echo 'no advisor: mode not set. Write .stratum/advisor.json with "mode": "auto", "codex", "both" or "off".'; exit 0; }
-  common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) && sf=$(dirname "$common")/.stratum/state.json || sf=.stratum/state.json
-  cfg=$(python3 -I - "$sf" <<'PY'
+  common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) && main=$(dirname "$common") || main=.
+  af=.stratum/advisor.json
+  [ -e "$af" ] || af=$main/.stratum/advisor.json
+  [ -e "$af" ] || { echo 'no advisor: mode not set. Write .stratum/advisor.json with "mode": "auto", "codex", "both" or "off".'; exit 0; }
+  sf=$main/.stratum/state.json
+  cfg=$(python3 -I - "$sf" "$af" <<'PY'
 import json, re, sys
 try:
-    s = json.loads(open(".stratum/advisor.json", "rb").read())
+    s = json.loads(open(sys.argv[2], "rb").read())
 except (OSError, ValueError, RecursionError):
     sys.exit(1)
 if not (isinstance(s, dict) and set(s) <= {"mode", "model", "effort"} and all(isinstance(v, str) for v in s.values())

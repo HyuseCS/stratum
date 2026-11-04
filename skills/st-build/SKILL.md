@@ -92,7 +92,8 @@ Every Fast-lane point uses `/advisor`. The Quick lane has no advisor.
 - Run `bash <plugin root>/scripts/st-advisor.sh <point> ...` from the project root in the foreground, with a Bash timeout of 600000 ms, and wait for it. No background run, no polling.
 - Codex only reviews, in the read-only sandbox. Never run `codex` to build or fix. In herdr, with the Stratum Codex home in place, Codex runs as the `st-codex-<NNN>` agent in the `Codex` tab of this workspace, read-only and never asking, and the user can watch it there. Otherwise it runs in the background as before.
 - When the user asks to add a Codex advisor, or sets a mode that uses Codex, run `bash <plugin root>/scripts/st-advisor.sh codex-home` and show its line word for word. Never run it on your own.
-- `no advisor: codex not found`, `no advisor: mode not set` (show the user its line) or `no advisor: mode off`: go on as before; consult `/advisor` only if the user set one.
+- `no advisor: codex not found` or `no advisor: mode off`: go on as before; consult `/advisor` only if the user set one.
+- `no advisor: mode not set`: stop. Ask the user the advisor question of `/stratum:st-init` step 11, write the answer to `"$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/.stratum/advisor.json"`, then run the point again.
 - First line `mode both: also consult /advisor if one is set`: after Codex, consult `/advisor` on the same input if one is set.
 - `advisors: codex`: Codex runs. `advisors: both`: Codex runs, then consult `/advisor` on the same input, then hold the talk. `advisors: /advisor`: consult `/advisor` only. `advisors: none`: no advisor at this point, and skip `check plan`.
 - At a High point both advisors first answer alone. Then hold the talk: at most 3 rounds of `bash <plugin root>/scripts/st-advisor.sh round <point> <feature dir> <n> <views file>`, each with `/advisor`'s answer to the same views.
@@ -110,7 +111,7 @@ Every Fast-lane point uses `/advisor`. The Quick lane has no advisor.
 - `no change since <base>: skip`: nothing changed after the last review, so the pass is skipped.
 - After each `/advisor` call, run `bash <plugin root>/scripts/st-advisor.sh note <point> <feature dir> "<one-line summary>"`.
 - `BLOCKED: <reason>`: stop and show the user the reason. Nothing passes the gate. If the user says to continue, run `bash <plugin root>/scripts/st-advisor.sh continued <point> <feature dir>` and skip the point. Do not retry it in this gate pass.
-- Each run appends a record to `<feature dir>/advisor.md`: the point, the time, the SHA256 of the input, the verdict and the findings. The mode comes from `.stratum/advisor.json`: `auto` (the default when the file has no `mode`), `codex`, `both` or `off`. No file means off, with the `mode not set` line.
+- Each run appends a record to `<feature dir>/advisor.md`: the point, the time, the SHA256 of the input, the verdict and the findings. The mode comes from `.stratum/advisor.json`: `auto` (the default when the file has no `mode`), `codex`, `both` or `off`. A worktree with no file reads the main checkout's file. No file in either gives the `mode not set` line.
 - At the build gate, `check plan` compares the latest plan record with the current input. `advisor approval is stale` or `no record` counts as no approval: run the plan point once more, as a round. Skip the check after a `no advisor` line.
 - Exit 2 with a `usage:` line or `cannot hash inputs`: the script could not read or hash its inputs. Nothing was recorded and nothing was sent. Fix the input or the tool and run the point again.
 

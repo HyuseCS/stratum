@@ -315,6 +315,17 @@ run plan specs/001-demo
 printf '{"mode": "codex"}' > "$mf"
 check "no mode file: no advisor, exit 0, no codex" '[ $rc = 0 ] && [ "$out" = "no advisor: mode not set. Write .stratum/advisor.json with \"mode\": \"auto\", \"codex\", \"both\" or \"off\"." ] && [ ! -e "$tmp/argv" ] && [ "$(nrec)" = "$n0" ]'
 
+git -C "$proj" worktree add -q --detach "$tmp/wt"
+rm -f "$tmp/wt/.stratum/advisor.json"
+printf '{"mode": "off"}' > "$mf"
+out=$(cd "$tmp/wt" && bash "$root/scripts/st-advisor.sh" plan specs/001-demo); rc=$?
+check "worktree with no mode file reads the main checkout's file" '[ $rc = 0 ] && [ "$out" = "no advisor: mode off" ]'
+printf '{"mode": "off"}' > "$tmp/wt/.stratum/advisor.json"
+printf '{"mode": "codex"}' > "$mf"
+out=$(cd "$tmp/wt" && bash "$root/scripts/st-advisor.sh" plan specs/001-demo); rc=$?
+check "worktree mode file wins over the main checkout's" '[ $rc = 0 ] && [ "$out" = "no advisor: mode off" ]'
+git -C "$proj" worktree remove --force "$tmp/wt"
+
 rm -f "$tmp/argv"
 run plan specs/001-demo
 check "mode codex" '[ -f "$tmp/argv" ] && ! grep -qxF "mode both: also consult /advisor if one is set" <<<"$out"'

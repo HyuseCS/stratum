@@ -188,7 +188,7 @@ copy for that project only. `scripts/st-lock.sh` runs tests marked `[lock]` one 
   The prompt tells Codex to stay inside the named inputs, never open env or secret files, and never quote a secret value. The sandbox does not block reads.
   Whether Codex's own shell sees your environment variables is not checked.
   `.stratum/advisor.json` sets the mode. `{"mode": "auto"}` (the default when the file has no `mode`): the risk level picks the advisors at each point. The others are `{"mode": "codex"}`, `{"mode": "both"}` (Codex, then `/advisor` if you set one), or `{"mode": "off"}`. `"mode": "off"` is the off switch: nothing goes to OpenAI.
-  With no file the advisor is off and prints `no advisor: mode not set. Write .stratum/advisor.json with "mode": "auto", "codex", "both" or "off".` `st-init` writes the file for new projects. A project set up before this feature has no file, so the advisor stays off until you write it.
+  A worktree with no file reads the main checkout's file. With no file in either, the point prints `no advisor: mode not set. Write .stratum/advisor.json with "mode": "auto", "codex", "both" or "off".` and the lane stops to ask you the mode, then writes it to the main checkout. `st-init` writes the file for new projects.
   With no `codex` on PATH you get one line, `no advisor: codex not found`, and the flow runs as before, with `/advisor` if you set one.
   Optional `model` and `effort` keys in the same file pick the Codex model and reasoning effort, for example `{"mode": "codex", "model": "gpt-6-astra", "effort": "high"}`. Without them Codex uses its own default.
   Inside herdr, Codex runs as an agent in a `Codex` tab of your workspace, read-only and never asking, so you can watch it. The tab uses Stratum's own Codex home, `~/.local/state/stratum/codex-home`, which holds only a link to your Codex login and a `config.toml` that marks the project untrusted: your `~/.codex/config.toml`, `~/.codex/hooks.json` and a project's `.codex/config.toml` do not load there, and the model comes from `.stratum/advisor.json`.
@@ -360,6 +360,7 @@ bash tests/test_triage_rules.sh
 bash tests/test_no_frontend_design.sh
 bash tests/test_risk_rules.sh
 bash tests/test_worker_rules.sh
+bash tests/test_local_files.sh
 node tests/test_token_weather.mjs
 node tests/test_pr_workflow.mjs
 claude plugin validate .claude-plugin/plugin.json

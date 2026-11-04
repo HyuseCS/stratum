@@ -273,11 +273,11 @@ phrases <<'EOF'
 #18 FR-008 stale inspect	skills/st-inspect/SKILL.md	bash <plugin root>/scripts/st-advisor.sh check plan <feature dir>
 #18 FR-010 modes	skills/st-build/SKILL.md	The mode comes from `.stratum/advisor.json`: `auto` (the default when the file has no `mode`), `codex`, `both` or `off`.
 #18 FR-010 modes	skills/st-build/SKILL.md	First line `mode both: also consult /advisor if one is set`
-#18 FR-010 no file	skills/st-build/SKILL.md	No file means off, with the `mode not set` line.
-#18 FR-010 no file	README.md	With no file the advisor is off and prints `no advisor: mode not set. Write .stratum/advisor.json with "mode": "auto", "codex", "both" or "off".`
-#18 FR-010 no file	README.md	A project set up before this feature has no file, so the advisor stays off until you write it.
-#18 FR-011 no codex	skills/st-build/SKILL.md	`no advisor: mode not set` (show the user its line) or `no advisor: mode off`: go on as before
-#18 FR-011 no codex	skills/st-build/SKILL.md	`no advisor: codex not found`, `no advisor: mode not set`
+#18 FR-010 no file	skills/st-build/SKILL.md	A worktree with no file reads the main checkout's file. No file in either gives the `mode not set` line.
+#18 FR-010 no file	README.md	the point prints `no advisor: mode not set. Write .stratum/advisor.json with "mode": "auto", "codex", "both" or "off".`
+#18 FR-010 no file	README.md	the lane stops to ask you the mode, then writes it to the main checkout.
+#18 FR-010 no file	skills/st-build/SKILL.md	`no advisor: mode not set`: stop. Ask the user the advisor question of `/stratum:st-init` step 11
+#18 FR-011 no codex	skills/st-build/SKILL.md	`no advisor: codex not found` or `no advisor: mode off`: go on as before
 #18 FR-012 review only	skills/st-build/SKILL.md	Never run `codex` to build or fix.
 #18 FR-016 plan rules	skills/st-plan/SKILL.md	Handle its answer as in "Advisor" in `<plugin root>/skills/st-build/SKILL.md`
 #18 FR-015 init	skills/st-init/SKILL.md	advisor mode `auto` (recommended: the risk level picks Codex, `/advisor` or both at each point; needs `codex` logged in for Codex), `codex` (Codex reviews the plan and a test red after 2 tries), `both` (Codex, then `/advisor` if set), or `off` (no Codex, nothing sent to OpenAI)?
