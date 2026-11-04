@@ -429,6 +429,12 @@ check "JSON write keeps the symlink" [ -L "$tmp/u21/.stratum/models.json" ]
 check "JSON write changes the link target" [ "$(pyq "$tmp/u21/models-real.json" 'sorted(d)')" = '["st-build"]' ]
 check "JSON write keeps mode 600" [ "$(stat -c %a "$tmp/u21/models-real.json")" = 600 ]
 check "JSON write leaves no .tmp file" [ -z "$(find "$tmp" -name '*.tmp')" ]
+printf '%s\n' '{"st-gone": {}, "x": "\ud800"}' > "$tmp/u21/models-real.json"
+surrsum=$(sha256sum "$tmp/u21/models-real.json")
+run fix "$tmp/u21" models-key st-gone
+check "JSON write of a lone surrogate exits 3" exits 3 contains "$out" "skip: cannot write .stratum/models.json:"
+check "JSON write of a lone surrogate leaves no .tmp file" [ -z "$(find "$tmp" -name '*.tmp')" ]
+check "JSON write of a lone surrogate leaves the file byte-equal" [ "$surrsum" = "$(sha256sum "$tmp/u21/models-real.json")" ]
 
 mkdir -p "$tmp/u21/.claude"
 printf '{}\n' > "$tmp/u21/.claude/settings.json"
@@ -461,4 +467,20 @@ run fix "$tmp/u22" pointer @.stratum/constitution.md
 check "append through a CLAUDE.md symlink inside the checkout exits 0" [ "$rc" = 0 ]
 check "append writes the line into the link target" grep -qxF '@.stratum/constitution.md' "$tmp/u22/docs/claude.md"
 check "append keeps the CLAUDE.md symlink" [ -L "$tmp/u22/CLAUDE.md" ]
+
+mkdir -p "$tmp/u23/.stratum"
+audit "$tmp/u23"
+check "U15 non-git folder audit exits 0" [ "$rc" = 0 ]
+check "U15 non-git folder has a new pointer row" exits 0 [ "$(state "$tmp/u23" pointer @.stratum/constitution.md)" = new ]
+check "U15 non-git folder has no skip row" exits 0 [ -z "$(awk -F'\t' '$4 == "skip"' <<<"$rows")" ]
+
+git init -q -b main "$tmp/u24"
+mkdir -p "$tmp/u24/.stratum"
+printf 'x\n' > "$tmp/u24/CLAUDE.md"
+git -C "$tmp/u24" add -A
+git -C "$tmp/u24" commit -qm init
+printf 'corrupt\n' > "$tmp/u24/.git/index"
+audit "$tmp/u24"
+check "U15 corrupt index audit exits 0" [ "$rc" = 0 ]
+check "U15 corrupt index gives a skip row with the git status detail" exits 0 [ "$(rowsof "$tmp/u24" pointer @.stratum/constitution.md | cut -f4,5)" = "skip	git status failed for CLAUDE.md" ]
 exit "$fail"

@@ -43,12 +43,13 @@ output.
   in `<name>` is `invalid`: listed, never fixed. A plugins-off key from `<config>/settings.json` that does not match the pattern is `invalid`, with no fix. A settings file that is not a JSON object gives an `invalid` row and is never written. An invalid `.claude/settings.local.json` counts as empty for `plugins-off`.
 - A worktree on a `worker-*` branch has `worker` in the detail of its `install` row, or of its
   first row when it has no record.
-- Committed files (`.gitignore`, `AGENTS.md`, `CLAUDE.md`, `.claude/settings.json`): when
-  `git -C <folder> status --porcelain -- <file>` is not empty, every row that would change that
-  file gets the state `skip` with the detail `<file> has uncommitted changes`. A `git status` that
-  fails counts as not empty. On a detached HEAD, every non-current committed-file row of that
-  checkout gets `skip` with the detail
-  `detached HEAD, no branch to commit on` (FR-017, D8).
+- Committed files (`.gitignore`, `AGENTS.md`, `CLAUDE.md`, `.claude/settings.json`), in a git
+  checkout only (`git worktree list` succeeds; a folder that is not a git repo gets no `skip`):
+  when `git -C <folder> status --porcelain -- <file>` is not empty, every row that would change
+  that file gets the state `skip` with the detail `<file> has uncommitted changes`. A
+  `git status` that fails gives `skip` with the detail `git status failed for <file>`. On a
+  detached HEAD, every non-current committed-file row of that checkout gets `skip` with the
+  detail `detached HEAD, no branch to commit on` (FR-017, D8).
 - Exit 0. Writes nothing (FR-010). `claude` is not called.
 - Never prints the value of a key it does not check (settings files can hold `env` secrets).
 
@@ -78,7 +79,8 @@ audit and the fix is not caught; upgrade if that is seen.`
 JSON files: not valid JSON or not an object: `skip: <file> is not valid JSON`, exit 3. Writes keep
 every other key and value, `indent=2`, key order kept (research R12). The write goes through a
 new temp file in the folder of the file's real path (a symlink is followed), keeps the old file's mode (a new file gets 644), and replaces
-the file. A write that fails removes the temp file: `skip: cannot write <file>: <reason>`, exit 3.
+the file. A write that fails (an OS error, or text that cannot be encoded as UTF-8, such as a
+lone surrogate) removes the temp file: `skip: cannot write <file>: <reason>`, exit 3.
 
 JSON files and the `ignore` and `pointer` appends: the file's real path (symlinks resolved)
 outside the folder's real path: `skip: <file> points outside <folder>`, exit 3.

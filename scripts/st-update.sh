@@ -163,7 +163,8 @@ if ip is None:
 recs = records()
 
 cos, det = [], set()
-for block in git("-C", main, "worktree", "list", "--porcelain").stdout.split("\n\n"):
+wt = git("-C", main, "worktree", "list", "--porcelain")
+for block in wt.stdout.split("\n\n"):
     kv = dict((l.split(" ", 1) + [""])[:2] for l in block.splitlines())
     if kv.get("worktree") and "bare" not in kv and os.path.isdir(kv["worktree"]):
         cos.append((kv["worktree"], kv.get("branch", "").removeprefix("refs/heads/")))
@@ -316,18 +317,19 @@ if cmd == "audit":
     @functools.cache
     def dirty(c, n):
         p = git("-C", c, "status", "--porcelain", "--", n)
-        return p.returncode != 0 or bool(p.stdout.strip())
+        if p.returncode:
+            return f"git status failed for {n}"
+        return f"{n} has uncommitted changes" if p.stdout.strip() else None
 
     def mark(r):
         f, kind, name, state, detail = r
         n = detail if kind == "allow" else FN.get(kind)
-        if f not in paths or n not in COMMITTED or state == "invalid":
+        if wt.returncode or f not in paths or n not in COMMITTED or state in ("invalid", "current"):
             return r
-        if f in det and state != "current":
+        if f in det:
             return (f, kind, name, "skip", "detached HEAD, no branch to commit on")
-        if state != "current" and dirty(f, n):
-            return (f, kind, name, "skip", f"{n} has uncommitted changes")
-        return r
+        d = dirty(f, n)
+        return (f, kind, name, "skip", d) if d else r
 
     print("\n".join("\t".join(mark(r)) for r in ROWS))
     sys.exit()
@@ -400,7 +402,7 @@ if data is not None:
     tmp = None
     try:
         os.makedirs(os.path.dirname(real), exist_ok=True)
-        fd, tmp = tempfile.mkstemp(dir=os.path.dirname(real))
+        fd, tmp = tempfile.mkstemp(suffix=".tmp", dir=os.path.dirname(real))
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
             fh.write(text)
         if os.path.exists(real):
@@ -408,9 +410,9 @@ if data is not None:
         else:
             os.chmod(tmp, 0o644)
         os.replace(tmp, real)
-    except OSError as e:
+    except (OSError, ValueError) as e:
         if tmp and os.path.exists(tmp):
             os.remove(tmp)
-        refuse(f"skip: cannot write {fn}: {e.strerror}")
+        refuse(f"skip: cannot write {fn}: {getattr(e, 'strerror', None) or e}")
 print(f"changed {fn}")
 PY
