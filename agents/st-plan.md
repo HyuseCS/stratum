@@ -47,6 +47,7 @@ Read first:
   personal or minors' data, or an external service. Those need a security note in plan.md.
 - Respect the constitution and the app ordinances. A plan that breaks a rule is an open decision, not a silent choice.
 - No speculative work: plan only what the spec asks for.
+- A probe that runs `claude plugin update` or `claude plugin install` sets `CLAUDE_CONFIG_DIR` to a temp folder. The `sha256sum` of the live `installed_plugins.json` is the same before and after the probe.
 
 ## Open decisions
 
