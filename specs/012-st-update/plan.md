@@ -13,8 +13,8 @@ edge case (research R16, case U20).
 
 A new skill, `/stratum:st-update [<folder>]`, and one script, `scripts/st-update.sh`. The script's
 `audit` reads the project's main checkout, its linked worktrees and record subfolders, the install
-records and the marketplace, and prints one row per harness item with its state. It writes
-nothing. The skill shows the rows that are not current in one table and asks once. After the OK, the
+records and the marketplace, and prints one row per harness item with its state (a `new` `ignore` or `pointer` row whose line a past commit removed gets the detail `removed in <sha>`). It writes
+nothing. The skill shows the rows that are not current in one table and asks once. The gate takes `skip <worktree>` or `skip <folder> <kind> <name>`. After the OK, the
 script's `plugin` runs `claude plugin update --json -s <scope> stratum@stratum` in each folder with
 its own record and checks that only that record moved. Then `fix` repoints `statusLine` at the
 updated record's path and fixes each other row, one line or key at a time. `audit` marks a dirty committed file or a detached HEAD `skip` before any change, and the skill never runs `fix` on a `skip` row. The skill asks st-init's questions for missing `.stratum/`
@@ -39,7 +39,7 @@ names the branch (research R16).
 `.gitignore`, `CLAUDE.md`, `.claude/settings.json`, `.claude/settings.local.json`,
 `.stratum/models.json`, `.stratum/state.json`, and deletes `.stratum/commit-mode` (data-model.md). The four st-init question files are written by the skill after st-init's question, never by the script (`fix` refuses those names).
 
-**Testing**: `bash tests/test_st_update.sh` (new, fixture with a `claude` stub, cases U1 to U21),
+**Testing**: `bash tests/test_st_update.sh` (new, fixture with a `claude` stub, cases U1 to U21, U25, U26),
 `bash tests/test_update_rules.sh` (new, skill phrases), `bash tests/test_update_items.sh` (new,
 FR-020 with a built-in negative control), existing `bash tests/test_inspect.sh`,
 `bash tests/test_no_frontend_design.sh`, `bash tests/test_local_files.sh`,
@@ -128,6 +128,9 @@ agent rules.
 - Spec edge case (branch): a `directory` marketplace on a branch other than `main` gets a warning
   at the gate that names the branch. Research R16, case U20, rule row R4.
 - G3 (kept, from the gap report): the symlink containment guard for JSON writes and for the `ignore` and `pointer` appends was added during Build, not in the spec. It is in `contracts/st-update.md` section 1d (`points outside <folder>`), and its tests are the symlink checks in the Build extras row of section 3.
+- Change 001 (changes/001-skip-item-removed-in.md, D1 to D3): the gate takes `skip <item>`, and a
+  `new` `ignore` or `pointer` row whose line a past commit removed gets `removed in <sha>`. Research
+  R17.
 - No open decisions.
 
 ## Project Structure
@@ -139,11 +142,13 @@ specs/012-st-update/
 ├── spec.md
 ├── decisions.md
 ├── plan.md
-├── research.md          # R1 to R16
+├── research.md          # R1 to R17
 ├── data-model.md        # checkout, record, marketplace, item, row, states
 ├── quickstart.md        # tests, negative controls, live run
 ├── contracts/
 │   └── st-update.md     # script subcommands, skill steps, test cases, drift test
+├── changes/
+│   └── 001-skip-item-removed-in.md
 ├── checklists/
 └── tasks.md
 ```
@@ -156,7 +161,7 @@ skills/
 scripts/
 └── st-update.sh            # new: items, audit, plugin, fix
 tests/
-├── test_st_update.sh       # new: U1 to U21
+├── test_st_update.sh       # new: U1 to U21, U25, U26
 ├── test_update_rules.sh    # new: skill phrases
 └── test_update_items.sh    # new: FR-020 drift test with built-in negative control
 README.md                   # skills row, first-time command, tests block

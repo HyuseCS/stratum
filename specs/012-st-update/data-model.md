@@ -76,14 +76,19 @@ One audit output line: one item in one folder.
 | kind | as above, or `marketplace` and `marketplace-branch` (header) |
 | name | as above |
 | state | `current`, `outdated`, `discontinued`, `new`, `ask`, `invalid`, `gone`, `listed`, `warn`, `skip` |
-| detail | one line: the version, the old and new value, or the reason |
+| detail | one line: the version, the old and new value, the reason, or `removed in <sha>` (`new` rows, below) |
+
+An `allow` row's file is its detail, so its gate name is `<settings file>:<entry>`. The same entry in
+both settings files gives two rows.
 
 States:
 
 - `current`: nothing to do.
 - `outdated`: Stratum's value is old. The fix sets the current value.
 - `discontinued`: a Stratum name or file the current version does not have. The fix removes it.
-- `new`: missing. The fix adds it, or the skill asks st-init's question first (FR-014).
+- `new`: missing. The fix adds it, or the skill asks st-init's question first (FR-014). An `ignore` or
+  `pointer` row whose line a past commit removed stays `new` and gets the detail `removed in <sha>`
+  (research R17).
 - `ask`: a value Stratum did not write (a non-Stratum `statusLine`). The skill shows the diff and
   asks. Only a yes runs the fix, with `--force`.
 - `invalid`: the file is not valid JSON or not an object. Never touched. Reported. An unsafe name (research R9) or an unsafe `plugins-off` key from the config folder is `invalid` too, with no fix.
@@ -98,7 +103,7 @@ States:
 
 Transitions: `outdated`, `discontinued` and `new` become `current` after a fix. A fix that exits 3
 leaves the row as it was and the report gives the reason. A second audit after a full run shows
-only `current`, `ask` rows the user said no to, `new` rows the user answered "skip", `skip` rows,
+only `current`, `ask` rows the user said no to, `new` rows the user answered "skip", rows of the worktrees and items the user skipped at the gate, `skip` rows,
 and `invalid`, `gone`, `listed` rows (SC-001).
 
 ## Discontinued file list

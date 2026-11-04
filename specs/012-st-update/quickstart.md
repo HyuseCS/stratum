@@ -32,6 +32,9 @@ Each must go red, then green again after the undo. Undo with the Edit tool, not 
 | N6 | Delete the README row for `st-update` | `bash tests/test_inspect.sh` fails "README skills" |
 | N7 | In `audit`, drop the `marketplace-branch` row | U20 fails |
 | N8 | In `audit`, check `.gitignore` text instead of `git check-ignore` | U7 fails on the `.git/info/exclude` case |
+| N9 | In the `removed in` lookup, drop the escape of the line | U25 fails "ignore never committed keeps .gitignore" |
+| N10 | In the `removed in` lookup, drop the `^` anchor | U25 fails "ignore whose only removed line has a prefix keeps .gitignore" |
+| N11 | In the `removed in` lookup, drop the check that the line is not in the file now | U25 fails "ignore whose line is in the file now keeps .gitignore" |
 
 ## 3. Live run on this machine (after the build, at the user's word)
 
@@ -54,7 +57,7 @@ bump and the merge to `main`, every record is outdated.
 3. `/stratum:st-update /home/hyuse/Desktop/VeentApps/v2-veent`. Check the table: one block per
    checkout, `install` and `statusLine` outdated, worker worktrees marked. Answer no.
 4. Snapshot again: all the same (FR-010, acceptance US1-5).
-5. Run it again and answer OK (or `skip` a worker worktree). Check: each record at 0.7.0, each
+5. Run it again and answer OK (or `skip <worktree>` for a worker worktree). Check: each record at 0.7.0, each
    `statusLine` at `.../cache/stratum/stratum/0.7.0/statusline/st-statusline.sh`, no file in
    `apps/` subfolders created, one commit per changed branch at most, the restart line at the end.
 6. Run `/stratum:st-update /home/hyuse/Desktop/VeentApps/v2-veent` a third time: "all items are

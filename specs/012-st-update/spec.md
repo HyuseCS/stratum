@@ -59,7 +59,7 @@ st-update changes only Stratum's own lines and keys. It never changes the user's
 
 1. **Given** `statusLine` runs a command that is not a Stratum statusline, **When** st-update runs, **Then** it shows the diff and asks before it changes it.
 2. **Given** `CLAUDE.md` in a worktree has uncommitted changes, **When** st-update runs, **Then** it skips that file in that worktree and the report gives the reason.
-3. **Given** the user says "skip <worktree>" at the gate, **Then** that worktree is left out completely.
+3. **Given** the user says "skip <worktree>" or "skip <folder> <kind> <name>" at the gate, **Then** that worktree or item is left out completely.
 
 ---
 
@@ -105,7 +105,7 @@ A maintainer who changes what st-init writes gets a red test until the st-update
 - **FR-006**: `statusLine` is current when it runs `st-statusline.sh` from the current install path. Any other Stratum statusline path is outdated (an old cache version, a path that does not exist, the source folder). A missing entry is new. A command that is not a Stratum statusline MUST get a diff and a question.
 - **FR-007**: A Stratum name in the project that the current version does not have MUST be marked discontinued: the agent keys in `.stratum/models.json`, and the `stratum` skills and tools in `permissions.allow`.
 - **FR-008**: A file on the discontinued file list that the project still has MUST be marked discontinued. The list starts with `.stratum/commit-mode`.
-- **FR-009**: st-update MUST show one table: only the items that are not current, grouped by folder, plus one line per folder that counts its current items. Then one gate for the user's OK. The user can say "skip <worktree>" at the gate.
+- **FR-009**: st-update MUST show one table: only the items that are not current, grouped by folder, plus one line per folder that counts its current items. Then one gate for the user's OK. The user can say "skip <worktree>" or "skip <folder> <kind> <name>" at the gate, one or more each. An `allow` item is named `skip <folder> allow <settings file>:<entry>`. A skip that names no row is said, and st-update asks again.
 - **FR-010**: Before the OK, st-update MUST change no file, setting, install record or commit.
 - **FR-011**: After the OK, st-update MUST run `claude plugin update --json -s <scope> stratum@stratum` in each folder with a record, with the record's scope. A record whose folder is gone MUST be listed and not touched. A failed run MUST show its error and the exact command, and the other folders MUST still run.
 - **FR-012**: After the plugin update, st-update MUST point `statusLine` in `.claude/settings.local.json` at the new install path from the updated record, and keep every other key.

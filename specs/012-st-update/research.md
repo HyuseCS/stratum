@@ -7,7 +7,7 @@ Sources: Claude Code 2.1.316 on this machine (`claude plugin update --help`, two
 files named below at commit 51eda0f.
 
 All items are settled. R1 to R3 follow D10, R13 follows D11, R16 follows the spec edge case on
-the marketplace branch.
+the marketplace branch. R17 follows change 001.
 
 ## R1. When a `.gitignore` item is current (D10)
 
@@ -211,3 +211,17 @@ the marketplace branch.
 - Rationale: `claude plugin update` installs what the folder holds. The source repo is on
   `012-st-update` today, so an update now would install a feature branch.
 - Alternatives: refuse to update off `main` (blocks a maintainer who wants to test a branch).
+
+## R17. `removed in <sha>` detail (change 001, D2, D3)
+
+- Decision: `audit` gives a `new` `ignore` or `pointer` row of a git checkout the detail
+  `removed in <sha>` when its name is not a line of its file now and
+  `git -C <checkout> log -1 --no-show-signature --first-parent --format=%h -G^<line>$ -- <file>`
+  finds a commit. `<file>` is `.gitignore` or `CLAUDE.md`. Every POSIX ERE special character of the
+  line is escaped, and the `-G` value is one list argument. The names are the script's static
+  constants. The lookup runs after the detached and dirty checks, so a `skip` row keeps its reason.
+  The state stays `new`.
+- Rationale: the sha names the commit that removed the line. `-G` with the anchors matches whole
+  lines, so `.stratum/models.json.bak` does not count. `-S` would match it. `--first-parent` diffs a
+  merge against its first parent, so a removal made in a merge shows the merge's sha.
+- Read only. No commit, branch or file changes (R13).
