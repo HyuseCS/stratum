@@ -85,7 +85,7 @@ A maintainer who changes what st-init writes gets a red test until the st-update
 - A subfolder of a worktree has its own install record (`v2-veent-parasat/apps/parasat`): it is updated like any other folder.
 - `.stratum/models.json` has dead agent keys and live ones: only the dead keys are removed.
 - A worktree is on a detached HEAD: its committed files are skipped and reported. There is no branch to commit on.
-- A project hook denies a commit: st-update quotes the hook's deny reason and gives the exact `git -C <checkout> add -- <paths> && git -C <checkout> commit` command, without working around it (D11).
+- A project hook denies a commit: st-update quotes the hook's deny reason and gives the exact `git -C <checkout> add -- <paths> && git -C <checkout> commit -m "<message>" -- <paths>` command, without working around it (D11).
 - The marketplace is a local directory whose checkout is not on `main`: the plugin update would install that branch, so st-update warns at the gate and names the branch.
 - The plugin update fails in a folder: that folder's `statusLine` is left as it was, so it never points at an install that does not exist.
 - st-update stops halfway: a second run audits again and does only what is still left.
@@ -109,10 +109,10 @@ A maintainer who changes what st-init writes gets a red test until the st-update
 - **FR-010**: Before the OK, st-update MUST change no file, setting, install record or commit.
 - **FR-011**: After the OK, st-update MUST run `claude plugin update stratum@stratum` in each folder with a record, with the record's scope. A record whose folder is gone MUST be listed and not touched. A failed run MUST show its error and the exact command, and the other folders MUST still run.
 - **FR-012**: After the plugin update, st-update MUST point `statusLine` in `.claude/settings.local.json` at the new install path from the updated record, and keep every other key.
-- **FR-013**: st-update MUST change only Stratum's own lines and keys. It MUST NOT rewrite a whole file, and MUST NOT change user data files (`constitution.md`, `state.json`, `lessons.md`, `handoff.md`, or the values in `git-guard.json`, `models.json`, `powerline.json`, `advisor.json`).
+- **FR-013**: st-update MUST change only Stratum's own lines and keys. It MUST NOT rewrite a whole file, and MUST NOT change user data files (`constitution.md`, `state.json` once it exists, `lessons.md`, `handoff.md`, or the values in `git-guard.json`, `models.json`, `powerline.json`, `advisor.json`).
 - **FR-014**: New items that need no question MUST be added after the gate. For a missing `.stratum/` file that st-init asks about, st-update MUST ask that st-init step's question, one at a time, with a "skip" answer that leaves the file missing.
 - **FR-015**: Discontinued traces MUST be removed only after the gate. In `.stratum/models.json`, only the dead keys are removed.
-- **FR-016**: st-update MUST update the committed harness files (`.gitignore`, `AGENTS.md`, `CLAUDE.md`, `.claude/settings.json`) in the main checkout and in each linked worktree, with one commit per branch through the commit guard, staging exact paths only.
+- **FR-016**: st-update MUST update the committed harness files (`.gitignore`, `AGENTS.md`, `CLAUDE.md`, `.claude/settings.json`, and `.stratum/state.json` and `.stratum/advisor.json` when git does not ignore them) in the main checkout and in each linked worktree, with one commit per branch through the commit guard, staging exact paths only.
 - **FR-017**: A committed file with uncommitted changes in a folder MUST be skipped in that folder and reported with the reason.
 - **FR-018**: An edit blocked by a hook or the classifier MUST be reported with the exact command for the user to run.
 - **FR-019**: The report MUST list what changed per folder, what was skipped and why, and say that running sessions need a restart to load the new version.
@@ -130,7 +130,7 @@ A maintainer who changes what st-init writes gets a red test until the st-update
 ### Measurable Outcomes
 
 - **SC-001**: After one st-update run with OK, a second audit of the same project shows 0 outdated, 0 discontinued and 0 new items, except for skipped items and items the user answered "skip".
-- **SC-002**: In v2-veent with 10 linked worktrees, the user gives one OK for all folders, plus only the questions from FR-006 and FR-014.
+- **SC-002**: In v2-veent with every linked worktree (7 today), the user gives one OK for all folders, plus only the questions from FR-006 and FR-014.
 - **SC-003**: In the fixture tests, 0 user data files and 0 non-Stratum lines change.
 - **SC-004**: After a restart, an autonomous session in a formerly 0.1.22 folder shows the `autonomous` tag.
 

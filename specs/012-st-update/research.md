@@ -17,7 +17,7 @@ the marketplace branch.
   `<checkout>/.gitignore`.
 - Rationale: v2-veent ignores Stratum's files with `.stratum/` and `graphify-out/` in
   `.git/info/exclude` (lines 18 and 20, "Stratum (local install, personal)"). Its `.gitignore` has
-  none of st-init's seven lines. A literal rule would commit seven lines to 12 branches of a team
+  none of st-init's seven lines. A literal rule would commit seven lines to 8 branches (the main checkout and 7 linked worktrees today) of a team
   repo (rejected O22).
 
 ## R2. When a pointer item is current (D10)
@@ -91,15 +91,17 @@ the marketplace branch.
     They get the install item, and the `statusLine` item only when their own
     `.claude/settings.local.json` has a Stratum `statusLine`. st-update creates no file in a
     subfolder.
-  - Gone records: a record under a checkout path, or at a `prunable` worktree path, whose folder
-    does not exist. Listed, not touched.
+  - Gone records: a record whose folder does not exist and whose path is under a checkout, or is
+    a sibling of the main checkout named `<main checkout name>-*` (the worktree and worker naming,
+    for example `v2-veent-worker-w1a`). Listed, not touched. Other missing folders belong to other
+    projects and get no row.
   - `user` and `managed` scope records: listed, not touched (they are not per folder).
   - Committed files (`.gitignore`, `AGENTS.md`, `CLAUDE.md`, `.claude/settings.json`), the
     install, `statusLine` and the discontinued checks: every checkout.
   - The `.stratum/` files st-init writes (`state.json`, `git-guard.json`, `models.json`,
     `powerline.json`, `advisor.json`, `constitution.md`): the main checkout only. DESIGN.md D13a
     makes worktrees read the main file (`advisor.json`, `constitution.md`) or run on defaults
-    (`models.json`, `powerline.json`, `git-guard.json`, `state.json`). Asking in 12 folders would
+    (`models.json`, `powerline.json`, `git-guard.json`, `state.json`). Asking in 8 folders (the main checkout and 7 linked worktrees today) would
     break SC-002.
 - `.stratum/constitution.md` missing: the row is new and the report says to run
   `/stratum:st-constitution`. D6 names only four question files, and the constitution grill does
@@ -131,6 +133,9 @@ the marketplace branch.
     `plugin.json` `mcpServers`, or `<server>` `figcraft` and `<tool>` not on the Tools line of
     `skills/st-design/design-tool.md`.
 - Anything else, for example a `Bash(...)` rule that names a Stratum path, is the user's.
+- A discontinued name gets its row only when it matches `^[A-Za-z0-9_.:@/*()-]+$`. Any other
+  name gets an `invalid` row and no fix, since it would go into a command line. The skill puts
+  single quotes around every argument it passes to the script and to git.
 - Only FigCraft names are in allow lists on this machine today (`st-l1-scratch`).
 
 ## R10. FigCraft allow entries (FR-003)
@@ -160,8 +165,10 @@ the marketplace branch.
 ## R13. Commits (FR-016, FR-017, CHK004, CHK011)
 
 - Decision: the script never runs git commands that change the repo. The skill runs, per checkout,
-  one Bash call: `git -C <checkout> add -- <paths> && git -C <checkout> commit -m "<message>"`,
-  so `hooks/st-git-guard.py` and the project's own hooks see it. `<paths>` are the files from this
+  one Bash call: `git -C <checkout> add -- <paths> && git -C <checkout> commit -m "<message>" -- <paths>`,
+  so `hooks/st-git-guard.py` and the project's own hooks see it. The commit ends with
+  `-- <paths>`, so files the user staged before the run stay staged and stay out of Stratum's
+  commit (found at Inspect). `<paths>` are the files from this
   fixed list that st-update changed in that checkout: `.gitignore`, `AGENTS.md`, `CLAUDE.md`,
   `.claude/settings.json`, and `.stratum/state.json` and `.stratum/advisor.json` when
   `git check-ignore` does not ignore them (st-init step 12). Never `.claude/settings.local.json`
@@ -171,7 +178,7 @@ the marketplace branch.
 - Before a committed file is changed, `fix` checks `git status --porcelain -- <file>` and the
   branch. Uncommitted changes or a detached HEAD: exit 3 with the reason, nothing written.
 - A commit a hook denies (D11): the skill quotes the deny reason and gives the exact command
-  `git -C <checkout> add -- <paths> && git -C <checkout> commit -m "<message>"`. It names no
+  `git -C <checkout> add -- <paths> && git -C <checkout> commit -m "<message>" -- <paths>`. It names no
   personal script and never retries another way.
 - Halfway stop (CHK012): every step reads the files again, so a second run audits and does only
   what is left.

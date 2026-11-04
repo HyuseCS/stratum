@@ -87,7 +87,8 @@ States:
 - `ask`: a value Stratum did not write (a non-Stratum `statusLine`). The skill shows the diff and
   asks. Only a yes runs the fix, with `--force`.
 - `invalid`: the file is not valid JSON or not an object. Never touched. Reported.
-- `gone`: an install record whose folder does not exist. Never touched. Listed.
+- `gone`: an install record whose folder does not exist and whose path is under a checkout or is
+  a sibling of the main checkout named `<main checkout name>-*`. Never touched. Listed.
 - `listed`: a `user` or `managed` record, or a folder with no install. Never touched. Listed.
 - `warn`: header only. The marketplace folder is a git checkout not on `main` (research R16).
   Shown at the gate. Nothing to fix.

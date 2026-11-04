@@ -35,6 +35,11 @@ output.
   `-\tmarketplace-branch\t<branch or detached>\twarn\t<installLocation>` (research R16). Then the rows
   of each checkout (main first), its record subfolders, and the `gone` and `listed` records.
   Current rows are printed too: the skill counts them.
+- A `gone` row is a record whose folder does not exist and whose path is under a checkout, or is a
+  sibling of the main checkout named `<main checkout name>-*` (research R7). Other missing
+  folders get no row.
+- A discontinued name gets its row only when it matches `^[A-Za-z0-9_.:@/*()-]+$`. Any other
+  name gets an `invalid` row with no fix (research R9).
 - A worktree on a `worker-*` branch has `worker` in the detail of its `install` row, or of its
   first row when it has no record.
 - Exit 0. Writes nothing (FR-010). `claude` is not called.
@@ -84,7 +89,8 @@ nothing.
 ## 2. `skills/st-update/SKILL.md`
 
 Plugin root is two levels up from the skill's base directory. `<script>` is
-`<plugin root>/scripts/st-update.sh`.
+`<plugin root>/scripts/st-update.sh`. The skill puts single quotes around every argument it passes
+to the script and to git (folder, kind, name, paths, message).
 
 1. **Audit.** Run `bash <script> audit <folder>` (the argument, else the project root). Exit 1:
    show the line and stop. No row other than `current`, `gone` and `listed`: say every item is
@@ -113,8 +119,9 @@ Plugin root is two levels up from the skill's base directory. `<script>` is
    `.stratum/advisor.json` when `git check-ignore` does not ignore them. Never
    `.claude/settings.local.json`, never `.stratum/models.json`. Per checkout with such a file, one
    Bash call:
-   `git -C <checkout> add -- <paths> && git -C <checkout> commit -m "chore(stratum): update harness files to <version>" -m "<one line per item>"`.
-   No `-A`, no `--amend`, no `--no-verify`, no push. A denied commit: quote the deny reason and
+   `git -C <checkout> add -- <paths> && git -C <checkout> commit -m "chore(stratum): update harness files to <version>" -m "<one line per item>" -- <paths>`.
+   The commit ends with `-- <paths>`, so files the user staged before stay out of it. No `-A`, no
+   `--amend`, no `--no-verify`, no push. A denied commit: quote the deny reason and
    give the exact command (D11). Name no personal script. Never work around it.
 8. **Report.** Per folder: what changed, what was skipped and why, the commands the user must run.
    Last line: `Restart running Claude Code sessions in these folders to load Stratum <version>.`
@@ -129,20 +136,20 @@ run `claude plugin update` in a folder without its own record, edit `installed_p
 | Case | Checks | FR |
 |------|--------|----|
 | U1 | `audit` on a folder with no `.stratum/`: exit 1, the st-init line, no change | FR-001 |
-| U2 | rows for main, the linked worktree and a record subfolder; a gone record is `gone`; a `user` record is `listed` | FR-002, FR-011 |
+| U2 | rows for main, the linked worktree and a record subfolder; a second linked worktree with no record: its `install` row is `listed` with `no install`; a gone record under a checkout and a gone sibling `<main>-worker-w1a` are `gone`; a gone folder of another project gets no row; a `user` record is `listed` | FR-002, FR-011 |
 | U3 | record 0.1.22, marketplace 0.7.0: `install` `outdated`; equal: `current` | FR-005 |
 | U4 | `statusLine` at an old cache path, at a missing path, at the source folder: `outdated`; at the record's path: `current`; none: `new`; a custom command: `ask`; bad JSON: `invalid` | FR-006 |
-| U5 | `models.json` with `st-check` and `st-build`: only `st-check` `discontinued`; `Skill(stratum:st-validate)` and a FigCraft name not on the Tools line: `discontinued`; a user `Bash(...)` rule: no row | FR-007 |
+| U5 | `models.json` with `st-gone` and `st-build`: only `st-gone` `discontinued`; `Skill(stratum:st-gone)` and a FigCraft name not on the Tools line: `discontinued`; `Skill(stratum:x$(touch pwned))`: `invalid`, and no file `pwned` exists after `audit`; a user `Bash(...)` rule: no row. The fixture uses no name that `tests/test_inspect.sh:86` matches (`st-check`, `st-validate`) | FR-007 |
 | U6 | `.stratum/commit-mode` present: `discontinued` | FR-008 |
 | U7 | D10: a path ignored only by `.git/info/exclude` is `current`, one ignored nowhere is `new`; the constitution named only in `CLAUDE.local.md` is `current`, named nowhere is `new`; `ponytail@ponytail` `true` in the fake `<config>/settings.json` and `false` only in `.claude/settings.local.json` is `current`, in neither is `new`; a `figcraft` row only when one FigCraft name is allowed | FR-003, FR-004 |
 | U8 | `audit` changes no file: tree hash, `git status` and the records file the same before and after | FR-010 |
-| U9 | `plugin`: the stub is called in the folder with the record's scope; record moves; prints `ok`; a stub that fails: exit 1, message and command; gone folder and no record: `claude` not called | FR-011 |
+| U9 | `plugin`: the stub is called in the folder with the record's scope; record moves; prints `ok`; a stub that fails: exit 1, message and command; the gone record under a checkout, the gone sibling `<main>-worker-w1a` and a folder with no record: `claude` not called | FR-011 |
 | U10 | stub that updates another record (the fallback in research R4): exit 1 | FR-011 |
-| U11 | `fix statusline` after `plugin`: the record's new path, every other key kept; before `plugin`: exit 3 | FR-012 |
+| U11 | `fix statusline` after `plugin`: the record's new path, every other key kept; before `plugin`: exit 3; in a checkout with no `.claude/settings.local.json`: the file is created with only `statusLine` | FR-012 |
 | U12 | `fix` of each kind keeps other lines and keys; user data files byte-equal | FR-013, SC-003 |
 | U13 | `fix file .stratum/state.json` writes st-init's value; `fix file .stratum/advisor.json` exit 3 | FR-014 |
-| U14 | `fix models-key st-check` leaves `st-build`; `fix gone-file .stratum/commit-mode` deletes it; `fix gone-file .stratum/lessons.md` exit 3 | FR-015 |
-| U15 | `fix ignore` in the worktree with a dirty `.gitignore`: exit 3, file the same; detached HEAD: exit 3 | FR-017 |
+| U14 | `fix models-key st-gone` leaves `st-build`; `fix gone-file .stratum/commit-mode` deletes it; `fix gone-file .stratum/lessons.md` exit 3 | FR-015 |
+| U15 | `fix pointer` in the worktree with a dirty `CLAUDE.md`: exit 3, the reason, file the same; detached HEAD: exit 3 | FR-017 |
 | U16 | `fix statusline` with a custom command: exit 3; with `--force`: changed | FR-006, US3 |
 | U17 | full run (stub plugin, every fix), then `audit`: only `current`, `gone`, `listed` | SC-001 |
 | U18 | `claude` not on `PATH`: `plugin` prints the command, exit 1; `fix` still works | Edge case |
@@ -162,7 +169,7 @@ like `tests/test_plan_rules.sh`:
 | R5 | `plugin` per folder, go on after a failure, `statusline` only after `plugin` exits 0 | FR-011, FR-012 |
 | R6 | `ask` rows: show the old and new command, `--force` only on yes | FR-006 |
 | R7 | st-init steps 3, 4, 7, 11 questions, one at a time, `skip` leaves the file missing; `/stratum:st-constitution` | FR-014 |
-| R8 | the commit command with `git -C`, the fixed path list, no `-A`, `--amend`, `--no-verify`, push | FR-016 |
+| R8 | the commit command with `git -C` that ends with `-- <paths>`, the fixed path list, no `-A`, `--amend`, `--no-verify`, push | FR-016 |
 | R9 | denied commit: quote the reason, give the command, name no personal script; gone: no `veent-commit-ask` text | D11 |
 | R10 | blocked Bash call: give the exact `fix` command | FR-018 |
 | R11 | report per folder and the restart line | FR-019 |
@@ -177,8 +184,10 @@ like `tests/test_plan_rules.sh`:
 
 1. From `$root/skills/st-init/SKILL.md` collect: the backticked names in step 2 (`.gitignore`
    lines), the `@` lines in step 6 (pointer lines), each backticked `.stratum/<name>.json` or
-   `.stratum/<name>.md` without `<` (files), and the settings keys `statusLine`,
-   `enabledPlugins`, `permissions.allow`.
+   `.stratum/<name>.md` without `<` (files), and the settings keys from steps 7, 8 and 10: the
+   first `"<key>":` in a backticked span right after `Merge in` or `merge`, when the key has no
+   `<`, and each backticked name right after the word `into`. Today that gives `statusLine`,
+   `enabledPlugins` and `permissions.allow`. The test has no fixed list of keys.
 2. Run `bash $root/scripts/st-update.sh items`.
 3. Each collected name missing from the items: `FAIL st-init names <name>, st-update items lack it`.
 4. Negative control, only when `ST_ROOT` is not set: copy `skills/st-init/SKILL.md` and

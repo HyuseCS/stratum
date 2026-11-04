@@ -101,11 +101,15 @@ agent rules.
   moved. `user` and `managed` records are never updated.
 - **S4. Install records.** Read only. The script never edits `installed_plugins.json` or the cache.
 - **S5. Commits on many branches.** The skill runs `git add` and `git commit` itself, so the git
-  guard and project hooks see each call. Exact paths, no `-A`, no `--amend`, no `--no-verify`, no
-  push. Dirty files and detached HEADs are skipped. A denied commit is reported, never worked around.
-- **S6. Untrusted paths.** Folder paths come from `git worktree list` and the records. The script
-  quotes them, uses `cd -- "$dir"` and `git -C "$dir"`, and runs no `eval`. JSON is parsed by
-  `python3 -I`, never by `source`.
+  guard and project hooks see each call. Exact paths, and the commit ends with `-- <paths>`, so
+  files the user staged stay out of it. No `-A`, no `--amend`, no `--no-verify`, no push. Dirty
+  files and detached HEADs are skipped. A denied commit is reported, never worked around.
+- **S6. Untrusted paths and names.** Folder paths come from `git worktree list` and the records.
+  Discontinued names come from project files, which can come from a cloned repo. The script quotes
+  paths, uses `cd -- "$dir"` and `git -C "$dir"`, and runs no `eval`. `audit` gives a name row only
+  when the name matches `^[A-Za-z0-9_.:@/*()-]+$`, else an `invalid` row with no fix (case U5).
+  The skill puts single quotes around every argument it passes to the script and to git. JSON is
+  parsed by `python3 -I`, never by `source`.
 - **S7. No sign-in, secrets, personal or minors' data, data model or contracts of an app.**
 
 ## Breaking Changes
@@ -167,3 +171,26 @@ DESIGN.md                   # D9 row and count, D13a commit-mode row and rule
 ## Complexity Tracking
 
 Empty.
+
+## Validate
+
+Date: 2026-11-04. Verdict: CONDITIONAL
+
+| Check | Verdict | Findings |
+|-------|---------|----------|
+| 1. Setup and dependencies | PASS | none |
+| 2. Test coverage per requirement | CONCERN | F5, F6 |
+| 3. Breaking changes | CONCERN | F1, F2 |
+| 4. Security and privacy | CONCERN | F3, F4 |
+
+F1. contracts/st-update.md:135, tasks.md:54 (T001 U5) The fixture puts the words `st-check` and `Skill(stratum:st-validate)` in `tests/test_st_update.sh`. `tests/test_inspect.sh:86-87` ("old names gone") fails on any tracked match outside `specs/`. Proved: `grep -cwE 'st-(check|validate)'` matches both forms. Once T001 is committed, T004, T017 and T018 go red. -> st-plan: use dead names that do not match, for example the key `st-gone` and `Skill(stratum:st-gone)`. Do not change `test_inspect.sh`.
+
+F2. tasks.md:59 (T003) The new D13a row is written with no indent. `tests/test_local_files.sh:5` reads only rows that start with two spaces, as in DESIGN.md:191-204. -> st-plan: say the row has the same two-space indent as the other rows.
+
+F3. contracts/st-update.md:116, research.md:163 and :174, decisions.md:13 (D11), tasks.md:83 (T008), plan.md:103-105 (S5) `git -C <checkout> add -- <paths> && git -C <checkout> commit -m ...` commits the whole index. Files the user staged before the run go into Stratum's commit. Proved in a scratch repo: a staged `user.txt` was in the commit. The guard does not stop it in `auto` mode, and workers write their own `git-guard.json`. -> st-plan: end the commit with `-- <paths>`. Proved: the commit then has only the listed paths, and `user.txt` stays staged. Change the same command in D11, R13, contract step 7, T008 and row R8.
+
+F4. research.md:122-131 (R9), contracts/st-update.md:77-78, plan.md:106-108 (S6) Discontinued names come from project files: `permissions.allow` in a committed `.claude/settings.json` from a cloned repo, and `.stratum/models.json` keys. No rule limits their characters. The skill puts them into Bash calls (`fix ... allow '<file>:<entry>'` and the commit `-m` lines). S6 covers quoting inside the script only. -> st-plan: `audit` prints a name row only when the name matches `^[A-Za-z0-9_.:@/*()-]+$`, else an `invalid` row. The skill single-quotes every argument. Add a U5 case with a name that has `$(` in it.
+
+F5. tasks.md:200, :207, :209, :210 FR-009, FR-016, FR-018 and FR-019, and the question part of FR-014, have only phrase rows on SKILL.md. U19 (a grep that the script runs no `git commit`) does not test FR-016's one commit per branch. The phrase rows can fail, but they do not test behavior. That is the repo's pattern for skill steps, and quickstart section 3 is the live check. -> user decision: accept phrase rows plus the live run for skill steps (recommended), or add a skill-level test.
+
+F6. contracts/st-update.md:178-181, tasks.md:121 (T013) The drift test does not read the settings keys from st-init. It uses the fixed list `statusLine`, `enabledPlugins`, `permissions.allow`. A new settings key in st-init never turns it red, so FR-020 is not met for settings keys. -> user decision: narrow FR-020 to the lines, pointers and files plus these three fixed keys (spec change), or have st-plan make the test read the quoted keys from st-init steps 7, 8 and 10.

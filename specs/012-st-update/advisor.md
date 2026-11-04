@@ -2,3 +2,6 @@
 summary: Simplify implementation sequencing and remove duplicate manual work.
 - [LOW] specs/012-st-update/tasks.md:82: Merge US2 and US3 implementation tasks so the fix dispatcher and skill flow are each built in one pass. Evidence: T007/T008 introduce fixes and orchestration; T011/T012 revisit those same functions and skill steps to add refusal rules and questions. Keep the story labels, but write both groups of tests first, then combine T007 with T011 and T008 with T012.
 - [LOW] specs/012-st-update/tasks.md:125: Cut the manual N1 negative control from T014. Evidence: T013 already automates adding .stratum/zz-drift.json to a temporary st-init copy and checking the failure. Quickstart N1 explicitly repeats that same mutation manually. Retain the automated control and the distinct N2 exercise.
+
+## plan | 2026-11-04T06:06:39Z | sha256 846e939a3663f27ec479c1693696f845672ade15353197ce82de9f94f98dfbf4 | WAIVED
+reason: Inspect fixes F1-F11, F13 only: test names, indent, commit -- paths, name filter, drift keys from st-init, gone siblings, wording; no task added or removed, no approach change
