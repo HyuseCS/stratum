@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
-usage() { echo "usage: st-worker.sh start <id> --task <file> --test <cmd> --lane <text> --roster <file> [--machine <m> --repo <path>] [--model <name>] [--autonomous] | goal <id> --test <cmd> [--machine <m>] | resend <id> [--machine <m>] | followup <id> --task <file> --test <cmd> [--machine <m>] | wait <id> [--machine <m>] | answer <id> [--machine <m>] --keys <key>... | --text <text> | result <id> [--machine <m>] | close <id> [--machine <m>] | list [--machine <m>] | headless <id> --task <file> --test <cmd> [--model <name>] | approve <id> --request <rid> --input-stdin --record <file> [--machine <m>] | pass <id> --request <rid> [--machine <m>] | autonomous-off [--roster <file>]" >&2; exit 2; }
+usage() { echo "usage: st-worker.sh start <id> --task <file> --test <cmd> --lane <text> --roster <file> [--machine <m> --repo <path>] [--model <name>] [--autonomous] | goal <id> --test <cmd> [--machine <m>] | resend <id> [--machine <m>] | followup <id> --task <file> --test <cmd> [--machine <m>] | wait <id> [--machine <m>] | answer <id> [--machine <m>] --keys <key>... | --text <text> | result <id> [--machine <m>] | close <id> [--machine <m>] | list [--machine <m>] | headless <id> --task <file> --test <cmd> [--model <name>] | approve <id> --request <rid> --input-stdin --record <file> [--machine <m>] | pass <id> --request <rid> [--machine <m>] | autonomous-off [--roster <file>] | watch --roster <file>" >&2; exit 2; }
 fail() { echo "$1" >&2; exit 1; }
 [ $# -gt 0 ] || usage
 cmd=$1; shift
 case $cmd in
   start | goal | resend | followup | wait | answer | result | close | headless | approve | pass) [ $# -gt 0 ] || usage; id=$1; shift ;;
-  list | autonomous-off) ;;
+  list | autonomous-off | watch) ;;
   *) usage ;;
 esac
 m= repo= auto= instdin=
@@ -20,7 +20,7 @@ while [ $# -gt 0 ]; do
     "start --task" | "followup --task" | "headless --task") task=$2 ;;
     "start --test" | "goal --test" | "followup --test" | "headless --test") test=$2 ;;
     "start --lane") lane=$2 ;;
-    "start --roster" | "autonomous-off --roster") roster=$2 ;;
+    "start --roster" | "autonomous-off --roster" | "watch --roster") roster=$2 ;;
     "approve --request" | "pass --request") rid=$2 ;;
     "approve --record") record=$2 ;;
     "start --repo") repo=$2 ;;
@@ -28,7 +28,7 @@ while [ $# -gt 0 ]; do
       [ -z "${model+x}" ] && [ -n "$2" ] || usage
       model=$2
       ;;
-    "headless --machine" | "autonomous-off --machine") usage ;;
+    "headless --machine" | "autonomous-off --machine" | "watch --machine") usage ;;
     *" --machine") m=$2 ;;
     "answer --text") text=$2 ;;
     "answer --keys")
@@ -46,11 +46,12 @@ case $cmd in
   answer) [ "${text+x}${keys+x}" = x ] || usage ;;
   approve) [ -n "${rid+x}" ] && [ -n "${record+x}" ] && [ -n "$instdin" ] || usage ;;
   pass) [ -n "${rid+x}" ] || usage ;;
+  watch) [ -n "${roster+x}" ] || usage ;;
 esac
 for v in ${text+"$text"} ${keys+"${keys[@]}"}; do [[ $v != -* ]] || { echo 'Answer values must not start with -.' >&2; exit 2; }; done
 
 N=
-if [ "$cmd" != list ] && [ "$cmd" != autonomous-off ]; then
+if [ "$cmd" != list ] && [ "$cmd" != autonomous-off ] && [ "$cmd" != watch ]; then
   [[ $id =~ ^[A-Za-z0-9][A-Za-z0-9-]{0,24}$ ]] || fail "Task id must be letters, digits or dash, start with a letter or digit, and be at most 25 characters."
   N=worker-${id,,}
 fi
@@ -187,10 +188,13 @@ chkowns() {
     [ "$d" = . ] || git cat-file -e "$sha:$d" 2>/dev/null || fail "Owns path $p: folder $d is not in the base commit."
   done
 }
+reqid() {
+  if [ -n "$m" ]; then rsh "ls -1 $Q/.stratum/approve" >"$t" || return 1; else ls -1 "$WT/.stratum/approve/" >"$t" 2>/dev/null || return 1; fi
+  rq=$(grep -m1 -xE '[0-9]+-[0-9]+\.req' "$t")
+}
 approval() {
-  local f=$WT/.stratum/approve/ rq in
-  if [ -n "$m" ]; then rsh "ls -1 $Q/.stratum/approve" >"$t" || return 0; else ls -1 "$f" >"$t" 2>/dev/null || return 0; fi
-  rq=$(grep -m1 -xE '[0-9]+-[0-9]+\.req' "$t") || return 0
+  local f=$WT/.stratum/approve/ in
+  reqid || return 0
   if [ -n "$m" ]; then rsh "cat -- $Q/.stratum/approve/$rq" >"$t" || return 0; f=$t; else f=$f$rq; fi
   in=$(render "$f") || return 0
   printf 'state\tapproval\t%s\t%s\nrequest\t%s\ntab\tworkspace %s, tab Main\ninput\t%s\n' "$N" "$PANE" "${rq%.req}" "$N" "$in"
@@ -274,9 +278,9 @@ start)
     fi
     qw=$Q
     quote "$repo"
-    rq=$Q
+    qr=$Q
     Q=$qw
-    U=" && { [ ! -f $rq/.stratum/worker-setup.sh ] || { echo 'setup output:' && cd $Q && bash $rq/.stratum/worker-setup.sh $rq 2>&1 || { echo \"worker-setup.sh exited \$? on $m\" >&2; exit 4; }; }; }"
+    U=" && { [ ! -f $qr/.stratum/worker-setup.sh ] || { echo 'setup output:' && cd $Q && bash $qr/.stratum/worker-setup.sh $qr 2>&1 || { echo \"worker-setup.sh exited \$? on $m\" >&2; exit 4; }; }; }"
     rsh "[ ! -L $Q/.stratum ] || { echo \"$Q/.stratum is a symlink\" >&2; exit 3; }; for p in $Q/brief.md $Q/result.md $Q/.stratum/git-guard.json${auto:+ $Q/.stratum/approve}; do [ ! -L \"\$p\" ] || { echo \"\$p is a symlink\" >&2; exit 3; }; [ ! -e \"\$p\" ] || { echo \"\$p already exists\" >&2; exit 3; }; done && cat > $Q/brief.md && mkdir -p $Q/.stratum && printf '%s\n' $(printf %q "$G") > $Q/.stratum/git-guard.json$A$U" < <(brief) || { rc=$? msg=$(head -1 "$e"); [ "$rc" != 4 ] || stop "$msg"; stop "cannot write brief.md and .stratum/git-guard.json in $WT on $m: ${msg:-exit $rc}"; }
   fi
   [ -n "$m" ] || [ ! -f "$repo/.stratum/worker-setup.sh" ] || { echo 'setup output:' && (cd "$WT" && bash "$repo/.stratum/worker-setup.sh" "$repo" 2>&1); } || stop "worker-setup.sh exited $?"
@@ -490,6 +494,98 @@ list)
     n=$((n + 1))
   done 3<<<"$x"
   [ "$n" != 0 ] || echo "no workers on ${m:-local}"
+  ;;
+watch)
+  [ -f "$roster" ] || fail "Roster not found: $roster"
+  sf=$roster.seen
+  : >>"$sf" || fail "Cannot write $sf."
+  mark() {
+    awk -F'\t' -v n="$N" '$1 != n' "$sf" >"$sf.new"
+    [ -z "$1" ] || printf '%s\t%s\n' "$N" "$1" >>"$sf.new"
+    mv -- "$sf.new" "$sf"
+  }
+  mapfile -t rows < <(grep -v '^[[:space:]]*$' "$roster")
+  [ ${#rows[@]} != 0 ] || fail "Roster $roster has no workers."
+  declare -A tg=() wtc=() qc=() idle=() resent=()
+  ms=
+  for l in "${rows[@]}"; do
+    IFS=$'\t' read -r -a f <<<"$l"
+    [[ ${f[0]:-} == worker-* ]] && [ -n "${f[1]:-}" ] || fail "Roster lines must be: name, machine, branch, task, split by TAB."
+    [ "${f[1]}" = local ] || [ -n "${tg[${f[1]}]:-}" ] || {
+      [ -n "$ms" ] || ms=$(herdr machine list --json 2>"$e") || fail "herdr machine list failed."
+      tg[${f[1]}]=$(jq -er --arg m "${f[1]}" 'first(.[] | select(.label == $m or .id == $m) | .target)' <<<"$ms" 2>/dev/null) || fail "Unknown machine: ${f[1]}."
+    }
+  done
+  bound=540 # ponytail: fixed 540 s bound to stay under the Bash tool's 600 s cap, raise it if the cap moves
+  tick=5    # ponytail: fixed 5 s between polls of all workers, lower it if a live run reacts too slowly
+  end=$((SECONDS + bound))
+  while :; do
+    for l in "${rows[@]}"; do
+      IFS=$'\t' read -r -a f <<<"$l"
+      N=${f[0]} m= H=(herdr) target=
+      [ "${f[1]}" = local ] || { m=${f[1]}; H=(herdr --machine "$m"); target=${tg[$m]}; }
+      old=$(awk -F'\t' -v n="$N" '$1 == n { v = $2 } END { print v }' "$sf")
+      if ! r=$("${H[@]}" agent get "$N" 2>"$e") || ! S=$(jq -er '.result.agent.agent_status' <<<"$r" 2>/dev/null); then
+        [ -z "$old" ] || continue
+        mark gone
+        printf 'state\tgone\t%s\t-\n' "$N"
+        exit 5
+      fi
+      PANE=$(jq -r '.result.agent.pane_id // "-"' <<<"$r")
+      key=
+      case $S in
+        blocked | idle | done)
+          [ -n "${wtc[$N]:-}" ] || { find_worker; wtc[$N]=$WT; qc[$N]=$Q; }
+          WT=${wtc[$N]} Q=${qc[$N]}
+          ;;
+      esac
+      case $S in
+        blocked)
+          if reqid; then
+            [ "approval ${rq%.req}" = "$old" ] && continue
+            mark "approval ${rq%.req}"
+            approval
+          fi
+          readpane || :
+          key="blocked $(cksum <"$t" | cut -d" " -f1)"
+          ;;
+        idle | done)
+          if question; then
+            key="blocked $(cksum <"$t" | cut -d" " -f1)"
+          elif { [ -z "$m" ] && [ -f "$WT/result.md" ]; } || { [ -n "$m" ] && rsh test -f "$Q/result.md"; }; then
+            key=finished
+          elif unsent; then
+            if [ -z "${resent[$N]:-}" ]; then
+              resent[$N]=1
+              ! push || continue
+            fi
+            key=unsent
+          else
+            idle[$N]=$((${idle[$N]:-0} + 1))
+            [ "${idle[$N]}" -lt 3 ] || key=stopped
+          fi
+          ;;
+      esac
+      [ "$S" = idle ] || [ "$S" = done ] || unset "idle[$N]"
+      if [ -z "$key" ]; then
+        [ "$S" != working ] || [ -z "$old" ] || mark ""
+        continue
+      fi
+      [ "$key" != "$old" ] || continue
+      mark "$key"
+      case $key in
+        blocked*) st blocked; exit 4 ;;
+        finished) st finished; exit 0 ;;
+        unsent) st unsent; exit 7 ;;
+        stopped) st stopped; exit 5 ;;
+      esac
+    done
+    if [ "$SECONDS" -ge "$end" ]; then
+      printf 'watch\tno event\t%s workers\n' "${#rows[@]}"
+      exit 3
+    fi
+    sleep "$tick"
+  done
   ;;
 approve | pass)
   find_worker

@@ -116,6 +116,9 @@ LOCK2_WORKER_CALLS = [
     'bash scripts/st-worker.sh "pass" worker-t1',
     "st-worker.sh wait worker-b",
     "st-worker.sh start t9 --autonomous",
+    "st-worker.sh resend worker-b",
+    "st-worker.sh followup worker-b --task t --test x",
+    "st-worker.sh watch --roster r",
 ]
 
 D30_SILENT = [

@@ -1305,6 +1305,42 @@ STUB_SSH_RC=255 axrun
 check "AM6 ssh down on the repo flag write: exit 1, the line, no worktree create or agent start" '[ $rc = 1 ] && hasline "cannot write .stratum/autonomous on laptop: ssh: stub failure" && [ "$(cnt "^--machine\tlaptop\tworktree\tcreate\t")" = 0 ] && [ "$(cnt "^--machine\tlaptop\tagent\tstart\t")" = 0 ]'
 autoclr
 
+wr="$tmp/wroster"; printf 'worker-t004\tlocal\tworker-t004\tT004\n' > "$wr"
+sleeps() { grep -c '^sleep' "$tmp/calls"; }
+rto=$(command -v timeout)
+wrun() { run "$rto" 60 bash "$script" watch --roster "$wr"; }
+mk; rm -f "$wr.seen"; states working working done; printf 'R\n' > "$lw/result.md"
+wrun
+check "WC1 watch: finished after two polls, exit 0, seen holds finished" '[ $rc = 0 ] && hasline "state\tfinished\tworker-t004\t%s" "$(pane)" && [ "$(sleeps)" = 2 ] && [ "$(cat "$wr.seen")" = "$(printf "worker-t004\tfinished")" ] && never 0 0'
+states done done blocked; sentpane > "$tmp/pane.txt"; reset
+wrun
+check "WC2 a seen finished worker is skipped; a new question is reported: exit 4, blocked" '[ $rc = 4 ] && hasline "state\tblocked\tworker-t004\t%s" "$(pane)" && ! grep -q "^state	finished" <<<"$out" && [ "$(sleeps)" = 2 ]'
+states blocked blocked working blocked; reset
+wrun
+check "WC3 the same open question is not reported again until the worker worked: exit 4 after three polls" '[ $rc = 4 ] && [ "$(sleeps)" = 3 ] && hasline "state\tblocked\tworker-t004\t%s" "$(pane)"'
+mk; rm -f "$wr.seen"; states idle working done; unsentpane > "$tmp/pane.txt"; sentpane > "$tmp/pane.after"; : > "$tmp/resume_result"
+wrun
+check "WC4 unsent prompt: one Enter by itself, then finished" '[ $rc = 0 ] && [ "$(cnt "^agent\tsend-keys\tworker-t004\tenter$")" = 1 ] && hasline "state\tfinished\tworker-t004\t%s" "$(pane)" && never 0 0'
+mk; rm -f "$wr.seen"; states idle; unsentpane > "$tmp/pane.txt"
+wrun
+check "WC5 prompt still in the box after the Enter: exit 7, state unsent" '[ $rc = 7 ] && [ "$(cnt "^agent\tsend-keys\tworker-t004\tenter$")" = 1 ] && hasline "state\tunsent\tworker-t004\t%s" "$(pane)"'
+mk; rm -f "$wr.seen"; states idle; sentpane > "$tmp/pane.txt"
+wrun
+check "WC6 idle with no result, question or prompt for three polls: exit 5, stopped" '[ $rc = 5 ] && [ "$(sleeps)" = 2 ] && hasline "state\tstopped\tworker-t004\t%s" "$(pane)"'
+mk; rm -f "$wr.seen"
+STUB_FAIL="agent get" run bash "$script" watch --roster "$wr"
+check "WC7 a worker that is gone and never seen: exit 5, the gone line" '[ $rc = 5 ] && [ "$out" = "$(printf "state\tgone\tworker-t004\t-")" ]'
+apx; rm -f "$wr.seen"; states blocked; mkreq "$rid" 'npm test'
+wrun
+check "WC8 approval request: exit 6, the request lines, seen holds its id" '[ $rc = 6 ] && hasline "state\tapproval\tworker-t004\t%s" "$(pane)" && hasline "request\t%s" "$rid" && [ "$(cat "$wr.seen")" = "$(printf "worker-t004\tapproval %s" "$rid")" ]'
+states blocked working done; printf 'R\n' > "$lw/result.md"; reset
+wrun
+check "WC9 the same request is not reported again: exit 0, finished" '[ $rc = 0 ] && ! grep -q "^state	approval" <<<"$out" && hasline "state\tfinished\tworker-t004\t%s" "$(pane)"'
+autoclr
+printf 'worker-t004\tnowhere\tworker-t004\tT004\n' > "$tmp/wbad"
+fresh; run bash "$script" watch --roster "$tmp/wbad"
+check "WC10 unknown machine: exit 1, the line, no agent call" '[ $rc = 1 ] && [ "$out" = "Unknown machine: nowhere." ] && [ "$(cnt "^agent\t")" = 0 ]'
+
 su="$repo/.stratum/worker-setup.sh"
 printf '%s\n' 'printf "%s\n%s\n" "$PWD" "$1" > setup.ran' 'echo setup >> "$STUB_T/order"' 'echo SETUP RAN' > "$su"
 fresh; run bash "$script" start "${sargs[@]}"
