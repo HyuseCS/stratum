@@ -134,6 +134,7 @@ printf '{"st-gone": {"model": "haiku"}, "st-build": {"model": "opus"}}\n' > "$tm
 cat > "$tmp/proj/.claude/settings.json" <<'EOF'
 {"permissions": {"allow": ["Skill(stratum:st-gone)", "Skill(stratum:x$(touch pwned))", "Skill(stratum:../x)", "Bash(npm test:*)", "mcp__plugin_stratum_figcraft__get_node", "mcp__plugin_stratum_figcraft__gone_tool"]}}
 EOF
+git -C "$tmp/proj" commit -qam "fixture: settings for the U5 and U7 rows"
 audit "$tmp/proj"
 check "U5 audit exits 0" [ "$rc" = 0 ]
 check "U5 dead model key discontinued" exits 0 [ "$(state "$tmp/proj" models-key st-gone)" = discontinued ]
@@ -163,6 +164,14 @@ check "U7 plugin in neither file is new" exits 0 [ "$(state "$tmp/proj-wt" plugi
 check "U7 allowed FigCraft tool is current" exits 0 [ "$(statein "$tmp/proj" figcraft get_node)" = current ]
 check "U7 unallowed FigCraft tool is new" exits 0 [ "$(statein "$tmp/proj" figcraft set_properties)" = new ]
 check "U7 no FigCraft row when none is allowed" exits 0 [ -z "$(kindrows "$tmp/proj-wt" figcraft)" ]
+printf 'lessons\n' > "$tmp/proj/.stratum/lessons.md"
+git -C "$tmp/proj" add -- .stratum/lessons.md
+printf '.stratum/lessons.md\n' >> "$tmp/proj/.gitignore"
+git -C "$tmp/proj" commit -qm "fixture: tracked lessons named in .gitignore" -- .gitignore .stratum/lessons.md
+audit "$tmp/proj"
+check "U7 tracked path named in .gitignore is current" exits 0 [ "$(state "$tmp/proj" ignore .stratum/lessons.md)" = current ]
+out=$(bash "$script" fix "$tmp/proj" ignore .stratum/lessons.md 2>&1); rc=$?
+check "U7 fix ignore on that path prints same" exits 0 contains "$out" "same .gitignore"
 
 before=$(snap)
 audit "$tmp/proj"
@@ -287,4 +296,96 @@ check "U17 only current, gone and listed rows" [ -z "$bad" ]
 noggit() { ! grep -Eq '\bgit\b.*\b(add|commit|push)\b' "$script"; }
 check "U19 script has the fix subcommand" grep -q '^ *fix)' "$script"
 check "U19 script runs no git add, commit or push" noggit
+
+u3="$tmp/u3"
+git init -q -b main "$u3"
+mkdir -p "$u3/.stratum" "$u3/.claude"
+printf 'node_modules/\nuser-line/\n' > "$u3/.gitignore"
+printf '@AGENTS.md\nuser pointer\n' > "$u3/CLAUDE.md"
+printf 'Agents.\n' > "$u3/AGENTS.md"
+printf '{"env": {"SECRET": "hunter2"}, "enabledPlugins": {"ponytail@ponytail": true}, "permissions": {"allow": ["Skill(stratum:st-gone)", "Bash(npm test:*)", "mcp__plugin_stratum_figcraft__get_node"]}}\n' > "$u3/.claude/settings.json"
+printf '# My constitution\n' > "$u3/.stratum/constitution.md"
+git -C "$u3" add -A
+git -C "$u3" commit -qm init
+printf '{"feature_directory": "specs/x", "phase": "build", "lane": "x"}\n' > "$u3/.stratum/state.json"
+printf 'my lessons\n' > "$u3/.stratum/lessons.md"
+printf 'my handoff\n' > "$u3/.stratum/handoff.md"
+printf '{"mode": "auto"}\n' > "$u3/.stratum/git-guard.json"
+printf '{"theme": "mine"}\n' > "$u3/.stratum/powerline.json"
+printf '{"enabled": true}\n' > "$u3/.stratum/advisor.json"
+printf '{"st-gone": {"model": "haiku"}, "st-build": {"model": "opus"}}\n' > "$u3/.stratum/models.json"
+printf 'auto\n' > "$u3/.stratum/commit-mode"
+printf '{"env": {"SECRET": "hunter2"}, "statusLine": {"type": "command", "command": "bash %s/statusline/st-statusline.sh"}}\n' "$tmp/cfg/plugins/cache/stratum/stratum/0.1.22" > "$u3/.claude/settings.local.json"
+cat > "$tmp/cfg/plugins/installed_plugins.json" <<EOF
+{"version": 2, "plugins": {"stratum@stratum": [
+{"scope": "local", "projectPath": "$u3", "installPath": "$cache7", "version": "0.7.0"}
+]}}
+EOF
+
+userfiles() { (cd "$u3/.stratum" && sha256sum constitution.md state.json lessons.md handoff.md git-guard.json powerline.json advisor.json); }
+before=$(userfiles)
+run fix "$u3" ignore .stratum/handoff.md
+check "U12 ignore fix changes .gitignore" exits 0 contains "$out" "changed .gitignore"
+run fix "$u3" pointer @.stratum/constitution.md
+check "U12 pointer fix changes CLAUDE.md" exits 0 contains "$out" "changed CLAUDE.md"
+run fix "$u3" plugins-off ponytail@ponytail
+check "U12 plugins-off fix changes settings.json" exits 0 contains "$out" "changed .claude/settings.json"
+run fix "$u3" statusline statusLine
+check "U12 statusline fix changes settings.local.json" exits 0 contains "$out" "changed .claude/settings.local.json"
+run fix "$u3" figcraft mcp__plugin_stratum_figcraft__set_properties
+check "U12 figcraft fix changes settings.json" exits 0 contains "$out" "changed .claude/settings.json"
+run fix "$u3" file .stratum/advisor.json
+check "U12 file fix refuses a user file" exits 3 contains "$out" "skip:"
+run fix "$u3" models-key st-gone
+check "U12 models-key fix changes models.json" exits 0 contains "$out" "changed .stratum/models.json"
+run fix "$u3" allow ".claude/settings.json:Skill(stratum:st-gone)"
+check "U12 allow fix changes settings.json" exits 0 contains "$out" "changed .claude/settings.json"
+run fix "$u3" gone-file .stratum/commit-mode
+check "U12 gone-file fix removes commit-mode" exits 0 [ ! -e "$u3/.stratum/commit-mode" ]
+after=$(userfiles)
+check "U12 user data files byte-equal" [ "$before" = "$after" ]
+check "U12 .gitignore keeps the user line" grep -qxF 'user-line/' "$u3/.gitignore"
+check "U12 CLAUDE.md keeps the user line" grep -qxF 'user pointer' "$u3/CLAUDE.md"
+check "U12 settings.json keeps env" [ "$(pyq "$u3/.claude/settings.json" 'd["env"] == {"SECRET": "hunter2"}')" = true ]
+check "U12 settings.json keeps the user allow rule and drops the dead one" [ "$(pyq "$u3/.claude/settings.json" 'd["permissions"]["allow"] == ["Bash(npm test:*)", "mcp__plugin_stratum_figcraft__get_node", "mcp__plugin_stratum_figcraft__set_properties"]')" = true ]
+check "U12 settings.json turns the plugin off" [ "$(pyq "$u3/.claude/settings.json" 'd["enabledPlugins"] == {"ponytail@ponytail": False}')" = true ]
+check "U12 settings.local.json keeps env" [ "$(pyq "$u3/.claude/settings.local.json" 'd["env"] == {"SECRET": "hunter2"}')" = true ]
+check "U12 statusLine moves to the record's path" [ "$(pyq "$u3/.claude/settings.local.json" 'd["statusLine"]["command"]')" = "bash $cache7/statusline/st-statusline.sh" ]
+check "U12 models-key keeps the live key" [ "$(pyq "$u3/.stratum/models.json" 'd == {"st-build": {"model": "opus"}}')" = true ]
+audit "$u3"
+check "U12 audit output does not show the env value" [ "$(grep -c hunter2 <<<"$rows")" = 0 ]
+
+printf '{"statusLine": {"type": "command", "command": "bash /opt/mine/statusline.sh"}}\n' > "$u3/.claude/settings.local.json"
+slbefore=$(sha256sum "$u3/.claude/settings.local.json")
+run fix "$u3" statusline statusLine
+check "U16 custom statusLine is refused with exit 3" exits 3 contains "$out" "skip: not a Stratum statusline"
+check "U16 refused statusLine fix writes nothing" [ "$slbefore" = "$(sha256sum "$u3/.claude/settings.local.json")" ]
+run fix "$u3" statusline statusLine --force
+check "U16 statusLine fix with --force exits 0 and changes it" exits 0 contains "$out" "changed .claude/settings.local.json"
+check "U16 --force points statusLine at the record's path" [ "$(pyq "$u3/.claude/settings.local.json" 'd["statusLine"]["command"]')" = "bash $cache7/statusline/st-statusline.sh" ]
+
+git -C "$u3" worktree add -q -b feat-dirty "$tmp/u3-dirty"
+printf 'user edit\n' >> "$tmp/u3-dirty/CLAUDE.md"
+git -C "$u3" worktree add -q --detach "$tmp/u3-det"
+dirtysum=$(sha256sum "$tmp/u3-dirty/CLAUDE.md")
+audit "$u3"
+check "U15 audit exits 0" [ "$rc" = 0 ]
+check "U15 non-current CLAUDE.md row in the dirty worktree is skip" [ "$(state "$tmp/u3-dirty" pointer @.stratum/constitution.md)" = skip ]
+check "U15 skip row names CLAUDE.md as uncommitted" [ "$(rowsof "$tmp/u3-dirty" pointer @.stratum/constitution.md | cut -f5)" = "CLAUDE.md has uncommitted changes" ]
+check "U15 current CLAUDE.md row in the dirty worktree stays current" [ "$(state "$tmp/u3-dirty" pointer @AGENTS.md)" = current ]
+check "U15 other rows of the dirty worktree are not skip" [ -z "$(awk -F'\t' -v f="$tmp/u3-dirty" '$1 == f && $4 == "skip" && $2 != "pointer"' <<<"$rows")" ]
+check "U15 dirty CLAUDE.md is byte-equal after audit" [ "$dirtysum" = "$(sha256sum "$tmp/u3-dirty/CLAUDE.md")" ]
+check "U15 detached worktree has committed-file rows" [ -n "$(awk -F'\t' -v f="$tmp/u3-det" '$1 == f && $2 == "ignore"' <<<"$rows")" ]
+check "U15 committed-file rows of the detached worktree are skip with the detached reason" [ -z "$(awk -F'\t' -v f="$tmp/u3-det" '$1 == f && ($2 == "ignore" || $2 == "pointer" || $2 == "plugins-off" || $2 == "figcraft" || $2 == "allow") && ($4 != "skip" || $5 != "detached HEAD, no branch to commit on")' <<<"$rows")" ]
+
+git init -q -b main "$tmp/u21"
+git -C "$tmp/u21" commit -q --allow-empty -m init
+mkdir -p "$tmp/u21/.stratum"
+run fix "$tmp/u21" pointer @AGENTS.md
+check "U21 pointer @AGENTS.md with no AGENTS.md is same" exits 0 contains "$out" "same CLAUDE.md"
+check "U21 that fix creates no CLAUDE.md" [ ! -e "$tmp/u21/CLAUDE.md" ]
+check "U21 that fix creates no AGENTS.md" [ ! -e "$tmp/u21/AGENTS.md" ]
+run fix "$tmp/u21" pointer @.stratum/constitution.md
+check "U21 CLAUDE.md gets only the constitution pointer" [ "$(cat "$tmp/u21/CLAUDE.md")" = "@.stratum/constitution.md" ]
+check "U21 no AGENTS.md after the constitution fix" [ ! -e "$tmp/u21/AGENTS.md" ]
 exit "$fail"
