@@ -132,7 +132,7 @@ check "U4 bad JSON is invalid" [ "$(slraw '{"statusLine": ')" = invalid ]
 
 printf '{"st-gone": {"model": "haiku"}, "st-build": {"model": "opus"}}\n' > "$tmp/proj/.stratum/models.json"
 cat > "$tmp/proj/.claude/settings.json" <<'EOF'
-{"permissions": {"allow": ["Skill(stratum:st-gone)", "Skill(stratum:x$(touch pwned))", "Bash(npm test:*)", "mcp__plugin_stratum_figcraft__get_node", "mcp__plugin_stratum_figcraft__gone_tool"]}}
+{"permissions": {"allow": ["Skill(stratum:st-gone)", "Skill(stratum:x$(touch pwned))", "Skill(stratum:../x)", "Bash(npm test:*)", "mcp__plugin_stratum_figcraft__get_node", "mcp__plugin_stratum_figcraft__gone_tool"]}}
 EOF
 audit "$tmp/proj"
 check "U5 audit exits 0" [ "$rc" = 0 ]
@@ -141,6 +141,7 @@ check "U5 live model key current" exits 0 [ "$(state "$tmp/proj" models-key st-b
 check "U5 dead skill allow entry discontinued" exits 0 [ "$(statein "$tmp/proj" allow 'Skill(stratum:st-gone)')" = discontinued ]
 check "U5 dead FigCraft allow entry discontinued" exits 0 [ "$(statein "$tmp/proj" allow mcp__plugin_stratum_figcraft__gone_tool)" = discontinued ]
 check "U5 injected allow entry invalid" exits 0 [ "$(statein "$tmp/proj" allow 'Skill(stratum:x$(touch pwned))')" = invalid ]
+check "U5 skill entry with a slash invalid" exits 0 [ "$(statein "$tmp/proj" allow 'Skill(stratum:../x)')" = invalid ]
 check "U5 no file pwned under the temp folder" exits 0 [ -z "$(find "$tmp" -name pwned)" ]
 check "U5 user Bash rule has no row" exits 0 [ -z "$(statein "$tmp/proj" allow 'npm test')" ]
 

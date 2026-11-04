@@ -31,15 +31,22 @@ case $1 in
       allow permissions.allow .claude/settings.json \
       allow skills/ .claude/settings.json \
       gone-file .stratum/commit-mode "each checkout"
+    exit
     ;;
-  audit)
-    [ $# -le 2 ] || usage
-    folder=${2:-$PWD}
-    main=$(git -C "$folder" worktree list --porcelain 2>/dev/null | sed -n '1s/^worktree //p') || true
-    [ -d "${main:=$folder}/.stratum" ] || { echo "Not a Stratum project: $folder. Run /stratum:st-init there." >&2; exit 1; }
-    exec python3 -I - "$main" "$cfg" <<'PY'
-import json, os, re, subprocess, sys
-main, cfg = sys.argv[1:]
+  audit) [ $# -le 2 ] || usage ;;
+  plugin) [ $# = 2 ] || usage ;;
+  fix) [ $# = 4 ] || { [ $# = 5 ] && [ "$5" = --force ]; } || usage ;;
+  *) usage ;;
+esac
+main=
+if [ "$1" != plugin ]; then
+  folder=${2:-$PWD}
+  main=$(git -C "$folder" worktree list --porcelain 2>/dev/null | sed -n '1s/^worktree //p') || true
+  [ -d "${main:=$folder}/.stratum" ] || { echo "Not a Stratum project: $folder. Run /stratum:st-init there." >&2; exit 1; }
+fi
+exec python3 -I - "$cfg" "$main" "$@" <<'PY'
+import json, os, re, shutil, subprocess, sys
+cfg, main, cmd, *args = sys.argv[1:]
 IGNORE = [".stratum/handoff.md", ".stratum/lessons.md", ".stratum/weather.json", ".stratum/powerline.json",
           ".stratum/git-guard.json", ".stratum/models.json", "graphify-out/"]
 FILES = [".stratum/state.json", ".stratum/git-guard.json", ".stratum/models.json", ".stratum/powerline.json",
@@ -55,8 +62,11 @@ def clean(s):
     return re.sub(r"[\x00-\x1f\x7f]", "?", str(s))
 
 
+ROWS, TARGET = [], {}
+
+
 def row(f, kind, name, state, detail=""):
-    print("\t".join(clean(x) for x in (f, kind, name, state, detail)))
+    ROWS.append(tuple(clean(x) for x in (f, kind, name, state, detail)))
 
 
 def load(p, missing={}):
@@ -88,6 +98,51 @@ def allowed(x):
     return [s for s in a if isinstance(s, str)] if isinstance(a, list) else []
 
 
+def records():
+    ip = load(f"{cfg}/plugins/installed_plugins.json")
+    try:
+        return [r for r in ip["plugins"]["stratum@stratum"] if isinstance(r, dict)]
+    except (KeyError, TypeError):
+        return []
+
+
+if cmd == "plugin":
+    f = os.path.abspath(args[0])
+    mine = [r for r in records() if r.get("scope") in ("local", "project")
+            and isinstance(r.get("projectPath"), str) and os.path.normpath(r["projectPath"]) == f]
+    if not mine:
+        sys.exit(f"No local or project Stratum install record with the path {f}.")
+    if not os.path.isdir(f):
+        sys.exit(f"Folder missing: {f}.")
+    me = (mine[0]["projectPath"], mine[0]["scope"])
+    again = f"Run: cd {f} && claude plugin update stratum@stratum -s {me[1]}"
+    if not shutil.which("claude"):
+        sys.exit(f"claude not found. {again}")
+
+    def others():
+        return sorted(str(((r.get("projectPath"), r.get("scope")), r.get("lastUpdated")))
+                      for r in records() if (r.get("projectPath"), r.get("scope")) != me)
+
+    before = others()
+    p = subprocess.run(["claude", "plugin", "update", "--json", "-s", me[1], "stratum@stratum"],
+                       cwd=f, capture_output=True, text=True, stdin=subprocess.DEVNULL)
+    out = {}
+    for s in [p.stdout, *reversed(p.stdout.splitlines())]:
+        try:
+            v = json.loads(s)
+        except ValueError:
+            continue
+        if isinstance(v, dict):
+            out = v
+            break
+    nv = out.get("newVersion")
+    now = [r for r in records() if (r.get("projectPath"), r.get("scope")) == me]
+    if p.returncode == 0 and out.get("outcome") == "ok" and now and now[0].get("version") == nv and others() == before:
+        print(f"ok {nv} {now[0].get('installPath')}")
+        sys.exit()
+    print(out.get("message") or p.stderr.strip() or "claude plugin update failed", file=sys.stderr)
+    sys.exit(again)
+
 mk = load(f"{cfg}/plugins/known_marketplaces.json", None)
 mk = mk.get("stratum") if mk else None
 loc = mk.get("installLocation") if isinstance(mk, dict) else None
@@ -117,10 +172,7 @@ for line in (read(f"{loc}/skills/st-design/design-tool.md") or "").splitlines():
 ip = load(f"{cfg}/plugins/installed_plugins.json")
 if ip is None:
     sys.exit(f"Not a JSON object: {cfg}/plugins/installed_plugins.json")
-try:
-    recs = [r for r in ip["plugins"]["stratum@stratum"] if isinstance(r, dict)]
-except (KeyError, TypeError):
-    recs = []
+recs = records()
 
 cos = []
 for block in git("-C", main, "worktree", "list", "--porcelain").stdout.split("\n\n"):
@@ -160,6 +212,7 @@ def install(f, r, extra=""):
 
 
 def statusline(f, target, only_stratum=False):
+    TARGET[f] = target
     s = load(f"{f}/.claude/settings.local.json")
     if s is None:
         if not only_stratum:
@@ -185,7 +238,7 @@ def statusline(f, target, only_stratum=False):
 def dead(s):
     m = SKILL.fullmatch(s)
     if m:
-        return "/" in m[1] or not os.path.isfile(f"{loc}/skills/{m[1]}/SKILL.md")
+        return "invalid" if "/" in m[1] else not os.path.isfile(f"{loc}/skills/{m[1]}/SKILL.md")
     m = MCP.fullmatch(s)
     if m:
         return m[1] not in servers or (m[1] == "figcraft" and m[2] is not None and s not in tools)
@@ -193,7 +246,8 @@ def dead(s):
 
 
 def judged(f, kind, name, is_dead, detail):
-    row(f, kind, name, ("discontinued" if SAFE.fullmatch(name) else "invalid") if is_dead else "current", detail)
+    row(f, kind, name, "current" if not is_dead else
+        "discontinued" if is_dead is True and SAFE.fullmatch(name) else "invalid", detail)
 
 
 g = load(f"{cfg}/settings.json") or {}
@@ -264,7 +318,72 @@ for c, branch in cos:
 
 for p, state, detail in tail:
     row(p, "install", "stratum@stratum", state, detail)
+
+if cmd == "audit":
+    print("\n".join("\t".join(r) for r in ROWS))
+    sys.exit()
+
+
+def refuse(msg):
+    print(msg, file=sys.stderr)
+    sys.exit(3)
+
+
+folder, kind, name = os.path.abspath(args[0]), args[1], args[2]
+entry = name
+if kind == "allow":
+    fn, _, entry = name.partition(":")
+    if fn not in (".claude/settings.json", ".claude/settings.local.json"):
+        refuse(f"skip: {fn} is not a settings file")
+else:
+    fn = {"ignore": ".gitignore", "pointer": "CLAUDE.md", "statusline": ".claude/settings.local.json",
+          "plugins-off": ".claude/settings.json", "figcraft": ".claude/settings.json",
+          "models-key": ".stratum/models.json"}.get(kind, name)
+path = os.path.join(folder, fn)
+data = None
+if kind in ("statusline", "plugins-off", "figcraft", "models-key", "allow"):
+    data = load(path, {})
+    if data is None:
+        refuse(f"skip: {fn} is not valid JSON")
+if kind == "file" and name != ".stratum/state.json":
+    refuse(f"skip: {name} is written after the st-init question")
+t = TARGET.get(folder)
+if kind == "statusline" and (not t or t.get("version") != ver):
+    refuse("skip: install not updated" if t else "skip: no install record")
+hit = [r[3] for r in ROWS if r[:3] == (folder, kind, clean(entry)) and (kind != "allow" or r[4] == fn)]
+state = hit[0] if hit else None
+if state == "current":
+    print(f"same {fn}")
+    sys.exit()
+if state == "ask" and len(args) < 4:
+    refuse("skip: not a Stratum statusline")
+if state not in ("outdated", "new", "discontinued", "ask"):
+    refuse(f"skip: {kind} {name} is not an item to fix in {folder}")
+
+if kind in ("ignore", "pointer"):
+    old = read(path) or ""
+    with open(path, "a", encoding="utf-8") as fh:
+        fh.write(("\n" if old and not old.endswith("\n") else "") + name + "\n")
+elif kind == "gone-file":
+    os.remove(path)
+elif kind == "file":
+    data = {"feature_directory": None, "phase": None, "lane": None}
+elif kind == "statusline":
+    data["statusLine"] = {"type": "command", "command": f"bash {t['installPath']}/statusline/st-statusline.sh"}
+elif kind == "plugins-off":
+    if not isinstance(data.setdefault("enabledPlugins", {}), dict):
+        refuse("skip: enabledPlugins in .claude/settings.json is not an object")
+    data["enabledPlugins"][name] = False
+elif kind == "figcraft":
+    data["permissions"]["allow"].append(name)
+elif kind == "models-key":
+    del data[name]
+elif kind == "allow":
+    data["permissions"]["allow"] = [e for e in data["permissions"]["allow"] if e != entry]
+if data is not None:
+    text = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(text)
+print(f"changed {fn}")
 PY
-    ;;
-  *) usage ;;
-esac
