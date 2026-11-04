@@ -111,6 +111,7 @@ The other Fast-lane points use `/advisor`. The Quick lane has no advisor.
   Two rounds at most per point per gate pass, then the user decides. A later gate pass starts a new count.
 - `no change since <base>: skip`: nothing changed after the last review, so the pass is skipped.
 - After each `/advisor` call, run `bash <plugin root>/scripts/st-advisor.sh note <point> <feature dir> "<one-line summary>"`.
+- `BLOCKED: no Stratum Codex home: run st-advisor.sh codex-home`: ask the user to run it, or run `bash <plugin root>/scripts/st-advisor.sh codex-home` on their yes and show its line, then run the same point again. Do not run `continued` for it.
 - `BLOCKED: <reason>`: stop and show the user the reason. Nothing passes the gate. If the user says to continue, run `bash <plugin root>/scripts/st-advisor.sh continued <point> <feature dir>` and skip the point. Do not retry it in this gate pass.
 - Each run appends a record to `<feature dir>/advisor.md`: the point, the time, the SHA256 of the input, the verdict and the findings. The mode comes from `.stratum/advisor.json`: `auto` (the default when the file has no `mode`), `codex`, `both` or `off`. A worktree with no file reads the main checkout's file. No file in either gives the `mode not set` line.
 - At the build gate, `check plan` compares the latest plan record with the current input. `advisor approval is stale` or `no record` counts as no approval: run the plan point once more, as a round. Skip the check after a `no advisor` line.
