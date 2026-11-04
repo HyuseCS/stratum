@@ -76,7 +76,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 
 ## 3. Skills
 
-- **D9.** Twenty-five entry skills:
+- **D9.** Twenty-six entry skills:
 
 | Skill | Job |
 |-------|-----|
@@ -89,6 +89,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 | `st-theme <name>` | Set the color theme of the statusline and Token Weather. |
 | `st-model <agent> <value>...` | Set an agent's model or effort in `.stratum/models.json`. |
 | `st-init` | Set up a project: data files, constitution (grilled), tool check. |
+| `st-update [folder]` | Audit the project's Stratum files in every checkout, then update the install, statusline and harness lines after one OK. |
 | `st-template <name>` | Copy a plugin template into `.stratum/templates/` to edit. |
 | `st-handoff` | Write the session handoff. |
 | `st-pr [base]` | Open a PR: facts from git and the spec, one gate, a draft that becomes ready when CI passes. |
