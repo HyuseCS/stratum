@@ -13,7 +13,7 @@ import time
 REASON = ".stratum/approve/ and .stratum/autonomous are written only by the orchestrator."
 ALLOW = '{"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"allow"}}}'
 EDIT_TOOLS = ("Edit", "Write", "MultiEdit", "NotebookEdit")
-RISKY = {"approve", "pass", "autonomous-off", "wait", "start"}
+RISKY = {"approve", "pass", "autonomous-off", "wait", "start", "resend", "followup", "watch"}
 SECRET_NAMES = (".env*", "*.pem", "*.key", "id_rsa*", "id_ed25519*", ".npmrc", ".netrc")
 DEPENDENCY_NAMES = ("package.json", "package-lock.json", "pnpm-lock.yaml", "yarn.lock", "bun.lockb",
                     "pyproject.toml", "requirements*.txt", "uv.lock", "Cargo.toml", "Cargo.lock",

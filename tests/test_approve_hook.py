@@ -88,6 +88,7 @@ OWN_COMMITS = [
     "git add src/a.py && git commit -m x > log.txt",
     "git add src/a.py && git commit -m x 2>&1",
     'git add src/a.py && git commit -m "explain git guard"',
+    'git add src/a.py && git commit -m "fix(a): b" -m "why it changed"',
 ]
 
 TEST_RUNNERS = ["npm test", "npm run test", "npx vitest run", "cargo test", "go test ./...", "pytest", "uv run pytest"]
@@ -115,6 +116,9 @@ LOCK2_WORKER_CALLS = [
     'bash scripts/st-worker.sh "pass" worker-t1',
     "st-worker.sh wait worker-b",
     "st-worker.sh start t9 --autonomous",
+    "st-worker.sh resend worker-b",
+    "st-worker.sh followup worker-b --task t --test x",
+    "st-worker.sh watch --roster r",
 ]
 
 D30_SILENT = [

@@ -85,7 +85,11 @@ case "$1 $2" in
   printf 'pane\t%s\n' "$p" >> "$T/made"
   jq -nc --arg p "$p" '{result:{type:"pane_created",pane:{pane_id:$p}}}' ;;
 "agent read")
-  if [ -e "$T/pane.txt" ]; then tail -n "$7" "$T/pane.txt"; else printf 'STUB PANE %s\n' "$X"; fi ;;
+  if [ "$5" = visible ]; then cat "$T/pane.txt" 2>/dev/null || printf 'STUB PANE %s\n' "$X"
+  elif [ -e "$T/pane.txt" ]; then tail -n "$7" "$T/pane.txt"; else printf 'STUB PANE %s\n' "$X"; fi ;;
+"agent send-keys")
+  [ ! -e "$T/pane.after" ] || [ "${*: -1}" != enter ] || mv "$T/pane.after" "$T/pane.txt"
+  echo '{"result":{}}' ;;
 "agent wait")
   if [[ " $* " == *" --until "* ]] && [ -e "$T/resume_result" ]; then
     printf 'RESULT FILE %s\n' "$X" > "$(jq -r .result.worktree.path "$T/wc.json")/result.md"
@@ -169,7 +173,8 @@ repo="$tmp/repo"
 mkdir -p "$repo/.stratum"
 git -C "$repo" init -q
 printf '{}\n' > "$repo/.stratum/state.json"
-git -C "$repo" add .stratum/state.json
+mkdir -p "$repo/src" "$repo/tests"; : > "$repo/src/keep"; : > "$repo/tests/keep"
+git -C "$repo" add .stratum/state.json src/keep tests/keep
 printf '.stratum/models.json\n' >> "$repo/.git/info/exclude"
 git -C "$repo" -c user.name=t -c user.email=t@t commit -q -m first
 git -C "$repo" remote add origin https://github.com/stub/stub.git
@@ -185,16 +190,17 @@ printf '%s\n' \
   '1. Commit each finished unit with the st-git agent, exact paths only. Never commit brief.md, result.md, .stratum/git-guard.json or .stratum/approve/, and never write in .stratum/approve/.' \
   "2. Before you build on a teammate's work, merge its branch: \`git log <branch>\`, \`git merge <branch>\`. A teammate on another machine shares no commits with you: send it messages only, and do not build on its work." \
   '3. Ask a teammate by name: on your machine, SendMessage to its name; on another machine, `herdr --machine <label> agent prompt <name> "<text>"`, with `<label>` from `herdr machine list` on your machine.' \
-  '4. Never merge into the base branch and never push. Merging a teammate'"'"'s branch into your own (rule 2) is fine. When your task says to run /stratum:st-pr, run it: it pushes your branch and opens the PR, and that is the only push allowed. The orchestrator reviews every branch and is the only one who merges into the base.' > "$rules"
+  '4. Never merge into the base branch and never push. Merging a teammate'"'"'s branch into your own (rule 2) is fine. When your task says to run /stratum:st-pr, run it: it pushes your branch and opens the PR, and that is the only push allowed. The orchestrator reviews every branch and is the only one who merges into the base.' \
+  '5. Commit from the worktree root with `git add <path> <path> && git commit -m "<subject>" -m "<body>"`. Use no `cd`, no `git -C`, no pipe, no shell variable, no `$(...)`, no heredoc and no `-F` file: the orchestrator approves only this form. Give this rule word for word to the st-git agent.' > "$rules"
 P="/goal \`$testcmd\` exits 0, the change is committed on branch worker-t004, and result.md is written; read brief.md in this folder first and follow it"
 sargs=(T004 --task "$task" --test "$testcmd" --lane "$lane" --roster "$roster")
 
 reset() { : > "$tmp/calls"; : > "$tmp/gh_calls"; }
 states() { rm -f "$tmp/n_get"; printf '%s\n' "$@" > "$tmp/states"; }
 fresh() {
-  rm -rf "$tmp"/repo-worker-* "$tmp"/n_* "$tmp/closed" "$tmp/resume_result" "$tmp/wc.json" "$tmp/s2" "$tmp/pane.txt" "$tmp/made" "$tmp/order"
+  rm -rf "$tmp"/repo-worker-* "$tmp"/n_* "$tmp/closed" "$tmp/resume_result" "$tmp/wc.json" "$tmp/s2" "$tmp/pane.txt" "$tmp/pane.after" "$tmp/made" "$tmp/order"
   printf 'x%s\n' "$RANDOM$RANDOM" > "$tmp/x"
-  printf 'TASK BODY %s\n' "$(cat "$tmp/x")" > "$task"
+  printf 'TASK BODY %s\nOwns: `src/a.py`.\n' "$(cat "$tmp/x")" > "$task"
   jq -nc '[{workspace_id:"stubDecoyWS",label:"notaworker"}]' > "$tmp/ws.json"
   jq -nc '[{path:"/stub/decoy",branch:"notaworker",open_workspace_id:"stubDecoyWS"}]' > "$tmp/wt.json"
   echo '[]' > "$tmp/agents.json"
@@ -219,6 +225,11 @@ never() {
   [ "$(cnt '^workspace\tclose\t')" = "$1" ] && [ "$(cnt '^agent\tprompt\t')" = "$2" ]
 }
 nopane() { ! grep -q 'STUB PANE' <<<"$out"; }
+nb=$'\xc2\xa0'
+rule=$(printf '─%.0s' {1..40})
+unsentpane() { printf '%s\n' '' "$rule" "❯$nb$P" "$rule" '  [PONYTAIL]' '  ⏵⏵ auto mode on (shift+tab to cycle)'; }
+sentpane() { printf '%s\n' "❯$nb$P" '● Working on it.' "$rule" "❯$nb" "$rule" '  ⏵⏵ auto mode on (shift+tab to cycle)'; }
+dialogpane() { printf '%s\n' ' ☐ Worker folder' '│ Which folder holds the brief.md?' '❯ 1. Newest brief.md folder (Recommended)' '     I pick the newest one.' '  2. I will type the path' '  3. Type something.' "$rule" '  4. Chat about this' 'Enter to select · ↑/↓ to navigate · Esc to cancel'; }
 paneshown() { grep -qxF 'pane text:' <<<"$out" && grep -qxF "STUB PANE $(rnd)" <<<"$out"; }
 
 prej() {
@@ -239,7 +250,7 @@ s1() {
   check "S1 brief names the plugin root" 'grep -qxF -- "- Plugin root: $pr" "$b"'
   check "S1 brief order: Model, then Plugin root, then Your machine" 'mo=$(grep -n "^- Model: " "$b" | cut -d: -f1) && po=$(grep -n "^- Plugin root: " "$b" | cut -d: -f1) && yo=$(grep -n "^- Your machine: " "$b" | cut -d: -f1) && [ "$mo" -lt "$po" ] && [ "$po" -lt "$yo" ]'
   check "S1 brief has every roster row" 'grep -qxF "| worker-t004 | local | worker-t004 | T004 |" "$b" && grep -qxF "| worker-t005 | local | worker-t005 | T005 |" "$b"'
-  check "S1 brief has the four team rules" '[ "$(grep -cxFf "$rules" "$b")" = 4 ]'
+  check "S1 brief has the five team rules" '[ "$(grep -cxFf "$rules" "$b")" = 5 ]'
   check "S1 brief rule 1 is the whole B2 line" 'grep -qxF -- "1. Commit each finished unit with the st-git agent, exact paths only. Never commit brief.md, result.md, .stratum/git-guard.json or .stratum/approve/, and never write in .stratum/approve/." "$b"'
   check "S1 brief has the advisor block only when st-advisor.sh is next to the script" '[ -f "$b" ] && if [ -f "$sd/st-advisor.sh" ]; then grep -qxF "## Advisor" "$b"; else ! grep -q "^## Advisor" "$b"; fi'
   check "S1 git-guard.json in the worktree is auto with the worker branch" '[ "$(jq -S -c . "$(wt)/.stratum/git-guard.json")" = "$(jq -S -c -n "{commit:\"auto\",branch:\"worker-t004\"}")" ] && [ "$(grep -c . "$(wt)/.stratum/git-guard.json")" = 1 ]'
@@ -300,6 +311,13 @@ check "S5 exit 1" '[ $rc = 1 ]'
 check "S5 stopped line" 'grep -q "^stopped: .*stub refused" <<<"$out"'
 check "S5 worker line with ids" 'hasline "worker\tworker-t004\tlocal\t%s\t%s\tworker-t004\t%s" "$(wsid)" "$(pane)" "$(wt)"'
 check "S5 one prompt only, nothing closed" 'never 0 1'
+
+fresh; unsentpane > "$tmp/pane.txt"; sentpane > "$tmp/pane.after"
+STUB_FAIL="agent prompt" STUB_FAIL_CODE=agent_prompt_stalled run bash "$script" start "${sargs[@]}"
+check "S5b stalled prompt in the box: one Enter, no second paste, exit 0, state working" '[ $rc = 0 ] && [ "$(cnt "^agent\tsend-keys\tworker-t004\tenter$")" = 1 ] && never 0 1 && hasline "state\tworking\tworker-t004\t%s" "$(pane)"'
+fresh; unsentpane > "$tmp/pane.txt"
+STUB_FAIL="agent prompt" STUB_FAIL_CODE=agent_prompt_stalled run bash "$script" start "${sargs[@]}"
+check "S5c prompt still in the box after the Enter: exit 7, worker line, state unsent, pane text" '[ $rc = 7 ] && [ "$(cnt "^agent\tsend-keys\tworker-t004\tenter$")" = 1 ] && never 0 1 && hasline "worker\tworker-t004\tlocal\t%s\t%s\tworker-t004\t%s" "$(wsid)" "$(pane)" "$(wt)" && hasline "state\tunsent\tworker-t004\t%s" "$(pane)" && grep -qxF "pane text:" <<<"$out"'
 
 fresh
 jq -nc '[{workspace_id:"stubExistWS",label:"worker-t004"}]' > "$tmp/ws.json"
@@ -448,6 +466,28 @@ check "W5 exit 4" '[ $rc = 4 ]'
 check "W5 state blocked with the worker name, pane text" 'hasline "state\tblocked\tworker-t004\t%s" "$(pane)" && paneshown'
 check "W5 never-list" 'never 0 0'
 
+mk; states idle; unsentpane > "$tmp/pane.txt"
+run bash "$script" wait T004
+check "W7 idle with the /goal prompt in the box: exit 7, state unsent, pane text, no key sent" '[ $rc = 7 ] && hasline "state\tunsent\tworker-t004\t%s" "$(pane)" && grep -qxF "pane text:" <<<"$out" && [ "$(cnt "^agent\tsend-keys\t")" = 0 ] && never 0 0'
+mk; states done; dialogpane > "$tmp/pane.txt"; printf 'RESULT FILE %s\n' "$(rnd)" > "$(wt)/result.md"
+run bash "$script" wait T004
+check "W8 done with an open question and a result file: exit 4, state blocked, not finished" '[ $rc = 4 ] && hasline "state\tblocked\tworker-t004\t%s" "$(pane)" && ! grep -q "^state	finished" <<<"$out"'
+mk; states idle; sentpane > "$tmp/pane.txt"
+STUB_FAIL_UNTIL="agent wait" STUB_FAIL_CODE=timeout run bash "$script" wait T004
+check "W9 a sent /goal in the history and an empty box is not unsent: exit 5, state stopped" '[ $rc = 5 ] && hasline "state\tstopped\tworker-t004\t%s" "$(pane)"'
+mk; unsentpane > "$tmp/pane.txt"
+run bash "$script" goal T004 --test "$testcmd"
+check "GO1 goal with the prompt still in the box: exit 1, the resend line, no prompt" '[ $rc = 1 ] && [ "$out" = "The /goal prompt is still in the input box of worker-t004. Run resend." ] && never 0 0'
+mk; states idle working; unsentpane > "$tmp/pane.txt"; sentpane > "$tmp/pane.after"
+run bash "$script" resend T004
+check "RS1 resend: one Enter, no paste, exit 0, state working" '[ $rc = 0 ] && [ "$(cnt "^agent\tsend-keys\tworker-t004\tenter$")" = 1 ] && [ "$(cnt "^pane\tsend-text\t")" = 0 ] && never 0 0 && hasline "state\tworking\tworker-t004\t%s" "$(pane)"'
+mk; states idle; sentpane > "$tmp/pane.txt"
+run bash "$script" resend T004
+check "RS2 resend with an empty box: exit 1, the line, no key sent" '[ $rc = 1 ] && [ "$out" = "No unsent prompt in worker-t004: idle" ] && [ "$(cnt "^agent\tsend-keys\t")" = 0 ]'
+mk; states idle; unsentpane > "$tmp/pane.txt"
+run bash "$script" resend T004
+check "RS3 resend and the prompt stays: exit 7, state unsent" '[ $rc = 7 ] && [ "$(cnt "^agent\tsend-keys\tworker-t004\tenter$")" = 1 ] && hasline "state\tunsent\tworker-t004\t%s" "$(pane)"'
+
 fresh; states idle
 STUB_WT_LINK=resultfile run bash "$script" start "${sargs[@]}"
 check "W6 start with a pre-existing result.md stops: exit 1, already exists" '[ $rc = 1 ] && [ "$(grep -c "^stopped:" <<<"$out")" = 1 ] && hasline "stopped: %s/result.md already exists" "$(wt)"'
@@ -557,6 +597,11 @@ check "L1 exit 0" '[ $rc = 0 ]'
 check "L1 two found lines, states from the stub" '[ "$(grep -cP "^found\t" <<<"$out")" = 2 ] && hasline "found\tworker-t004\tlocal\tstubA%s\tstubA%s:p1\tblocked\t/stub/a%s" "$x" "$x" "$x" && hasline "found\tworker-t005\tlocal\tstubB%s\t-\tgone\t/stub/b%s" "$x" "$x"'
 check "L1 the other workspace is absent" '! grep -q notaworker <<<"$out" && ! grep -q "stubC" <<<"$out"'
 check "L1 never-list, no prompt, no close" 'never 0 0'
+jq '.[0].agent_status = "idle"' "$tmp/agents.json" > "$tmp/a.new" && mv "$tmp/a.new" "$tmp/agents.json"
+unsentpane > "$tmp/pane.txt"; run bash "$script" list
+check "L2 idle worker with the prompt in the box shows unsent" '[ $rc = 0 ] && hasline "found\tworker-t004\tlocal\tstubA%s\tstubA%s:p1\tunsent\t/stub/a%s" "$x" "$x" "$x"'
+dialogpane > "$tmp/pane.txt"; run bash "$script" list
+check "L2 idle worker with an open question shows blocked" '[ $rc = 0 ] && hasline "found\tworker-t004\tlocal\tstubA%s\tstubA%s:p1\tblocked\t/stub/a%s" "$x" "$x" "$x"'
 
 sendlog() { grep -P '^(agent\t(get|send-keys|wait)|pane\tsend-text)\t' "$tmp/calls"; }
 a1() {
@@ -585,6 +630,18 @@ a3() {
 a1 "$script"
 a2 "$script"
 a3 "$script"
+mk; states done working; dialogpane > "$tmp/pane.txt"
+run bash "$script" answer T004 --text "use main"
+check "AQ1 open question while done: --text picks Type something, types and sends, in one call" '[ $rc = 0 ] && [ "$(sendlog)" = "$(printf "agent\tget\tworker-t004\nagent\tsend-keys\tworker-t004\t3\npane\tsend-text\t%s\tuse main\nagent\tsend-keys\tworker-t004\tenter\nagent\twait\tworker-t004\t--until\tworking\t--timeout\t5000\nagent\tget\tworker-t004" "$(pane)")" ]'
+mk; states done working; dialogpane > "$tmp/pane.txt"
+run bash "$script" answer T004 --keys 2
+check "AQ2 open question while done: --keys sends the key" '[ $rc = 0 ] && hascall "agent\tsend-keys\tworker-t004\t2"'
+mk; states done; dialogpane | grep -v 'Type something' > "$tmp/pane.txt"
+run bash "$script" answer T004 --text "use main"
+check "AQ3 no Type something option: exit 1, the line, nothing sent" '[ $rc = 1 ] && [ "$out" = "The question has no \"Type something.\" option. Answer with --keys." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+mk; states done; { printf '%s\n' ' Do you want to proceed?' '❯ 1. Yes' '  2. No'; echo 'Enter to select · Esc to cancel'; } > "$tmp/pane.txt"
+run bash "$script" answer T004 --keys 1
+check "AQ4 permission dialog while done is not a question: exit 1, not blocked, nothing sent" '[ $rc = 1 ] && [ "$out" = "not blocked: done" ] && [ "$(cnt "^agent\tsend-keys\t")" = 0 ]'
 for a in --keys --text; do
   fresh; reset
   run bash "$script" answer T004 $a -x
@@ -654,7 +711,7 @@ r1() {
   check "R1 one ssh call to the saved target with BatchMode" '[ "$(grep -c . "$tmp/ssh")" = 1 ] && grep -qP "^-o\tBatchMode=yes\t--\tu@stubhost\t" "$tmp/ssh"'
   check "R1 ssh writes brief.md and git-guard.json under the path herdr answered" 'c=$(sshs); [ "$(wt)" = /home/u/proj-worker-t004 ] && grep -qF -- "cat > /home/u/proj-worker-t004/brief.md" <<<"$c" && grep -qF -- "mkdir -p /home/u/proj-worker-t004/.stratum" <<<"$c" && grep -qF -- "> /home/u/proj-worker-t004/.stratum/git-guard.json" <<<"$c" && grep -qF -- "$g" <<<"$c" && ! grep -qF -- "~/proj-worker-t004" "$tmp/ssh"'
   check "R1 brief on ssh stdin: heading, task, machine, result path" 'grep -qxF "# Brief: worker-t004" "$in" && grep -qxF "TASK BODY $(rnd)" "$in" && grep -qxF -- "- Your machine: laptop. \`local\` is the orchestrator'"'"'s machine." "$in" && grep -qxF -- "- Result file: /home/u/proj-worker-t004/result.md" "$in"'
-  check "R1 brief on ssh stdin: roster rows and the four rules" 'grep -qxF "| worker-t004 | laptop | worker-t004 | T004 |" "$in" && grep -qxF "| worker-t005 | local | worker-t005 | T005 |" "$in" && [ "$(grep -cxFf "$rules" "$in")" = 4 ]'
+  check "R1 brief on ssh stdin: roster rows and the five rules" 'grep -qxF "| worker-t004 | laptop | worker-t004 | T004 |" "$in" && grep -qxF "| worker-t005 | local | worker-t005 | T005 |" "$in" && [ "$(grep -cxFf "$rules" "$in")" = 5 ]'
   check "R1 brief on ssh stdin: no Plugin root line, no Advisor block" '[ -s "$in" ] && ! grep -q "^- Plugin root:" "$in" && ! grep -q "^## Advisor" "$in"'
   check "R1 agent start argv" 'rcall "agent\tstart\tworker-t004\t--kind\tclaude\t--pane\t%s\t--timeout\t120000\t--\t--permission-mode\tauto\t-n\tworker-t004" "$(pane)"'
   check "R1 agent prompt with P" 'rcall "agent\tprompt\tworker-t004\t%s\t--wait\t--until\tworking\t--until\tblocked\t--timeout\t30000" "$P"'
@@ -989,7 +1046,19 @@ check "B4 approve folder, session holds the session id" '[ -d "$lw/.stratum/appr
 check "B4 owns holds the backticked Owns paths, one per line" '[ "$(cat "$lw/.stratum/approve/owns")" = "$(printf "src/a.py\ntests/t.sh")" ]'
 fresh; autoset "$sid"
 CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" start T004 --task "$tmp/task-none.md" --test "$testcmd" --lane "$lane" --roster "$roster" --autonomous
-check "B5 no Owns line: exit 0, owns is an empty file" '[ $rc = 0 ] && [ -f "$lw/.stratum/approve/owns" ] && [ ! -s "$lw/.stratum/approve/owns" ]'
+check "B5 no Owns line: exit 1, the line, no herdr call" '[ $rc = 1 ] && [ "$out" = "The task has no Owns: paths. Autonomous mode needs them." ] && [ ! -s "$tmp/calls" ]'
+for bad in 'src/*.py' 'src/a?.py' 'src/[ab].py' '/abs/a.py' '~/a.py' './src/a.py' 'src/../a.py' '../a.py'; do
+  printf 'TASK BODY\nOwns: `%s`.\n' "$bad" > "$tmp/task-bad.md"
+  fresh; autoset "$sid"
+  CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" start T004 --task "$tmp/task-bad.md" --test "$testcmd" --lane "$lane" --roster "$roster" --autonomous
+  check "B7 Owns $bad: exit 1, the line, no herdr call" '[ $rc = 1 ] && [ "$out" = "Owns path $bad must be repo-relative, with no glob." ] && [ ! -s "$tmp/calls" ]'
+done
+printf 'TASK BODY\nOwns: `apps/crm/a.ts`.\n' > "$tmp/task-bad.md"
+fresh; autoset "$sid"
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" start T004 --task "$tmp/task-bad.md" --test "$testcmd" --lane "$lane" --roster "$roster" --autonomous
+check "B8 Owns folder not in the base commit: exit 1, the line, no herdr call" '[ $rc = 1 ] && [ "$out" = "Owns path apps/crm/a.ts: folder apps/crm is not in the base commit." ] && [ ! -s "$tmp/calls" ]'
+fresh; CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" start T004 --task "$tmp/task-bad.md" --test "$testcmd" --lane "$lane" --roster "$roster"
+check "B8 without --autonomous the Owns list is not checked: exit 0" '[ $rc = 0 ]'
 printf 'TASK BODY\nOwns: `a.sh`,\n  `b.sh`. Test: x\n' > "$tmp/task-wrap.md"
 fresh; autoset "$sid"
 CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" start T004 --task "$tmp/task-wrap.md" --test "$testcmd" --lane "$lane" --roster "$roster" --autonomous
@@ -1188,6 +1257,12 @@ check "AO1 both flags with this session id are removed" '[ ! -e "$repo/.stratum/
 xsetup; autoset other-session; printf '%s\n' other-session > "$rrepo/.stratum/autonomous"
 STUB_SSH_EXEC=1 CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-off --roster "$aoroster"
 check "AO2 flags with another id are kept: exit 0" '[ $rc = 0 ] && [ -e "$repo/.stratum/autonomous" ] && [ -e "$rrepo/.stratum/autonomous" ]'
+check "AO2 each kept flag names the id that holds it" 'hasline "autonomous off skipped\tlocal\tflag held by other-session" && hasline "autonomous off skipped\tlaptop\tflag held by other-session" && ! grep -q "^autonomous off	" <<<"$out"'
+reset; : > "$tmp/ssh"; CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-off
+check "AO5 no roster, another id: exit 0, the skipped line, flag kept, no ssh" '[ $rc = 0 ] && [ "$out" = "$(printf "autonomous off skipped\tlocal\tflag held by other-session")" ] && [ -e "$repo/.stratum/autonomous" ] && [ ! -s "$tmp/ssh" ]'
+autoset "$sid"
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-off
+check "AO5 no roster, this id: exit 0, the local line, flag removed" '[ $rc = 0 ] && [ "$out" = "$(printf "autonomous off\tlocal")" ] && [ ! -e "$repo/.stratum/autonomous" ]'
 xsetup; autoset "$sid"; printf '%s\n' "$sid" > "$rrepo/.stratum/autonomous"
 STUB_SSH_RC=255 CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-off --roster "$aoroster"
 check "AO3 ssh down: exit 1, the failed laptop line, local removed, laptop flag kept" '[ $rc = 1 ] && hasline "autonomous off failed\tlaptop\tssh: stub failure" && hasline "autonomous off\tlocal" && [ ! -e "$repo/.stratum/autonomous" ] && [ -e "$rrepo/.stratum/autonomous" ]'
@@ -1197,6 +1272,9 @@ printf 'worker-t004\tlaptop\tworker-t004\tT004\t%s\nworker-t005\tlaptop\tworker-
 printf '%s\n' "$sid" > "$rrepo/.stratum/autonomous"; printf '%s\n' "$sid" > "$tmp/rrepo2/.stratum/autonomous"
 STUB_SSH_EXEC=1 CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-off --roster "$aoroster"
 check "AO4 two repos on one machine: exit 0, both flags removed" '[ $rc = 0 ] && [ ! -e "$rrepo/.stratum/autonomous" ] && [ ! -e "$tmp/rrepo2/.stratum/autonomous" ]'
+autoset "$sid"
+STUB_SSH_EXEC=1 CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-off --roster "$aoroster"
+check "AO6 a roster with saved machines only still clears the local flag" '[ $rc = 0 ] && hasline "autonomous off\tlocal" && [ ! -e "$repo/.stratum/autonomous" ]'
 
 ax; autoset "$sid"
 axrun
@@ -1229,6 +1307,108 @@ ax; autoset "$sid"
 STUB_SSH_RC=255 axrun
 check "AM6 ssh down on the repo flag write: exit 1, the line, no worktree create or agent start" '[ $rc = 1 ] && hasline "cannot write .stratum/autonomous on laptop: ssh: stub failure" && [ "$(cnt "^--machine\tlaptop\tworktree\tcreate\t")" = 0 ] && [ "$(cnt "^--machine\tlaptop\tagent\tstart\t")" = 0 ]'
 autoclr
+
+wr="$tmp/wroster"; printf 'worker-t004\tlocal\tworker-t004\tT004\n' > "$wr"
+sleeps() { grep -c '^sleep' "$tmp/calls"; }
+rto=$(command -v timeout)
+wrun() { run "$rto" 60 bash "$script" watch --roster "$wr"; }
+mk; rm -f "$wr.seen"; states working working done; printf 'R\n' > "$lw/result.md"
+wrun
+check "WC1 watch: finished after two polls, exit 0, seen holds finished" '[ $rc = 0 ] && hasline "state\tfinished\tworker-t004\t%s" "$(pane)" && [ "$(sleeps)" = 2 ] && grep -qxP "worker-t004\tfinished [0-9]+ [0-9]+" "$wr.seen" && never 0 0'
+states done done blocked; sentpane > "$tmp/pane.txt"; reset
+wrun
+check "WC2 a seen finished worker is skipped; a new question is reported: exit 4, blocked" '[ $rc = 4 ] && hasline "state\tblocked\tworker-t004\t%s" "$(pane)" && ! grep -q "^state	finished" <<<"$out" && [ "$(sleeps)" = 2 ]'
+states blocked blocked working blocked; reset
+wrun
+check "WC3 the same open question is not reported again until the worker worked: exit 4 after three polls" '[ $rc = 4 ] && [ "$(sleeps)" = 3 ] && hasline "state\tblocked\tworker-t004\t%s" "$(pane)"'
+mk; rm -f "$wr.seen"; states idle working done; unsentpane > "$tmp/pane.txt"; sentpane > "$tmp/pane.after"; : > "$tmp/resume_result"
+wrun
+check "WC4 unsent prompt: one Enter by itself, then finished" '[ $rc = 0 ] && [ "$(cnt "^agent\tsend-keys\tworker-t004\tenter$")" = 1 ] && hasline "state\tfinished\tworker-t004\t%s" "$(pane)" && never 0 0'
+mk; rm -f "$wr.seen"; states idle; unsentpane > "$tmp/pane.txt"
+wrun
+check "WC5 prompt still in the box after the Enter: exit 7, state unsent" '[ $rc = 7 ] && [ "$(cnt "^agent\tsend-keys\tworker-t004\tenter$")" = 1 ] && hasline "state\tunsent\tworker-t004\t%s" "$(pane)"'
+mk; rm -f "$wr.seen"; states idle; sentpane > "$tmp/pane.txt"
+wrun
+check "WC6 idle with no result, question or prompt for three polls: exit 5, stopped" '[ $rc = 5 ] && [ "$(sleeps)" = 2 ] && hasline "state\tstopped\tworker-t004\t%s" "$(pane)"'
+mk; rm -f "$wr.seen"
+STUB_FAIL="agent get" run bash "$script" watch --roster "$wr"
+check "WC7 a worker that is gone and never seen: exit 5, the gone line" '[ $rc = 5 ] && [ "$out" = "$(printf "state\tgone\tworker-t004\t-")" ]'
+apx; rm -f "$wr.seen"; states blocked; mkreq "$rid" 'npm test'
+wrun
+check "WC8 approval request: exit 6, the request lines, seen holds its id" '[ $rc = 6 ] && hasline "state\tapproval\tworker-t004\t%s" "$(pane)" && hasline "request\t%s" "$rid" && [ "$(cat "$wr.seen")" = "$(printf "worker-t004\tapproval %s" "$rid")" ]'
+states blocked working done; printf 'R\n' > "$lw/result.md"; reset
+wrun
+check "WC9 the same request is not reported again: exit 0, finished" '[ $rc = 0 ] && ! grep -q "^state	approval" <<<"$out" && hasline "state\tfinished\tworker-t004\t%s" "$(pane)"'
+autoclr
+mk; rm -f "$wr.seen"; states done; printf 'ROUND1\n' > "$lw/result.md"
+wrun
+printf 'ROUND2\n' > "$lw/result.md"; reset
+wrun
+check "WC11 a new result.md after a reported finish is a new finish: exit 0, finished" '[ $rc = 0 ] && hasline "state\tfinished\tworker-t004\t%s" "$(pane)"'
+mk; printf 'worker-t004\tblocked 123\n' > "$wr.seen"
+STUB_FAIL="agent get" run "$rto" 60 bash "$script" watch --roster "$wr"
+check "WC12 a blocked worker that is gone is reported: exit 5, the gone line" '[ $rc = 5 ] && [ "$out" = "$(printf "state\tgone\tworker-t004\t-")" ]'
+printf 'worker-t004\tlocal\tworker-t004\tT004\nworker-t005\tlocal\tworker-t005\tT005\n' > "$tmp/wr2"; printf 'worker-t004\tfinished 1 2\n' > "$tmp/wr2.seen"
+STUB_FAIL="agent get" run "$rto" 60 bash "$script" watch --roster "$tmp/wr2"
+check "WC12 a finished worker that is gone (closed) is skipped: only the other worker is reported" '[ $rc = 5 ] && [ "$out" = "$(printf "state\tgone\tworker-t005\t-")" ]'
+printf 'worker-t004\tnowhere\tworker-t004\tT004\n' > "$tmp/wbad"
+fresh; run bash "$script" watch --roster "$tmp/wbad"
+check "WC10 unknown machine: exit 1, the line, no agent call" '[ $rc = 1 ] && [ "$out" = "Unknown machine: nowhere." ] && [ "$(cnt "^agent\t")" = 0 ]'
+
+su="$repo/.stratum/worker-setup.sh"
+printf '%s\n' 'printf "%s\n%s\n" "$PWD" "$1" > setup.ran' 'echo setup >> "$STUB_T/order"' 'echo SETUP RAN' > "$su"
+fresh; run bash "$script" start "${sargs[@]}"
+check "SU1 setup script: exit 0, its output after the header" '[ $rc = 0 ] && hasline "setup output:" && hasline "SETUP RAN"'
+check "SU1 it runs in the new worktree with the main checkout as its argument" '[ "$(cat "$(wt)/setup.ran")" = "$(printf "%s\n%s" "$(wt)" "$repo")" ]'
+check "SU1 it runs after worktree create and before agent start" 'o1=$(grep -n "^worktree create$" "$tmp/order" | cut -d: -f1) && o2=$(grep -n "^setup$" "$tmp/order" | cut -d: -f1) && o3=$(grep -n "^agent start$" "$tmp/order" | cut -d: -f1) && [ "$o1" -lt "$o2" ] && [ "$o2" -lt "$o3" ]'
+printf '%s\n' 'echo boom' 'exit 3' > "$su"
+fresh; run bash "$script" start "${sargs[@]}"
+check "SU2 setup fails: exit 1, its output, the stopped line, the worker line, no agent start" '[ $rc = 1 ] && hasline boom && hasline "stopped: worker-setup.sh exited 3" && hasline "worker\tworker-t004\tlocal\t%s\t%s\tworker-t004\t%s" "$(wsid)" "$(pane)" "$(wt)" && [ "$(cnt "^agent\tstart\t")" = 0 ]'
+printf '%s\n' 'echo REMOTE SETUP "$1"' > "$su"
+rfresh; xsetup; mkdir -p "$rrepo/.stratum"; cp "$su" "$rrepo/.stratum/worker-setup.sh"
+STUB_WT_PATH="$tmp/rwt" STUB_SSH_EXEC=1 rrun bash "$script" start T004 --task "$task" --test "$testcmd" --lane "$lane" --roster "$rroster" --machine laptop --repo "$rrepo"
+check "SU3 saved machine: the machine's setup script runs with its main checkout, in the one ssh call" '[ $rc = 0 ] && hasline "setup output:" && hasline "REMOTE SETUP $rrepo" && [ "$(grep -c . "$tmp/ssh")" = 1 ]'
+rfresh; xsetup; printf '%s\n' 'echo rboom' 'exit 3' > "$rrepo/.stratum/worker-setup.sh"
+STUB_WT_PATH="$tmp/rwt" STUB_SSH_EXEC=1 rrun bash "$script" start T004 --task "$task" --test "$testcmd" --lane "$lane" --roster "$rroster" --machine laptop --repo "$rrepo"
+check "SU5 saved machine setup fails: exit 1, its output, the stopped line, no agent start" '[ $rc = 1 ] && hasline rboom && hasline "stopped: worker-setup.sh exited 3 on laptop" && [ "$(rcnt "agent\tstart\t")" = 0 ]'
+rm -f "$su"
+fresh; run bash "$script" start "${sargs[@]}"
+check "SU4 no setup script: no setup output" '[ $rc = 0 ] && ! grep -q "setup output" <<<"$out"'
+
+round="$tmp/round.md"
+printf 'Fix the null check in src/a.py.\nOwns: `src/b.py`.\n' > "$round"
+fuP="/goal \`$testcmd\` exits 0, the change is committed on branch worker-t004, and result.md is written; read brief.md in this folder first and follow it"
+mk; states done working; printf 'ROUND1 RESULT\n' > "$lw/result.md"; cp "$lw/brief.md" "$tmp/brief.before"
+run bash "$script" followup T004 --task "$round" --test "$testcmd"
+check "FU1 exit 0, round 2 line, state working" '[ $rc = 0 ] && hasline "round\tworker-t004\t2" && hasline "state\tworking\tworker-t004\t%s" "$(pane)"'
+check "FU1 brief starts with the round 2 text, then the old brief" '[ "$(head -n 1 "$lw/brief.md")" = "## Round 2" ] && grep -qxF "Fix the null check in src/a.py." "$lw/brief.md" && [ "$(tail -n "$(wc -l < "$tmp/brief.before")" "$lw/brief.md")" = "$(cat "$tmp/brief.before")" ]'
+check "FU1 result.md moved to result-round1.md" '[ ! -e "$lw/result.md" ] && [ "$(cat "$lw/result-round1.md")" = "ROUND1 RESULT" ]'
+check "FU1 one /goal prompt" 'hascall "agent\tprompt\tworker-t004\t%s\t--wait\t--until\tworking\t--until\tblocked\t--timeout\t30000" "$fuP" && never 0 1'
+states done working; printf 'ROUND2 RESULT\n' > "$lw/result.md"; reset
+run bash "$script" followup T004 --task "$round" --test "$testcmd"
+check "FU2 a second followup is round 3, result-round2.md" '[ $rc = 0 ] && hasline "round\tworker-t004\t3" && [ "$(head -n 1 "$lw/brief.md")" = "## Round 3" ] && [ "$(cat "$lw/result-round2.md")" = "ROUND2 RESULT" ] && [ "$(cat "$lw/result-round1.md")" = "ROUND1 RESULT" ]'
+mk; states working; printf 'R\n' > "$lw/result.md"; cp "$lw/brief.md" "$tmp/brief.before"
+run bash "$script" followup T004 --task "$round" --test "$testcmd"
+check "FU3 working worker: exit 1, refused, brief and result unchanged, no prompt" '[ $rc = 1 ] && [ "$out" = "Worker worker-t004 is working, not finished. Followup refused." ] && cmp -s "$lw/brief.md" "$tmp/brief.before" && [ -e "$lw/result.md" ] && never 0 0'
+mk; states done
+run bash "$script" followup T004 --task "$round" --test "$testcmd"
+check "FU4 no result.md: exit 1, refused, no prompt" '[ $rc = 1 ] && [ "$out" = "Worker worker-t004 has no result.md, not finished. Followup refused." ] && never 0 0'
+mk; states done; printf 'R\n' > "$lw/result.md"; dialogpane > "$tmp/pane.txt"
+run bash "$script" followup T004 --task "$round" --test "$testcmd"
+check "FU5 open question: exit 1, refused, result kept" '[ $rc = 1 ] && [ "$out" = "Worker worker-t004 has an open question. Answer it first." ] && [ -e "$lw/result.md" ] && never 0 0'
+mk; states done working; printf 'R\n' > "$lw/result.md"; apd; printf '%s\n' "$sid" > "$lw/.stratum/approve/session"; printf 'src/a.py\n' > "$lw/.stratum/approve/owns"
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" followup T004 --task "$round" --test "$testcmd"
+check "FU6 autonomous worker: the round Owns paths are added" '[ $rc = 0 ] && [ "$(cat "$lw/.stratum/approve/owns")" = "$(printf "src/a.py\nsrc/b.py")" ]'
+mk; states done; printf 'R\n' > "$lw/result.md"; apd; printf 'other\n' > "$lw/.stratum/approve/session"; printf 'src/a.py\n' > "$lw/.stratum/approve/owns"
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" followup T004 --task "$round" --test "$testcmd"
+check "FU7 another session's run: exit 1, refused, owns and result unchanged" '[ $rc = 1 ] && [ "$out" = "Worker worker-t004 is not in this autonomous run." ] && [ "$(cat "$lw/.stratum/approve/owns")" = src/a.py ] && [ -e "$lw/result.md" ] && never 0 0'
+mk; states done; printf 'R\n' > "$lw/result.md"; apd; printf '%s\n' "$sid" > "$lw/.stratum/approve/session"; printf 'Fix it.\nOwns: `src/*.py`.\n' > "$tmp/round-bad.md"
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" followup T004 --task "$tmp/round-bad.md" --test "$testcmd"
+check "FU8 a bad round Owns path: exit 1, the line, result kept" '[ $rc = 1 ] && [ "$out" = "Owns path src/*.py must be repo-relative, with no glob." ] && [ -e "$lw/result.md" ] && never 0 0'
+rfresh; xsetup; STUB_WT_PATH="$tmp/rwt" STUB_SSH_EXEC=1 rrun bash "$script" start "${rsargs[@]}"
+states done working; printf 'REMOTE R1\n' > "$tmp/rwt/result.md"; reset
+STUB_WT_PATH="$tmp/rwt" STUB_SSH_EXEC=1 rrun bash "$script" followup T004 --task "$round" --test "$testcmd" --machine laptop
+check "FU9 saved machine: exit 0, the brief and result change on the machine, prompt on the machine" '[ $rc = 0 ] && [ "$(head -n 1 "$tmp/rwt/brief.md")" = "## Round 2" ] && [ "$(cat "$tmp/rwt/result-round1.md")" = "REMOTE R1" ] && [ ! -e "$tmp/rwt/result.md" ] && [ "$(rcnt "agent\tprompt\t")" = 1 ]'
 
 fresh; run bash "$script" start "${sargs[@]}"
 check "LY1 exit 0" '[ $rc = 0 ]'
