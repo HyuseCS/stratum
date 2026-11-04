@@ -73,6 +73,7 @@ Skip the end-of-Build advisor pass when every story had an `st-review` and no co
 Otherwise run it once, on the changes after the last review only: `bash <plugin root>/scripts/st-advisor.sh diff <feature dir> <last review sha>`.
 Handle its notes like review findings.
 Then run `bash <plugin root>/scripts/st-advisor.sh count <feature dir>` and show its line word for word.
+Then clear the reply label: `bash <plugin root>/scripts/st-state.sh "$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/.stratum/state.json" skill ""`.
 Then say the build is done, list the small decisions and findings (fixed and dropped), and name
 the next phase: `/stratum:st-close`.
 
