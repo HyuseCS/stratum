@@ -37,6 +37,10 @@ Each must go red, then green again after the undo. Undo with the Edit tool, not 
 
 Only the user runs this section. Build and tests never call the real `claude plugin update`.
 
+Order first: merge the PR, bump to 0.7.0 on `main` (T016), then run
+`claude plugin update stratum@stratum -s local` in the project, restart, then `/stratum:st-update`.
+Without the bump, `claude plugin update` sees 0.6.0 as the latest and changes nothing.
+
 State on 2026-11-04: marketplace `/home/hyuse/Desktop/stratum` (directory source, on branch
 `012-st-update` until merge, so the gate warns until then). v2-veent's record is 0.6.0, most
 others are 0.1.22 to 0.2.1. v2-veent's `statusLine` points at the source folder. After the 0.7.0

@@ -12,7 +12,7 @@ script and to git (folder, kind, name, paths, message).
 1. **Audit.** Run `bash <script> audit <folder>`, with the argument as `<folder>`, else the project root.
    Exit 1: show the line and stop.
    No row other than `current`, `gone` and `listed`: say every item is current and stop. No gate.
-   Only `warn`, `invalid` or `skip` rows besides those: show those rows, say there is nothing to update, and stop. No gate.
+   Only `warn`, `invalid` or `skip` rows besides those: show those rows with their details, say st-update can change nothing here, and stop. No gate.
 2. **Table.** Show one table. The header: the marketplace version and folder, and the config folder.
    The config folder is `$CLAUDE_CONFIG_DIR`, else `~/.claude`.
    Then, per folder, only the rows that are not `current`: folder, kind, name, state, detail.

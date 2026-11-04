@@ -8,3 +8,6 @@ reason: Inspect fixes F1-F11, F13 only: test names, indent, commit -- paths, nam
 
 ## decisions | 2026-11-04T06:38:30Z | /advisor
 summary: US1 decisions: accept 1-7 and 9; 8 should be invalid not discontinued (D1); fix ignore in T007 must reuse --no-index; add test_update_items README line with T013
+
+## decisions | 2026-11-04T07:34:05Z | /advisor
+summary: US2/US3 decisions: accept 1,2,4-8,10,12; 3 skip rows need their reason shown, not 'nothing to update'; 9 note T016 as done on main after merge; 11 split the README commands into two blocks; bump to 0.7.0 is needed before plugin update has any effect

@@ -34,12 +34,16 @@ constitution), writes the `AGENTS.md` and `CLAUDE.md` pointers, sets the statusl
 theme, shape and Token Weather line, turns off a global ponytail or Token Weather plugin for this
 project, offers to upgrade graphify, installs its post-commit hook, and checks your tools.
 
-If your install has no `st-update` yet, update it once by hand. In your project folder, run the
-line for the scope you installed with. Use `-s local` for a personal install, or `-s project` for
-the `--scope project` install above:
+If your install has no `st-update` yet, update it once by hand. In your project folder, run only
+the command for the scope you installed with. For a personal install:
 
 ```bash
 claude plugin update stratum@stratum -s local
+```
+
+For the `--scope project` install above:
+
+```bash
 claude plugin update stratum@stratum -s project
 ```
 

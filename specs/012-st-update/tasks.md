@@ -122,7 +122,7 @@ control proves it goes red on an added `.gitignore` line.
 
 ### Implementation for User Story 4
 
-- [ ] T014 [US4] Add to the `items` list in `scripts/st-update.sh` each name T013 reports missing. Then run quickstart negative control N2 by hand (N1 is covered by T013's built-in control): make the break with the Edit tool, see `bash tests/test_update_items.sh` exit 1 and name the item, undo with the Edit tool, see it green. Record the result in the task's report. Test: bash tests/test_update_items.sh.
+- [X] T014 [US4] Add to the `items` list in `scripts/st-update.sh` each name T013 reports missing. Then run quickstart negative control N2 by hand (N1 is covered by T013's built-in control): make the break with the Edit tool, see `bash tests/test_update_items.sh` exit 1 and name the item, undo with the Edit tool, see it green. Record the result in the task's report. Test: bash tests/test_update_items.sh.
 
 **Checkpoint**: drift between st-init and st-update turns a test red.
 
@@ -132,8 +132,9 @@ control proves it goes red on an added `.gitignore` line.
 
 - [X] T015 [P] Add row R13 to `tests/test_update_rules.sh`: `README.md` has `claude plugin update stratum@stratum -s local`, `claude plugin update stratum@stratum -s project`, `bash tests/test_st_update.sh`, `bash tests/test_update_rules.sh` and `bash tests/test_update_items.sh`. Red now. Owns: `tests/test_update_rules.sh`. Test: bash tests/test_update_rules.sh.
 - [ ] T016 [P] Set `"version": "0.7.0"` in `.claude-plugin/plugin.json`. Owns: `.claude-plugin/plugin.json`. Test: claude plugin validate .claude-plugin/plugin.json && grep -q '"version": "0.7.0"' .claude-plugin/plugin.json.
+  Not on this branch: the user's rule puts version bumps straight on `main`, so T016 is done there after the merge, before the live run.
 - [X] T017 In `README.md` Install, after the `/stratum:st-init` block, add the first-time update for a project whose install has no st-update yet (FR-021): run in the project folder `claude plugin update stratum@stratum -s local` for a personal install or `claude plugin update stratum@stratum -s project` for the `--scope project` install above (use the scope you installed with), restart the session, then `/stratum:st-update`. Add the three lines `bash tests/test_st_update.sh`, `bash tests/test_update_rules.sh`, `bash tests/test_update_items.sh` to the Tests block. Depends on T015. Test: bash tests/test_update_rules.sh && bash tests/test_inspect.sh.
-- [ ] T018 Run quickstart negative controls N3 to N8 on `scripts/st-update.sh`, `README.md` and the audit: break with the Edit tool, see the named case fail, undo with the Edit tool, see it green. No file stays changed. Record each result in the task's report. Test: bash tests/test_st_update.sh && bash tests/test_inspect.sh.
+- [X] T018 Run quickstart negative controls N3 to N8 on `scripts/st-update.sh`, `README.md` and the audit: break with the Edit tool, see the named case fail, undo with the Edit tool, see it green. No file stays changed. Record each result in the task's report. Test: bash tests/test_st_update.sh && bash tests/test_inspect.sh.
 
 The live run (quickstart section 3) is the user's, after the merge to `main`. No agent runs it.
 
