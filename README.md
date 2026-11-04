@@ -373,6 +373,7 @@ bash tests/test_worker_rules.sh
 bash tests/test_local_files.sh
 bash tests/test_st_update.sh
 bash tests/test_update_rules.sh
+bash tests/test_update_items.sh
 node tests/test_token_weather.mjs
 node tests/test_pr_workflow.mjs
 claude plugin validate .claude-plugin/plugin.json

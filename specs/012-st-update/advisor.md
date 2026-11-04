@@ -5,3 +5,6 @@ summary: Simplify implementation sequencing and remove duplicate manual work.
 
 ## plan | 2026-11-04T06:06:39Z | sha256 846e939a3663f27ec479c1693696f845672ade15353197ce82de9f94f98dfbf4 | WAIVED
 reason: Inspect fixes F1-F11, F13 only: test names, indent, commit -- paths, name filter, drift keys from st-init, gone siblings, wording; no task added or removed, no approach change
+
+## decisions | 2026-11-04T06:38:30Z | /advisor
+summary: US1 decisions: accept 1-7 and 9; 8 should be invalid not discontinued (D1); fix ignore in T007 must reuse --no-index; add test_update_items README line with T013
