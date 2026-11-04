@@ -526,7 +526,7 @@ watch)
       [ "${f[1]}" = local ] || { m=${f[1]}; H=(herdr --machine "$m"); target=${tg[$m]}; }
       old=$(awk -F'\t' -v n="$N" '$1 == n { v = $2 } END { print v }' "$sf")
       if ! r=$("${H[@]}" agent get "$N" 2>"$e") || ! S=$(jq -er '.result.agent.agent_status' <<<"$r" 2>/dev/null); then
-        [ -z "$old" ] || continue
+        case $old in gone | finished*) continue ;; esac
         mark gone
         printf 'state\tgone\t%s\t-\n' "$N"
         exit 5
@@ -552,8 +552,8 @@ watch)
         idle | done)
           if question; then
             key="blocked $(cksum <"$t" | cut -d" " -f1)"
-          elif { [ -z "$m" ] && [ -f "$WT/result.md" ]; } || { [ -n "$m" ] && rsh test -f "$Q/result.md"; }; then
-            key=finished
+          elif ck=$(if [ -n "$m" ]; then rsh "cksum < $Q/result.md"; else cksum <"$WT/result.md"; fi 2>/dev/null); then
+            key="finished $ck"
           elif unsent; then
             if [ -z "${resent[$N]:-}" ]; then
               resent[$N]=1
@@ -575,7 +575,7 @@ watch)
       mark "$key"
       case $key in
         blocked*) st blocked; exit 4 ;;
-        finished) st finished; exit 0 ;;
+        finished*) st finished; exit 0 ;;
         unsent) st unsent; exit 7 ;;
         stopped) st stopped; exit 5 ;;
       esac
@@ -664,7 +664,7 @@ autonomous-off)
     else
       printf 'autonomous off\t%s\n' "$mm"
     fi
-  done < <(if [ -n "${roster+x}" ]; then cat -- "$roster"; else printf -- '-\tlocal\n'; fi)
+  done < <(printf -- '-\tlocal\n'; [ -z "${roster+x}" ] || cat -- "$roster")
   exit "$bad"
   ;;
 headless)
