@@ -173,7 +173,8 @@ repo="$tmp/repo"
 mkdir -p "$repo/.stratum"
 git -C "$repo" init -q
 printf '{}\n' > "$repo/.stratum/state.json"
-git -C "$repo" add .stratum/state.json
+mkdir -p "$repo/src" "$repo/tests"; : > "$repo/src/keep"; : > "$repo/tests/keep"
+git -C "$repo" add .stratum/state.json src/keep tests/keep
 printf '.stratum/models.json\n' >> "$repo/.git/info/exclude"
 git -C "$repo" -c user.name=t -c user.email=t@t commit -q -m first
 git -C "$repo" remote add origin https://github.com/stub/stub.git
@@ -189,7 +190,8 @@ printf '%s\n' \
   '1. Commit each finished unit with the st-git agent, exact paths only. Never commit brief.md, result.md, .stratum/git-guard.json or .stratum/approve/, and never write in .stratum/approve/.' \
   "2. Before you build on a teammate's work, merge its branch: \`git log <branch>\`, \`git merge <branch>\`. A teammate on another machine shares no commits with you: send it messages only, and do not build on its work." \
   '3. Ask a teammate by name: on your machine, SendMessage to its name; on another machine, `herdr --machine <label> agent prompt <name> "<text>"`, with `<label>` from `herdr machine list` on your machine.' \
-  '4. Never merge into the base branch and never push. Merging a teammate'"'"'s branch into your own (rule 2) is fine. When your task says to run /stratum:st-pr, run it: it pushes your branch and opens the PR, and that is the only push allowed. The orchestrator reviews every branch and is the only one who merges into the base.' > "$rules"
+  '4. Never merge into the base branch and never push. Merging a teammate'"'"'s branch into your own (rule 2) is fine. When your task says to run /stratum:st-pr, run it: it pushes your branch and opens the PR, and that is the only push allowed. The orchestrator reviews every branch and is the only one who merges into the base.' \
+  '5. Commit from the worktree root with `git add <path> <path> && git commit -m "<subject>" -m "<body>"`. Use no `cd`, no `git -C`, no pipe, no shell variable, no `$(...)`, no heredoc and no `-F` file: the orchestrator approves only this form. Give this rule word for word to the st-git agent.' > "$rules"
 P="/goal \`$testcmd\` exits 0, the change is committed on branch worker-t004, and result.md is written; read brief.md in this folder first and follow it"
 sargs=(T004 --task "$task" --test "$testcmd" --lane "$lane" --roster "$roster")
 
@@ -198,7 +200,7 @@ states() { rm -f "$tmp/n_get"; printf '%s\n' "$@" > "$tmp/states"; }
 fresh() {
   rm -rf "$tmp"/repo-worker-* "$tmp"/n_* "$tmp/closed" "$tmp/resume_result" "$tmp/wc.json" "$tmp/s2" "$tmp/pane.txt" "$tmp/pane.after" "$tmp/made" "$tmp/order"
   printf 'x%s\n' "$RANDOM$RANDOM" > "$tmp/x"
-  printf 'TASK BODY %s\n' "$(cat "$tmp/x")" > "$task"
+  printf 'TASK BODY %s\nOwns: `src/a.py`.\n' "$(cat "$tmp/x")" > "$task"
   jq -nc '[{workspace_id:"stubDecoyWS",label:"notaworker"}]' > "$tmp/ws.json"
   jq -nc '[{path:"/stub/decoy",branch:"notaworker",open_workspace_id:"stubDecoyWS"}]' > "$tmp/wt.json"
   echo '[]' > "$tmp/agents.json"
@@ -248,7 +250,7 @@ s1() {
   check "S1 brief names the plugin root" 'grep -qxF -- "- Plugin root: $pr" "$b"'
   check "S1 brief order: Model, then Plugin root, then Your machine" 'mo=$(grep -n "^- Model: " "$b" | cut -d: -f1) && po=$(grep -n "^- Plugin root: " "$b" | cut -d: -f1) && yo=$(grep -n "^- Your machine: " "$b" | cut -d: -f1) && [ "$mo" -lt "$po" ] && [ "$po" -lt "$yo" ]'
   check "S1 brief has every roster row" 'grep -qxF "| worker-t004 | local | worker-t004 | T004 |" "$b" && grep -qxF "| worker-t005 | local | worker-t005 | T005 |" "$b"'
-  check "S1 brief has the four team rules" '[ "$(grep -cxFf "$rules" "$b")" = 4 ]'
+  check "S1 brief has the five team rules" '[ "$(grep -cxFf "$rules" "$b")" = 5 ]'
   check "S1 brief rule 1 is the whole B2 line" 'grep -qxF -- "1. Commit each finished unit with the st-git agent, exact paths only. Never commit brief.md, result.md, .stratum/git-guard.json or .stratum/approve/, and never write in .stratum/approve/." "$b"'
   check "S1 brief has the advisor block only when st-advisor.sh is next to the script" '[ -f "$b" ] && if [ -f "$sd/st-advisor.sh" ]; then grep -qxF "## Advisor" "$b"; else ! grep -q "^## Advisor" "$b"; fi'
   check "S1 git-guard.json in the worktree is auto with the worker branch" '[ "$(jq -S -c . "$(wt)/.stratum/git-guard.json")" = "$(jq -S -c -n "{commit:\"auto\",branch:\"worker-t004\"}")" ] && [ "$(grep -c . "$(wt)/.stratum/git-guard.json")" = 1 ]'
@@ -709,7 +711,7 @@ r1() {
   check "R1 one ssh call to the saved target with BatchMode" '[ "$(grep -c . "$tmp/ssh")" = 1 ] && grep -qP "^-o\tBatchMode=yes\t--\tu@stubhost\t" "$tmp/ssh"'
   check "R1 ssh writes brief.md and git-guard.json under the path herdr answered" 'c=$(sshs); [ "$(wt)" = /home/u/proj-worker-t004 ] && grep -qF -- "cat > /home/u/proj-worker-t004/brief.md" <<<"$c" && grep -qF -- "mkdir -p /home/u/proj-worker-t004/.stratum" <<<"$c" && grep -qF -- "> /home/u/proj-worker-t004/.stratum/git-guard.json" <<<"$c" && grep -qF -- "$g" <<<"$c" && ! grep -qF -- "~/proj-worker-t004" "$tmp/ssh"'
   check "R1 brief on ssh stdin: heading, task, machine, result path" 'grep -qxF "# Brief: worker-t004" "$in" && grep -qxF "TASK BODY $(rnd)" "$in" && grep -qxF -- "- Your machine: laptop. \`local\` is the orchestrator'"'"'s machine." "$in" && grep -qxF -- "- Result file: /home/u/proj-worker-t004/result.md" "$in"'
-  check "R1 brief on ssh stdin: roster rows and the four rules" 'grep -qxF "| worker-t004 | laptop | worker-t004 | T004 |" "$in" && grep -qxF "| worker-t005 | local | worker-t005 | T005 |" "$in" && [ "$(grep -cxFf "$rules" "$in")" = 4 ]'
+  check "R1 brief on ssh stdin: roster rows and the five rules" 'grep -qxF "| worker-t004 | laptop | worker-t004 | T004 |" "$in" && grep -qxF "| worker-t005 | local | worker-t005 | T005 |" "$in" && [ "$(grep -cxFf "$rules" "$in")" = 5 ]'
   check "R1 brief on ssh stdin: no Plugin root line, no Advisor block" '[ -s "$in" ] && ! grep -q "^- Plugin root:" "$in" && ! grep -q "^## Advisor" "$in"'
   check "R1 agent start argv" 'rcall "agent\tstart\tworker-t004\t--kind\tclaude\t--pane\t%s\t--timeout\t120000\t--\t--permission-mode\tauto\t-n\tworker-t004" "$(pane)"'
   check "R1 agent prompt with P" 'rcall "agent\tprompt\tworker-t004\t%s\t--wait\t--until\tworking\t--until\tblocked\t--timeout\t30000" "$P"'
@@ -1044,7 +1046,19 @@ check "B4 approve folder, session holds the session id" '[ -d "$lw/.stratum/appr
 check "B4 owns holds the backticked Owns paths, one per line" '[ "$(cat "$lw/.stratum/approve/owns")" = "$(printf "src/a.py\ntests/t.sh")" ]'
 fresh; autoset "$sid"
 CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" start T004 --task "$tmp/task-none.md" --test "$testcmd" --lane "$lane" --roster "$roster" --autonomous
-check "B5 no Owns line: exit 0, owns is an empty file" '[ $rc = 0 ] && [ -f "$lw/.stratum/approve/owns" ] && [ ! -s "$lw/.stratum/approve/owns" ]'
+check "B5 no Owns line: exit 1, the line, no herdr call" '[ $rc = 1 ] && [ "$out" = "The task has no Owns: paths. Autonomous mode needs them." ] && [ ! -s "$tmp/calls" ]'
+for bad in 'src/*.py' 'src/a?.py' 'src/[ab].py' '/abs/a.py' '~/a.py' './src/a.py' 'src/../a.py' '../a.py'; do
+  printf 'TASK BODY\nOwns: `%s`.\n' "$bad" > "$tmp/task-bad.md"
+  fresh; autoset "$sid"
+  CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" start T004 --task "$tmp/task-bad.md" --test "$testcmd" --lane "$lane" --roster "$roster" --autonomous
+  check "B7 Owns $bad: exit 1, the line, no herdr call" '[ $rc = 1 ] && [ "$out" = "Owns path $bad must be repo-relative, with no glob." ] && [ ! -s "$tmp/calls" ]'
+done
+printf 'TASK BODY\nOwns: `apps/crm/a.ts`.\n' > "$tmp/task-bad.md"
+fresh; autoset "$sid"
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" start T004 --task "$tmp/task-bad.md" --test "$testcmd" --lane "$lane" --roster "$roster" --autonomous
+check "B8 Owns folder not in the base commit: exit 1, the line, no herdr call" '[ $rc = 1 ] && [ "$out" = "Owns path apps/crm/a.ts: folder apps/crm is not in the base commit." ] && [ ! -s "$tmp/calls" ]'
+fresh; CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" start T004 --task "$tmp/task-bad.md" --test "$testcmd" --lane "$lane" --roster "$roster"
+check "B8 without --autonomous the Owns list is not checked: exit 0" '[ $rc = 0 ]'
 printf 'TASK BODY\nOwns: `a.sh`,\n  `b.sh`. Test: x\n' > "$tmp/task-wrap.md"
 fresh; autoset "$sid"
 CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" start T004 --task "$tmp/task-wrap.md" --test "$testcmd" --lane "$lane" --roster "$roster" --autonomous

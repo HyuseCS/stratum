@@ -177,6 +177,16 @@ find_worker() {
 }
 render() { python3 "$(cd "$(dirname "$0")/.." && pwd)/hooks/st-approve.py" --render "$1"; }
 owns() { awk 'f && (/^[[:space:]]*$/ || /^[[:space:]]*- \[/) { exit } !f && /Owns:/ { f = 1; sub(/.*Owns:/, "") } f { if (sub(/Test:.*/, "")) { print; exit } print }' "$task" | grep -o '`[^`]*`' | tr -d '`' || true; }
+chkowns() {
+  local p d
+  mapfile -t O < <(owns)
+  [ ${#O[@]} != 0 ] || fail "The task has no Owns: paths. Autonomous mode needs them."
+  for p in "${O[@]}"; do
+    [[ $p != *[*?[]* && $p != /* && $p != \~* && $p != ./* && /$p/ != */../* ]] || fail "Owns path $p must be repo-relative, with no glob."
+    d=$(dirname -- "$p")
+    [ "$d" = . ] || git cat-file -e "$sha:$d" 2>/dev/null || fail "Owns path $p: folder $d is not in the base commit."
+  done
+}
 approval() {
   local f=$WT/.stratum/approve/ rq in
   if [ -n "$m" ]; then rsh "ls -1 $Q/.stratum/approve" >"$t" || return 0; else ls -1 "$f" >"$t" 2>/dev/null || return 0; fi
@@ -216,7 +226,8 @@ brief() {
     '1. Commit each finished unit with the st-git agent, exact paths only. Never commit brief.md, result.md, .stratum/git-guard.json or .stratum/approve/, and never write in .stratum/approve/.' \
     "2. Before you build on a teammate's work, merge its branch: \`git log <branch>\`, \`git merge <branch>\`. A teammate on another machine shares no commits with you: send it messages only, and do not build on its work." \
     '3. Ask a teammate by name: on your machine, SendMessage to its name; on another machine, `herdr --machine <label> agent prompt <name> "<text>"`, with `<label>` from `herdr machine list` on your machine.' \
-    "4. Never merge into the base branch and never push. Merging a teammate's branch into your own (rule 2) is fine. When your task says to run /stratum:st-pr, run it: it pushes your branch and opens the PR, and that is the only push allowed. The orchestrator reviews every branch and is the only one who merges into the base."
+    "4. Never merge into the base branch and never push. Merging a teammate's branch into your own (rule 2) is fine. When your task says to run /stratum:st-pr, run it: it pushes your branch and opens the PR, and that is the only push allowed. The orchestrator reviews every branch and is the only one who merges into the base." \
+    '5. Commit from the worktree root with `git add <path> <path> && git commit -m "<subject>" -m "<body>"`. Use no `cd`, no `git -C`, no pipe, no shell variable, no `$(...)`, no heredoc and no `-F` file: the orchestrator approves only this form. Give this rule word for word to the st-git agent.'
   printf '\n%s\n\n%s\n%s\n' '## Questions' 'Ask a question only with the AskUserQuestion tool, then wait for the answer. Do not ask in plain text and do not guess.' 'Do not edit tasks.md or .stratum/state.json. The orchestrator ticks the task after the merge.'
   printf '\n%s\n\n%s\n' '## When done' 'Write the result file with four lines:'
   printf '%s\n' 'Built: <what you built>' 'Tests: <test command> exit <code>' 'Commit: <sha>' 'Open: <open points, or none>'
@@ -229,6 +240,7 @@ start)
   [ -n "$m" ] || repo=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
   G=$(jq -c --arg b "$N" '.commit="auto" | .branch=$b' <(cat "$top/.stratum/git-guard.json" 2>/dev/null || echo '{}')) || stop "cannot read $top/.stratum/git-guard.json"
   [ -n "$G" ] || G=$(jq -nc --arg b "$N" '{commit:"auto",branch:$b}')
+  [ -z "$auto" ] || chkowns
   h workspace list
   c=$(jq -er --arg n "$N" '[.result.workspaces[] | select(.label == $n)] | length' <<<"$r") || stop "no .result.workspaces in the herdr answer"
   [ "$c" = 0 ] || fail "A worker $N already exists."

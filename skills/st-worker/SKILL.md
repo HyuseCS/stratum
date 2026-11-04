@@ -51,3 +51,4 @@ When the run ends (after the last close or the headless run), clear the reply la
 Never run `herdr machine reconnect` or `herdr server stop`, never push, and never remove a worktree folder.
 
 `/stratum:st-build` sends a phase's `[P]` tasks here when the user says "build with workers" or names a machine. Pass `--autonomous` to `start` only while autonomous build mode is on.
+With `--autonomous`, `start` stops before it makes anything when the task has no `Owns:` paths, or a path has a glob, is not repo-relative, or names a folder that is not in the base commit. Write exact repo-relative paths in the task's `Owns:` line and run `start` again.
