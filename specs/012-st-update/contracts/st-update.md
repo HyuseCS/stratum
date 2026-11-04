@@ -1,7 +1,7 @@
 # Contract: st-update
 
 Two parts. `scripts/st-update.sh` reads and fixes, one item at a time, and never runs a git
-command that changes the repo. `skills/st-update/SKILL.md` shows the table, holds the gate, asks
+command that changes a commit, branch or file (`git status` may refresh `.git/index`). `skills/st-update/SKILL.md` shows the table, holds the gate, asks
 the questions, runs the commits and writes the report.
 
 ## 1. `scripts/st-update.sh`
@@ -78,7 +78,7 @@ audit and the fix is not caught; upgrade if that is seen.`
 
 JSON files: not valid JSON or not an object: `skip: <file> is not valid JSON`, exit 3. Writes keep
 every other key and value, `indent=2`, key order kept (research R12). The write goes through a
-new temp file in the folder of the file's real path (a symlink is followed), keeps the old file's mode (a new file gets 644), and replaces
+new temp file (name ends in `.tmp`) in the folder of the file's real path (a symlink is followed), keeps the old file's mode (a new file gets 644), and replaces
 the file. A write that fails (an OS error, or text that cannot be encoded as UTF-8, such as a
 lone surrogate) removes the temp file: `skip: cannot write <file>: <reason>`, exit 3.
 
@@ -174,7 +174,7 @@ run `claude plugin update` in a folder without its own record, edit `installed_p
 | U19 | script runs no `git add`, `git commit`, `git push` (grep of the script) | FR-016 |
 | U20 | fake marketplace folder is a git repo on branch `feat-x`: `marketplace-branch` row `warn` naming `feat-x`; on `main`: no row; not a git repo: no row | Edge case (branch) |
 | U21 | `pointer` fix on a folder with no `AGENTS.md`: `CLAUDE.md` gets only `@.stratum/constitution.md` | FR-013 |
-| Build extras (no U number) | `tests/test_st_update.sh` also checks: an unsafe `plugins-off` key is `invalid`; a tracked path named in `.gitignore` is `current` and `fix ignore` on it prints `same`; `plugin` with an `ok` outcome and an unmoved record exits 1; `fix` on an outdated `install` row exits 3; `gone-file` on a directory exits 3; `audit` never calls `claude`; a JSON write through a symlink outside the checkout exits 3 and leaves the target byte-equal, through a symlink inside the checkout changes the link target and keeps the link, a planted `<file>.tmp` symlink is not followed, a new file gets mode 644 and an existing one keeps its mode; an append through a `CLAUDE.md` symlink outside the checkout exits 3, inside writes into the target | FR-003, FR-011, FR-013 |
+| Build extras (no U number) | `tests/test_st_update.sh` also checks: an unsafe `plugins-off` key is `invalid`; a tracked path named in `.gitignore` is `current` and `fix ignore` on it prints `same`; `plugin` with an `ok` outcome and an unmoved record exits 1; `fix` on an outdated `install` row exits 3; `gone-file` on a directory exits 3; `audit` never calls `claude`; a JSON write through a symlink outside the checkout exits 3 and leaves the target byte-equal, through a symlink inside the checkout changes the link target and keeps the link, a planted `<file>.tmp` symlink is not followed, a new file gets mode 644 and an existing one keeps its mode; an append through a `CLAUDE.md` symlink outside the checkout exits 3, inside writes into the target; a lone surrogate in a JSON write exits 3, leaves no `.tmp` file and the file byte-equal; a folder that is not a git repo gets no `skip` row; a corrupt `.git/index` gives `git status failed for CLAUDE.md` as the `skip` detail | FR-003, FR-011, FR-013, FR-017 |
 
 `tests/test_update_rules.sh`: phrase rows on `skills/st-update/SKILL.md` for steps 1 to 8 above,
 like `tests/test_plan_rules.sh`:

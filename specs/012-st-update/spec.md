@@ -141,3 +141,8 @@ A maintainer who changes what st-init writes gets a red test until the st-update
 - The `bunx @owloops/claude-powerline` `statusLine` in a committed `.claude/settings.json` is the user's, and st-update does not touch it.
 - Tool checks (graphify, FigCraft install) stay in `/stratum:st-status` and `/stratum:st-init`. st-update does not install tools.
 - The release that ships st-update is version 0.7.0, because it adds a new command.
+
+## Gap decisions (Close)
+
+- G1. T016, bump to 0.7.0 in `.claude-plugin/plugin.json`: deferred. Done on `main` after the merge, before the live run (quickstart.md section 3).
+- G2. FR-017, `fix` has no dirty-file check of its own: deferred. The skill runs `audit` first and never runs `fix` on a `skip` row (contracts/st-update.md section 1d and section 2 step 6).

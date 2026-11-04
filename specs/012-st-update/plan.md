@@ -127,6 +127,7 @@ agent rules.
   skill names no personal script. Research R13, rule row R9.
 - Spec edge case (branch): a `directory` marketplace on a branch other than `main` gets a warning
   at the gate that names the branch. Research R16, case U20, rule row R4.
+- G3 (kept, from the gap report): the symlink containment guard for JSON writes and for the `ignore` and `pointer` appends was added during Build, not in the spec. It is in `contracts/st-update.md` section 1d (`points outside <folder>`), and its tests are the symlink checks in the Build extras row of section 3.
 - No open decisions.
 
 ## Project Structure

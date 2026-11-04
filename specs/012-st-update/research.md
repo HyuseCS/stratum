@@ -161,7 +161,7 @@ the marketplace branch.
   the row is `invalid`.
 - The user data files (`constitution.md`, `state.json` once it exists, `lessons.md`,
   `handoff.md`, and the values in `git-guard.json`, `models.json`, `powerline.json`,
-  `advisor.json`) are never written. The one write into `models.json` removes a dead key. JSON writes (build): the new content goes to a temp file in the real path's folder, the old file's mode is copied (a new file gets 644), and the temp file replaces the file. A symlink is followed. A real path outside the checkout is refused (exit 3) for JSON writes and for the ignore and pointer appends.
+  `advisor.json`) are never written. The one write into `models.json` removes a dead key. JSON writes (build): the new content goes to a temp file (name ends in `.tmp`) in the real path's folder, the old file's mode is copied (a new file gets 644), and the temp file replaces the file. A symlink is followed. A real path outside the checkout is refused (exit 3) for JSON writes and for the ignore and pointer appends.
 
 ## R13. Commits (FR-016, FR-017, CHK004, CHK011)
 
@@ -179,7 +179,7 @@ the marketplace branch.
   `-m 'chore(stratum): update harness files to <version>' -m '<one line per item>'`.
 - Before any change, `audit` checks `git status --porcelain -- <file>` for each committed file and
   the branch. Uncommitted changes or a detached HEAD: the rows for that file get `skip` with the
-  reason, and the skill never runs `fix` on them.
+  reason, and the skill never runs `fix` on them. A failing `git status` counts as uncommitted changes, with the detail `git status failed for <file>`. A folder that is not a git repo gets no `skip` rows.
 - A commit a hook denies (D11): the skill quotes the deny reason and gives the exact command
   `git -C <checkout> add -- <paths> && git -C <checkout> commit -m '<message>' -- <paths>`. It names no
   personal script and never retries another way.

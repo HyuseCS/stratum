@@ -93,7 +93,7 @@ States:
 - `warn`: header only. The marketplace folder is the top level of a git checkout not on `main` (research R16).
   Shown at the gate. Nothing to fix.
 - `skip`: a row that would change a committed file with uncommitted changes, or any non-current committed-file
-  row of a checkout on a detached HEAD. Set by `audit` before any change. Never fixed. Reported
+  row of a checkout on a detached HEAD. Set by `audit` before any change. A failing `git status` gives `skip` with the detail `git status failed for <file>`. Never fixed. Reported
   with its detail.
 
 Transitions: `outdated`, `discontinued` and `new` become `current` after a fix. A fix that exits 3
