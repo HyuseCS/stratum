@@ -101,3 +101,4 @@ if b < 0:
     sys.exit(1)
 with open(af, "w", encoding="utf-8") as f:
     f.write(" ".join(ls[b + 1:e]))' "$nonce" "$af" <<<"$out" || die "ERROR: no answer between the markers"
+echo "codex: tab $name"

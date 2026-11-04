@@ -193,7 +193,7 @@ printf '%s\n' '{"type":"object","additionalProperties":false,"required":["verdic
   esac
 } > "$tmp/prompt"
 
-rc=1
+rc=1 via="codex: headless (not in herdr)"
 if [ "${HERDR_ENV:-}" = 1 ] && [ -n "${HERDR_WORKSPACE_ID:-}" ] && command -v herdr >/dev/null; then
   [ -L "$dir/auth.json" ] || block "no Stratum Codex home: run st-advisor.sh codex-home"
   add_entry || block "cannot write $dir/config.toml"
@@ -202,7 +202,8 @@ if [ "${HERDR_ENV:-}" = 1 ] && [ -n "${HERDR_WORKSPACE_ID:-}" ] && command -v he
   cp "$tmp/prompt" "$tmp/prompt.tab" || block "cannot copy the prompt"
   timeout -k 10 540 bash "$sd/st-lock.sh" --name "codex-$HERDR_WORKSPACE_ID" --timeout 50 -- bash "$sd/st-codex-agent.sh" "$f" "$tmp/prompt.tab" "$tmp/answer.json" "$dir" "${opts[@]}" > "$tmp/tab" 2>&1 || rc=$?
   [ $rc = 75 ] && block "Codex agent busy with another review"
-  case $rc in 0) ;; 124|137) echo "ERROR: Codex tab timed out" ;; *) grep -a '^ERROR:' "$tmp/tab" | tail -n1 ;; esac
+  case $rc in 0) via=$(grep -a '^codex: tab ' "$tmp/tab" | tail -n1) ;; 124|137) echo "ERROR: Codex tab timed out" ;; *) grep -a '^ERROR:' "$tmp/tab" | tail -n1 ;; esac
+  [ $rc = 0 ] || via="codex: headless (Codex tab failed)"
 fi
 left=$((540 - SECONDS))
 # ponytail: the 60 s floor has no test (it needs a 60 s wait), add one with a fake clock if the budget changes
@@ -255,3 +256,6 @@ head = [f"BLOCKED: {summary}"] if v == "BLOCKED" else [f"{v} sha256 {h}", f"summ
 print("\n".join(head + found + [f"record: {f}/advisor.md"]))
 sys.exit(1 if v == "BLOCKED" else 0)
 PY
+rc=$?
+echo "$via"
+exit $rc

@@ -336,10 +336,12 @@ approve
 h=$(plan_hash)
 hrun folder
 check "(k) tab path: APPROVED, codex exec not run, tab with the Codex home, agent start, one enter" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "APPROVED sha256 $h" ] && [ ! -e "$tmp/argv" ] && grep -qF -- "tab create" "$tmp/herdr.log" && grep -qF -- "--env CODEX_HOME=$home" "$tmp/herdr.log" && grep -q "^agent start st-codex-001-demo --kind codex" "$tmp/herdr.log" && [ "$(grep -cx "agent send-keys st-codex-001-demo enter" "$tmp/herdr.log")" = 1 ]'
+check "(k) G5 tab path: the last line names the tab" '[ "$(tail -n1 <<<"$out")" = "codex: tab st-codex-001-demo" ]'
 hrun nofolder
 check "(k1) tab path, no Folder access screen: APPROVED, no send-keys, codex exec not run" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "APPROVED sha256 $h" ] && [ ! -e "$tmp/argv" ] && grep -q "^agent start st-codex-001-demo" "$tmp/herdr.log" && ! grep -q "send-keys" "$tmp/herdr.log"'
 hrun notready
 check "(k3) agent_not_ready with an unknown screen: ERROR line printed, codex exec runs, verdict APPROVED, no BLOCKED" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "ERROR: Codex stopped at start on a screen Stratum does not know, so the Codex tab is closed. Run the point again, or check Codex." ] && grep -qx "APPROVED sha256 $h" <<<"$out" && ! grep -q "^BLOCKED" <<<"$out" && [ "$(head -n1 "$tmp/argv")" = exec ] && ! grep -q "send-keys" "$tmp/herdr.log"'
+check "(k3) G5 failed tab: the last line says headless" '[ "$(tail -n1 <<<"$out")" = "codex: headless (Codex tab failed)" ]'
 hrun nomarkers
 check "(k6) no markers in the answer: the ERROR line, then codex exec runs and the verdict is APPROVED" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "ERROR: no answer between the markers" ] && grep -qx "APPROVED sha256 $h" <<<"$out" && [ "$(head -n1 "$tmp/argv")" = exec ]'
 printf '%s' '{"verdict":"REVISE","summary":"s","findings":[{"claim":"c","evidence":"e","location":"l","severity":"URGENT"}]}' > "$tmp/answer"

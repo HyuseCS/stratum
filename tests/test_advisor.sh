@@ -59,6 +59,7 @@ answer '{"verdict":"APPROVED","summary":"fine","findings":[]}'
 run plan specs/001-demo
 h=$(plan_hash)
 check "plan APPROVED: exit 0, verdict line with the plan hash" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "APPROVED sha256 $h" ]'
+check "G5 outside herdr the last line says headless" '[ "$(tail -n1 <<<"$out")" = "codex: headless (not in herdr)" ]'
 check "plan record header" 'last_header plan | grep -qE "^## plan \| [0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z \| sha256 $h \| APPROVED$"'
 check "FR-012 argv read-only" '[ "$(head -n1 "$tmp/argv" 2>/dev/null)" = exec ] && grep -x -A1 -- "-s" "$tmp/argv" | grep -qx read-only && grep -qx -- "--ephemeral" "$tmp/argv" && grep -qx -- "--output-schema" "$tmp/argv" && grep -qx -- "-o" "$tmp/argv" && [ "$(tail -n1 "$tmp/argv")" = "-" ]'
 check "D23 argv ignore-user-config after read-only" 'grep -x -A1 -- read-only "$tmp/argv" | grep -qx -- --ignore-user-config'
