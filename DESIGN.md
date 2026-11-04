@@ -184,7 +184,8 @@ dependency.
   worktree has none. `link`: the session start hook links the main checkout's file into a
   worktree that has none. `own`: each checkout has its own on purpose.
   A feature that adds a `.stratum/` file adds its row. `tests/test_local_files.sh` fails on a
-  file with no row.
+  file with no row. A change that removes a feature which wrote a project file adds that file to
+  the discontinued list in `scripts/st-update.sh`.
 
   | File | Worktree | Why |
   |------|----------|-----|
@@ -199,6 +200,7 @@ dependency.
   | `.stratum/weather.json` | own | The statusline cache of that checkout. |
   | `.stratum/handoff.md` | own | Each checkout's session writes its own. |
   | `.stratum/decisions.md` | own | Grill decisions when no feature is set. |
+  | `.stratum/commit-mode` | own | Discontinued. `st-update` removes it from each checkout. |
   | `.stratum/lessons.md` | link | Lessons written in a worktree go to the main checkout's file. |
   | `.stratum/constitution.md` | link | The project rules, also each `<app>-constitution.md`. |
   | `.stratum/templates` | link | The project's own templates. |

@@ -1,0 +1,270 @@
+#!/usr/bin/env bash
+set -euo pipefail
+usage() { echo "usage: st-update.sh items | audit [<folder>] | plugin <folder> | fix <folder> <kind> <name> [--force]" >&2; exit 2; }
+[ $# -gt 0 ] || usage
+cfg=${CLAUDE_CONFIG_DIR:-$HOME/.claude}
+case $1 in
+  items)
+    [ $# = 1 ] || usage
+    printf '%s\t%s\t%s\n' \
+      install stratum@stratum "install record" \
+      statusline statusLine .claude/settings.local.json \
+      ignore .stratum/handoff.md .gitignore \
+      ignore .stratum/lessons.md .gitignore \
+      ignore .stratum/weather.json .gitignore \
+      ignore .stratum/powerline.json .gitignore \
+      ignore .stratum/git-guard.json .gitignore \
+      ignore .stratum/models.json .gitignore \
+      ignore graphify-out/ .gitignore \
+      pointer @AGENTS.md CLAUDE.md \
+      pointer @.stratum/constitution.md CLAUDE.md \
+      plugins-off enabledPlugins .claude/settings.json \
+      plugins-off "<config>/settings.json" .claude/settings.json \
+      figcraft skills/st-design/design-tool.md .claude/settings.json \
+      file .stratum/state.json "main checkout" \
+      file .stratum/git-guard.json "main checkout" \
+      file .stratum/models.json "main checkout" \
+      file .stratum/powerline.json "main checkout" \
+      file .stratum/advisor.json "main checkout" \
+      file .stratum/constitution.md "main checkout" \
+      models-key agents/ .stratum/models.json \
+      allow permissions.allow .claude/settings.json \
+      allow skills/ .claude/settings.json \
+      gone-file .stratum/commit-mode "each checkout"
+    ;;
+  audit)
+    [ $# -le 2 ] || usage
+    folder=${2:-$PWD}
+    main=$(git -C "$folder" worktree list --porcelain 2>/dev/null | sed -n '1s/^worktree //p') || true
+    [ -d "${main:=$folder}/.stratum" ] || { echo "Not a Stratum project: $folder. Run /stratum:st-init there." >&2; exit 1; }
+    exec python3 -I - "$main" "$cfg" <<'PY'
+import json, os, re, subprocess, sys
+main, cfg = sys.argv[1:]
+IGNORE = [".stratum/handoff.md", ".stratum/lessons.md", ".stratum/weather.json", ".stratum/powerline.json",
+          ".stratum/git-guard.json", ".stratum/models.json", "graphify-out/"]
+FILES = [".stratum/state.json", ".stratum/git-guard.json", ".stratum/models.json", ".stratum/powerline.json",
+         ".stratum/advisor.json", ".stratum/constitution.md"]
+GONE = [".stratum/commit-mode"]
+SAFE = re.compile(r"[A-Za-z0-9_.:@/*()-]+")
+STRATUM_SL = re.compile(r"bash +\S*/statusline/st-statusline\.sh")
+SKILL = re.compile(r"Skill\(stratum:(.+?)(?::\*)?\)")
+MCP = re.compile(r"mcp__plugin_stratum_(.+?)(?:__(.+))?")
+
+
+def clean(s):
+    return re.sub(r"[\x00-\x1f\x7f]", "?", str(s))
+
+
+def row(f, kind, name, state, detail=""):
+    print("\t".join(clean(x) for x in (f, kind, name, state, detail)))
+
+
+def load(p, missing={}):
+    try:
+        with open(p, "rb") as fh:
+            v = json.load(fh)
+    except FileNotFoundError:
+        return missing
+    except (OSError, ValueError, RecursionError):
+        return None
+    return v if isinstance(v, dict) else None
+
+
+def read(p):
+    try:
+        with open(p, encoding="utf-8", errors="replace") as fh:
+            return fh.read()
+    except OSError:
+        return None
+
+
+def git(*a):
+    return subprocess.run(["git", *a], capture_output=True, text=True)
+
+
+def allowed(x):
+    p = x.get("permissions")
+    a = p.get("allow") if isinstance(p, dict) else None
+    return [s for s in a if isinstance(s, str)] if isinstance(a, list) else []
+
+
+mk = load(f"{cfg}/plugins/known_marketplaces.json", None)
+mk = mk.get("stratum") if mk else None
+loc = mk.get("installLocation") if isinstance(mk, dict) else None
+pj = load(f"{loc}/.claude-plugin/plugin.json", None) if isinstance(loc, str) else None
+if not pj or not isinstance(pj.get("version"), str):
+    sys.exit(f"No Stratum marketplace with a readable plugin.json in {cfg}/plugins/known_marketplaces.json.")
+ver = pj["version"]
+row("-", "marketplace", "stratum", "current", f"{ver} {loc}")
+src = mk.get("source")
+if isinstance(src, dict) and src.get("source") == "directory":
+    top = git("-C", loc, "rev-parse", "--show-toplevel")
+    if top.returncode == 0 and os.path.realpath(top.stdout.strip()) == os.path.realpath(loc):
+        branch = git("-C", loc, "branch", "--show-current").stdout.strip() or "detached"
+        if branch != "main":
+            row("-", "marketplace-branch", branch, "warn", loc)
+
+try:
+    agents = {f[:-3] for f in os.listdir(f"{loc}/agents") if f.endswith(".md")}
+except OSError:
+    agents = set()
+servers = pj.get("mcpServers") if isinstance(pj.get("mcpServers"), dict) else {}
+tools = []
+for line in (read(f"{loc}/skills/st-design/design-tool.md") or "").splitlines():
+    if "**Tools.**" in line:
+        tools += re.findall(r"mcp__plugin_stratum_figcraft__\w+", line)
+
+ip = load(f"{cfg}/plugins/installed_plugins.json")
+if ip is None:
+    sys.exit(f"Not a JSON object: {cfg}/plugins/installed_plugins.json")
+try:
+    recs = [r for r in ip["plugins"]["stratum@stratum"] if isinstance(r, dict)]
+except (KeyError, TypeError):
+    recs = []
+
+cos = []
+for block in git("-C", main, "worktree", "list", "--porcelain").stdout.split("\n\n"):
+    kv = dict((l.split(" ", 1) + [""])[:2] for l in block.splitlines())
+    if kv.get("worktree") and "bare" not in kv and os.path.isdir(kv["worktree"]):
+        cos.append((kv["worktree"], kv.get("branch", "").removeprefix("refs/heads/")))
+cos = cos or [(main, "")]
+main = cos[0][0]
+paths = [c for c, _ in cos]
+
+own, subs, tail, users = {}, {}, [], []
+for r in recs:
+    p, scope = r.get("projectPath"), r.get("scope")
+    if scope in ("user", "managed"):
+        users.append(r)
+        tail.append((p if isinstance(p, str) else cfg, "listed", f"{scope} scope {r.get('version')}"))
+        continue
+    if scope not in ("local", "project") or not isinstance(p, str):
+        continue
+    p = os.path.normpath(p)
+    if p in paths:
+        own.setdefault(p, []).append(r)
+        continue
+    under = [c for c in paths if p.startswith(c + "/")]
+    if os.path.isdir(p):
+        if under:
+            subs.setdefault(max(under, key=len), []).append((p, r))
+    elif under or (os.path.dirname(p) == os.path.dirname(main)
+                   and os.path.basename(p).startswith(os.path.basename(main) + "-")):
+        tail.append((p, "gone", f"folder missing, {scope} {r.get('version')}"))
+
+
+def install(f, r, extra=""):
+    v = r.get("version")
+    row(f, "install", "stratum@stratum", "current" if v == ver else "outdated",
+        f"{r.get('scope')} {v}" + ("" if v == ver else f" -> {ver}") + extra)
+
+
+def statusline(f, target, only_stratum=False):
+    s = load(f"{f}/.claude/settings.local.json")
+    if s is None:
+        if not only_stratum:
+            row(f, "statusline", "statusLine", "invalid", ".claude/settings.local.json is not a JSON object")
+        return
+    sl = s.get("statusLine")
+    cmd = sl.get("command") if isinstance(sl, dict) else None
+    stratum = isinstance(cmd, str) and STRATUM_SL.fullmatch(cmd)
+    if only_stratum and not stratum:
+        return
+    if not target or not isinstance(target.get("installPath"), str):
+        return row(f, "statusline", "statusLine", "listed", "no install")
+    want = f"bash {target['installPath']}/statusline/st-statusline.sh"
+    if "statusLine" not in s:
+        row(f, "statusline", "statusLine", "new", want)
+    elif cmd == want:
+        row(f, "statusline", "statusLine", "current", want)
+    else:
+        row(f, "statusline", "statusLine", "outdated" if stratum else "ask",
+            f"{cmd if isinstance(cmd, str) else 'not a command'} -> {want}")
+
+
+def dead(s):
+    m = SKILL.fullmatch(s)
+    if m:
+        return "/" in m[1] or not os.path.isfile(f"{loc}/skills/{m[1]}/SKILL.md")
+    m = MCP.fullmatch(s)
+    if m:
+        return m[1] not in servers or (m[1] == "figcraft" and m[2] is not None and s not in tools)
+    return None
+
+
+def judged(f, kind, name, is_dead, detail):
+    row(f, kind, name, ("discontinued" if SAFE.fullmatch(name) else "invalid") if is_dead else "current", detail)
+
+
+g = load(f"{cfg}/settings.json") or {}
+ep = g.get("enabledPlugins") if isinstance(g.get("enabledPlugins"), dict) else {}
+offkeys = [k for k, v in ep.items() if v is True and (k == "ponytail@ponytail" or "token-weather" in k)]
+main_rec = (own.get(main) or [None])[0] or (users or [None])[0]
+
+for c, branch in cos:
+    worker = " worker" if branch.startswith("worker-") else ""
+    for r in own.get(c, []):
+        install(c, r, worker)
+    if c not in own:
+        row(c, "install", "stratum@stratum", "listed", "no install" + worker)
+    statusline(c, (own.get(c) or [None])[0] or main_rec)
+
+    probe = [n + "x" if n.endswith("/") else n for n in IGNORE]
+    hit = set(git("-C", c, "check-ignore", "--no-index", "--", *probe).stdout.splitlines())
+    for n, q in zip(IGNORE, probe):
+        row(c, "ignore", n, "current" if q in hit else "new", ".gitignore")
+
+    txt = {n: read(f"{c}/{n}") for n in ("AGENTS.md", "CLAUDE.md", "CLAUDE.local.md")}
+    has_agents = txt["AGENTS.md"] is None or "@AGENTS.md" in [l.strip() for l in (txt["CLAUDE.md"] or "").splitlines()]
+    row(c, "pointer", "@AGENTS.md", "current" if has_agents else "new", "CLAUDE.md")
+    has_const = any(".stratum/constitution.md" in (t or "") for t in txt.values())
+    row(c, "pointer", "@.stratum/constitution.md", "current" if has_const else "new", "CLAUDE.md")
+
+    ps, pl = load(f"{c}/.claude/settings.json"), load(f"{c}/.claude/settings.local.json")
+    for k in offkeys:
+        if ps is None:
+            row(c, "plugins-off", k, "invalid", ".claude/settings.json is not a JSON object")
+            continue
+        off = any(isinstance(x.get("enabledPlugins"), dict) and x["enabledPlugins"].get(k) is False for x in (ps, pl or {}))
+        row(c, "plugins-off", k, "current" if off else "new", ".claude/settings.json")
+
+    allow = allowed(ps) if ps is not None else []
+    if any(s.startswith("mcp__plugin_stratum_figcraft__") for s in allow):
+        for t in tools:
+            row(c, "figcraft", t, "current" if t in allow else "new", ".claude/settings.json")
+
+    if c == main:
+        for n in FILES:
+            there = os.path.exists(f"{c}/{n}")
+            row(c, "file", n, "current" if there else "new",
+                "present" if there else "missing, run /stratum:st-constitution" if n.endswith("constitution.md") else "missing")
+
+    models = load(f"{c}/.stratum/models.json")
+    if models is None:
+        row(c, "models-key", ".stratum/models.json", "invalid", "not a JSON object")
+    else:
+        for k in models:
+            judged(c, "models-key", k, k not in agents and k != "st-worker", ".stratum/models.json")
+
+    for fn, x in ((".claude/settings.json", ps), (".claude/settings.local.json", pl)):
+        if x is None:
+            row(c, "allow", fn, "invalid", f"{fn} is not a JSON object")
+            continue
+        for s in allowed(x):
+            d = dead(s)
+            if d is not None:
+                judged(c, "allow", s, d, fn)
+
+    for n in GONE:
+        row(c, "gone-file", n, "discontinued" if os.path.lexists(f"{c}/{n}") else "current", "each checkout")
+
+    for p, r in subs.get(c, []):
+        install(p, r)
+        statusline(p, r, only_stratum=True)
+
+for p, state, detail in tail:
+    row(p, "install", "stratum@stratum", state, detail)
+PY
+    ;;
+  *) usage ;;
+esac
