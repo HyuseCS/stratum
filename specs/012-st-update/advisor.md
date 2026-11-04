@@ -11,3 +11,6 @@ summary: US1 decisions: accept 1-7 and 9; 8 should be invalid not discontinued (
 
 ## decisions | 2026-11-04T07:34:05Z | /advisor
 summary: US2/US3 decisions: accept 1,2,4-8,10,12; 3 skip rows need their reason shown, not 'nothing to update'; 9 note T016 as done on main after merge; 11 split the README commands into two blocks; bump to 0.7.0 is needed before plugin update has any effect
+
+## diff | 2026-11-04T09:05:53Z | /advisor
+summary: /advisor unavailable in this session, diff d4b00a8..ef7b47c not reviewed by an advisor
