@@ -30,7 +30,7 @@ if [ -n "\${STUB_FAIL:-}" ]; then
 fi
 target=\$(pwd -P)
 [ -n "\${STUB_OTHER:-}" ] && target="$tmp/other-x"
-python3 -I - "$tmp/cfg/plugins/installed_plugins.json" "\$target" "\$scope" "$tmp/cfg/plugins/cache/stratum/stratum/0.7.0" <<'PY' || { echo '{"command":"update","outcome":"failed","message":"no record for this folder","failureCode":"not_found"}'; exit 1; }
+[ -n "\${STUB_NOMOVE:-}" ] || python3 -I - "$tmp/cfg/plugins/installed_plugins.json" "\$target" "\$scope" "$tmp/cfg/plugins/cache/stratum/stratum/0.7.0" <<'PY' || { echo '{"command":"update","outcome":"failed","message":"no record for this folder","failureCode":"not_found"}'; exit 1; }
 import datetime, json, sys
 path, target, scope, cache = sys.argv[1:]
 doc = json.load(open(path))
@@ -129,10 +129,12 @@ check "U4 statusLine at the record path current" [ "$(slcmd "bash $tmp/cfg/plugi
 check "U4 no statusLine is new" [ "$(slraw '{}')" = new ]
 check "U4 custom statusLine is ask" [ "$(slcmd 'bash /opt/mine/statusline.sh')" = ask ]
 check "U4 bad JSON is invalid" [ "$(slraw '{"statusLine": ')" = invalid ]
+audit "$tmp/proj"
+check "U4 bad settings.local.json gives one invalid row" [ "$(awk -F'\t' -v f="$tmp/proj" '$1 == f && $4 == "invalid" && index($5, "settings.local.json")' <<<"$rows" | wc -l)" = 1 ]
 
 printf '{"st-gone": {"model": "haiku"}, "st-build": {"model": "opus"}}\n' > "$tmp/proj/.stratum/models.json"
 cat > "$tmp/proj/.claude/settings.json" <<'EOF'
-{"permissions": {"allow": ["Skill(stratum:st-gone)", "Skill(stratum:x$(touch pwned))", "Skill(stratum:../x)", "Bash(npm test:*)", "mcp__plugin_stratum_figcraft__get_node", "mcp__plugin_stratum_figcraft__gone_tool"]}}
+{"permissions": {"allow": ["Skill(stratum:st-gone)", "Skill(stratum:x$(touch pwned))", "Skill(stratum:../x)", "Bash(npm test:*)", "mcp__plugin_stratum_figcraft__get_node", "mcp__plugin_stratum_figcraft__gone_tool", "mcp__plugin_stratum_figcraft__*"]}}
 EOF
 git -C "$tmp/proj" commit -qam "fixture: settings for the U5 and U7 rows"
 audit "$tmp/proj"
@@ -145,6 +147,13 @@ check "U5 injected allow entry invalid" exits 0 [ "$(statein "$tmp/proj" allow '
 check "U5 skill entry with a slash invalid" exits 0 [ "$(statein "$tmp/proj" allow 'Skill(stratum:../x)')" = invalid ]
 check "U5 no file pwned under the temp folder" exits 0 [ -z "$(find "$tmp" -name pwned)" ]
 check "U5 user Bash rule has no row" exits 0 [ -z "$(statein "$tmp/proj" allow 'npm test')" ]
+check "U5 FigCraft wildcard allow entry current" exits 0 [ "$(state "$tmp/proj" allow 'mcp__plugin_stratum_figcraft__*')" = current ]
+for d in agents skills; do
+  mv "$tmp/mkt/$d" "$tmp/mkt/$d.off"
+  err=$(cd "$tmp" && bash "$script" audit "$tmp/proj" 2>&1 >/dev/null); rc=$?
+  mv "$tmp/mkt/$d.off" "$tmp/mkt/$d"
+  check "U5 missing marketplace $d/ exits 1 with one line" exits 1 [ "$err" = "Cannot read $tmp/mkt/$d in the Stratum marketplace." ]
+done
 
 printf 'auto\n' > "$tmp/proj/.stratum/commit-mode"
 audit "$tmp/proj"
@@ -164,6 +173,10 @@ check "U7 plugin in neither file is new" exits 0 [ "$(state "$tmp/proj-wt" plugi
 check "U7 allowed FigCraft tool is current" exits 0 [ "$(statein "$tmp/proj" figcraft get_node)" = current ]
 check "U7 unallowed FigCraft tool is new" exits 0 [ "$(statein "$tmp/proj" figcraft set_properties)" = new ]
 check "U7 no FigCraft row when none is allowed" exits 0 [ -z "$(kindrows "$tmp/proj-wt" figcraft)" ]
+printf '{"enabledPlugins": {"ponytail@ponytail": true, "token-weather$(touch pwned)@x": true}}\n' > "$tmp/cfg/settings.json"
+audit "$tmp/proj"
+check "U7 unsafe plugin key is invalid" exits 0 [ "$(state "$tmp/proj" plugins-off 'token-weather$(touch pwned)@x')" = invalid ]
+printf '{"enabledPlugins": {"ponytail@ponytail": true}}\n' > "$tmp/cfg/settings.json"
 printf 'lessons\n' > "$tmp/proj/.stratum/lessons.md"
 git -C "$tmp/proj" add -- .stratum/lessons.md
 printf '.stratum/lessons.md\n' >> "$tmp/proj/.gitignore"
@@ -221,6 +234,8 @@ fullrun() {
 }
 cache7="$tmp/cfg/plugins/cache/stratum/stratum/0.7.0"
 
+run fix "$tmp/proj" install stratum@stratum
+check "U9 fix on an outdated install row exits 3, no fix for that kind" exits 3 contains "$out" "skip: install has no fix"
 run plugin "$tmp/proj"
 check "U9 plugin exits 0" [ "$rc" = 0 ]
 check "U9 plugin prints ok, the new version and path" contains "$out" "ok 0.7.0 $cache7"
@@ -239,6 +254,8 @@ out=$(STUB_FAIL=1 bash "$script" plugin "$tmp/proj/apps/a" 2>&1); rc=$?
 check "U9 failed CLI update exits 1 and leaves the record at 0.1.22" exits 1 [ "$(rec "$tmp/proj/apps/a" version)" = 0.1.22 ]
 check "U9 failed CLI update prints the CLI message" contains "$out" "stub refused the update"
 check "U9 failed CLI update prints the command" contains "$out" "Run: cd $tmp/proj/apps/a && claude plugin update stratum@stratum -s local"
+out=$(STUB_NOMOVE=1 bash "$script" plugin "$tmp/proj/apps/a" 2>&1); rc=$?
+check "U9 ok outcome with an unmoved record exits 1" exits 1 [ "$(rec "$tmp/proj/apps/a" version)" = 0.1.22 ]
 
 out=$(STUB_OTHER=1 bash "$script" plugin "$tmp/proj-wt" 2>&1); rc=$?
 check "U10 update of another record exits 1" [ "$rc" = 1 ]
@@ -271,6 +288,10 @@ check "U14 gone-file commit-mode exits 0 and deletes it" exits 0 [ ! -e "$tmp/pr
 printf 'lessons\n' > "$tmp/proj/.stratum/lessons.md"
 run fix "$tmp/proj" gone-file .stratum/lessons.md
 check "U14 gone-file lessons.md exits 3 and keeps it" exits 3 [ -e "$tmp/proj/.stratum/lessons.md" ]
+mkdir "$tmp/proj/.stratum/commit-mode"
+run fix "$tmp/proj" gone-file .stratum/commit-mode
+check "U14 gone-file on a commit-mode folder exits 3 and keeps it" exits 3 [ -d "$tmp/proj/.stratum/commit-mode" ]
+rmdir "$tmp/proj/.stratum/commit-mode"
 
 mkdir -p "$tmp/bin18"
 for b in /usr/bin/*; do [ "${b##*/}" = claude ] || ln -s "$b" "$tmp/bin18/${b##*/}"; done
@@ -388,4 +409,12 @@ check "U21 that fix creates no AGENTS.md" [ ! -e "$tmp/u21/AGENTS.md" ]
 run fix "$tmp/u21" pointer @.stratum/constitution.md
 check "U21 CLAUDE.md gets only the constitution pointer" [ "$(cat "$tmp/u21/CLAUDE.md")" = "@.stratum/constitution.md" ]
 check "U21 no AGENTS.md after the constitution fix" [ ! -e "$tmp/u21/AGENTS.md" ]
+
+printf '{"st-gone": {}, "st-build": {}}\n' > "$tmp/u21-models.json"
+ln -s "$tmp/u21-models.json" "$tmp/u21/.stratum/models.json"
+run fix "$tmp/u21" models-key st-gone
+check "JSON write through a symlink exits 0" [ "$rc" = 0 ]
+check "JSON write keeps the symlink" [ -L "$tmp/u21/.stratum/models.json" ]
+check "JSON write changes the link target" [ "$(pyq "$tmp/u21-models.json" 'sorted(d)')" = '["st-build"]' ]
+check "JSON write leaves no .tmp file" [ -z "$(find "$tmp" -name '*.tmp')" ]
 exit "$fail"

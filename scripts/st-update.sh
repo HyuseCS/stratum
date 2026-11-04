@@ -4,54 +4,41 @@ usage() { echo "usage: st-update.sh items | audit [<folder>] | plugin <folder> |
 [ $# -gt 0 ] || usage
 cfg=${CLAUDE_CONFIG_DIR:-$HOME/.claude}
 case $1 in
-  items)
-    [ $# = 1 ] || usage
-    printf '%s\t%s\t%s\n' \
-      install stratum@stratum "install record" \
-      statusline statusLine .claude/settings.local.json \
-      ignore .stratum/handoff.md .gitignore \
-      ignore .stratum/lessons.md .gitignore \
-      ignore .stratum/weather.json .gitignore \
-      ignore .stratum/powerline.json .gitignore \
-      ignore .stratum/git-guard.json .gitignore \
-      ignore .stratum/models.json .gitignore \
-      ignore graphify-out/ .gitignore \
-      pointer @AGENTS.md CLAUDE.md \
-      pointer @.stratum/constitution.md CLAUDE.md \
-      plugins-off enabledPlugins .claude/settings.json \
-      plugins-off "<config>/settings.json" .claude/settings.json \
-      figcraft skills/st-design/design-tool.md .claude/settings.json \
-      file .stratum/state.json "main checkout" \
-      file .stratum/git-guard.json "main checkout" \
-      file .stratum/models.json "main checkout" \
-      file .stratum/powerline.json "main checkout" \
-      file .stratum/advisor.json "main checkout" \
-      file .stratum/constitution.md "main checkout" \
-      models-key agents/ .stratum/models.json \
-      allow permissions.allow .claude/settings.json \
-      allow skills/ .claude/settings.json \
-      gone-file .stratum/commit-mode "each checkout"
-    exit
-    ;;
+  items) [ $# = 1 ] || usage ;;
   audit) [ $# -le 2 ] || usage ;;
   plugin) [ $# = 2 ] || usage ;;
   fix) [ $# = 4 ] || { [ $# = 5 ] && [ "$5" = --force ]; } || usage ;;
   *) usage ;;
 esac
 main=
-if [ "$1" != plugin ]; then
+if [ "$1" = audit ] || [ "$1" = fix ]; then
   folder=${2:-$PWD}
   main=$(git -C "$folder" worktree list --porcelain 2>/dev/null | sed -n '1s/^worktree //p') || true
   [ -d "${main:=$folder}/.stratum" ] || { echo "Not a Stratum project: $folder. Run /stratum:st-init there." >&2; exit 1; }
 fi
 exec python3 -I - "$cfg" "$main" "$@" <<'PY'
-import json, os, re, shutil, subprocess, sys
+import functools, json, os, re, shlex, shutil, subprocess, sys
 cfg, main, cmd, *args = sys.argv[1:]
 IGNORE = [".stratum/handoff.md", ".stratum/lessons.md", ".stratum/weather.json", ".stratum/powerline.json",
           ".stratum/git-guard.json", ".stratum/models.json", "graphify-out/"]
 FILES = [".stratum/state.json", ".stratum/git-guard.json", ".stratum/models.json", ".stratum/powerline.json",
          ".stratum/advisor.json", ".stratum/constitution.md"]
 GONE = [".stratum/commit-mode"]
+FN = {"ignore": ".gitignore", "pointer": "CLAUDE.md", "statusline": ".claude/settings.local.json",
+      "plugins-off": ".claude/settings.json", "figcraft": ".claude/settings.json", "models-key": ".stratum/models.json"}
+COMMITTED = (".gitignore", "AGENTS.md", "CLAUDE.md", ".claude/settings.json")
+if cmd == "items":
+    for r in [("install", "stratum@stratum", "install record"), ("statusline", "statusLine", FN["statusline"]),
+              *[("ignore", n, ".gitignore") for n in IGNORE],
+              ("pointer", "@AGENTS.md", "CLAUDE.md"), ("pointer", "@.stratum/constitution.md", "CLAUDE.md"),
+              ("plugins-off", "enabledPlugins", ".claude/settings.json"),
+              ("plugins-off", "<config>/settings.json", ".claude/settings.json"),
+              ("figcraft", "skills/st-design/design-tool.md", ".claude/settings.json"),
+              *[("file", n, "main checkout") for n in FILES],
+              ("models-key", "agents/", ".stratum/models.json"), ("allow", "permissions.allow", ".claude/settings.json"),
+              ("allow", "skills/", ".claude/settings.json"), *[("gone-file", n, "each checkout") for n in GONE]]:
+        print("\t".join(r))
+    sys.exit()
 SAFE = re.compile(r"[A-Za-z0-9_.:@/*()-]+")
 STRATUM_SL = re.compile(r"bash +\S*/statusline/st-statusline\.sh")
 SKILL = re.compile(r"Skill\(stratum:(.+?)(?::\*)?\)")
@@ -115,7 +102,7 @@ if cmd == "plugin":
     if not os.path.isdir(f):
         sys.exit(f"Folder missing: {f}.")
     me = (mine[0]["projectPath"], mine[0]["scope"])
-    again = f"Run: cd {f} && claude plugin update stratum@stratum -s {me[1]}"
+    again = f"Run: cd {shlex.quote(f)} && claude plugin update stratum@stratum -s {me[1]}"
     if not shutil.which("claude"):
         sys.exit(f"claude not found. {again}")
 
@@ -161,8 +148,9 @@ if isinstance(src, dict) and src.get("source") == "directory":
 
 try:
     agents = {f[:-3] for f in os.listdir(f"{loc}/agents") if f.endswith(".md")}
-except OSError:
-    agents = set()
+    os.listdir(f"{loc}/skills")
+except OSError as e:
+    sys.exit(f"Cannot read {e.filename} in the Stratum marketplace.")
 servers = pj.get("mcpServers") if isinstance(pj.get("mcpServers"), dict) else {}
 tools = []
 for line in (read(f"{loc}/skills/st-design/design-tool.md") or "").splitlines():
@@ -174,11 +162,13 @@ if ip is None:
     sys.exit(f"Not a JSON object: {cfg}/plugins/installed_plugins.json")
 recs = records()
 
-cos = []
+cos, det = [], set()
 for block in git("-C", main, "worktree", "list", "--porcelain").stdout.split("\n\n"):
     kv = dict((l.split(" ", 1) + [""])[:2] for l in block.splitlines())
     if kv.get("worktree") and "bare" not in kv and os.path.isdir(kv["worktree"]):
         cos.append((kv["worktree"], kv.get("branch", "").removeprefix("refs/heads/")))
+        if "detached" in kv:
+            det.add(kv["worktree"])
 cos = cos or [(main, "")]
 main = cos[0][0]
 paths = [c for c, _ in cos]
@@ -241,7 +231,7 @@ def dead(s):
         return "invalid" if "/" in m[1] else not os.path.isfile(f"{loc}/skills/{m[1]}/SKILL.md")
     m = MCP.fullmatch(s)
     if m:
-        return m[1] not in servers or (m[1] == "figcraft" and m[2] is not None and s not in tools)
+        return m[1] not in servers or (m[1] == "figcraft" and m[2] not in (None, "*") and s not in tools)
     return None
 
 
@@ -276,6 +266,9 @@ for c, branch in cos:
 
     ps, pl = load(f"{c}/.claude/settings.json"), load(f"{c}/.claude/settings.local.json")
     for k in offkeys:
+        if not SAFE.fullmatch(k):
+            row(c, "plugins-off", k, "invalid", f"plugin key in {cfg}/settings.json has unsafe characters")
+            continue
         if ps is None:
             row(c, "plugins-off", k, "invalid", ".claude/settings.json is not a JSON object")
             continue
@@ -300,7 +293,7 @@ for c, branch in cos:
         for k in models:
             judged(c, "models-key", k, k not in agents and k != "st-worker", ".stratum/models.json")
 
-    for fn, x in ((".claude/settings.json", ps), (".claude/settings.local.json", pl)):
+    for fn, x in ((".claude/settings.json", ps), (".claude/settings.local.json", pl or {})):
         if x is None:
             row(c, "allow", fn, "invalid", f"{fn} is not a JSON object")
             continue
@@ -320,7 +313,22 @@ for p, state, detail in tail:
     row(p, "install", "stratum@stratum", state, detail)
 
 if cmd == "audit":
-    print("\n".join("\t".join(r) for r in ROWS))
+    @functools.cache
+    def dirty(c, n):
+        return bool(git("-C", c, "status", "--porcelain", "--", n).stdout.strip())
+
+    def mark(r):
+        f, kind, name, state, detail = r
+        n = detail if kind == "allow" else FN.get(kind)
+        if f not in paths or n not in COMMITTED or state == "invalid":
+            return r
+        if f in det:
+            return (f, kind, name, "skip", "detached HEAD, no branch to commit on")
+        if state != "current" and dirty(f, n):
+            return (f, kind, name, "skip", f"{n} has uncommitted changes")
+        return r
+
+    print("\n".join("\t".join(mark(r)) for r in ROWS))
     sys.exit()
 
 
@@ -336,9 +344,7 @@ if kind == "allow":
     if fn not in (".claude/settings.json", ".claude/settings.local.json"):
         refuse(f"skip: {fn} is not a settings file")
 else:
-    fn = {"ignore": ".gitignore", "pointer": "CLAUDE.md", "statusline": ".claude/settings.local.json",
-          "plugins-off": ".claude/settings.json", "figcraft": ".claude/settings.json",
-          "models-key": ".stratum/models.json"}.get(kind, name)
+    fn = FN.get(kind, name)
 path = os.path.join(folder, fn)
 data = None
 if kind in ("statusline", "plugins-off", "figcraft", "models-key", "allow"):
@@ -365,7 +371,10 @@ if kind in ("ignore", "pointer"):
     with open(path, "a", encoding="utf-8") as fh:
         fh.write(("\n" if old and not old.endswith("\n") else "") + name + "\n")
 elif kind == "gone-file":
-    os.remove(path)
+    try:
+        os.remove(path)
+    except OSError as e:
+        refuse(f"skip: cannot remove {fn}: {e.strerror}")
 elif kind == "file":
     data = {"feature_directory": None, "phase": None, "lane": None}
 elif kind == "statusline":
@@ -380,10 +389,14 @@ elif kind == "models-key":
     del data[name]
 elif kind == "allow":
     data["permissions"]["allow"] = [e for e in data["permissions"]["allow"] if e != entry]
+else:
+    refuse(f"skip: {kind} has no fix")
 if data is not None:
     text = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w", encoding="utf-8") as fh:
+    real = os.path.realpath(path)
+    os.makedirs(os.path.dirname(real), exist_ok=True)
+    with open(real + ".tmp", "w", encoding="utf-8") as fh:
         fh.write(text)
+    os.replace(real + ".tmp", real)
 print(f"changed {fn}")
 PY
