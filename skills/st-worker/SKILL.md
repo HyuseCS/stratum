@@ -17,6 +17,7 @@ Make no herdr call yourself. Run only `scripts/st-worker.sh`, git and the `st-re
    Show the `worker` line.
    Each worker workspace gets the full layout: Main (the worker agent and lazygit), Dev Servers and VM.
    `start` exit 4 (state blocked): handle it as in step 6 `blocked`, then run `bash <plugin root>/scripts/st-worker.sh goal <id> --test <cmd> [--machine <m>]`, then go on with step 6.
+   If the project has `.stratum/worker-setup.sh`, `start` runs it in the new worktree first and shows its output after `setup output:`. If it fails, `start` stops with `stopped: worker-setup.sh exited <n>`: show the output to the user and stop. Never write or change that file: the user owns it.
    `start` exit 7 (state unsent): handle it as in step 6 `unsent`, then go on with step 6.
 5. On a one-line failure, show the line and stop. After a failure, do not run start again: run `bash <plugin root>/scripts/st-worker.sh list [--machine <m>]` and show what exists, because a failed remote call may still have made something.
 6. Wait: `bash <plugin root>/scripts/st-worker.sh wait <id> [--machine <m>]` per worker. For `[--machine <m>]` in this and every later command, take <m> from the worker's roster row and pass it on every follow-up; a local worker has none.

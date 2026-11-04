@@ -1305,6 +1305,26 @@ STUB_SSH_RC=255 axrun
 check "AM6 ssh down on the repo flag write: exit 1, the line, no worktree create or agent start" '[ $rc = 1 ] && hasline "cannot write .stratum/autonomous on laptop: ssh: stub failure" && [ "$(cnt "^--machine\tlaptop\tworktree\tcreate\t")" = 0 ] && [ "$(cnt "^--machine\tlaptop\tagent\tstart\t")" = 0 ]'
 autoclr
 
+su="$repo/.stratum/worker-setup.sh"
+printf '%s\n' 'printf "%s\n%s\n" "$PWD" "$1" > setup.ran' 'echo setup >> "$STUB_T/order"' 'echo SETUP RAN' > "$su"
+fresh; run bash "$script" start "${sargs[@]}"
+check "SU1 setup script: exit 0, its output after the header" '[ $rc = 0 ] && hasline "setup output:" && hasline "SETUP RAN"'
+check "SU1 it runs in the new worktree with the main checkout as its argument" '[ "$(cat "$(wt)/setup.ran")" = "$(printf "%s\n%s" "$(wt)" "$repo")" ]'
+check "SU1 it runs after worktree create and before agent start" 'o1=$(grep -n "^worktree create$" "$tmp/order" | cut -d: -f1) && o2=$(grep -n "^setup$" "$tmp/order" | cut -d: -f1) && o3=$(grep -n "^agent start$" "$tmp/order" | cut -d: -f1) && [ "$o1" -lt "$o2" ] && [ "$o2" -lt "$o3" ]'
+printf '%s\n' 'echo boom' 'exit 3' > "$su"
+fresh; run bash "$script" start "${sargs[@]}"
+check "SU2 setup fails: exit 1, its output, the stopped line, the worker line, no agent start" '[ $rc = 1 ] && hasline boom && hasline "stopped: worker-setup.sh exited 3" && hasline "worker\tworker-t004\tlocal\t%s\t%s\tworker-t004\t%s" "$(wsid)" "$(pane)" "$(wt)" && [ "$(cnt "^agent\tstart\t")" = 0 ]'
+printf '%s\n' 'echo REMOTE SETUP "$1"' > "$su"
+rfresh; xsetup; mkdir -p "$rrepo/.stratum"; cp "$su" "$rrepo/.stratum/worker-setup.sh"
+STUB_WT_PATH="$tmp/rwt" STUB_SSH_EXEC=1 rrun bash "$script" start T004 --task "$task" --test "$testcmd" --lane "$lane" --roster "$rroster" --machine laptop --repo "$rrepo"
+check "SU3 saved machine: the machine's setup script runs with its main checkout, in the one ssh call" '[ $rc = 0 ] && hasline "setup output:" && hasline "REMOTE SETUP $rrepo" && [ "$(grep -c . "$tmp/ssh")" = 1 ]'
+rfresh; xsetup; printf '%s\n' 'echo rboom' 'exit 3' > "$rrepo/.stratum/worker-setup.sh"
+STUB_WT_PATH="$tmp/rwt" STUB_SSH_EXEC=1 rrun bash "$script" start T004 --task "$task" --test "$testcmd" --lane "$lane" --roster "$rroster" --machine laptop --repo "$rrepo"
+check "SU5 saved machine setup fails: exit 1, its output, the stopped line, no agent start" '[ $rc = 1 ] && hasline rboom && hasline "stopped: worker-setup.sh exited 3 on laptop" && [ "$(rcnt "agent\tstart\t")" = 0 ]'
+rm -f "$su"
+fresh; run bash "$script" start "${sargs[@]}"
+check "SU4 no setup script: no setup output" '[ $rc = 0 ] && ! grep -q "setup output" <<<"$out"'
+
 round="$tmp/round.md"
 printf 'Fix the null check in src/a.py.\nOwns: `src/b.py`.\n' > "$round"
 fuP="/goal \`$testcmd\` exits 0, the change is committed on branch worker-t004, and result.md is written; read brief.md in this folder first and follow it"
