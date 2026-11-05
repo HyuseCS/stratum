@@ -120,7 +120,7 @@ shift 2
 c="$*"
 [ -z "${STUB_SSH_EXEC:-}" ] || exec bash -c "$c"
 case "$c" in
-*"worktree add -b "*) set -- $c; while [ "$1" != -b ]; do shift; done; jq -c --arg p "$3" --arg b "$2" '. + [{path:$p,branch:$b}]' "$T/wt.json" > "$T/wt.new" && mv "$T/wt.new" "$T/wt.json" ;;
+*"worktree add -q -b "*) set -- $c; while [ "$1" != -b ]; do shift; done; jq -c --arg p "$3" --arg b "$2" '. + [{path:$p,branch:$b}]' "$T/wt.json" > "$T/wt.new" && mv "$T/wt.new" "$T/wt.json" ;;
 *"cat > "*) cat > "$T/ssh_in.$n" ;;
 "cat -- "*result.md) printf 'RESULT FILE %s\n' "$(cat "$T/x")" ;;
 "test -f "*) [ -e "$T/ssh_has_result" ] ;;
@@ -130,11 +130,11 @@ cat > "$tmp/bin/git" <<'EOF'
 #!/usr/bin/env bash
 T=$STUB_T
 if [ "$1" = fetch ]; then ( IFS=$'\t'; printf 'ENV=%s\t%s\n' "${GIT_SSH_COMMAND:-}" "$*" >> "$T/gitlog" ); exit 0; fi
-if [ "$1" = -C ] && [ "$3" = worktree ] && [ "$4" = add ] && [ "$5" = -b ]; then
+if [ "$1" = -C ] && [ "$3" = worktree ] && [ "$4" = add ] && [ "$5" = -q ] && [ "$6" = -b ]; then
   ( IFS=$'\t'; printf '%s\n' "$*" >> "$T/gitlog" )
   printf 'worktree add\n' >> "$T/order"
-  [ "${STUB_GIT_FAIL:-}" != add ] || { echo 'fatal: stub git refused' >&2; exit 128; }
-  p=$7 b=$6
+  case ${STUB_GIT_FAIL:-} in add) echo 'fatal: stub git refused' >&2; exit 128 ;; add255) echo 'fatal: stub git refused 255' >&2; exit 255 ;; esac
+  p=$8 b=$7
   case "$p" in "$T"/*) ;; *) echo "stub git: path outside the test dir: $p" >&2; exit 97 ;; esac
   [ ! -e "$p" ] || { echo "fatal: '$p' already exists" >&2; exit 128; }
   case "${STUB_WT_LINK:-}" in
@@ -293,7 +293,7 @@ s1() {
   fresh; run bash "$1" start "${sargs[@]}"
   local b pr sd; b="$(wt)/brief.md"; pr=$(cd "$(dirname "$1")/.." && pwd); sd=$(dirname "$1")
   check "S1 exit 0" '[ $rc = 0 ]'
-  check "S1 one git worktree add from the main checkout, base is HEAD" '[ "$(grep -c . "$tmp/gitlog")" = 1 ] && ghascall "-C\t%s\tworktree\tadd\t-b\tworker-t004\t%s\t%s" "$repo" "$tmp/repo-worker-t004" "$sha"'
+  check "S1 one git worktree add from the main checkout, base is HEAD" '[ "$(grep -c . "$tmp/gitlog")" = 1 ] && ghascall "-C\t%s\tworktree\tadd\t-q\t-b\tworker-t004\t%s\t%s" "$repo" "$tmp/repo-worker-t004" "$sha"'
   check "S1 one tab create in the orchestrator workspace, one split, lazygit, no rename, no Dev Servers or VM" '[ "$(cnt "^tab\tcreate\t")" = 1 ] && hascall "tab\tcreate\t--workspace\tw1P\t--cwd\t%s\t--label\tworker-t004\t--no-focus" "$tmp/repo-worker-t004" && [ "$(cnt "^pane\tsplit\t")" = 1 ] && hascall "pane\tsplit\t%s\t--direction\tright\t--cwd\t%s\t--no-focus" "$(pane)" "$(wt)" && hascall "pane\trun\t%s\tlazygit" "$(lazypane)" && [ "$(cnt "^tab\trename\t")" = 0 ] && ! grep -qP "Dev Servers|\tVM(\t|\$)" "$tmp/calls"'
   check "S1 brief has the task text" 'grep -qxF "TASK BODY $(rnd)" "$b"'
   check "S1 brief heading, test, lane, branch, machine, result path" 'grep -qxF "# Brief: worker-t004" "$b" && grep -qxF -- "- Test command: \`$testcmd\`" "$b" && grep -qxF -- "- Lane: $lane. If it names a skill, start it with the Skill tool. Run only task T004; skip every other task, ticked or not." "$b" && grep -qxF -- "- Branch: worker-t004" "$b" && grep -qxF -- "- Your machine: local. \`local\` is the orchestrator'"'"'s machine." "$b" && grep -qxF -- "- Result file: $(wt)/result.md" "$b"'
@@ -356,6 +356,10 @@ check "S4 stopped line with the git message" 'grep -q "^stopped: .*stub git refu
 check "S4 worker line has - ids" 'hasline "worker\tworker-t004\tlocal\t-\t-\t-\t-"'
 check "S4 no tab create, no undo, no agent start, no prompt" '[ "$(cnt "^tab\tcreate\t")" = 0 ] && [ "$(cnt "^agent\tstart\t")" = 0 ] && ! grep -qP "worktree\tremove|branch\t-D" "$tmp/gitlog" && never 0 0'
 
+fresh; mkdir "$tmp/repo-worker-t004"
+run bash "$script" start "${sargs[@]}"
+check "S4b folder exists: exit 1, the already-exists stop line, worker line with -, no git worktree add, no tab create" '[ $rc = 1 ] && [ "$(grep -c "^stopped:" <<<"$out")" = 1 ] && hasline "stopped: %s already exists" "$tmp/repo-worker-t004" && hasline "worker\tworker-t004\tlocal\t-\t-\t-\t-" && [ ! -s "$tmp/gitlog" ] && [ "$(cnt "^tab\tcreate\t")" = 0 ] && never 0 0'
+
 fresh
 STUB_FAIL="agent prompt" STUB_FAIL_CODE=agent_prompt_stalled run bash "$script" start "${sargs[@]}"
 check "S5 exit 1" '[ $rc = 1 ]'
@@ -399,7 +403,7 @@ featsha=$(git -C "$tmp/repo-feat" rev-parse HEAD)
 printf '{"force_push":"deny"}\n' > "$tmp/repo-feat/.stratum/git-guard.json"
 repo="$tmp/repo-feat" run bash "$script" start "${sargs[@]}"
 check "S10 exit 0" '[ $rc = 0 ]'
-check "S10 git worktree add from the main checkout, base is the linked worktree HEAD" '[ "$featsha" != "$sha" ] && [ "$(grep -c . "$tmp/gitlog")" = 1 ] && ghascall "-C\t%s\tworktree\tadd\t-b\tworker-t004\t%s\t%s" "$repo" "$tmp/repo-worker-t004" "$featsha"'
+check "S10 git worktree add from the main checkout, base is the linked worktree HEAD" '[ "$featsha" != "$sha" ] && [ "$(grep -c . "$tmp/gitlog")" = 1 ] && ghascall "-C\t%s\tworktree\tadd\t-q\t-b\tworker-t004\t%s\t%s" "$repo" "$tmp/repo-worker-t004" "$featsha"'
 check "S10 guard file read from the linked worktree" '[ ! -e "$repo/.stratum/git-guard.json" ] && [ "$(jq -S -c . "$(wt)/.stratum/git-guard.json")" = "$(jq -S -c -n "{force_push:\"deny\",commit:\"auto\",branch:\"worker-t004\"}")" ]'
 check "S10 never-list, one prompt" 'never 0 1'
 git -C "$repo" worktree remove --force "$tmp/repo-feat"
@@ -790,7 +794,7 @@ r1() {
   check "R1 exit 0" '[ $rc = 0 ]'
   check "R1 machine list, every other call starts --machine laptop, never-list, one prompt" 'rnever 0 1'
   check "R1 tab create on the machine in the main checkout workspace, no w1P" 'rcall "tab\tcreate\t--workspace\tstubMainWS\t--cwd\t%s\t--label\tworker-t004\t--no-focus" "~/proj-worker-t004"'
-  check "R1 first ssh is the git worktree add, the second writes the brief, both with BatchMode" '[ "$(grep -c . "$tmp/ssh")" = 2 ] && [ "$(sed -n 1p "$tmp/ssh")" = "$(printf -- "-o\tBatchMode=yes\t--\tu@stubhost\tgit -C ~/proj worktree add -b worker-t004 ~/proj-worker-t004 %s" "$sha")" ] && grep -qP "^-o\tBatchMode=yes\t--\tu@stubhost\t" "$tmp/ssh"'
+  check "R1 first ssh is the git worktree add, the second writes the brief, both with BatchMode" '[ "$(grep -c . "$tmp/ssh")" = 2 ] && [ "$(sed -n 1p "$tmp/ssh")" = "$(printf -- "-o\tBatchMode=yes\t--\tu@stubhost\t[ ! -e ~/proj-worker-t004 ] || { echo \"~/proj-worker-t004 already exists\" >&2; exit 1; }; git -C ~/proj worktree add -q -b worker-t004 ~/proj-worker-t004 %s || exit 1" "$sha")" ] && grep -qP "^-o\tBatchMode=yes\t--\tu@stubhost\t" "$tmp/ssh"'
   check "R1 brief ssh writes brief.md and git-guard.json under ~/proj-worker-t004, no \\~" 'c=$(sed -n 2p "$tmp/ssh"); grep -qF -- "cat > ~/proj-worker-t004/brief.md" <<<"$c" && grep -qF -- "mkdir -p ~/proj-worker-t004/.stratum" <<<"$c" && grep -qF -- "> ~/proj-worker-t004/.stratum/git-guard.json" <<<"$c" && grep -qF -- "$g" <<<"$c" && ! grep -qF -- "\\~" "$tmp/ssh"'
   check "R1 brief on ssh stdin: heading, task, machine, result path" 'grep -qxF "# Brief: worker-t004" "$in" && grep -qxF "TASK BODY $(rnd)" "$in" && grep -qxF -- "- Your machine: laptop. \`local\` is the orchestrator'"'"'s machine." "$in" && grep -qxF -- "- Result file: ~/proj-worker-t004/result.md" "$in"'
   check "R1 brief on ssh stdin: roster rows and the five rules" 'grep -qxF "| worker-t004 | laptop | worker-t004 | T004 |" "$in" && grep -qxF "| worker-t005 | local | worker-t005 | T005 |" "$in" && [ "$(grep -cxFf "$rules" "$in")" = 5 ]'
@@ -924,7 +928,7 @@ check "R15b exit 0, no workspace create, tab create in the st-workers workspace 
 
 rfresh; STUB_FAIL="tab create" rrun bash "$script" start "${rsargs[@]}"
 check "R16 exit 1, stopped line with the stub message" '[ $rc = 1 ] && grep -q "^stopped: .*stub refused" <<<"$out"'
-check "R16 second ssh is the git undo, no brief write" '[ "$(grep -c . "$tmp/ssh")" = 2 ] && [ "$(sed -n 2p "$tmp/ssh")" = "$(printf -- "-o\tBatchMode=yes\t--\tu@stubhost\tgit -C ~/proj worktree remove ~/proj-worker-t004 && git -C ~/proj branch -D worker-t004")" ] && ! grep -q "cat > " "$tmp/ssh" && rnever 0 0'
+check "R16 second ssh is the git undo, no brief write" '[ "$(grep -c . "$tmp/ssh")" = 2 ] && [ "$(sed -n 2p "$tmp/ssh")" = "$(printf -- "-o\tBatchMode=yes\t--\tu@stubhost\tgit -C ~/proj worktree remove ~/proj-worker-t004 && git -C ~/proj branch -D worker-t004 >/dev/null")" ] && ! grep -q "cat > " "$tmp/ssh" && rnever 0 0'
 
 for k in "3::ssh: stub failure" "3:1:exit 3"; do
   rfresh; STUB_SSH_ON="cat >" STUB_SSH_RC=${k%%:*} STUB_SSH_QUIET=$(cut -d: -f2 <<<"$k") rrun bash "$script" start "${rsargs[@]}"
@@ -1429,6 +1433,8 @@ ax; autoset "$sid"
 STUB_SSH_RC=255 axrun
 check "AM6 ssh down on the repo flag write: exit 1, the line, no worktree add or agent start" '[ $rc = 1 ] && hasline "cannot write .stratum/autonomous on laptop: ssh: stub failure" && ! grep -q "worktree add" "$tmp/ssh" && [ "$(cnt "^--machine\tlaptop\tagent\tstart\t")" = 0 ]'
 autoclr
+rfresh; xsetup; STUB_SSH_EXEC=1 STUB_GIT_FAIL=add255 rrun bash "$script" start "${rxargs[@]}"
+check "R16b saved machine, git worktree add exits 255: exit 1, git's fatal line, not ssh failed, no tab create" '[ $rc = 1 ] && [ "$(grep -c "^stopped:" <<<"$out")" = 1 ] && hasline "stopped: fatal: stub git refused 255" && ! grep -q "ssh to" <<<"$out" && hasline "worker\tworker-t004\tlaptop\t-\t-\t-\t-" && [ "$(rcnt "tab\tcreate\t")" = 0 ]'
 
 wr="$tmp/wroster"; printf 'worker-t004\tlocal\tworker-t004\tT004\n' > "$wr"
 sleeps() { grep -c '^sleep' "$tmp/calls"; }

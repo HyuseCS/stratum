@@ -7,3 +7,6 @@ summary: The revised plan resolves the previous finding: negative-control mutati
 
 ## plan | 2026-11-05T16:14:24Z | sha256 b9a1a35ee602e5d8ce0509065fc6ae4f92f3650e88416ed578fef6c9b39e3cde | APPROVED
 summary: The revised plan keeps implementation focused, reuses existing helpers and tests, and sequences local and remote live runs after the build. No further approach or task-structure changes are warranted within this plan-only review.
+
+## decisions | 2026-11-05T17:25:14Z | /advisor
+summary: advisor: list acceptable; verify the real-herdr incident left nothing (local clean, laptop unreachable); hand T023/T024 steps to user; drift for st-close: S13b raw line, T019 w1P wording, F7 gap

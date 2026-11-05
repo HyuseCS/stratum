@@ -274,11 +274,11 @@ start)
   qr=$Q
   quote "$path"
   qp=$Q
-  rx "git -C $qr worktree add -b $N $qp $sha" || stop "$(head -1 "$e")"
+  rx "[ ! -e $qp ] || { echo \"$qp already exists\" >&2; exit 1; }; git -C $qr worktree add -q -b $N $qp $sha || exit 1" || stop "$(head -1 "$e")"
   BR=$N WT=$path
   if ! r=$("${H[@]}" tab create --workspace "$WS" --cwd "$path" --label "$N" --no-focus 2>"$e"); then
     msg=$(head -1 "$e")
-    rx "git -C $qr worktree remove $qp && git -C $qr branch -D $N" || stop "$msg; left $path and branch $N"
+    rx "git -C $qr worktree remove $qp && git -C $qr branch -D $N >/dev/null" || stop "$msg; left $path and branch $N"
     BR= WT=
     stop "$msg"
   fi
