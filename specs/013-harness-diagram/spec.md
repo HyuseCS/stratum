@@ -12,27 +12,33 @@
 
 ### User Story 1 - See how each lane works (Priority: P1)
 
-The developer opens the harness page on GitHub or in the repo. It has one view per lane (Full,
-Fast, Quick, Design). Each lane view shows, in order, which skill or agent passes what to which
-next one, and where each gate stops for the user. Other views show the agents, the harness
+The developer opens the harness page on GitHub or in the repo. Each lane (Full, Fast, Quick,
+Design) has its views. The Full lane has an overview and one view per phase, and the Design lane
+has an overview and one view per mode (D13). Each lane view shows, in order, which skill or agent
+passes what to which next one, and where each gate stops for the user. Other views show the agents, the harness
 (hooks and their events, the statusline, the advisors and the risk level) and the data flow
 (which step reads and writes which file).
 
 **Why this priority**: Today the flow is only in text across `README.md`, 40 skills and 15
 agents (issue #78). A picture of each lane is the core value.
 
-**Independent Test**: Open the page on GitHub. Each of the 7 views draws. Follow the Full-lane
-view and name its phases and its three gates in order.
+**Independent Test**: Open the page on GitHub. Each of the 15 views draws. Follow the Full-lane
+overview and name its phases and its four gates in order.
 
 **Acceptance Scenarios**:
 
 1. **Given** the page on GitHub, **When** the developer opens it, **Then** every view draws with
    no error.
-2. **Given** the Full-lane view, **When** the developer reads it, **Then** it shows Define, Plan,
-   Inspect, Build and Close in order, the three gates, and the data passed at each step.
+2. **Given** the Full-lane overview, **When** the developer reads it, **Then** it shows Define,
+   Plan, Inspect, Build and Close in order and the four gates (you agree the spec, you answer each
+   open decision, OK to build, push). Each phase view shows the data passed at each step of that
+   phase.
 3. **Given** a skill that more than one lane uses, **When** the developer reads each lane view,
    **Then** each view shows the links that skill has in that lane only.
 4. **Given** the main `README.md`, **When** the developer reads it, **Then** it links to the page.
+5. **Given** the Full-lane or Design-lane overview in the VS Code LikeC4 preview, **When** the
+   developer clicks a phase or mode, **Then** its view opens. On GitHub the same views show one
+   after the other, with no clicks.
 
 ---
 
@@ -134,11 +140,15 @@ Remove the folder. The test passes.
 - **FR-003**: Each element MUST have a plain summary of 1 or 2 short sentences.
 - **FR-004**: Each link MUST have a kind (starts, reads, writes, runs or passes) and a label that
   names the data it carries.
-- **FR-005**: There MUST be one ordered view per lane (Full, Fast, Quick, Design) that shows who
-  passes what to whom, and each gate. Each step label starts with its step number `(n)` (D8). A
-  gate is a step whose label has `gate:` after the step number and names what the user must say,
-  for example `(4) gate: you agree the spec`. A skill that is in no lane shows only in the topic
-  views.
+- **FR-005**: There MUST be ordered lane views that show who passes what to whom, and each gate
+  (D13): the Full lane has an overview (the orchestrator, the 5 phases and the 4 gates) and one
+  view per phase (Define, Plan, Inspect, Build, Close). The Design lane has an overview (the start
+  steps and the 3 modes) and one view per mode (new look, autonomous, custom). The Fast and Quick
+  lanes have one view each. In each overview, each phase or mode opens its view with `navigateTo`
+  (a click in the LikeC4 preview; GitHub shows no clicks). Each step label starts with its step
+  number `(n)`, and each view numbers its steps from `(1)` (D8). A gate is a step whose label has
+  `gate:` after the step number and names what the user must say, for example
+  `(4) gate: you agree the spec`. A skill that is in no lane shows only in the topic views.
 - **FR-006**: There MUST be an agents view, a harness view (hooks by event, statusline, advisors
   and risk level) and a data-flow view. The user, Codex, `/advisor` and GitHub are elements too,
   because steps pass data to them.
@@ -180,7 +190,7 @@ Remove the folder. The test passes.
 - **SC-004**: From the model alone, the LLM lists the steps that write `.stratum/state.json`, and
   the list matches a search of the repo.
 - **SC-005**: A skill added with no model change makes the test fail on its first run.
-- **SC-006**: All 7 views draw on GitHub with no error.
+- **SC-006**: All 15 views draw on GitHub with no error.
 
 ## Assumptions
 

@@ -46,20 +46,38 @@ source text gives the instruction or holds the code (for example `procedures/spe
 
 ### View
 
-| id | Kind | Title (exact, the page heading) | File |
-|----|------|------|------|
-| `full` | dynamic | Full lane | `views/1-full.c4` |
-| `fast` | dynamic | Fast lane | `views/2-fast.c4` |
-| `quick` | dynamic | Quick lane | `views/3-quick.c4` |
-| `design` | dynamic | Design lane | `views/4-design.c4` |
-| `agents` | element view | Agents | `views/5-agents.c4` |
-| `harness` | element view | Harness | `views/6-harness.c4` |
-| `dataflow` | element view | Data flow | `views/7-dataflow.c4` |
+15 views (D13). The page lists them in this order: file order, then declaration order in the file.
+
+| id | Kind | Title (exact, the page heading) | File | Gates needed | Opened from |
+|----|------|------|------|------|------|
+| `full` | dynamic, overview | Full lane | `views/1-full.c4` | 4 | |
+| `full-define` | dynamic | Full lane: Define | `views/1-full.c4` | 1 | `full` |
+| `full-plan` | dynamic | Full lane: Plan | `views/1-full.c4` | 1 | `full` |
+| `full-inspect` | dynamic | Full lane: Inspect | `views/1-full.c4` | 1 | `full` |
+| `full-build` | dynamic | Full lane: Build | `views/1-full.c4` | 0 | `full` |
+| `full-close` | dynamic | Full lane: Close | `views/1-full.c4` | 1 | `full` |
+| `fast` | dynamic | Fast lane | `views/2-fast.c4` | 1 | |
+| `quick` | dynamic | Quick lane | `views/3-quick.c4` | 0 | |
+| `design` | dynamic, overview | Design lane | `views/4-design.c4` | 2 | |
+| `design-new-look` | dynamic | Design lane: New look | `views/4-design.c4` | 1 | `design` |
+| `design-autonomous` | dynamic | Design lane: Autonomous | `views/4-design.c4` | 0 | `design` |
+| `design-custom` | dynamic | Design lane: Custom | `views/4-design.c4` | 1 | `design` |
+| `agents` | element view | Agents | `views/5-agents.c4` | | |
+| `harness` | element view | Harness | `views/6-harness.c4` | | |
+| `dataflow` | element view | Data flow | `views/7-dataflow.c4` | | |
+
+"Gates needed" is the least number of gate steps the view must have. The Full overview's 4 gates
+are you agree the spec, you answer each open decision, OK to build, and push. The Design
+overview's 2 gates are the new look's yes and the custom mode's yes.
 
 Lane step: one line `<source> -> <target> '(n) <data>'` (an optional kind `-[passes]->` is
-allowed). `n` starts at 1 and goes up by 1 in file order. A gate step is `(n) gate: <what the user
-must say>` (FR-005, D8). Gates needed: Full at least 3, Fast at least 1, Design at least 1, Quick
-none needed.
+allowed), with an optional ` { navigateTo <view id> }` at the end of the line. In each view, `n`
+starts at 1 and goes up by 1 in file order. A gate step is `(n) gate: <what the user must say>`
+(FR-005, D8). A phase or mode view repeats its gate step, so the overview and the phase view both
+show it.
+
+Click-through (D13): each view in the "Opened from" column is the target of at least one
+`navigateTo` in that overview. Every `navigateTo` target is a view id of this table.
 
 ### Page
 

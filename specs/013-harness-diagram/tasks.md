@@ -23,7 +23,7 @@ Dependencies).
 - **[screen]**: none in this feature.
 - Run every command from the repo root.
 
-## Rules for every model and view task (T003 to T010, T013 to T017)
+## Rules for every model and view task (T003 to T010, T013 to T017, T025, T026)
 
 - Write the exact text shape of [contracts/model-format.md](contracts/model-format.md), with ids,
   kinds and titles from [data-model.md](data-model.md). No backtick in a `.c4` file. No `<` or `>`
@@ -111,8 +111,8 @@ Full lane's phases and gates in order in under 2 minutes.
 
 **Independent Test**: quickstart.md sections 4, 5 and 6.
 
-- [ ] T019 [P] [US3] Check by hand with the user: quickstart.md section 5. The user first installs the LikeC4 VS Code extension `likec4.likec4-vscode` (`code --install-extension likec4.likec4-vscode`; the PC does not have it today). Then drag one box in the VS Code LikeC4 preview, save, reopen). If the user keeps the layout, it is `docs/harness/.likec4/full.likec4.snap`. If the box does not stay, report it: it is a spec gap for US3 scenario 1, not a fix in this task. Owns: `docs/harness/.likec4/`. Test: `bash tests/test_harness_model.sh nomcp rebuild`.
-- [ ] T020 [P] [US3] Check by hand with the user: quickstart.md section 4 in a copy, so the repo stays as it is while T021 copies it (`c=$(mktemp -d); cp -r docs/harness "$c/h"`, edit the label of one `starts` link in `$c/h/model/agents.c4` or a skills file (the Agents view draws it), `npx -y likec4@1.60.0 validate "$c/h"`, `npx -y likec4@1.60.0 export markdown "$c/h"`, `diff docs/harness/README.md "$c/h/README.md"` shows only that label, `rm -rf "$c"`) and section 6 (the user adds the MCP server once, then a session in a worktree lists the 7 views). If the server finds no project, report it with the error text. A change to the README command is a decision for the user. Owns: none (checks by hand and in a temp copy). Test: `bash tests/test_harness_model.sh rebuild`.
+- [X] T019 [P] [US3] Check by hand with the user: quickstart.md section 5. The user first installs the LikeC4 VS Code extension `likec4.likec4-vscode` (`code --install-extension likec4.likec4-vscode`; the PC does not have it today). Then drag one box in the VS Code LikeC4 preview, save, reopen). If the user keeps the layout, it is `docs/harness/.likec4/full.likec4.snap`. If the box does not stay, report it: it is a spec gap for US3 scenario 1, not a fix in this task. Owns: `docs/harness/.likec4/`. Test: `bash tests/test_harness_model.sh nomcp rebuild`.
+- [ ] T020 [P] [US3] Check by hand with the user: quickstart.md section 4 in a copy, so the repo stays as it is while T021 copies it (`c=$(mktemp -d); cp -r docs/harness "$c/h"`, edit the label of one `starts` link in `$c/h/model/agents.c4` or a skills file (the Agents view draws it), `npx -y likec4@1.60.0 validate "$c/h"`, `npx -y likec4@1.60.0 export markdown "$c/h"`, `diff docs/harness/README.md "$c/h/README.md"` shows only that label, `rm -rf "$c"`) and section 6 (the user adds the MCP server once, then a session in a worktree lists the views: 7 before T027, 15 after). If the server finds no project, report it with the error text. A change to the README command is a decision for the user. Owns: none (checks by hand and in a temp copy). Test: `bash tests/test_harness_model.sh rebuild`.
 
 ---
 
@@ -133,6 +133,25 @@ Full lane's phases and gates in order in under 2 minutes.
 
 ---
 
+## Phase 8: Split the Full and Design lane views (D13, US1)
+
+**Purpose**: the Full lane becomes an overview plus 5 phase views and the Design lane an overview
+plus 3 mode views, each numbered from `(1)`, each overview opening its views with `navigateTo`.
+Runs after T019 and T020, before Close. View ids, titles, order and gate floors:
+[data-model.md](data-model.md) "View". Text shape: [contracts/model-format.md](contracts/model-format.md)
+"Lane views". Checks and controls: [contracts/test-contract.md](contracts/test-contract.md).
+
+**Independent Test**: `bash tests/test_harness_model.sh` prints only `ok`, the page has 15
+headings, and quickstart.md section 2 steps 3 to 5 pass.
+
+- [ ] T024 [US1] Change `tests/test_harness_model.sh` to the D13 checks of test-contract.md, test first: split `views` into `views-full`, `views-fast`, `views-quick`, `views-design`, `views-common` (no argument and `views` run all five, as `coverage` does); one table in the test with the 15 view ids, titles, lane file, gate floor and overview of the data-model view table (a `# ponytail:` line says to edit both together, as the `VENDORED` list does); per dynamic view, not per file: numbering from `(1)` and the gate floor; each lane file declares exactly its view ids in table order, lane id first; the step pattern allows ` { navigateTo <id> }` at the end of the line; every `navigateTo` on a step or an `include ... with { navigateTo <id> }` line names a declared view; every phase or mode view is a `navigateTo` target in its overview; `page` wants the 15 titles in order and 15 Mermaid blocks. Keep every other check as it is (`DECL`, `DOTLINK`, `GATES` become table data). Test: `bash tests/test_harness_model.sh views-full views-design page; test $? -eq 1 && bash tests/test_harness_model.sh views-fast views-quick views-common coverage missing summaries links kinds vendored` (the first part must fail now on the unsplit files, the second must pass).
+- [ ] T025 [P] [US1] Split `docs/harness/views/1-full.c4` into the views `full`, `full-define`, `full-plan`, `full-inspect`, `full-build`, `full-close`, in that order, as model-format.md "Lane views" says. Keep every step and its label text, only renumber. Today's step numbers: the overview keeps steps 1 to 4, the step that starts each phase (5, 20, 39, 46, 63) with `{ navigateTo full-<phase> }`, and the 4 gates (17, 31, 45, 77); add one `include skills.st-<phase> with { navigateTo full-<phase> }` line per phase. Phase views: Define 5 to 19, Plan 20 to 38, Inspect 39 to 45, Build 46 to 62, Close 63 to 77, each renumbered from `(1)`. Do not touch `docs/harness/.likec4/`. Owns: `docs/harness/views/1-full.c4`. Test: `bash tests/test_harness_model.sh views-full views-common && diff <(git show HEAD:docs/harness/views/1-full.c4 | grep -oE "\([0-9]+\) [^']*" | sed -E 's/^\([0-9]+\) //' | sort -u) <(grep -oE "\([0-9]+\) [^']*" docs/harness/views/1-full.c4 | sed -E 's/^\([0-9]+\) //' | sort -u)` (no step text lost or added; HEAD still holds the unsplit file).
+- [ ] T026 [P] [US1] Split `docs/harness/views/4-design.c4` into the views `design`, `design-new-look`, `design-autonomous`, `design-custom`, in that order, as model-format.md "Lane views" says. Keep every step and its label text, only renumber. Today's step numbers: the overview keeps steps 1 to 4, the first step of each mode (5 new look, 27 autonomous, 38 custom) with `{ navigateTo design-<mode> }`, the new look gate 24, the autonomous OK 35, and the custom gate 56. Mode views: new look 5 to 26, autonomous 27 to 37, custom 38 to 58, each renumbered from `(1)`. Do not touch `docs/harness/.likec4/`. Owns: `docs/harness/views/4-design.c4`. Test: `bash tests/test_harness_model.sh views-design views-common && diff <(git show HEAD:docs/harness/views/4-design.c4 | grep -oE "\([0-9]+\) [^']*" | sed -E 's/^\([0-9]+\) //' | sort -u) <(grep -oE "\([0-9]+\) [^']*" docs/harness/views/4-design.c4 | sed -E 's/^\([0-9]+\) //' | sort -u)`.
+- [ ] T027 [US1] Validate and rebuild the page: `npx -y likec4@1.60.0 validate docs/harness`, fix an error in the view file that has it, then `npx -y likec4@1.60.0 export markdown docs/harness` to write `docs/harness/README.md`. In `README.md` change "7 views" in the Harness diagram section to 15 views and say in one sentence that the Full and Design lanes have an overview whose phases or modes open their own views in the LikeC4 preview. If `docs/harness/.likec4/` holds a snap for `full` or `design` (from T019), name it in the report: its layout was made for the old view, and the user decides to drag again or delete it. Depends on T025 and T026. Test: `bash tests/test_harness_model.sh validate rebuild page views readme nomcp && bash tests/test_inspect.sh`.
+- [ ] T028 [US4] Run every negative control of test-contract.md "Negative controls" again (the old rows and the D13 rows), each in a fresh copy as T021 does. Each must print its expected line and exit code. If one does not, fix `tests/test_harness_model.sh` and run all controls again. Depends on T027. Test: `bash tests/test_harness_model.sh && bash tests/test_inspect.sh && bash tests/test_local_files.sh` (on the unchanged repo: exit 0) and each control command of the table.
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -146,6 +165,8 @@ Full lane's phases and gates in order in under 2 minutes.
   `README.md` is committed with T018's page or after it (`tests/test_inspect.sh` "README paths").
 - US3 (T019, T020) and US4 (T021): after T018. They share no file, so they run at the same time.
 - Polish (T022, T023): after T018 to T021.
+- D13 split (Phase 8): after T019 and T020. T024 first (the test fails on the unsplit files). Then
+  T025 and T026 at the same time (they share no file). Then T027, then T028.
 
 ### User Story Dependencies
 

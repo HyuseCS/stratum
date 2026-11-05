@@ -17,16 +17,21 @@ and `SKIP rebuild`, the other checks `ok`.
 ## 2. The page draws (US1, SC-002, SC-006)
 
 1. Push the branch and open `docs/harness/README.md` on GitHub (the user pushes).
-2. Expected: 7 headings, Full lane to Data flow, and each Mermaid block draws with no
-   "Syntax error" or "Maximum text size" box.
-3. In the Full lane diagram, read the steps `(1)`, `(2)` ... in order. Name Define, Plan, Inspect,
-   Build and Close in order and each `gate:` step. Expected gates: `(17)` spec, `(31)` open
-   decisions, `(45)` OK to build, `(77)` push. Time it: under 2 minutes.
-4. US1 scenario 3: find `st-build agent` in the Full lane and in the Fast lane diagrams. Expected:
-   in the Full lane its steps carry Full-lane data (tasks from `tasks.md`), in the Fast lane they
-   carry Fast-lane data (tests from the change plan), and no step of one lane shows in the other.
-   Do the same for `st-git agent` in the Full, Fast and Quick lanes.
-5. Open `README.md` on GitHub. Its Harness diagram section links to the page.
+2. Expected: 15 headings in the order of the data-model view table, Full lane to Data flow, and
+   each Mermaid block draws with no "Syntax error" or "Maximum text size" box.
+3. In the Full lane overview diagram, read the steps `(1)`, `(2)` ... in order. Name Define, Plan,
+   Inspect, Build and Close in order and each `gate:` step. Expected: 4 gate steps, in this order:
+   you agree the spec, you answer each open decision, OK to build, push. Time it: under 2 minutes.
+   Then check that each phase diagram (Full lane: Define ... Full lane: Close) starts at `(1)`.
+4. US1 scenario 3: find `st-build agent` in the Full lane: Build diagram and in the Fast lane
+   diagram. Expected: in the Full lane its steps carry Full-lane data (tasks from `tasks.md`), in
+   the Fast lane they carry Fast-lane data (tests from the change plan), and no step of one lane
+   shows in the other. Do the same for `st-git agent` in the Full phase diagrams, Fast and Quick.
+5. US1 scenario 5, check by hand in VS Code (needs the extension of section 5 step 1): open
+   `docs/harness/views/1-full.c4` and the preview of the `full` view. Click the `/st-plan` box (or
+   the step that starts Plan). Expected: the Full lane: Plan view opens. Go back, then do the same
+   for one Design mode in the `design` view of `docs/harness/views/4-design.c4`.
+6. Open `README.md` on GitHub. Its Harness diagram section links to the page.
 
 If Data flow does not draw, split it as model-format.md "Topic views" says.
 
@@ -71,7 +76,7 @@ Expected: `Valid`, then a diff only where the model changed.
    `claude mcp add --scope user likec4 -- npx -y @likec4/mcp@1.60.0`
 2. Start Claude Code in a worktree of this repo (for example `../stratum-078`).
 3. Ask it to list the LikeC4 views with the likec4 MCP tools.
-4. Expected: the 7 views of `docs/harness/`. If it finds no project, report it with the error
+4. Expected: the 15 views of `docs/harness/`. If it finds no project, report it with the error
    text. A change to the README command (for example `-e LIKEC4_WORKSPACE=docs/harness`) is a
    decision for the user, as T020 says.
 

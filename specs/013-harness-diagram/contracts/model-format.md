@@ -85,29 +85,54 @@ model {
   is read, `passes` names what is handed over (`gate: you agree the spec` is a lane step, not a
   model label), `starts` names what the started agent gets, `runs` names the arguments or the event
   matcher.
-- Which lanes use a link is only in the lane views (D12). An LLM finds a skill's lanes by searching
-  `views/1-full.c4` to `views/4-design.c4` for its id.
+- Which lanes use a link is only in the lane views (D12). An LLM finds a skill's lanes and phases
+  by searching `views/1-full.c4` to `views/4-design.c4` for its id.
 
-## Lane view (dynamic)
+## Lane views (dynamic)
+
+Each lane keeps its own file. `views/1-full.c4` holds the Full overview and its 5 phase views,
+`views/4-design.c4` holds the Design overview and its 3 mode views, `views/2-fast.c4` and
+`views/3-quick.c4` hold one view each (D13). The view ids, titles, order and gate floors are in
+the data-model view table. The first view in each lane file is the lane id (`full`, `fast`,
+`quick`, `design`).
 
 ```c4
 views {
   dynamic view full {
     title 'Full lane'
+    include skills.st-define with { navigateTo full-define }
     user -> skills.st '(1) task in plain words'
     skills.st -> user '(2) lane and risk line'
-    skills.st -> skills.st-define '(3) feature description'
+    skills.st -> skills.st-define '(3) feature description' { navigateTo full-define }
     skills.st-define -> user '(4) gate: you agree the spec'
+  }
+  dynamic view full-define {
+    title 'Full lane: Define'
+    skills.st -> skills.st-define '(1) feature description'
+    skills.st-define -> skills.st-grill '(2) feature description'
   }
 }
 ```
 
-- One dynamic view per file. View id and title from the data-model view table.
+- View id and title from the data-model view table, in its order inside the file.
 - Each step is one line: `<source id> -> <target id> '(n) <data>'`, or with a kind
-  `-[passes]->`. `n` is 1 for the first step and goes up by 1 on each step line in file order.
-  `parallel { }` blocks are allowed. Their steps are numbered the same way.
+  `-[passes]->`, and an optional ` { navigateTo <view id> }` at the end of the same line. In each
+  view, `n` is 1 for the first step and goes up by 1 on each step line. `parallel { }` blocks are
+  allowed. Their steps are numbered the same way.
 - A gate step: `'(n) gate: <what the user must say>'`.
+- Full overview: one `include skills.<phase> with { navigateTo full-<phase> }` line per phase skill
+  (`st-define`, `st-plan`, `st-inspect`, `st-build`, `st-close`), so each box opens its phase view,
+  and the step that starts the phase carries the same `{ navigateTo ... }`. The overview has about
+  10 steps: the lane line, the start of each phase and the 4 gates.
+- Design overview: the start steps (task, tool check, design file check, mode line), then for each
+  mode its first step with `{ navigateTo design-<mode> }` and its gate or OK step. All three modes
+  run in `skills.st-design`, so the click is on the step, not on a box.
+- A phase or mode view starts at the step that starts it in the overview, renumbered from `(1)`,
+  and ends with its gate step, if it has one.
+- `include` lines carry one element and one `navigateTo` on one line. Other `include` lines are
+  not used in lane views.
 - A step may have no model relationship. Draw only what the lane's skill text says, in its order.
+- Clicks work only in the LikeC4 preview. The Mermaid page shows every view one after another.
 
 ## Topic views
 
@@ -128,5 +153,5 @@ views {
 - `dataflow`: `stratum.*`, `feature.*`, `project.*`, and the links into and out of them from
   `skills.*`, `agents.*`, `hooks.*`, `scripts.*`, `procedures.*`, `statusline.*`. If GitHub
   cannot draw it (research R8), split it into `dataflow` (`.stratum` files) and `dataflow-feature`
-  (feature and project files). That makes 8 views. The test and the page heading list then
+  (feature and project files). That makes 16 views. The test and the page heading list then
   change in the same commit.
