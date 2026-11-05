@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -o pipefail
 SECONDS=0
-usage() { echo "usage: st-advisor.sh plan|test|diff|decisions|change|round|check|continued|waive|note|talk|count ..."; exit 2; }
+usage() { echo "usage: st-advisor.sh plan|test|diff|decisions|change|round|check|continued|waive|note|talk|count|answer|watch ..."; exit 2; }
 tabs=${XDG_STATE_HOME:-$HOME/.local/state}/stratum/codex-tabs
 tabname() {
   local l
@@ -20,6 +20,39 @@ if not re.search(r"[a-z0-9]", n):
     n = slug(ws)
 print("st-codex-" + n)' "$HERDR_WORKSPACE_ID" <<<"$l"
 }
+case ${1:-} in answer|watch)
+  if [ $1 = answer ]; then
+    [ "${2:-}" = --keys ] && [ $# -gt 2 ] || usage
+    for k in "${@:3}"; do [[ $k =~ ^[A-Za-z0-9+_][A-Za-z0-9+_-]{0,15}$ ]] || usage; done
+  else
+    [ $# = 1 ] || usage
+  fi
+  [ "${HERDR_ENV:-}" = 1 ] && [ -n "${HERDR_WORKSPACE_ID:-}" ] && command -v herdr >/dev/null || { echo "not in herdr"; exit 1; }
+  name=$(tabname)
+  live() { local p; p=$(cat "$tabs/$name.review" 2>/dev/null) && [[ $p =~ ^[0-9]+$ ]] && kill -0 "$p" 2>/dev/null; }
+  waits() { herdr agent get "$name" 2>/dev/null | python3 -I -c 'import json, sys; sys.exit(json.load(sys.stdin)["result"]["agent"]["agent_status"] != "blocked")' 2>/dev/null; }
+  if [ $1 = answer ]; then
+    live && waits || { echo "no review waits in the Codex tab"; exit 1; }
+    out=$(herdr agent send-keys "$name" "${@:3}" 2>&1) || { echo "ERROR: $(head -n1 <<<"$out")"; exit 1; }
+    echo "sent: ${*:3}"
+    exit 0
+  fi
+  seen=0 shown=0
+  while :; do
+    if live; then
+      seen=1
+      if waits; then
+        [ $shown = 1 ] || { echo "codex tab waits: $name"; herdr agent read "$name" --source recent-unwrapped --lines 20 2>&1 | sed $'s/\e\\[[0-9;]*[A-Za-z]//g'; echo "codex tab waits: end"; shown=1; }
+      else
+        shown=0
+      fi
+    elif [ $seen = 1 ]; then
+      exit 0
+    fi
+    # ponytail: watch polls every 2 s, switch to herdr agent wait if herdr gains a wait on a state change
+    sleep 2
+  done ;;
+esac
 cmd=run
 case ${1:-} in check|continued|waive|note|round|talk) cmd=$1; shift ;; count) cmd=count ;; esac
 point=${1:-}
@@ -195,7 +228,7 @@ if [ "${HERDR_ENV:-}" = 1 ] && [ -n "${HERDR_WORKSPACE_ID:-}" ] && command -v he
   sd=$(dirname "$0")
   name=$(tabname)
   cp "$tmp/prompt" "$tmp/prompt.tab" || block "cannot copy the prompt"
-  timeout -k 10 540 bash "$sd/st-lock.sh" --name "codex-$HERDR_WORKSPACE_ID" --timeout 50 -- bash "$sd/st-codex-agent.sh" "$name" "$tmp/prompt.tab" "$tmp/answer.json" "$tabs" "${opts[@]}" > "$tmp/tab" 2>&1 || rc=$?
+  bash "$sd/st-lock.sh" --name "codex-$HERDR_WORKSPACE_ID" --timeout 50 -- bash "$sd/st-codex-agent.sh" "$name" "$tmp/prompt.tab" "$tmp/answer.json" "$tabs" "${opts[@]}" > "$tmp/tab" 2>&1 || rc=$?
   [ $rc = 75 ] && block "Codex agent busy with another review"
   grep -a '^codex: the Codex tab runs with ' "$tmp/tab"
   [ $rc = 4 ] && { r=$(grep -a -m1 '^BLOCKED: ' "$tmp/tab"); block "${r#BLOCKED: }"; }
@@ -203,7 +236,6 @@ if [ "${HERDR_ENV:-}" = 1 ] && [ -n "${HERDR_WORKSPACE_ID:-}" ] && command -v he
     0) via=$(grep -a '^codex: tab ' "$tmp/tab" | tail -n1) ;;
     3) via="codex: headless (Codex tab in use)" ;;
     5) via="codex: headless (Codex tab name $name in use elsewhere)" ;;
-    124|137) echo "ERROR: Codex tab timed out"; via="codex: headless (Codex tab failed)" ;;
     *) grep -a '^ERROR:' "$tmp/tab" | tail -n1; via="codex: headless (Codex tab failed)" ;;
   esac
 fi
