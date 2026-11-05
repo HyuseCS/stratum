@@ -1,0 +1,24 @@
+views {
+  dynamic view quick {
+    title 'Quick lane'
+    user -> skills.st '(1) task in plain words'
+    skills.st -> user '(2) lane and risk line'
+    skills.st -> scripts.st-state-sh '(3) risk none'
+    skills.st -> skills.st-quick '(4) one file: the edit'
+    skills.st-quick -> agents.st-quick '(5) plugin root, project root, the edit'
+    agents.st-quick -> stratum.state-json '(6) phase done'
+    agents.st-quick -> skills.st-quick '(7) done with file and line, or move up a lane'
+    skills.st-quick -> scripts.st-verify-sh '(8) tests it ran and the one file'
+    skills.st-quick -> agents.st-git '(9) the one file'
+    agents.st-git -> git '(10) commit'
+    skills.st-quick -> user '(11) what changed in one line'
+    skills.st-quick -> agents.st-build '(12) second file only: brief, plugin root, project root'
+    skills.st-quick -> skills.st-fast '(13) move up for any other reason: the edit'
+    skills.st -> agents.st-build '(14) few files, no plan: brief, plugin root, project root'
+    agents.st-build -> skills.st '(15) files changed and tests run, or Needs the Fast lane'
+    skills.st -> scripts.st-verify-sh '(16) test command and the files it touched'
+    skills.st -> agents.st-git '(17) the exact files'
+    agents.st-git -> git '(18) commit'
+    skills.st -> skills.st-fast '(19) Needs the Fast lane: the task'
+  }
+}

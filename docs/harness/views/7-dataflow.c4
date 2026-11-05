@@ -1,0 +1,6 @@
+views {
+  view dataflow {
+    title 'Data flow'
+    include stratum.*, feature.*, project.*, skills.* <-> stratum.*, skills.* <-> feature.*, skills.* <-> project.*, agents.* <-> stratum.*, agents.* <-> feature.*, agents.* <-> project.*, hooks.* <-> stratum.*, hooks.* <-> feature.*, hooks.* <-> project.*, scripts.* <-> stratum.*, scripts.* <-> feature.*, scripts.* <-> project.*, procedures.* <-> stratum.*, procedures.* <-> feature.*, procedures.* <-> project.*, statusline.* <-> stratum.*, statusline.* <-> feature.*, statusline.* <-> project.*
+  }
+}
