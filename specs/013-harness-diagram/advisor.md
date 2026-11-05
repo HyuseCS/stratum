@@ -1,3 +1,6 @@
 ## plan | 2026-11-05T15:55:21Z | sha256 1ff2efed8004c0ce02eaf18582b81932a245555e74e0706d49f2c8eed0c0827a | REVISE
 summary: Simplify the task split by combining the three small topic-view tasks.
 - [LOW] specs/013-harness-diagram/ tasks.md:101: Merge T017–T019 into one topic- views task, retaining the three output files and running the shared views check once. Evidence: Each task only applies the include rules already specified in model-format.md and runs the same check. The execution plan schedules all three separately within a 16-task wave. One owner can implement these related views with fewer handoffs and repeated setup, while preserving the separate model and lane-view tasks.
+
+## plan | 2026-11-05T16:14:35Z | sha256 9b1745e00bc6618a52755d1c97cd47c09750749f519818be634026eea4609b8c | WAIVED
+reason: Plan changed at Inspect only by fixes of Inspect findings F1-F14 (test greps, negative controls, README commit order, wording) and user decisions D11 (pin note) and D12 (drop lane tags); no story, task or file-list change.

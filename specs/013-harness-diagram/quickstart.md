@@ -21,7 +21,11 @@ and `SKIP rebuild`, the other checks `ok`.
    "Syntax error" or "Maximum text size" box.
 3. In the Full lane diagram, read the steps `(1)`, `(2)` ... in order. Name Define, Plan, Inspect,
    Build and Close in order and each `gate:` step. Time it: under 2 minutes.
-4. Open `README.md` on GitHub. Its Harness diagram section links to the page.
+4. US1 scenario 3: find `st-build agent` in the Full lane and in the Fast lane diagrams. Expected:
+   in the Full lane its steps carry Full-lane data (tasks from `tasks.md`), in the Fast lane they
+   carry Fast-lane data (tests from the change plan), and no step of one lane shows in the other.
+   Do the same for `st-git agent` in the Full, Fast and Quick lanes.
+5. Open `README.md` on GitHub. Its Harness diagram section links to the page.
 
 If Data flow does not draw, split it as model-format.md "Topic views" says.
 
@@ -51,8 +55,9 @@ Expected: `Valid`, then a diff only where the model changed.
 
 ## 5. Drag and save (US3 scenario 1, check by hand)
 
-1. Open the repo in VS Code with the LikeC4 extension. Open `docs/harness/views/1-full.c4` and its
-   preview.
+1. Install the LikeC4 VS Code extension once (the user runs it; the PC does not have it today):
+   `code --install-extension likec4.likec4-vscode`. Open the repo in VS Code. Open
+   `docs/harness/views/1-full.c4` and its preview.
 2. Drag one box. Save. Close and open the preview again.
 3. Expected: the box stays where it was put, and `git status` shows a new
    `docs/harness/.likec4/full.likec4.snap`.
@@ -65,8 +70,9 @@ Expected: `Valid`, then a diff only where the model changed.
    `claude mcp add --scope user likec4 -- npx -y @likec4/mcp@1.60.0`
 2. Start Claude Code in a worktree of this repo (for example `../stratum-078`).
 3. Ask it to list the LikeC4 views with the likec4 MCP tools.
-4. Expected: the 7 views of `docs/harness/`. If it finds no project, note it in `gaps.md` and give
-   the server `-e LIKEC4_WORKSPACE=docs/harness` in the README command.
+4. Expected: the 7 views of `docs/harness/`. If it finds no project, report it with the error
+   text. A change to the README command (for example `-e LIKEC4_WORKSPACE=docs/harness`) is a
+   decision for the user, as T020 says.
 
 ## 7. No harness change (FR-014)
 

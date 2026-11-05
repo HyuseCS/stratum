@@ -16,8 +16,8 @@ Fast, Quick, Design) that list their steps by hand, and three topic views (agent
 flow). `likec4 export markdown` makes `docs/harness/README.md`, one Mermaid block per view, which
 GitHub draws. The main `README.md` links the page and says how to edit, check and rebuild it, and
 how to add the LikeC4 MCP server once per machine. `tests/test_harness_model.sh` checks coverage
-both ways with grep (no `npx` needed), and model validity and page rebuild with pinned
-`npx -y likec4@1.60.0`. No skill, agent, hook or script changes (FR-014).
+both ways with grep (no `npx` needed), and model validity and page rebuild with
+`npx -y likec4@1.60.0` (top package pinned, D11). No skill, agent, hook or script changes (FR-014).
 
 ## Technical Context
 
@@ -31,7 +31,8 @@ both ways with grep (no `npx` needed), and model validity and page rebuild with 
 **Testing**: `bash tests/test_harness_model.sh [check...]`. No CI in the repo.
 
 **Target Platform**: GitHub Markdown (Mermaid), VS Code with the LikeC4 extension, Claude Code
-(MCP server). Developer machines: PC (Node 24.14.1) and laptop (Node version not known).
+(MCP server). Developer machines: PC and laptop, both Node 24.14.1 (D9). The LikeC4 VS Code
+extension `likec4.likec4-vscode` is needed only to drag boxes (not installed on the PC today).
 
 **Project Type**: documentation model inside a Claude Code plugin repo.
 
@@ -100,9 +101,13 @@ Tasks that touch an external service: T001 (the test runs `npx`), T002, T018 and
 No task touches access rules, sign-in, an app data model, contracts of a running service, secrets,
 or personal data.
 
-- **npm registry.** `npx -y likec4@1.60.0` downloads and runs third-party code at test time. The
-  exact version is pinned in one variable in the test and in the README commands (FR-011). The
-  first run needs the network. Nothing from the repo is sent anywhere.
+- **npm registry (D11).** `npx -y likec4@1.60.0` downloads and runs third-party code at test time.
+  Only the top package is pinned, in one variable in the test and in the README commands (FR-011).
+  Its dependencies use `^` ranges (for example `vite ^8.3.4`, `chokidar ^5.0.0`), so `npx -y`
+  resolves them again on each machine and runs their install scripts. This is a developer-only
+  tool: nothing of it ships to plugin users. The `rebuild` check catches a page that comes out
+  different. No `package.json` and no lockfile in the repo. The first run needs the network.
+  Nothing from the repo is sent anywhere.
 - **User-scope MCP server.** `claude mcp add --scope user likec4 -- npx -y @likec4/mcp@1.60.0` makes
   Claude Code start the server in every project the user opens, not only this repo. It runs
   third-party code at session start and reads `.c4` files under the session folder. The README must
@@ -158,3 +163,63 @@ use the checks that read one file at a time (`summaries`, `links`, `missing`, `v
 ## Constitution Check (after design)
 
 No constitution and no ordinances. Nothing to recheck.
+
+## Validate
+
+Date: 2026-11-06. Verdict: CONDITIONAL
+
+| Check | Verdict | Findings |
+|-------|---------|----------|
+| 1. Setup and dependencies | CONCERN | F4 |
+| 2. Test coverage per requirement | CONCERN | F1, F2, F6, F7 |
+| 3. Breaking changes | CONCERN | F3 |
+| 4. Security and privacy | CONCERN | F5 |
+
+Proven on the PC: Node v24.14.1, npx 11.11.0, python3 3.14.9, bash 5.3. `npm view` shows `likec4@1.60.0`
+(engines `node >=22.22.3`) and `@likec4/mcp@1.60.0` (bin `likec4-mcp`). `npx --no-install likec4@1.60.0
+--version` prints 1.60.0 from the cache. Repo counts match the registry: 40 skills, 15 agents, 17 hook
+files, 15 scripts, 3 statusline files, 9 procedures, 7 templates, 7 events in `hooks/commands.json`, 15
+`.stratum` names from the R10 grep. No root `.mcp.json`. A scratch probe confirmed the page first line
+and the `### <title>` heading of data-model.md "Page".
+
+F1. tasks.md:131 T022's test `! grep -rn 'gaps.md' README.md docs/harness` can never pass. data-model.md:215
+registers `feature.gaps-md` with `data 'specs/NNN-feature/gaps.md'` in `model/data.c4`, and the Data flow
+view includes `feature.*`, so the page has that title too (probe confirmed). -> st-plan: grep for
+`013-harness-diagram/gaps` only, or check only that no Markdown link targets the file.
+
+F2. contracts/test-contract.md:53-61 T021 proves 7 of 12 checks can fail. No control for: Node below
+22.22.3 (US4 scenario 4 names it; the version compare is new logic), `vendored`, `page`, `readme`,
+`nomcp`, `kinds`. -> st-plan: add rows, for example a `node` shim on PATH that prints `v22.22.2` and one
+that prints `v22.9.0` (catches a string compare), remove one `#vendored`, delete one `### ` heading,
+change the version in `README.md`, `touch .mcp.json`, add one element kind.
+
+F3. tasks.md:96 and tests/test_inspect.sh:119-123 T012 adds a `](docs/harness/README.md)` link to
+`README.md`. The "README paths" check of `tests/test_inspect.sh` needs that file to exist, and T018 writes
+it later, so `tests/test_inspect.sh` is red between the T012 and T018 commits. No task runs
+`tests/test_inspect.sh` or `tests/test_local_files.sh` after the README change. The new section must also
+have no table row that starts with a backtick and `st` (tests/test_inspect.sh:109 "README skills"). ->
+st-plan: add `bash tests/test_inspect.sh && bash tests/test_local_files.sh` to the T023 test, and commit
+T012 with or after T018.
+
+F4. tasks.md:114 T019 needs the LikeC4 VS Code extension. `code --list-extensions` shows no LikeC4
+extension on the PC, and no task or quickstart step names the install. -> st-plan: quickstart.md section
+5 names the extension and says the user installs it before T019.
+
+F5. plan.md:103-105 says the exact version is pinned. Only the top package is pinned: the cached
+`likec4@1.60.0` has 18 dependencies, many with `^` ranges (`vite ^8.3.4`, `chokidar ^5.0.0`,
+`immer ^11.1.21`), no lockfile ships with it, and `playwright 1.64.0` and `esbuild` come with it.
+`npx -y` resolves the ranges on each new machine and runs install scripts. This is third-party code on
+both machines, and FR-011 ("both machines make the same page") rests on the top pin only. -> user
+decision: accept and say it in the plan security note (my pick), or pin further (a lockfile in the repo
+breaks the "no package.json" rule).
+
+F6. data-model.md:30 and contracts/model-format.md:91 every link carries lane tags (`#full` ...). No check
+reads them and no view uses them, so they drift with no alert, and an LLM that answers "which skills are
+in no lane" from them gets wrong answers. -> user decision: drop the lane-tag rule (the lane views
+already hold the lanes, my pick), or add a T011 check that each lane-view step with a model link has
+the matching tag.
+
+F7. spec.md:33-34 US1 scenario 3 (a skill in more than one lane shows only that lane's links) has no
+automated check and no step in quickstart.md section 2. It holds by construction because lane views list
+steps by hand. -> st-plan: add one hand step to quickstart.md section 2 (`/st-build` in Full and Fast),
+or mark the scenario as true by construction.

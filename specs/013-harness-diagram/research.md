@@ -8,8 +8,12 @@ The probe models are not kept.
 - Decision: LikeC4 1.60.0, run as `npx -y likec4@1.60.0`. MCP server `npx -y @likec4/mcp@1.60.0`.
 - Rationale: D1, D2 and FR-011. `npm view @likec4/mcp@1.60.0` exists, with bin `likec4-mcp`.
 - Alternatives considered: none (D1).
-- Constraint found: `npm view likec4@1.60.0 engines` gives `node >=22.22.3`. The spec assumes
-  "Node 18 or later" on the laptop. See plan.md open decision on the Node floor.
+- Pin scope (D11): only the top package is pinned. Its dependencies use `^` ranges and resolve
+  again on each machine. No `package.json` or lockfile in the repo. Rejected: a lockfile, which
+  needs a `package.json` in the plugin repo.
+- Constraint found: `npm view likec4@1.60.0 engines` gives `node >=22.22.3`. Settled by D9: keep
+  1.60.0, the README names the Node floor, and the test prints SKIP for `validate` and `rebuild`
+  below it. Both machines run Node 24.14.1.
 
 ## R2. Project folder and config
 
@@ -111,10 +115,13 @@ The probe models are not kept.
   finds. Today: `advisor.json`, `approve`, `autonomous`, `commit-mode`, `constitution.md`,
   `decisions.md`, `git-guard.json`, `handoff.md`, `lessons.md`, `models.json`, `powerline.json`,
   `state.json`, `templates`, `weather.json`, `worker-setup.sh` (15). The feature files are the
-  FR-002 list: `spec.md`, `plan.md`, `research.md`, `data-model.md`, `contracts/`, `quickstart.md`,
-  `tasks.md`, `checklists/`, `changes/`, `decisions.md`, `advisor.md`, `gaps.md` (12).
-- Rationale: the same grep as `tests/test_local_files.sh`, so a new `.stratum/` file in the code
-  fails both tests. Data files may not exist in a worktree (git-ignored), so the test never checks
+  FR-002 list: `spec.md`, `plan.md`, `research.md`, `data-model.md`, `contracts`, `quickstart.md`,
+  `tasks.md`, `checklists`, `changes`, `decisions.md`, `advisor.md`, `gaps.md` (12). A folder is
+  written with no trailing slash, as everywhere in the model (data-model.md "Title rule").
+- Rationale: the grep of `tests/test_local_files.sh:7` plus the `procedures` folder (that test does
+  not search `procedures`). Today `procedures` adds no new name, so a new `.stratum/` file in
+  `scripts`, `hooks`, `statusline`, `skills` or `agents` fails both tests, and one only in
+  `procedures` fails this test only. Data files may not exist in a worktree (git-ignored), so the test never checks
   that a data file exists. It checks that the code still names it.
 
 ## R11. Hook events

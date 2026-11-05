@@ -27,7 +27,7 @@ An element has `path` or `data` or neither (groups, actors, events). Never both.
 | source, target | Fully qualified element ids. |
 | kind | `starts`, `reads`, `writes`, `runs` or `passes` (FR-004). |
 | label | Required. Names the data the link carries (FR-004, SC-003). |
-| tags | Lane tags `#full`, `#fast`, `#quick`, `#design` for each lane whose steps use the link. |
+| tags | None. Lane membership is only in the lane views (D12). |
 
 Link kinds:
 
@@ -72,7 +72,7 @@ view table above.
 
 `group`, `actor`, `event`, `skill`, `agent`, `hook`, `statusline`, `script`, `procedure`,
 `pluginfile`, `datafile`. Relationship kinds: `starts`, `reads`, `writes`, `runs`, `passes`. Tags:
-`vendored`, `full`, `fast`, `quick`, `design`.
+`vendored` only (D12: no lane tags).
 
 ## Title rule
 
@@ -87,6 +87,9 @@ The page shows titles only (research R5), so a title tells the kind apart:
 | pluginfile | repo path | `templates/spec.md` |
 | datafile | run-time path, `specs/NNN-feature/` for feature files | `.stratum/state.json` |
 | event | Claude Code event name | `PreToolUse` |
+
+A folder's title, `path` and `data` have no trailing slash: `.stratum/templates`,
+`specs/NNN-feature/contracts`, `graphify-out`, `.impeccable`.
 | actor, group | name | `Codex`, `Skills` |
 
 No backtick, `<` or `>` in any title, summary or label (research R6).
@@ -222,10 +225,10 @@ Project files (D10), kind `datafile`, `data` = the project path:
 | `project.agents-md` | `AGENTS.md` |
 | `project.claude-md` | `CLAUDE.md` |
 | `project.graphify-out-graph-report-md` | `graphify-out/GRAPH_REPORT.md` |
-| `project.graphify-out` | `graphify-out/` |
+| `project.graphify-out` | `graphify-out` |
 | `project.claude-settings-json` | `.claude/settings.json` |
 | `project.claude-settings-local-json` | `.claude/settings.local.json` |
-| `project.impeccable` | `.impeccable/` |
+| `project.impeccable` | `.impeccable` |
 | `project.gitignore` | `.gitignore` |
 
 Plugin files (D10), kind `pluginfile`, `path` = repo path (must exist):

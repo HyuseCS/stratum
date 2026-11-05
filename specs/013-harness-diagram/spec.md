@@ -6,7 +6,7 @@
 
 **Status**: Draft
 
-**Input**: User description: "#78 Add a diagram of the Stratum workflows and harness. Purpose: see the harness so we can make the workflows work better and the skills in the workflows more cohesive and autonomous. The diagram must be editable by the developer, easy to consume, and easy for an LLM to read." Decisions D1 to D7 are in `decisions.md`.
+**Input**: User description: "#78 Add a diagram of the Stratum workflows and harness. Purpose: see the harness so we can make the workflows work better and the skills in the workflows more cohesive and autonomous. The diagram must be editable by the developer, easy to consume, and easy for an LLM to read." Decisions D1 to D10 are in `decisions.md`.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -148,7 +148,8 @@ Remove the folder. The test passes.
   per view that GitHub draws. It is not edited by hand.
 - **FR-010**: The main `README.md` MUST link to the page and say how to edit, check and rebuild
   it, and how to add the MCP server once per machine.
-- **FR-011**: The tool version MUST be pinned, so both machines make the same page.
+- **FR-011**: The top LikeC4 package MUST be pinned to one version, so both machines make the same
+  page. Its own dependencies are not pinned (D11). The rebuild check catches a page that changes.
 - **FR-012**: The repo MUST NOT get any file that Claude Code loads as a plugin component for this
   feature (no root `.mcp.json`) (D6).
 - **FR-013**: `tests/test_harness_model.sh` MUST check coverage (FR-002 items both ways), model
@@ -159,9 +160,11 @@ Remove the folder. The test passes.
 
 ### Key Entities
 
-- **Element**: one skill, agent, hook script, script, statusline script or data file. Has a kind,
-  a name, a repo path, a summary and tags.
-- **Link**: from one element to another. Has a kind, a data label and the lanes it belongs to.
+- **Element**: one skill, agent, hook script, script, statusline script, procedure, data file,
+  actor, event or group. Has a kind, a name, a summary and tags, and a repo path (plugin files), a
+  data path (run-time data files) or neither (actors, events, groups).
+- **Link**: from one element to another. Has a kind and a data label. Lane membership is only in
+  the lane views (D12).
 - **View**: a lane view (ordered steps) or a topic view (agents, harness, data flow).
 - **Page**: the generated `docs/harness/README.md`, one diagram per view.
 

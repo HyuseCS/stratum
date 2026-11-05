@@ -38,14 +38,10 @@ specification {
   relationship runs
   relationship passes
   tag vendored
-  tag full
-  tag fast
-  tag quick
-  tag design
 }
 ```
 
-Exactly these element kinds and relationship kinds, one per line. No `style` blocks: the Mermaid
+Exactly these element kinds, relationship kinds and the one tag, one per line. No lane tags (D12). No `style` blocks: the Mermaid
 export ignores them (research R5).
 
 ## Element block
@@ -77,18 +73,20 @@ model {
 ## Relationship line
 
 ```c4
-  skills.st-plan -[starts]-> agents.st-plan 'plugin root, project root, feature dir' #full
+  skills.st-plan -[starts]-> agents.st-plan 'plugin root, project root, feature dir'
 ```
 
 - One relationship per line, inside a `model` block, anywhere in `model/*.c4`.
-- Pattern: `<source id> -[<kind>]-> <target id> '<label>'`, then zero or more lane tags.
+- Pattern: `<source id> -[<kind>]-> <target id> '<label>'`, with nothing after the label. No tags
+  on links (D12).
   Ids are fully qualified (`skills.st-plan`, not `st-plan`). Actor ids are bare (`user`).
 - Every line in `model/*.c4` that has `->` follows this pattern. A plain `->` with no kind fails.
 - The label names the data: `writes` names what is written (`phase and lane`), `reads` names what
   is read, `passes` names what is handed over (`gate: you agree the spec` is a lane step, not a
   model label), `starts` names what the started agent gets, `runs` names the arguments or the event
   matcher.
-- Tag a link `#full`, `#fast`, `#quick` or `#design` for each lane view that has a step for it.
+- Which lanes use a link is only in the lane views (D12). An LLM finds a skill's lanes by searching
+  `views/1-full.c4` to `views/4-design.c4` for its id.
 
 ## Lane view (dynamic)
 
@@ -117,7 +115,7 @@ views {
 views {
   view agents {
     title 'Agents'
-    include agents.*, skills.* -> agents.*, agents.* -> agents.*, agents.* -> user
+    include agents.*, skills.* -> agents.*, agents.* -> skills.*, agents.* -> agents.*, agents.* -> user
   }
 }
 ```
