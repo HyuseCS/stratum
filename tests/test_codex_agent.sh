@@ -50,6 +50,7 @@ case "$1 $2" in
   "agent send-keys")
     printf '{"id":"x","result":{}}\n' ;;
   "agent prompt")
+    [ -f "$S/on_prompt" ] && (cd "$PROJ" && bash "$S/on_prompt")
     if [ -f "$S/screen_prompt" ]; then
       nonce=$(grep -o 'ST-ADVISOR-BEGIN-[0-9a-f]\{12\}' "$PF" | tail -1 | sed 's/.*-//')
       sed "s/@N@/$nonce/g" "$S/screen_prompt" > "$S/screen"
@@ -72,6 +73,7 @@ pp=$(cd "$proj" && pwd -P)
 pf="$tmp/prompt.txt"
 af="$tmp/answer.json"
 export PF="$pf"
+export PROJ="$proj"
 
 chat='› Ask Codex to do anything'
 ans=$'• ST-ADVISOR-BEGIN-@N@\n• {"verdict":"APPROVED","summary":"fine","findings":[]}\n• ST-ADVISOR-END-@N@\n'
@@ -96,6 +98,14 @@ outhas() { printf '%s\n' "$out" | grep -qF -- "$1"; }
 outline() { printf '%s\n' "$out" | grep -qxF -- "$1"; }
 agent_json() { printf '[{"name":"%s","workspace_id":"%s","tab_id":"%s:t3","pane_id":"p9","cwd":"%s"}]' "$1" "$2" "$2" "${3:-$pp}" > "$S/agents"; }
 settings() { mkdir -p "$tabs" && printf '%s\n' "$HERDR_WORKSPACE_ID:t3" "$@" > "$tabs/st-codex-t1"; }
+repo() {
+  rm -rf "$proj"
+  mkdir -p "$proj/specs/010-demo"
+  git -C "$proj" init -q
+  printf 'old\n' > "$proj/a.txt"
+  git -C "$proj" add a.txt
+  git -C "$proj" -c user.name=t -c user.email=t@t commit -qm init
+}
 
 new; go -m m1 -c 'model_reasoning_effort="high"'
 pane=$(cat "$S/pane" 2>/dev/null)
@@ -131,6 +141,27 @@ check "C9 name live in another workspace: exit 5, in use elsewhere, no create, s
 
 new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID" /elsewhere; go
 check "C9 name live in this workspace with another cwd: exit 5, in use elsewhere, no create, start, prompt, send-keys or close" '[ $rc -eq 5 ] && outline "codex: tab name st-codex-t1 in use elsewhere" && [ "$(cnt "^tab create")" = 0 ] && [ "$(cnt "^agent start")" = 0 ] && [ "$(cnt "^agent prompt")" = 0 ] && [ "$(cnt "^agent send-keys")" = 0 ] && [ "$(cnt "^tab close")" = 0 ]'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; echo 'printf changed > a.txt' > "$S/on_prompt"; go
+check "C10 Codex changes a tracked file: exit 4, BLOCKED names it, new content kept" '[ $rc -eq 4 ] && outline "BLOCKED: Codex changed files during the review: a.txt" && [ "$(cat "$proj/a.txt")" = changed ]'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; echo 'printf x > b.txt' > "$S/on_prompt"; go
+check "C11 Codex adds an untracked file: exit 4, BLOCKED names it" '[ $rc -eq 4 ] && outline "BLOCKED: Codex changed files during the review: b.txt"'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; printf old > "$proj/u.txt"; echo 'printf new > u.txt' > "$S/on_prompt"; go
+check "C12 Codex changes an untracked file that was there: exit 4, BLOCKED names it" '[ $rc -eq 4 ] && outline "BLOCKED: Codex changed files during the review: u.txt"'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; printf old > "$proj/u.txt"; echo 'rm u.txt' > "$S/on_prompt"; go
+check "C13 Codex removes an untracked file: exit 4, BLOCKED names it" '[ $rc -eq 4 ] && outline "BLOCKED: Codex changed files during the review: u.txt"'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; echo 'printf x > c.txt; git add c.txt; git -c user.name=t -c user.email=t@t commit -qm c' > "$S/on_prompt"; go
+check "C14 Codex commits: exit 4, BLOCKED names HEAD" '[ $rc -eq 4 ] && outline "BLOCKED: Codex changed files during the review: HEAD"'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; go
+check "C15 no change: exit 0, answer written, no BLOCKED line" '[ $rc -eq 0 ] && [ -s "$af" ] && ! outhas "BLOCKED:"'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; printf dirty > "$proj/a.txt"; go
+check "C16 tree dirty before and the same after: exit 0, no BLOCKED line" '[ $rc -eq 0 ] && ! outhas "BLOCKED:"'
 
 new; echo 2 > "$S/start_busy"; go
 check "e busy twice then ok: 3 start calls" '[ $rc -eq 0 ] && [ "$(cnt "^agent start")" = 3 ]'
