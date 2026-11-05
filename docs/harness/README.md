@@ -589,8 +589,9 @@ answer`" .-> Claude
 a deny with the file errors`" .-> Claude
   Hooks.St_phase_py -. "`reply label and out-of-order phase 
 warning`" .-> Claude
-  Hooks.St_session_start_sh -. "`communication rules, session handoff and 
-Stratum reply rules`" .-> Claude
+  Hooks.St_session_start_sh -. "`communication rules, session handoff, 
+Stratum reply rules and the 
+background-run rule`" .-> Claude
   Hooks.Ponytail_activate_js -. "`ponytail rules, codebase map and 
 statusline setup note`" .-> Claude
   Hooks.Ponytail_mode_tracker_js -. "`mode changed or mode off notice`" .-> Claude

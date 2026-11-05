@@ -176,6 +176,7 @@ model {
   agents.st-impeccable -[reads]-> plugin.sr-opus-5-md 'report style rules'
   agents.st-impeccable -[starts]-> skills.st-impeccable 'audit command and target'
   agents.st-impeccable -[passes]-> user 'audit report'
+  claude -[starts]-> agents.st-impeccable 'background run the user asks for'
 
   agents.st-inspect -[reads]-> plugin.sr-opus-5-md 'report style rules'
   agents.st-inspect -[reads]-> project.graphify-out-graph-report-md 'file map'
@@ -208,10 +209,12 @@ model {
   agents.st-ponytail-audit -[reads]-> plugin.sr-opus-5-md 'report style rules'
   agents.st-ponytail-audit -[starts]-> skills.st-ponytail-audit 'scope'
   agents.st-ponytail-audit -[passes]-> user 'ranked cut list and net line'
+  claude -[starts]-> agents.st-ponytail-audit 'background run the user asks for'
 
   agents.st-ponytail-debt -[reads]-> plugin.sr-opus-5-md 'report style rules'
   agents.st-ponytail-debt -[starts]-> skills.st-ponytail-debt 'project root'
   agents.st-ponytail-debt -[passes]-> user 'ledger rows by file'
+  claude -[starts]-> agents.st-ponytail-debt 'background run the user asks for'
 
   agents.st-quick -[reads]-> plugin.sr-opus-5-md 'report style rules'
   agents.st-quick -[reads]-> project.graphify-out-graph-report-md 'file map'

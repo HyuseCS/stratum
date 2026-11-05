@@ -7,3 +7,6 @@ reason: Plan changed at Inspect only by fixes of Inspect findings F1-F14 (test g
 
 ## decisions | 2026-11-05T16:46:13Z | /advisor
 summary: US1+US2 small decisions: 14 of 15 ok; restore the st-close APP-constitution write (fix missing check), make views fail on a missing lane file, quickstart names the 3 phase gates; render the page in a browser before the PR
+
+## diff | 2026-11-05T16:58:46Z | /advisor
+summary: End-of-Build diff 3c5a3f7..c6e9743 docs only, approve; resolve gap G2 vs model, pre-check snap allowed by nomcp/rebuild and the snap folder, fix tasks.md dependency line at Close

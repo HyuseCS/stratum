@@ -192,7 +192,7 @@ model {
   hooks.st-session-start-sh -[writes]-> stratum.constitution-md 'worktree link to the main checkout file'
   hooks.st-session-start-sh -[writes]-> stratum.lessons-md 'worktree link to the main checkout file'
   hooks.st-session-start-sh -[writes]-> stratum.templates 'worktree link to the main checkout folder'
-  hooks.st-session-start-sh -[passes]-> claude 'communication rules, session handoff and Stratum reply rules'
+  hooks.st-session-start-sh -[passes]-> claude 'communication rules, session handoff, Stratum reply rules and the background-run rule'
 
   hooks.token-weather-mjs -[writes]-> stratum.weather-json 'compaction threshold and mean token growth'
 
