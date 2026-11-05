@@ -270,7 +270,7 @@ case "$1 $2" in
     fi
     echo '{"result":{"agent":"codex","name":"st-codex-demo","pane_id":"w1:p2"}}' ;;
   "agent send-keys") touch "$d/h.entered" ;;
-  "agent prompt") printf '%s\n' "$@" > "$d/h.args"; echo '{"result":{"state":"done"}}' ;;
+  "agent prompt") printf '%s\n' "$@" > "$d/h.args"; [ "$m" = writes ] && printf 'new\n' > "$d/proj/new.txt"; echo '{"result":{"state":"done"}}' ;;
   "agent read")
     if [[ " $* " == *" 400 "* ]]; then
       [ "$m" = nomarkers ] && { echo "some text without the markers"; exit 0; }
@@ -351,6 +351,12 @@ mkdir -p "$tmp/state/stratum/codex-tabs"
 printf 'w1:t2\n-m\nold\n' > "$tmp/state/stratum/codex-tabs/st-codex-demo"
 hrun nofolder
 check "(M5) tab idle, record differs: the settings line is in the output" 'grep -qxF "codex: the Codex tab runs with -m old, advisor.json asks for Codex defaults. Close the tab to apply." <<<"$out"'
+hreset
+h=$(plan_hash)
+approve
+hrun writes
+check "(M6) Codex writes a file in the tab: first line BLOCKED with the file, exit 1, BLOCKED record, codex exec not run, file kept" '[ $rc = 1 ] && [ "$(head -n1 <<<"$out")" = "BLOCKED: Codex changed files during the review: new.txt" ] && [ ! -e "$tmp/argv" ] && [ -f "$proj/new.txt" ] && grep -qE "^## plan \| [^|]+ \| sha256 $h \| BLOCKED$" "$recf" && grep -qxF "reason: Codex changed files during the review: new.txt" "$recf"'
+rm -f "$proj/new.txt"
 hreset
 for pair in 'stratum|st-codex-stratum' 'Stratum Main!|st-codex-stratum-main-' 'abcdefghijklmnopqrstuvwxyz0123456789ABCD|st-codex-abcdefghijklmnopqrstuvw' '~|st-codex-wq9'; do
   printf '%s' "${pair%%|*}" > "$tmp/hlabel"
