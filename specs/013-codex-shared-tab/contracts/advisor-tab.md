@@ -196,6 +196,9 @@ Printed only by `watch`, and read the same way by `answer`. The last 20 lines of
 | C14 | US2 | Codex commits (tree clean after) | names `HEAD` |
 | C15 | US2 | no change | exit 0, answer written |
 | C16 | US2 | tree dirty before, same after | exit 0 |
+| C16b | US2 | `a.txt` is `MM`, Codex stages other content, worktree and status stay the same | names `a.txt` |
+| C16e | US2 | `a.txt` dirty, Codex runs `chmod +x a.txt` | names `a.txt` |
+| C16f | US2 | untracked symlink `l` retargeted to a file with the same bytes | names `l` |
 | C17 | US3 | prompt argv (guard FR-009, D11) | ends `--wait --until done --until idle`; no `--until blocked`; no `--timeout` |
 | C18 | US3 | prompt fails, `agent get` says `agent_not_found` (guard FR-012) | exit 4, `BLOCKED: the Codex tab ended during the review`; no close; no `ERROR:` line |
 | C19 | US3 | prompt fails with `agent_prompt_stalled`, agent still there | exit 4, `BLOCKED: the Codex tab failed during the review: <first line>`; no close |

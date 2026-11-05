@@ -33,15 +33,18 @@ ended() {
 }
 # ponytail: a path with a newline breaks the snapshot lines, use -z through to the compare if one shows up
 snap() {
-  local - c e i x=(-- . ':(exclude).stratum/state.json' ':(exclude,glob)**/.syncthing.*.tmp' ':(exclude,glob)**/~syncthing~*.tmp')
+  local - c e f m x=(-- . ':(exclude).stratum/state.json' ':(exclude,glob)**/.syncthing.*.tmp' ':(exclude,glob)**/~syncthing~*.tmp')
   set -o pipefail
   c=$(git rev-parse --show-cdup 2>/dev/null)
   echo "HEAD $(git rev-parse -q --verify HEAD 2>/dev/null)"
-  i=$(git --no-optional-locks diff --cached --raw --no-abbrev --no-renames "${x[@]}" 2>/dev/null) || return 1
-  echo "INDEX $(sha256sum <<<"$i" | cut -d' ' -f1)"
+  git --no-optional-locks diff --cached --raw --no-abbrev --no-renames -z "${x[@]}" 2>/dev/null |
+    while IFS= read -r -d '' m && IFS= read -r -d '' e; do
+      printf '%s\tindex\t%s\n' "$e" "$m"
+    done || return 1
   git --no-optional-locks status --porcelain=v1 -z --untracked-files=all --no-renames "${x[@]}" 2>/dev/null |
     while IFS= read -r -d '' e; do
-      printf '%s\t%s\t%s\n' "${e:3}" "${e:0:2}" "$([ -f "$c${e:3}" ] && sha256sum < "$c${e:3}" | cut -d' ' -f1)"
+      f=$c${e:3}
+      printf '%s\t%s\t%s %s\n' "${e:3}" "${e:0:2}" "$(stat -c %f -- "$f" 2>/dev/null)" "$(if [ -L "$f" ]; then readlink -- "$f" | sha256sum | cut -d' ' -f1; elif [ -f "$f" ]; then sha256sum < "$f" | cut -d' ' -f1; fi)"
     done
 }
 
@@ -97,7 +100,7 @@ out=$(herdr agent prompt "$name" "Read the review request in $pf and follow it. 
 prc=$?
 rm -f "$tabs/$name.review"
 after=$(snap) || die "BLOCKED: cannot read git status in $root" 4
-[ "$before" = "$after" ] || die "BLOCKED: Codex changed files during the review: $(comm -3 <(sort <<<"$before") <(sort <<<"$after") | sed 's/^\t//; s/^HEAD .*/HEAD/; s/^INDEX .*/INDEX/; s/\t[^\t]*\t[^\t]*$//' | LC_ALL=C sort -u | awk 'NR > 1 { printf ", " } { printf "%s", $0 }')" 4
+[ "$before" = "$after" ] || die "BLOCKED: Codex changed files during the review: $(comm -3 <(sort <<<"$before") <(sort <<<"$after") | sed 's/^\t//; s/^HEAD .*/HEAD/; s/\t.*//' | LC_ALL=C sort -u | awk 'NR > 1 { printf ", " } { printf "%s", $0 }')" 4
 [ $prc = 0 ] || {
   [ "$(jget error code <<<"$out")" = agent_blocked ] && die "codex: tab in use" 3
   ended

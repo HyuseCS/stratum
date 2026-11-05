@@ -56,8 +56,9 @@ Text, built twice per review (before the prompt, after the prompt call returns).
 | Line | Value |
 |------|-------|
 | 1 | `HEAD <sha>` (`git rev-parse -q --verify HEAD`, empty in a repo with no commit) |
-| 2.. | `<path>\t<XY>\t<sha256 of the file, empty when gone>` for each entry of `git --no-optional-locks status --porcelain=v1 -z --untracked-files=all --no-renames -- . ':(exclude).stratum/state.json' ':(exclude,glob)**/.syncthing.*.tmp' ':(exclude,glob)**/~syncthing~*.tmp'` |
+| 2.. | `<path>\tindex\t<raw entry>` for each entry of `git --no-optional-locks diff --cached --raw --no-abbrev --no-renames -z` with the same pathspec as the next row (modes, blob ids and status of each staged change) |
+| next | `<path>\t<XY>\t<mode> <sha256>` for each entry of `git --no-optional-locks status --porcelain=v1 -z --untracked-files=all --no-renames -- . ':(exclude).stratum/state.json' ':(exclude,glob)**/.syncthing.*.tmp' ':(exclude,glob)**/~syncthing~*.tmp'`. `<mode>` is `stat -c %f` of the path, symlinks not followed (file type and permission bits). `<sha256>` is the hash of the link target text (`readlink`) for a symlink, of the file content for a regular file. Both empty when the path is gone |
 
 Rules:
-- Any line that differs makes the point BLOCKED, with each differing path (and `HEAD`) named once, in sorted order.
-- Covers tracked changes, untracked files that are not ignored, and HEAD. Not ignored files, not files outside the folder, not `.stratum/state.json` (written by `hooks/st-phase.py`) and not Syncthing temp files (research R6).
+- Any line that differs makes the point BLOCKED, with each differing path (and `HEAD`) named once, in sorted order. The name is the text before the first tab of the line.
+- Covers tracked changes (staged and in the worktree), untracked files that are not ignored, file modes, symlink targets, and HEAD. Not ignored files, not files outside the folder, not `.stratum/state.json` (written by `hooks/st-phase.py`) and not Syncthing temp files (research R6).

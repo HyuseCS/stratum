@@ -175,7 +175,13 @@ new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; echo 'rm a.tx
 check "C10b Codex deletes a tracked file and adds one: exit 4, BLOCKED names both" '[ $rc -eq 4 ] && outline "BLOCKED: Codex changed files during the review: a.txt, b.txt"'
 
 new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; (cd "$proj" && printf X > a.txt && git add a.txt && printf Y > a.txt); echo 'printf Z > a.txt; git add a.txt; printf Y > a.txt' > "$S/on_prompt"; go
-check "C16b Codex restages a file that was MM: exit 4, BLOCKED names INDEX" '[ $rc -eq 4 ] && outline "BLOCKED: Codex changed files during the review: INDEX"'
+check "C16b Codex restages a file that was MM: exit 4, BLOCKED names it" '[ $rc -eq 4 ] && outline "BLOCKED: Codex changed files during the review: a.txt"'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; printf dirty > "$proj/a.txt"; echo 'chmod +x a.txt' > "$S/on_prompt"; go
+check "C16e Codex sets the x bit on a dirty tracked file: exit 4, BLOCKED names it" '[ $rc -eq 4 ] && outline "BLOCKED: Codex changed files during the review: a.txt"'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; (cd "$proj" && printf same > x.txt && printf same > y.txt && ln -s x.txt l); echo 'ln -sfn y.txt l' > "$S/on_prompt"; go
+check "C16f Codex retargets an untracked symlink to a file with the same bytes: exit 4, BLOCKED names it" '[ $rc -eq 4 ] && outline "BLOCKED: Codex changed files during the review: l"'
 
 new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; GIT_DIR="$tmp/nowhere" go
 check "C16c git status fails before the prompt: ERROR, exit 1, no prompt" '[ $rc -eq 1 ] && outline "ERROR: cannot read git status in $pp" && [ "$(cnt "^agent prompt")" = 0 ]'
