@@ -49,6 +49,7 @@ case "$1 $2" in
     [ -f "$S/wait_gone" ] && { touch "$S/gone"; err agent_not_found "no such agent"; }
     printf '{"id":"x","result":{}}\n' ;;
   "agent read")
+    [ -f "$S/read_err" ] && err agent_read_failed "read failed"
     cat "$S/screen" ;;
   "agent send-keys")
     printf '{"id":"x","result":{}}\n' ;;
@@ -198,6 +199,8 @@ new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; touch "$S/prompt_go
 check "C18 prompt fails, agent get says agent_not_found: exit 4, the tab ended, no close, no ERROR line" '[ $rc -eq 4 ] && outline "BLOCKED: the Codex tab ended during the review" && [ "$(cnt "^tab close")" = 0 ] && ! outhas "ERROR:"'
 new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; echo agent_prompt_stalled > "$S/prompt_err"; go
 check "C19 prompt fails, agent still there: exit 4, the tab failed, no close" '[ $rc -eq 4 ] && outhas "BLOCKED: the Codex tab failed during the review: " && [ "$(cnt "^tab close")" = 0 ]'
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; touch "$S/read_err"; go
+check "C19b agent read fails after the prompt: exit 4, first line the tab failed, no ERROR line, no answer file" '[ $rc -eq 4 ] && [ "$(printf "%s\n" "$out" | grep -m1 "^BLOCKED: ")" = "BLOCKED: the Codex tab failed during the review: {\"error\":{\"code\":\"agent_read_failed\",\"message\":\"read failed\"}}" ] && ! outhas "ERROR:" && [ ! -s "$af" ]'
 new; touch "$S/notready"; go
 check "C20 agent_not_ready at start: agent wait with no --timeout before the prompt, prompt runs, exit 0" '[ $rc -eq 0 ] && grep -qxF "agent wait st-codex-t1 --until idle --until done" "$S/log.txt" && [ "$(cnt "^agent prompt st-codex-t1 ")" = 1 ] && [ "$(grep -n "^agent wait" "$S/log.txt" | cut -d: -f1)" -lt "$(grep -n "^agent prompt" "$S/log.txt" | cut -d: -f1)" ]'
 check "C22 marker exists when agent wait runs in C20" '[ -e "$S/marker_at_wait" ]'

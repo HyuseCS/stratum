@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-SECONDS=0
 die() { echo "$1" >&2; exit "${2:-1}"; }
 [ $# -ge 4 ] && [[ $1 =~ ^[a-z][a-z0-9_-]{0,31}$ ]] || die "usage: st-codex-agent.sh <tab name> <prompt file> <answer file> <state dir> [-m <model>] [-c <key=value>]" 2
 name=$1 pf=$2 af=$3 tabs=$4
@@ -23,6 +22,15 @@ for l in sys.stdin:
     break' "$@"
 }
 hd() { out=$(herdr "$@" 2>&1) || die "ERROR: $(head -n1 <<<"$out")"; }
+# ponytail: a pid reused after a kill looks like a live review, store the start time too if that bites
+mark() {
+  trap 'rm -f "$tabs/$name.review"' EXIT
+  (umask 077; mkdir -p "$tabs" && echo $$ > "$tabs/$name.review") || die "ERROR: cannot write $tabs/$name.review"
+}
+ended() {
+  herdr agent get "$name" >/dev/null 2>&1 || die "BLOCKED: the Codex tab ended during the review" 4
+  die "BLOCKED: the Codex tab failed during the review: $(head -n1 <<<"$out")" 4
+}
 # ponytail: a path with a newline breaks the snapshot lines, use -z through to the compare if one shows up
 snap() {
   local - c e i x=(-- . ':(exclude).stratum/state.json' ':(exclude,glob)**/.syncthing.*.tmp' ':(exclude,glob)**/~syncthing~*.tmp')
@@ -64,34 +72,37 @@ else
   [ -n "$pane" ] || die "ERROR: $(head -n1 <<<"$out")"
   for i in 1 2 3 4 5 6 7 8 9 10; do
     out=$(herdr agent start "$name" --kind codex --pane "$pane" --timeout 120000 -- --no-alt-screen "$@" 2>&1) && break
-    [ "$(jget error code <<<"$out")" = agent_pane_busy ] && [ $i -lt 10 ] || die "ERROR: $(head -n1 <<<"$out")"
+    code=$(jget error code <<<"$out")
+    [ "$code" = agent_not_ready ] && break
+    [ "$code" = agent_pane_busy ] && [ $i -lt 10 ] || die "ERROR: $(head -n1 <<<"$out")"
     sleep 1
   done
   [[ $made =~ ^[A-Za-z0-9:_-]+$ ]] || die "ERROR: bad tab id from herdr: $made"
   (umask 077; mkdir -p "$tabs" && printf '%s\n' "$made" "$@" > "$tabs/$name") || die "ERROR: cannot write $tabs/$name"
+  [ "$code" = agent_not_ready ] && { mark; out=$(herdr agent wait "$name" --until idle --until done 2>&1) || ended; }
 fi
 
 before=$(snap) || die "ERROR: cannot read git status in $root"
 hd agent get "$name"
 # ponytail: herdr cannot see text typed but not sent in the tab, a point may type after it; check the pane input if herdr exposes it
 case $(jget result agent agent_status <<<"$out") in working|blocked) die "codex: tab in use" 3 ;; esac
+mark
 
 nonce=$(od -An -N6 -tx1 /dev/urandom | tr -d ' \n')
 [[ $nonce =~ ^[0-9a-f]{12}$ ]] || die "ERROR: no nonce"
 printf '%s\n' "The project root is $root. Read every path above relative to it." \
   'The JSON object has the keys verdict ("APPROVED", "REVISE" or "BLOCKED"), summary (a string) and findings (a list of objects with the string keys claim, evidence, location and severity, severity one of "CRITICAL", "HIGH", "MEDIUM", "LOW").' \
   "Print the line ST-ADVISOR-BEGIN-$nonce alone, then the JSON object on one line, then the line ST-ADVISOR-END-$nonce alone. Print nothing after the end line." >> "$pf" || die "ERROR: cannot write $pf"
-out=$(herdr agent prompt "$name" "Read the review request in $pf and follow it. Change no file." --wait --until done --until idle --until blocked --timeout $(( (480 - SECONDS) * 1000 )) 2>&1)
+out=$(herdr agent prompt "$name" "Read the review request in $pf and follow it. Change no file." --wait --until done --until idle 2>&1)
 prc=$?
 after=$(snap) || die "BLOCKED: cannot read git status in $root" 4
 [ "$before" = "$after" ] || die "BLOCKED: Codex changed files during the review: $(comm -3 <(sort <<<"$before") <(sort <<<"$after") | sed 's/^\t//; s/^HEAD .*/HEAD/; s/^INDEX .*/INDEX/; s/\t[^\t]*\t[^\t]*$//' | LC_ALL=C sort -u | awk 'NR > 1 { printf ", " } { printf "%s", $0 }')" 4
 [ $prc = 0 ] || {
   [ "$(jget error code <<<"$out")" = agent_blocked ] && die "codex: tab in use" 3
-  die "ERROR: $(head -n1 <<<"$out")"
+  ended
 }
-[ "$(jget result state <<<"$out")" = blocked ] && die "ERROR: Codex waits for an answer in its Codex tab."
 
-hd agent read "$name" --source recent-unwrapped --lines 400
+out=$(herdr agent read "$name" --source recent-unwrapped --lines 400 2>&1) || ended
 python3 -I -c '
 import sys
 n, af = sys.argv[1:]
@@ -101,5 +112,5 @@ b = max((i for i, l in enumerate(ls[:e]) if l == "ST-ADVISOR-BEGIN-" + n), defau
 if b < 0:
     sys.exit(1)
 with open(af, "w", encoding="utf-8") as f:
-    f.write(" ".join(ls[b + 1:e]))' "$nonce" "$af" <<<"$out" || die "ERROR: no answer between the markers"
+    f.write(" ".join(ls[b + 1:e]))' "$nonce" "$af" <<<"$out" || die "BLOCKED: no answer between the markers" 4
 echo "codex: tab $name"
