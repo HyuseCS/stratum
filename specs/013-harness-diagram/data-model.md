@@ -87,10 +87,10 @@ The page shows titles only (research R5), so a title tells the kind apart:
 | pluginfile | repo path | `templates/spec.md` |
 | datafile | run-time path, `specs/NNN-feature/` for feature files | `.stratum/state.json` |
 | event | Claude Code event name | `PreToolUse` |
+| actor, group | name | `Codex`, `Skills` |
 
 A folder's title, `path` and `data` have no trailing slash: `.stratum/templates`,
 `specs/NNN-feature/contracts`, `graphify-out`, `.impeccable`.
-| actor, group | name | `Codex`, `Skills` |
 
 No backtick, `<` or `>` in any title, summary or label (research R6).
 
