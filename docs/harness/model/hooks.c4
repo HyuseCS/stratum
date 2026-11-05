@@ -1,0 +1,237 @@
+model {
+  extend events {
+    pre-tool-use = event 'PreToolUse' {
+      summary 'Fires before Claude Code runs a tool. It runs the git guard, the model setter, the phase tracker and the approve lock by tool matcher.'
+    }
+    permission-request = event 'PermissionRequest' {
+      summary 'Fires when a tool call needs the user to allow it. It runs st-approve.py so the orchestrator can answer for a worker.'
+    }
+    session-start = event 'SessionStart' {
+      summary 'Fires on startup, resume, clear and compact. It loads the handoff, the communication rules and the ponytail rules.'
+    }
+    subagent-start = event 'SubagentStart' {
+      summary 'Fires when Claude Code starts a subagent. It gives the subagent the ponytail rules.'
+    }
+    user-prompt-submit = event 'UserPromptSubmit' {
+      summary 'Fires on each user prompt. It tracks the ponytail mode and adds the reply label for the current phase.'
+    }
+    session-end = event 'SessionEnd' {
+      summary 'Fires when the session ends. It saves the handoff facts.'
+    }
+    pre-compact = event 'PreCompact' {
+      summary 'Fires before Claude Code compacts the context. It saves the handoff facts.'
+    }
+  }
+
+  extend hooks {
+    commands-json = hook 'commands.json' {
+      summary 'Binds each Claude Code event and tool matcher to the hook commands it runs.'
+      metadata {
+        path 'hooks/commands.json'
+      }
+    }
+    hooks-json = hook 'hooks.json' {
+      summary 'Lists the hook modules Claude Code loads: token-weather.mjs.'
+      metadata {
+        path 'hooks/hooks.json'
+      }
+    }
+    st-approve-py = hook 'st-approve.py' {
+      summary 'Denies worker access to the approve folder and the autonomous flag. In an autonomous run it writes each permission request to a file and allows it when the orchestrator answers ok.'
+      metadata {
+        path 'hooks/st-approve.py'
+      }
+    }
+    st-git-guard-py = hook 'st-git-guard.py' {
+      summary 'Reads each Bash command for git words and asks or denies commits, pushes and destructive git commands by the git guard modes.'
+      metadata {
+        path 'hooks/st-git-guard.py'
+      }
+    }
+    st-handoff-facts-sh = hook 'st-handoff-facts.sh' {
+      summary 'Writes a facts block into the handoff file: phase, lane, tasks done, branch, last commits and uncommitted files.'
+      metadata {
+        path 'hooks/st-handoff-facts.sh'
+      }
+    }
+    st-models-py = hook 'st-models.py' {
+      summary 'Checks the project model settings file and sets the model and effort of each Stratum agent call. It denies the call when the file has errors.'
+      metadata {
+        path 'hooks/st-models.py'
+      }
+    }
+    st-phase-py = hook 'st-phase.py' {
+      summary 'Sets the phase and lane in state.json when a phase skill starts. On each prompt it tells Claude the reply label and warns on a phase out of order.'
+      metadata {
+        path 'hooks/st-phase.py'
+      }
+    }
+    st-session-start-sh = hook 'st-session-start.sh' {
+      summary 'Prints the communication rules, the session handoff and the Stratum reply rules. In a worktree it links the shared .stratum files from the main checkout.'
+      metadata {
+        path 'hooks/st-session-start.sh'
+      }
+    }
+    token-weather-mjs = hook 'token-weather.mjs' {
+      summary 'After each turn it reads the context window fill and saves the compaction threshold and the mean token growth for the statusline.'
+      metadata {
+        path 'hooks/token-weather.mjs'
+      }
+    }
+    ponytail-activate-js = hook 'ponytail-activate.js' {
+      summary 'Sets the ponytail mode at session start and prints the ponytail rules with a codebase map. It offers the ponytail statusline badge once when no statusline is set.'
+      metadata {
+        path 'hooks/ponytail/ponytail-activate.js'
+      }
+    }
+    ponytail-config-js = hook 'ponytail-config.js' {
+      summary 'Module with the ponytail mode names, the config folders and the default mode from the ponytail config file.'
+      metadata {
+        path 'hooks/ponytail/ponytail-config.js'
+      }
+    }
+    ponytail-instructions-js = hook 'ponytail-instructions.js' {
+      summary 'Module that builds the ponytail rules text from the st-ponytail skill, filtered to the active mode.'
+      metadata {
+        path 'hooks/ponytail/ponytail-instructions.js'
+      }
+    }
+    ponytail-map-js = hook 'ponytail-map.js' {
+      summary 'Lists the top-level functions, classes and exports of the project source files, one line per folder, inside a character budget.'
+      metadata {
+        path 'hooks/ponytail/ponytail-map.js'
+      }
+    }
+    ponytail-mode-tracker-js = hook 'ponytail-mode-tracker.js' {
+      summary 'Reads each prompt for a ponytail command or stop ponytail, and sets, changes or clears the live mode.'
+      metadata {
+        path 'hooks/ponytail/ponytail-mode-tracker.js'
+      }
+    }
+    ponytail-runtime-js = hook 'ponytail-runtime.js' {
+      summary 'Module that reads, sets and clears the live ponytail mode flag and writes the hook output for the host app.'
+      metadata {
+        path 'hooks/ponytail/ponytail-runtime.js'
+      }
+    }
+    ponytail-statusline-sh = hook 'ponytail-statusline.sh' {
+      summary 'Prints the ponytail badge with the live mode. ponytail-activate.js copies it into the Claude config folder.'
+      metadata {
+        path 'hooks/ponytail/ponytail-statusline.sh'
+      }
+    }
+    ponytail-subagent-js = hook 'ponytail-subagent.js' {
+      summary 'Gives each subagent the ponytail rules when the ponytail mode is on.'
+      metadata {
+        path 'hooks/ponytail/ponytail-subagent.js'
+      }
+    }
+  }
+
+  extend statusline {
+    st-statusline-sh = statusline 'st-statusline.sh' {
+      summary 'Draws the Stratum status line: model, git, commit mode, ponytail level, autonomous flag and the Token Weather line.'
+      metadata {
+        path 'statusline/st-statusline.sh'
+      }
+    }
+    powerline-json = statusline 'powerline.json' {
+      summary 'Default statusline settings: theme, segments, shape and the weather line switch.'
+      metadata {
+        path 'statusline/powerline.json'
+      }
+    }
+    themes-json = statusline 'themes.json' {
+      summary 'Segment colors for each statusline theme.'
+      metadata {
+        path 'statusline/themes.json'
+      }
+    }
+  }
+
+  claude -[reads]-> hooks.commands-json 'hook commands by event and matcher'
+  claude -[reads]-> hooks.hooks-json 'hook module list'
+  claude -[runs]-> hooks.token-weather-mjs 'module on session.start and turn.complete'
+  claude -[runs]-> statusline.st-statusline-sh 'session JSON on stdin'
+
+  events.pre-tool-use -[runs]-> hooks.st-git-guard-py 'matcher Bash'
+  events.pre-tool-use -[runs]-> hooks.st-models-py 'matcher Agent'
+  events.pre-tool-use -[runs]-> hooks.st-phase-py 'matcher Skill'
+  events.pre-tool-use -[runs]-> hooks.st-approve-py 'matcher Bash|Edit|Write|MultiEdit|NotebookEdit|Read|Grep|Glob'
+  events.permission-request -[runs]-> hooks.st-approve-py 'no matcher, every permission request'
+  events.session-start -[runs]-> hooks.st-session-start-sh 'matcher startup|resume|clear|compact'
+  events.session-start -[runs]-> hooks.ponytail-activate-js 'matcher startup|resume|clear|compact'
+  events.subagent-start -[runs]-> hooks.ponytail-subagent-js 'no matcher, every subagent'
+  events.user-prompt-submit -[runs]-> hooks.ponytail-mode-tracker-js 'no matcher, every prompt'
+  events.user-prompt-submit -[runs]-> hooks.st-phase-py 'no matcher, every prompt'
+  events.session-end -[runs]-> hooks.st-handoff-facts-sh 'no matcher, session end'
+  events.pre-compact -[runs]-> hooks.st-handoff-facts-sh 'no matcher, before compaction'
+
+  hooks.st-approve-py -[reads]-> stratum.approve 'session id, owned paths, ok and user answer files'
+  hooks.st-approve-py -[writes]-> stratum.approve 'permission request file'
+  hooks.st-approve-py -[reads]-> stratum.autonomous 'autonomous session id from the main checkout'
+  hooks.st-approve-py -[reads]-> stratum.git-guard-json 'guarded branch'
+  hooks.st-approve-py -[passes]-> claude 'deny for locked paths, allow after an ok answer'
+
+  hooks.st-git-guard-py -[reads]-> stratum.git-guard-json 'commit mode, destructive git modes and guarded branch'
+  hooks.st-git-guard-py -[passes]-> claude 'ask or deny decision with the reason'
+
+  hooks.st-handoff-facts-sh -[reads]-> stratum.state-json 'phase, lane and feature directory'
+  hooks.st-handoff-facts-sh -[reads]-> feature.tasks-md 'task checkboxes for the done count'
+  hooks.st-handoff-facts-sh -[writes]-> stratum.handoff-md 'facts block: phase, lane, tasks, branch, last commits, uncommitted files'
+
+  hooks.st-models-py -[reads]-> stratum.models-json 'model and effort per agent'
+  hooks.st-models-py -[passes]-> claude 'model and effort for the Agent call, or a deny with the file errors'
+
+  hooks.st-phase-py -[reads]-> stratum.state-json 'phase, lane, feature directory and skill'
+  hooks.st-phase-py -[writes]-> stratum.state-json 'phase, lane, skill and skill session'
+  hooks.st-phase-py -[passes]-> claude 'reply label and out-of-order phase warning'
+
+  hooks.st-session-start-sh -[reads]-> plugin.sr-opus-5-md 'communication rules'
+  hooks.st-session-start-sh -[reads]-> stratum.handoff-md 'last session handoff'
+  hooks.st-session-start-sh -[writes]-> stratum.constitution-md 'worktree link to the main checkout file'
+  hooks.st-session-start-sh -[writes]-> stratum.lessons-md 'worktree link to the main checkout file'
+  hooks.st-session-start-sh -[writes]-> stratum.templates 'worktree link to the main checkout folder'
+  hooks.st-session-start-sh -[passes]-> claude 'communication rules, session handoff and Stratum reply rules'
+
+  hooks.token-weather-mjs -[writes]-> stratum.weather-json 'compaction threshold and mean token growth'
+
+  hooks.ponytail-activate-js -[reads]-> hooks.ponytail-config-js 'module: default mode and Claude config folder'
+  hooks.ponytail-activate-js -[reads]-> hooks.ponytail-instructions-js 'module: ponytail rules text'
+  hooks.ponytail-activate-js -[reads]-> hooks.ponytail-runtime-js 'module: set and read the live mode'
+  hooks.ponytail-activate-js -[runs]-> hooks.ponytail-map-js 'project folder, codebase map back'
+  hooks.ponytail-activate-js -[reads]-> outside.claude-settings-json 'statusLine command'
+  hooks.ponytail-activate-js -[passes]-> claude 'ponytail rules, codebase map and statusline setup note'
+
+  hooks.ponytail-config-js -[reads]-> outside.config-ponytail-config-json 'default mode, quiet startup and hide status'
+  hooks.ponytail-config-js -[writes]-> outside.config-ponytail-config-json 'default mode'
+
+  hooks.ponytail-instructions-js -[reads]-> hooks.ponytail-config-js 'module: mode names and default mode'
+  hooks.ponytail-instructions-js -[reads]-> skills.st-ponytail 'SKILL.md rules filtered to the mode'
+
+  hooks.ponytail-mode-tracker-js -[reads]-> hooks.ponytail-config-js 'module: default mode and stop command'
+  hooks.ponytail-mode-tracker-js -[reads]-> hooks.ponytail-runtime-js 'module: set, read and clear the live mode'
+  hooks.ponytail-mode-tracker-js -[reads]-> hooks.ponytail-instructions-js 'module: ponytail rules text'
+  hooks.ponytail-mode-tracker-js -[passes]-> claude 'mode changed or mode off notice'
+
+  hooks.ponytail-runtime-js -[reads]-> hooks.ponytail-config-js 'module: Claude config folder'
+  hooks.ponytail-runtime-js -[reads]-> outside.claude-ponytail-modes 'live mode for this project'
+  hooks.ponytail-runtime-js -[writes]-> outside.claude-ponytail-modes 'live mode for this project'
+  hooks.ponytail-runtime-js -[writes]-> outside.claude-ponytail-active 'live mode, shared flag'
+
+  hooks.ponytail-statusline-sh -[reads]-> outside.claude-ponytail-active 'live mode'
+
+  hooks.ponytail-subagent-js -[reads]-> hooks.ponytail-instructions-js 'module: ponytail rules text'
+  hooks.ponytail-subagent-js -[reads]-> hooks.ponytail-runtime-js 'module: read the live mode'
+  hooks.ponytail-subagent-js -[passes]-> claude 'ponytail rules for the subagent'
+
+  statusline.st-statusline-sh -[reads]-> statusline.powerline-json 'default statusline settings'
+  statusline.st-statusline-sh -[reads]-> stratum.powerline-json 'project statusline settings'
+  statusline.st-statusline-sh -[reads]-> statusline.themes-json 'theme colors'
+  statusline.st-statusline-sh -[reads]-> stratum.git-guard-json 'commit mode'
+  statusline.st-statusline-sh -[reads]-> outside.claude-settings-json 'Stratum plugin commit option'
+  statusline.st-statusline-sh -[reads]-> outside.claude-ponytail-active 'ponytail level'
+  statusline.st-statusline-sh -[reads]-> stratum.autonomous 'autonomous session id'
+  statusline.st-statusline-sh -[reads]-> stratum.weather-json 'compaction threshold and token growth'
+  statusline.st-statusline-sh -[passes]-> claude 'status line text'
+}

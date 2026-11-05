@@ -1,0 +1,104 @@
+model {
+  extend skills {
+    st-ponytail = skill '/st-ponytail' {
+      #vendored
+      summary 'Lazy senior dev mode: the smallest change that fully solves the task. Levels lite, full and ultra.'
+      metadata {
+        path 'skills/st-ponytail'
+      }
+    }
+    st-ponytail-review = skill '/st-ponytail-review' {
+      #vendored
+      summary 'Reviews one change for bugs, security, load, missing tests, speed and extra code. Lists numbered findings and changes no code.'
+      metadata {
+        path 'skills/st-ponytail-review'
+      }
+    }
+    st-ponytail-audit = skill '/st-ponytail-audit' {
+      #vendored
+      summary 'Audits a whole repo or folder with the same checks as the review, ranked. One report, changes no code.'
+      metadata {
+        path 'skills/st-ponytail-audit'
+      }
+    }
+    st-ponytail-debt = skill '/st-ponytail-debt' {
+      #vendored
+      summary 'Greps the repo for ponytail and shortcut comments and lists them as a debt ledger. Changes nothing.'
+      metadata {
+        path 'skills/st-ponytail-debt'
+      }
+    }
+    st-ponytail-gain = skill '/st-ponytail-gain' {
+      #vendored
+      summary 'Shows the ponytail benchmark scoreboard: less code, cost and time. One display, writes nothing.'
+      metadata {
+        path 'skills/st-ponytail-gain'
+      }
+    }
+    st-ponytail-help = skill '/st-ponytail-help' {
+      #vendored
+      summary 'Shows a reference card for the ponytail levels, skills and default mode. One display, writes nothing.'
+      metadata {
+        path 'skills/st-ponytail-help'
+      }
+    }
+    st-grill = skill '/st-grill' {
+      #vendored
+      summary 'Asks the user one question at a time about a plan until every decision is settled. Records each answer as a decision.'
+      metadata {
+        path 'skills/st-grill'
+      }
+    }
+    st-ui-ux = skill '/st-ui-ux' {
+      #vendored
+      summary 'Searches local UI and UX data for styles, palettes, fonts and guidelines. Can save a design system in the project.'
+      metadata {
+        path 'skills/st-ui-ux'
+      }
+    }
+    st-impeccable = skill '/st-impeccable' {
+      #vendored
+      summary 'Designs, reviews and refines frontend interfaces with sub-commands like shape, audit and polish. Keeps product and design context files.'
+      metadata {
+        path 'skills/st-impeccable'
+      }
+    }
+    st-graphify = skill '/st-graphify' {
+      #vendored
+      summary 'Builds a knowledge graph of the project files and answers questions from it. Writes the graph and a plain report to graphify-out.'
+      metadata {
+        path 'skills/st-graphify'
+      }
+    }
+    st-hallmark = skill '/st-hallmark' {
+      #vendored
+      summary 'Builds new web pages that look designed, from a dealt theme and a hard design floor. Runs only when the user names it.'
+      metadata {
+        path 'skills/st-hallmark'
+      }
+    }
+  }
+
+  skills.st-ponytail-debt -[reads]-> project.gitignore 'ignored paths the grep skips'
+  skills.st-grill -[reads]-> stratum.state-json 'active feature directory'
+  skills.st-grill -[writes]-> feature.decisions-md 'one decision line per answer'
+  skills.st-grill -[writes]-> stratum.decisions-md 'decision lines when no feature is active'
+  skills.st-grill -[passes]-> user 'one question with a recommended option'
+  skills.st-ui-ux -[reads]-> project.design-system 'MASTER.md and page overrides'
+  skills.st-ui-ux -[writes]-> project.design-system 'MASTER.md and page overrides'
+  skills.st-impeccable -[reads]-> project.design-md 'visual design system'
+  skills.st-impeccable -[writes]-> project.design-md 'design system from the document command'
+  skills.st-impeccable -[reads]-> project.product-md 'product context'
+  skills.st-impeccable -[writes]-> project.product-md 'product context from the init command'
+  skills.st-impeccable -[writes]-> project.impeccable 'config, design sidecar and live roots'
+  skills.st-impeccable -[writes]-> project.claude-settings-local-json 'design detector hook, project scope'
+  skills.st-impeccable -[writes]-> outside.claude-settings-json 'design detector hook, user scope'
+  skills.st-graphify -[reads]-> project.graphify-out 'graph.json for a query'
+  skills.st-graphify -[writes]-> project.graphify-out 'graph.json, graph.html and cache files'
+  skills.st-graphify -[writes]-> project.graphify-out-graph-report-md 'god nodes, communities and suggested questions'
+  skills.st-graphify -[writes]-> project.claude-md 'graphify section on request'
+  skills.st-hallmark -[reads]-> project.design-md 'locked design system'
+  skills.st-hallmark -[writes]-> project.design-md 'locked system when the user asks'
+  skills.st-hallmark -[reads]-> project.hallmark 'brand spec and build log'
+  skills.st-hallmark -[writes]-> project.hallmark 'preflight cache and build log'
+}

@@ -1,0 +1,324 @@
+model {
+  extend stratum {
+    advisor-json = datafile '.stratum/advisor.json' {
+      summary 'The advisor mode: auto, codex, both or off. st-init writes it, st-advisor.sh reads it from the main checkout.'
+      metadata {
+        data '.stratum/advisor.json'
+      }
+    }
+    approve = datafile '.stratum/approve' {
+      summary 'A worker folder with the files it owns and the session id. st-worker.sh start writes it, st-approve.py reads it.'
+      metadata {
+        data '.stratum/approve'
+      }
+    }
+    autonomous = datafile '.stratum/autonomous' {
+      summary 'The autonomous build flag with the session id in the main checkout. The orchestrator writes it, st-worker.sh and st-approve.py read it.'
+      metadata {
+        data '.stratum/autonomous'
+      }
+    }
+    commit-mode = datafile '.stratum/commit-mode' {
+      summary 'A discontinued commit mode file. st-update removes it from each checkout.'
+      metadata {
+        data '.stratum/commit-mode'
+      }
+    }
+    constitution-md = datafile '.stratum/constitution.md' {
+      summary 'The project rules that override tool defaults. procedures/constitution.md writes it and every lane reads it.'
+      metadata {
+        data '.stratum/constitution.md'
+      }
+    }
+    decisions-md = datafile '.stratum/decisions.md' {
+      summary 'Grill decisions when no feature is set. /st-grill writes it.'
+      metadata {
+        data '.stratum/decisions.md'
+      }
+    }
+    git-guard-json = datafile '.stratum/git-guard.json' {
+      summary 'The git guard mode for commit and each risky git command. st-init and st-worker.sh write it, st-git-guard.py reads it.'
+      metadata {
+        data '.stratum/git-guard.json'
+      }
+    }
+    handoff-md = datafile '.stratum/handoff.md' {
+      summary 'The session handoff for the next session. /st-handoff writes it and the session start hook prints it.'
+      metadata {
+        data '.stratum/handoff.md'
+      }
+    }
+    lessons-md = datafile '.stratum/lessons.md' {
+      summary 'Proposed lessons with their target files. The st-close agent writes it and /st-close asks the user about each one.'
+      metadata {
+        data '.stratum/lessons.md'
+      }
+    }
+    models-json = datafile '.stratum/models.json' {
+      summary 'Model and effort overrides per agent. st-init and /st-model write it, st-models.py applies it when an agent starts.'
+      metadata {
+        data '.stratum/models.json'
+      }
+    }
+    powerline-json = datafile '.stratum/powerline.json' {
+      summary 'The project statusline theme, shape and colors. st-init, /st-theme and /st-shape write it, st-statusline.sh merges it.'
+      metadata {
+        data '.stratum/powerline.json'
+      }
+    }
+    state-json = datafile '.stratum/state.json' {
+      summary 'The current feature, phase, lane and risk level of this checkout. st-phase.py and st-state.sh write it.'
+      metadata {
+        data '.stratum/state.json'
+      }
+    }
+    templates = datafile '.stratum/templates' {
+      summary 'Project copies of plugin templates that win over the plugin ones. /st-template copies them, resolve-template.sh finds them.'
+      metadata {
+        data '.stratum/templates'
+      }
+    }
+    weather-json = datafile '.stratum/weather.json' {
+      summary 'The Token Weather cache: compaction threshold and context growth per turn. token-weather.mjs writes it, the statusline reads it.'
+      metadata {
+        data '.stratum/weather.json'
+      }
+    }
+    worker-setup-sh = datafile '.stratum/worker-setup.sh' {
+      summary 'The user setup script for a new worker worktree. The user owns it and st-worker.sh start runs it.'
+      metadata {
+        data '.stratum/worker-setup.sh'
+      }
+    }
+  }
+
+  extend feature {
+    spec-md = datafile 'specs/NNN-feature/spec.md' {
+      summary 'The feature spec: stories, requirements and success criteria. procedures/specify.md writes it and procedures/clarify.md updates it.'
+      metadata {
+        data 'specs/NNN-feature/spec.md'
+      }
+    }
+    plan-md = datafile 'specs/NNN-feature/plan.md' {
+      summary 'The technical plan with its Validate section. The st-plan agent writes it with procedures/plan.md.'
+      metadata {
+        data 'specs/NNN-feature/plan.md'
+      }
+    }
+    research-md = datafile 'specs/NNN-feature/research.md' {
+      summary 'The decisions and reasons for the open questions of the plan. procedures/plan.md writes it in phase 0.'
+      metadata {
+        data 'specs/NNN-feature/research.md'
+      }
+    }
+    data-model-md = datafile 'specs/NNN-feature/data-model.md' {
+      summary 'The entities, fields and rules of the feature. procedures/plan.md writes it in phase 1.'
+      metadata {
+        data 'specs/NNN-feature/data-model.md'
+      }
+    }
+    contracts = datafile 'specs/NNN-feature/contracts' {
+      summary 'The interface contracts of the feature. procedures/plan.md writes them in phase 1.'
+      metadata {
+        data 'specs/NNN-feature/contracts'
+      }
+    }
+    quickstart-md = datafile 'specs/NNN-feature/quickstart.md' {
+      summary 'The test steps for each story. procedures/plan.md writes it and /st-build runs its steps at each story end.'
+      metadata {
+        data 'specs/NNN-feature/quickstart.md'
+      }
+    }
+    tasks-md = datafile 'specs/NNN-feature/tasks.md' {
+      summary 'The ordered tasks with their tests and owned files. procedures/tasks.md writes it and /st-build ticks a task when its test is green.'
+      metadata {
+        data 'specs/NNN-feature/tasks.md'
+      }
+    }
+    checklists = datafile 'specs/NNN-feature/checklists' {
+      summary 'The requirement quality checklists. procedures/specify.md writes requirements.md and procedures/checklist.md writes the others.'
+      metadata {
+        data 'specs/NNN-feature/checklists'
+      }
+    }
+    changes = datafile 'specs/NNN-feature/changes' {
+      summary 'The Fast-lane change plans, one NNN-name.md each. The st-fast agent writes them.'
+      metadata {
+        data 'specs/NNN-feature/changes'
+      }
+    }
+    decisions-md = datafile 'specs/NNN-feature/decisions.md' {
+      summary 'The grill decisions of the feature, with the option picked and the one rejected. /st-grill writes it.'
+      metadata {
+        data 'specs/NNN-feature/decisions.md'
+      }
+    }
+    advisor-md = datafile 'specs/NNN-feature/advisor.md' {
+      summary 'One record per advisor run: point, time, input hash, verdict and findings. st-advisor.sh appends it.'
+      metadata {
+        data 'specs/NNN-feature/advisor.md'
+      }
+    }
+    gaps-md = datafile 'specs/NNN-feature/gaps.md' {
+      summary 'A side note of gaps seen in a feature, linked from no page. No harness file reads or writes it.'
+      metadata {
+        data 'specs/NNN-feature/gaps.md'
+      }
+    }
+  }
+
+  extend project {
+    design-md = datafile 'DESIGN.md' {
+      summary 'The project design file, with .impeccable/design.json beside it. The Design lane writes it and screen tasks build from it.'
+      metadata {
+        data 'DESIGN.md'
+      }
+    }
+    agents-md = datafile 'AGENTS.md' {
+      summary 'Project instructions for any agent: read the constitution, specs live in specs. st-init creates it when it is missing.'
+      metadata {
+        data 'AGENTS.md'
+      }
+    }
+    claude-md = datafile 'CLAUDE.md' {
+      summary 'Two import lines that load AGENTS.md and the constitution in Claude Code. st-init creates it when it is missing.'
+      metadata {
+        data 'CLAUDE.md'
+      }
+    }
+    graphify-out-graph-report-md = datafile 'graphify-out/GRAPH_REPORT.md' {
+      summary 'The code graph report that agents read first to find files. graphify writes it.'
+      metadata {
+        data 'graphify-out/GRAPH_REPORT.md'
+      }
+    }
+    graphify-out = datafile 'graphify-out' {
+      summary 'The graphify code graph folder, rebuilt by the graphify post-commit hook. It stays out of git.'
+      metadata {
+        data 'graphify-out'
+      }
+    }
+    claude-settings-json = datafile '.claude/settings.json' {
+      summary 'The committed project Claude Code settings: plugins turned off and tools allowed. st-init merges its keys and st-update checks them.'
+      metadata {
+        data '.claude/settings.json'
+      }
+    }
+    claude-settings-local-json = datafile '.claude/settings.local.json' {
+      summary 'The machine-only project settings with the statusline command and plugin path. st-init writes it and it is not committed.'
+      metadata {
+        data '.claude/settings.local.json'
+      }
+    }
+    impeccable = datafile '.impeccable' {
+      summary 'The impeccable folder beside DESIGN.md: design.json, local config and critiques. The Design lane writes it.'
+      metadata {
+        data '.impeccable'
+      }
+    }
+    gitignore = datafile '.gitignore' {
+      summary 'The project git ignore list. st-init, /st-handoff and /st-close add the local .stratum files to it.'
+      metadata {
+        data '.gitignore'
+      }
+    }
+  }
+
+  extend plugin {
+    templates-checklist-md = pluginfile 'templates/checklist.md' {
+      summary 'The plugin checklist template. resolve-template.sh returns it when the project has no own copy.'
+      metadata {
+        path 'templates/checklist.md'
+      }
+    }
+    templates-constitution-md = pluginfile 'templates/constitution.md' {
+      summary 'The plugin constitution template. resolve-template.sh returns it when the project has no own copy.'
+      metadata {
+        path 'templates/constitution.md'
+      }
+    }
+    templates-models-json = pluginfile 'templates/models.json' {
+      summary 'The default agent model and effort file. st-init and /st-model copy it to .stratum/models.json.'
+      metadata {
+        path 'templates/models.json'
+      }
+    }
+    templates-plan-md = pluginfile 'templates/plan.md' {
+      summary 'The plugin plan template. resolve-template.sh returns it when the project has no own copy.'
+      metadata {
+        path 'templates/plan.md'
+      }
+    }
+    templates-pr-md = pluginfile 'templates/pr.md' {
+      summary 'The plugin pull request body template. /st-pr uses it when the project has no own copy.'
+      metadata {
+        path 'templates/pr.md'
+      }
+    }
+    templates-spec-md = pluginfile 'templates/spec.md' {
+      summary 'The plugin spec template. resolve-template.sh returns it when the project has no own copy.'
+      metadata {
+        path 'templates/spec.md'
+      }
+    }
+    templates-tasks-md = pluginfile 'templates/tasks.md' {
+      summary 'The plugin tasks template. resolve-template.sh returns it when the project has no own copy.'
+      metadata {
+        path 'templates/tasks.md'
+      }
+    }
+    claude-plugin-plugin-json = pluginfile '.claude-plugin/plugin.json' {
+      summary 'The plugin manifest: name, version, hook file, the figcraft MCP server and the git guard options.'
+      metadata {
+        path '.claude-plugin/plugin.json'
+      }
+    }
+    vendor-lock = pluginfile 'vendor.lock' {
+      summary 'The pinned upstream repo and commit of each vendored skill, with the last sync date. /st-sync updates it.'
+      metadata {
+        path 'vendor.lock'
+      }
+    }
+    sr-opus-5-md = pluginfile 'sr-opus-5.md' {
+      summary 'The report style rules. Each Stratum agent reads it first and follows it in its report.'
+      metadata {
+        path 'sr-opus-5.md'
+      }
+    }
+    third-party-notices-md = pluginfile 'THIRD_PARTY_NOTICES.md' {
+      summary 'The license notice of each forked or vendored upstream and the Stratum files it maps to.'
+      metadata {
+        path 'THIRD_PARTY_NOTICES.md'
+      }
+    }
+  }
+
+  extend outside {
+    local-state-stratum-codex-home = datafile '~/.local/state/stratum/codex-home' {
+      summary 'The Stratum Codex home: a link to the user Codex login and a config.toml that marks each project untrusted. st-advisor.sh codex-home makes it.'
+      metadata {
+        data '~/.local/state/stratum/codex-home'
+      }
+    }
+    claude-settings-json = datafile '~/.claude/settings.json' {
+      summary 'The user Claude Code settings: enabled plugins and plugin options. Stratum reads it and never changes it.'
+      metadata {
+        data '~/.claude/settings.json'
+      }
+    }
+  }
+
+  user -[writes]-> stratum.worker-setup-sh 'setup commands for a new worker worktree'
+  user -[writes]-> stratum.advisor-json 'advisor mode'
+  user -[writes]-> stratum.git-guard-json 'git guard modes'
+  user -[writes]-> stratum.models-json 'agent model and effort'
+  user -[writes]-> stratum.powerline-json 'custom colors'
+  claude -[reads]-> plugin.claude-plugin-plugin-json 'hook file, figcraft MCP server and git guard options'
+  claude -[reads]-> project.claude-md 'AGENTS.md and constitution imports'
+  claude -[reads]-> project.agents-md 'project instructions'
+  claude -[reads]-> stratum.constitution-md 'project rules'
+  claude -[reads]-> project.claude-settings-json 'plugins turned off and allowed tools'
+  claude -[reads]-> project.claude-settings-local-json 'statusline command'
+  claude -[reads]-> outside.claude-settings-json 'enabled plugins and plugin options'
+  codex -[reads]-> outside.local-state-stratum-codex-home 'Codex login link and project trust level'
+}

@@ -1,0 +1,255 @@
+model {
+  extend agents {
+    st-build = agent 'st-build agent' {
+      summary 'Builds the given tasks, review findings or a brief with no plan until their tests pass. It never commits.'
+      metadata {
+        path 'agents/st-build.md'
+      }
+    }
+    st-close = agent 'st-close agent' {
+      summary 'Makes the feature docs match the built code, gives the gap report when asked, proposes lessons and lists new shortcuts. It writes docs only.'
+      metadata {
+        path 'agents/st-close.md'
+      }
+    }
+    st-debug = agent 'st-debug agent' {
+      summary 'Finds the root cause of a test that is still red after 2 build tries, proves it and fixes it inside the plan.'
+      metadata {
+        path 'agents/st-debug.md'
+      }
+    }
+    st-design = agent 'st-design agent' {
+      summary 'Builds one screen from the design file with the lane engine, writes its component tests and runs the engine checks. In custom mode it also draws and saves the design.'
+      metadata {
+        path 'agents/st-design.md'
+      }
+    }
+    st-fast = agent 'st-fast agent' {
+      summary 'Writes one short change plan for a Fast-lane change, or reports that the change must move up to the Full lane.'
+      metadata {
+        path 'agents/st-fast.md'
+      }
+    }
+    st-git = agent 'st-git agent' {
+      summary 'The only agent that commits. It stages the exact listed paths, commits with a conventional message and never pushes.'
+      metadata {
+        path 'agents/st-git.md'
+      }
+    }
+    st-impeccable = agent 'st-impeccable agent' {
+      summary 'Runs the st-impeccable audit on one target in the background and reports. It changes no file.'
+      metadata {
+        path 'agents/st-impeccable.md'
+      }
+    }
+    st-inspect = agent 'st-inspect agent' {
+      summary 'Checks that spec, plan and tasks agree and that the plan can be built. It writes only the Validate section of plan.md.'
+      metadata {
+        path 'agents/st-inspect.md'
+      }
+    }
+    st-plan = agent 'st-plan agent' {
+      summary 'Writes plan, research, data model, contracts, quickstart and tasks for one feature. It stops and returns the open decisions it cannot settle.'
+      metadata {
+        path 'agents/st-plan.md'
+      }
+    }
+    st-ponytail-audit = agent 'st-ponytail-audit agent' {
+      summary 'Runs the st-ponytail-audit skill in the background and ranks what to delete or simplify in the repo. It changes no file.'
+      metadata {
+        path 'agents/st-ponytail-audit.md'
+      }
+    }
+    st-ponytail-debt = agent 'st-ponytail-debt agent' {
+      summary 'Lists every ponytail marker with its ceiling and trigger in the background. It changes no file.'
+      metadata {
+        path 'agents/st-ponytail-debt.md'
+      }
+    }
+    st-quick = agent 'st-quick agent' {
+      summary 'Makes one small text or visual edit in one file, checks it and sets the phase to done. It stops when the change needs more.'
+      metadata {
+        path 'agents/st-quick.md'
+      }
+    }
+    st-review = agent 'st-review agent' {
+      summary 'Reviews the diff of a story or a Fast-lane change for correctness, security, plan fit and over-engineering. It changes no file.'
+      metadata {
+        path 'agents/st-review.md'
+      }
+    }
+    st-test = agent 'st-test agent' {
+      summary 'Writes the test of each task and shows that it fails before the build. It writes no product code.'
+      metadata {
+        path 'agents/st-test.md'
+      }
+    }
+    st-triage = agent 'st-triage agent' {
+      summary 'Checks the claims of one GitHub issue against the code and git history and gives a verdict and a next step. It changes no file.'
+      metadata {
+        path 'agents/st-triage.md'
+      }
+    }
+  }
+
+  agents.st-build -[reads]-> plugin.sr-opus-5-md 'report style rules'
+  agents.st-build -[reads]-> project.graphify-out-graph-report-md 'file map'
+  agents.st-build -[reads]-> stratum.constitution-md 'project rules'
+  agents.st-build -[reads]-> feature.plan-md 'plan and Validate section'
+  agents.st-build -[reads]-> feature.tasks-md 'task text and test command'
+  agents.st-build -[reads]-> feature.data-model-md 'entities the task touches'
+  agents.st-build -[reads]-> feature.contracts 'contracts the task touches'
+  agents.st-build -[reads]-> feature.changes 'Fast-lane change plan'
+  agents.st-build -[reads]-> project.design-md 'design rules for screen tasks'
+  agents.st-build -[runs]-> scripts.st-lock-sh 'test command of a lock task'
+  agents.st-build -[starts]-> skills.st-ui-ux 'screen task to build'
+  agents.st-build -[writes]-> feature.tasks-md 'tick of a green task'
+  agents.st-build -[passes]-> skills.st-build 'build report: files, tests, findings'
+  agents.st-build -[passes]-> skills.st-fast 'build report: files, tests, findings'
+  agents.st-build -[passes]-> skills.st-close 'build report for a drift fix'
+  agents.st-build -[passes]-> skills.st-quick 'brief-mode build report'
+  agents.st-build -[passes]-> skills.st 'brief-mode build report'
+
+  agents.st-close -[reads]-> plugin.sr-opus-5-md 'report style rules'
+  agents.st-close -[reads]-> project.graphify-out-graph-report-md 'file map'
+  agents.st-close -[reads]-> stratum.constitution-md 'project rules'
+  agents.st-close -[reads]-> feature.spec-md 'requirements to compare'
+  agents.st-close -[reads]-> feature.plan-md 'plan to compare'
+  agents.st-close -[reads]-> feature.tasks-md 'unticked tasks'
+  agents.st-close -[reads]-> feature.data-model-md 'data model to compare'
+  agents.st-close -[reads]-> feature.contracts 'contracts to compare'
+  agents.st-close -[reads]-> feature.quickstart-md 'quickstart to compare'
+  agents.st-close -[reads]-> feature.changes 'Fast-lane change plans'
+  agents.st-close -[reads]-> git 'feature commits and diff against the base'
+  agents.st-close -[reads]-> procedures.converge-md 'gap report steps'
+  agents.st-close -[writes]-> feature.spec-md 'drift fixes'
+  agents.st-close -[writes]-> feature.plan-md 'drift fixes'
+  agents.st-close -[writes]-> feature.data-model-md 'drift fixes'
+  agents.st-close -[writes]-> feature.contracts 'drift fixes'
+  agents.st-close -[writes]-> stratum.lessons-md 'proposed lessons'
+  agents.st-close -[runs]-> scripts.st-shortcuts-sh 'base'
+  agents.st-close -[passes]-> skills.st-close 'drift fixes, gaps, shortcuts and lessons'
+  agents.st-close -[passes]-> skills.st-fast 'drift fixes and shortcuts'
+
+  agents.st-debug -[reads]-> plugin.sr-opus-5-md 'report style rules'
+  agents.st-debug -[reads]-> project.graphify-out-graph-report-md 'file map'
+  agents.st-debug -[reads]-> stratum.constitution-md 'project rules'
+  agents.st-debug -[reads]-> feature.plan-md 'plan'
+  agents.st-debug -[reads]-> feature.tasks-md 'task text'
+  agents.st-debug -[reads]-> feature.data-model-md 'entities the task touches'
+  agents.st-debug -[reads]-> feature.contracts 'contracts the task touches'
+  agents.st-debug -[reads]-> git 'recent diff and log'
+  agents.st-debug -[runs]-> scripts.st-lock-sh 'test command of a lock task'
+  agents.st-debug -[passes]-> skills.st-debug 'root cause, fix and test result'
+  agents.st-debug -[passes]-> skills.st-build 'root cause, fix and test result'
+  agents.st-debug -[passes]-> skills.st-fast 'root cause, fix and test result'
+
+  agents.st-design -[reads]-> plugin.sr-opus-5-md 'report style rules'
+  agents.st-design -[reads]-> skills.st-design 'engine.md and design-tool.md steps'
+  agents.st-design -[reads]-> project.design-md 'design rules'
+  agents.st-design -[passes]-> skills.st-design 'screen report: checks, tests, screenshots'
+
+  agents.st-fast -[reads]-> plugin.sr-opus-5-md 'report style rules'
+  agents.st-fast -[reads]-> project.graphify-out-graph-report-md 'file map'
+  agents.st-fast -[reads]-> stratum.constitution-md 'project rules'
+  agents.st-fast -[reads]-> feature.spec-md 'FRs the change serves'
+  agents.st-fast -[reads]-> feature.plan-md 'plan'
+  agents.st-fast -[reads]-> feature.data-model-md 'data model near the change'
+  agents.st-fast -[reads]-> feature.contracts 'contracts near the change'
+  agents.st-fast -[reads]-> feature.changes 'existing change plans for the next number'
+  agents.st-fast -[writes]-> feature.changes 'change plan NNN-name.md'
+  agents.st-fast -[passes]-> skills.st-fast 'change plan path or move up to Full lane'
+
+  agents.st-git -[reads]-> plugin.sr-opus-5-md 'report style rules'
+  agents.st-git -[reads]-> project.graphify-out-graph-report-md 'file map'
+  agents.st-git -[passes]-> git 'staged listed paths and commit message'
+  agents.st-git -[passes]-> skills.st-git 'commit hash, files and dirty files left out'
+  agents.st-git -[passes]-> skills.st-build 'commit hash and files'
+  agents.st-git -[passes]-> skills.st-fast 'commit hash and files'
+  agents.st-git -[passes]-> skills.st-quick 'commit hash and files'
+  agents.st-git -[passes]-> skills.st-close 'commit hash and files'
+  agents.st-git -[passes]-> skills.st-inspect 'commit hash and files'
+  agents.st-git -[passes]-> skills.st-design 'commit hash and files'
+  agents.st-git -[passes]-> skills.st-worker 'commit hash and files'
+  agents.st-git -[passes]-> skills.st 'commit hash and files'
+
+  agents.st-impeccable -[reads]-> plugin.sr-opus-5-md 'report style rules'
+  agents.st-impeccable -[starts]-> skills.st-impeccable 'audit command and target'
+  agents.st-impeccable -[passes]-> user 'audit report'
+
+  agents.st-inspect -[reads]-> plugin.sr-opus-5-md 'report style rules'
+  agents.st-inspect -[reads]-> project.graphify-out-graph-report-md 'file map'
+  agents.st-inspect -[reads]-> stratum.constitution-md 'project rules'
+  agents.st-inspect -[reads]-> project.apps-app-ordinance-md 'app rules'
+  agents.st-inspect -[reads]-> feature.spec-md 'requirements'
+  agents.st-inspect -[reads]-> feature.plan-md 'plan'
+  agents.st-inspect -[reads]-> feature.tasks-md 'tasks'
+  agents.st-inspect -[reads]-> feature.data-model-md 'data model'
+  agents.st-inspect -[reads]-> feature.contracts 'contracts'
+  agents.st-inspect -[reads]-> feature.quickstart-md 'quickstart'
+  agents.st-inspect -[reads]-> procedures.analyze-md 'analysis steps'
+  agents.st-inspect -[writes]-> feature.plan-md 'Validate section'
+  agents.st-inspect -[passes]-> skills.st-inspect 'verdict, findings and coverage line'
+
+  agents.st-plan -[reads]-> plugin.sr-opus-5-md 'report style rules'
+  agents.st-plan -[reads]-> project.graphify-out-graph-report-md 'file map'
+  agents.st-plan -[reads]-> stratum.constitution-md 'project rules'
+  agents.st-plan -[reads]-> project.apps-app-ordinance-md 'app rules'
+  agents.st-plan -[reads]-> feature.spec-md 'spec to plan'
+  agents.st-plan -[reads]-> procedures.plan-md 'plan steps to follow'
+  agents.st-plan -[reads]-> procedures.tasks-md 'tasks steps to follow'
+  agents.st-plan -[reads]-> stratum.templates 'project template overrides'
+  agents.st-plan -[reads]-> plugin.templates-plan-md 'plan template'
+  agents.st-plan -[reads]-> plugin.templates-tasks-md 'tasks template'
+  agents.st-plan -[reads]-> skills.st-design 'custom mode name'
+  agents.st-plan -[passes]-> skills.st-plan 'plan report and open decisions'
+  agents.st-plan -[passes]-> skills.st-inspect 'fixed spec, plan or tasks'
+
+  agents.st-ponytail-audit -[reads]-> plugin.sr-opus-5-md 'report style rules'
+  agents.st-ponytail-audit -[starts]-> skills.st-ponytail-audit 'scope'
+  agents.st-ponytail-audit -[passes]-> user 'ranked cut list and net line'
+
+  agents.st-ponytail-debt -[reads]-> plugin.sr-opus-5-md 'report style rules'
+  agents.st-ponytail-debt -[starts]-> skills.st-ponytail-debt 'project root'
+  agents.st-ponytail-debt -[passes]-> user 'ledger rows by file'
+
+  agents.st-quick -[reads]-> plugin.sr-opus-5-md 'report style rules'
+  agents.st-quick -[reads]-> project.graphify-out-graph-report-md 'file map'
+  agents.st-quick -[reads]-> stratum.constitution-md 'project rules'
+  agents.st-quick -[writes]-> stratum.state-json 'phase done'
+  agents.st-quick -[passes]-> skills.st-quick 'edit line and check result or move up a lane'
+
+  agents.st-review -[reads]-> plugin.sr-opus-5-md 'report style rules'
+  agents.st-review -[reads]-> project.graphify-out-graph-report-md 'file map'
+  agents.st-review -[reads]-> stratum.constitution-md 'project rules'
+  agents.st-review -[reads]-> feature.spec-md 'story and its FRs'
+  agents.st-review -[reads]-> feature.plan-md 'plan and Validate section'
+  agents.st-review -[reads]-> feature.tasks-md 'tasks'
+  agents.st-review -[reads]-> feature.data-model-md 'data model the diff touches'
+  agents.st-review -[reads]-> feature.contracts 'contracts the diff touches'
+  agents.st-review -[reads]-> feature.changes 'Fast-lane change plan'
+  agents.st-review -[reads]-> git 'diff and log of the story'
+  agents.st-review -[starts]-> skills.st-ponytail-review 'same diff'
+  agents.st-review -[passes]-> skills.st-review 'ranked findings'
+  agents.st-review -[passes]-> skills.st-build 'ranked findings'
+  agents.st-review -[passes]-> skills.st-fast 'ranked findings'
+
+  agents.st-test -[reads]-> plugin.sr-opus-5-md 'report style rules'
+  agents.st-test -[reads]-> project.graphify-out-graph-report-md 'file map'
+  agents.st-test -[reads]-> stratum.constitution-md 'project rules'
+  agents.st-test -[reads]-> feature.spec-md 'FR and acceptance criteria'
+  agents.st-test -[reads]-> feature.plan-md 'test commands and Validate section'
+  agents.st-test -[reads]-> feature.tasks-md 'task text'
+  agents.st-test -[reads]-> feature.data-model-md 'entities the test checks'
+  agents.st-test -[reads]-> feature.contracts 'contracts the test checks'
+  agents.st-test -[runs]-> scripts.st-lock-sh 'test command of a lock task'
+  agents.st-test -[passes]-> skills.st-test 'test path and failing line'
+  agents.st-test -[passes]-> skills.st-build 'test path and failing line'
+  agents.st-test -[passes]-> skills.st-fast 'test path and failing line'
+
+  agents.st-triage -[reads]-> plugin.sr-opus-5-md 'report style rules'
+  agents.st-triage -[reads]-> project.graphify-out-graph-report-md 'file map'
+  agents.st-triage -[reads]-> github 'issue and linked issues by gh issue view'
+  agents.st-triage -[reads]-> git 'tracked files and log'
+  agents.st-triage -[passes]-> skills.st-triage 'verdict, built parts, blocker and next step'
+}
