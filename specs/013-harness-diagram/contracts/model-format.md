@@ -128,7 +128,7 @@ views {
   mode its first step with `{ navigateTo design-<mode> }` and its gate or OK step. All three modes
   run in `skills.st-design`, so the click is on the step, not on a box.
 - A phase or mode view starts at the step that starts it in the overview, renumbered from `(1)`,
-  and ends with its gate step, if it has one.
+  and keeps the source order. Its gate step stays where the source has it.
 - `include` lines carry one element and one `navigateTo` on one line. Other `include` lines are
   not used in lane views.
 - A step may have no model relationship. Draw only what the lane's skill text says, in its order.

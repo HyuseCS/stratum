@@ -69,6 +69,7 @@ LINK = re.compile(r"^\s*[a-z0-9][a-z0-9.-]* -\[(starts|reads|writes|runs|passes)
 DYN = re.compile(r"^\s*dynamic view ([a-z0-9-]+) \{")
 VIEW = re.compile(r"^\s*(?:dynamic )?view ([a-z0-9-]+) \{")
 NAV = re.compile(r"navigateTo ([a-z0-9-]+)")
+INCLUDE = re.compile(r"^\s*include skills\.st-([a-z0-9-]+) with \{\s*navigateTo ([a-z0-9-]+)\s*\}")
 ARROW = re.compile(r"^\s*\S+\s+-(?:\[\w+\]-)?>\s+\S+\s+'((?:[^'\\]|\\.)*)'(?:\s*\{\s*navigateTo\s+[a-z0-9-]+\s*\})?\s*$")
 NUMBERED = re.compile(r"^\((\d+)\) (.*)$")
 STRATUM = re.compile(rb"\.stratum/[A-Za-z0-9_-]+(?:\.[a-z]+)?")
@@ -312,12 +313,17 @@ def c_lane(stem):
         if g != w:
             fail(f"{rel(f)} declares view {g or 'none'}, expected {w or 'none'}")
             break
-    targets = {}
+    targets, navs, labels = {}, {}, {}
     for vid, lines in bl:
         targets[vid] = {t for _, line in lines for t in NAV.findall(line)}
+        navs[vid] = [t for _, line in lines if "->" in line for t in NAV.findall(line)]
+        labels[vid] = []
         floor = next((r[3] for r in VIEWS if r[0] == vid), 0)
         steps, gates = 0, 0
         for n, line in lines:
+            i = INCLUDE.match(line)
+            if i and i[2] != f"{vid}-{i[1]}":
+                fail(f"{vid} include skills.st-{i[1]} opens {i[2]}, expected {vid}-{i[1]}")
             if "->" not in line:
                 continue
             a = ARROW.match(line)
@@ -329,14 +335,27 @@ def c_lane(stem):
             if int(k[1]) != steps:
                 fail(f"{vid} step {steps} is labelled ({k[1]}), expected ({steps})")
             gates += k[2].startswith("gate: ")
+            labels[vid].append(k[2])
         if gates < floor:
             fail(f"{vid} has {gates} gate steps, needs {floor}")
+    for vid in navs:
+        kids = [r[0] for r in rows if r[4] == vid]
+        if not kids:
+            continue
+        for g, w in zip_longest(navs[vid], kids):
+            if g != w:
+                fail(f"{vid} step navigateTo is {g or 'none'}, expected {w or 'none'}")
+                break
+        seen = {x for c in kids for x in labels.get(c, [])}
+        for x in labels[vid]:
+            if x.startswith("gate: ") and x not in seen:
+                fail(f"{vid} gate step '{x}' is in no child view")
     for t in sorted(set().union(*targets.values()) - declared_views()):
         fail(f"navigateTo {t} is not a view")
     for r in rows:
         if r[4] and r[0] not in targets.get(r[4], set()):
             fail(f"{r[0]} is not opened from {r[4]}")
-    done(f"{len(rows)} views in order, steps numbered, gate counts and navigateTo targets met")
+    done(f"{len(rows)} views in order, steps numbered, gate counts, navigateTo targets and order, gate labels met")
 
 
 def c_common():
