@@ -101,11 +101,11 @@ if [ "$cmd" = start ] || [ "$cmd" = goal ] || [ "$cmd" = followup ]; then
   P="/goal \`$test\` exits 0, the change is committed on branch $N, and result.md is written; read brief.md in this folder first and follow it"
   [ ${#P} -le 4000 ] || fail "The /goal prompt is over 4000 characters."
 fi
-[ "$cmd" = headless ] || [ "$cmd" = autonomous-off ] || [ -n "$m" ] || [ "${HERDR_ENV:-}" = 1 ] || fail "Not inside a herdr pane. Run it from a herdr pane, or name a --machine."
+[ "$cmd" = headless ] || [ "$cmd" = autonomous-off ] || [ -n "$m" ] || { [ "${HERDR_ENV:-}" = 1 ] && { [ "$cmd" != start ] || [ -n "${HERDR_WORKSPACE_ID:-}" ]; }; } || fail "Not inside a herdr pane. Run it from a herdr pane, or name a --machine."
 [ "$cmd" != start ] || [ -z "$m" ] || [[ $repo == [/~]* ]] || fail "A saved machine needs --repo <path> starting with / or ~."
 
 H=(herdr)
-WS= PANE= BR= WT= S= Q=
+WS= TAB= PANE= BR= WT= S= Q=
 e=$(mktemp)
 t=$(mktemp)
 exec 4>&1
@@ -118,7 +118,7 @@ if [ -n "$m" ]; then
   "${H[@]}" workspace list >/dev/null 2>"$e" || fail "Machine $m does not answer: $(head -1 "$e")"
 fi
 
-worker() { printf 'worker\t%s\t%s\t%s\t%s\t%s\t%s\n' "$N" "${m:-local}" "${WS:--}" "${PANE:--}" "${BR:--}" "${WT:--}"; }
+worker() { printf 'worker\t%s\t%s\t%s\t%s\t%s\t%s\n' "$N" "${m:-local}" "${TAB:--}" "${PANE:--}" "${BR:--}" "${WT:--}"; }
 stop() {
   echo "stopped: $1"
   [ "$cmd" != start ] || worker
@@ -132,6 +132,7 @@ rsh() {
   [ $c != 255 ] || stop "ssh to $target failed: $(head -1 "$e")" >&4
   return $c
 }
+rx() { if [ -n "$m" ]; then rsh "$1"; else bash -c "$1" 2>"$e"; fi; }
 quote() {
   Q=$(printf %q "$1")
   Q=${Q/#\\~/\~}
@@ -166,14 +167,16 @@ noresult() {
   exit 1
 }
 find_worker() {
-  h workspace list
-  local c
-  c=$(jq -er --arg n "$N" '[.result.workspaces[] | select(.label == $n)] | length' <<<"$r") || stop "no .result.workspaces in the herdr answer"
+  h tab list
+  local c C
+  c=$(jq -er --arg n "$N" '[.result.tabs[] | select(.label == $n)] | length' <<<"$r") || stop "no .result.tabs in the herdr answer"
   [ "$c" != 0 ] || fail "No worker $N on ${m:-local}."
-  [ "$c" = 1 ] || fail "More than one workspace is labelled $N."
-  WS=$(jq -er --arg n "$N" 'first(.result.workspaces[] | select(.label == $n) | .workspace_id)' <<<"$r") || fail "No worker $N on ${m:-local}."
-  h worktree list --workspace "$WS"
-  WT=$(jq -er --arg w "$WS" 'first(.result.worktrees[] | select(.open_workspace_id == $w) | .path)' <<<"$r") || fail "No worker $N on ${m:-local}."
+  [ "$c" = 1 ] || fail "More than one tab is labelled $N."
+  TAB=$(jq -er --arg n "$N" 'first(.result.tabs[] | select(.label == $n) | .tab_id)' <<<"$r") && WS=$(jq -er --arg n "$N" 'first(.result.tabs[] | select(.label == $n) | .workspace_id)' <<<"$r") || fail "No worker $N on ${m:-local}."
+  h pane list --workspace "$WS" # ponytail: only the first pane's cwd is used, a cd in a stopped worker's pane breaks the find, upgrade by falling back to <repo parent>/<repo name>-N
+  C=$(jq -er --arg t "$TAB" 'first(.result.panes[] | select(.tab_id == $t) | .cwd)' <<<"$r") || fail "No worker $N on ${m:-local}."
+  h worktree list --cwd "$C"
+  WT=$(jq -er --arg n "$N" 'first(.result.worktrees[] | select(.branch == $n) | .path)' <<<"$r") || fail "No worker $N on ${m:-local}."
   quote "$WT"
 }
 render() { python3 "$(cd "$(dirname "$0")/.." && pwd)/hooks/st-approve.py" --render "$1"; }
@@ -197,7 +200,7 @@ approval() {
   reqid || return 0
   if [ -n "$m" ]; then rsh "cat -- $Q/.stratum/approve/$rq" >"$t" || return 0; f=$t; else f=$f$rq; fi
   in=$(render "$f") || return 0
-  printf 'state\tapproval\t%s\t%s\nrequest\t%s\ntab\tworkspace %s, tab Main\ninput\t%s\n' "$N" "$PANE" "${rq%.req}" "$N" "$in"
+  printf 'state\tapproval\t%s\t%s\nrequest\t%s\ntab\ttab %s\ninput\t%s\n' "$N" "$PANE" "${rq%.req}" "$N" "$in"
   jq -r '(.branch | strings | "branch\t\(gsub("[[:cntrl:]]"; "?"))"), (.staged | arrays | "staged\t\(map(tostring | gsub("[[:cntrl:]]"; "?")) | join(" "))")' "$f" 2>/dev/null || true
   panetext
   exit 6
@@ -245,21 +248,42 @@ start)
   G=$(jq -c --arg b "$N" '.commit="auto" | .branch=$b' <(cat "$top/.stratum/git-guard.json" 2>/dev/null || echo '{}')) || stop "cannot read $top/.stratum/git-guard.json"
   [ -n "$G" ] || G=$(jq -nc --arg b "$N" '{commit:"auto",branch:$b}')
   [ -z "$auto" ] || chkowns
-  h workspace list
-  c=$(jq -er --arg n "$N" '[.result.workspaces[] | select(.label == $n)] | length' <<<"$r") || stop "no .result.workspaces in the herdr answer"
+  h tab list
+  c=$(jq -er --arg n "$N" '[.result.tabs[] | select(.label == $n)] | length' <<<"$r") || stop "no .result.tabs in the herdr answer"
   [ "$c" = 0 ] || fail "A worker $N already exists."
   path="$(dirname "$repo")/$(basename "$repo")-$N"
   if [ -n "$auto" ] && [ -n "$m" ]; then
     quote "$repo"
     sshq "[ ! -L $Q/.stratum ] || { echo \"$Q/.stratum is a symlink\" >&2; exit 3; }; [ ! -L $Q/.stratum/autonomous ] || { echo \"$Q/.stratum/autonomous is a symlink\" >&2; exit 3; }; mkdir -p $Q/.stratum && printf '%s\n' $(printf %q "$SID") > $Q/.stratum/autonomous" </dev/null || { rc=$? msg=$(head -1 "$e"); fail "cannot write .stratum/autonomous on $m: ${msg:-exit $rc}"; }
   fi
-  h worktree create --cwd "$repo" --branch "$N" --base "$sha" --path "$path" --label "$N" --no-focus
-  get WS .result.workspace.workspace_id
+  if [ -z "$m" ]; then
+    WS=$HERDR_WORKSPACE_ID
+  else
+    h worktree list --cwd "$repo"
+    WS=$(jq -r 'first(.result.worktrees[] | select(.is_linked_worktree == false) | .open_workspace_id | strings) // empty' <<<"$r") || stop "no .result.worktrees in the herdr answer"
+    if [ -z "$WS" ]; then
+      h workspace list
+      WS=$(jq -r 'first(.result.workspaces[] | select(.label == "st-workers") | .workspace_id | strings) // empty' <<<"$r") || stop "no .result.workspaces in the herdr answer"
+    fi
+    if [ -z "$WS" ]; then
+      h workspace create --cwd "$repo" --label st-workers --no-focus
+      get WS .result.workspace.workspace_id
+    fi
+  fi
+  quote "$repo"
+  qr=$Q
+  quote "$path"
+  qp=$Q
+  rx "git -C $qr worktree add -b $N $qp $sha" || stop "$(head -1 "$e")"
+  BR=$N WT=$path
+  if ! r=$("${H[@]}" tab create --workspace "$WS" --cwd "$path" --label "$N" --no-focus 2>"$e"); then
+    msg=$(head -1 "$e")
+    rx "git -C $qr worktree remove $qp && git -C $qr branch -D $N" || stop "$msg; left $path and branch $N"
+    BR= WT=
+    stop "$msg"
+  fi
   get TAB .result.tab.tab_id
   get PANE .result.root_pane.pane_id
-  get BR .result.worktree.branch
-  get WT .result.worktree.path
-  [ -n "$m" ] || [ "$WT" = "$path" ] || stop "herdr made the worktree in $WT, not $path"
   if [ -z "$m" ]; then
     [ ! -L "$WT/.stratum" ] || stop "$WT/.stratum is a symlink"
     for p in "$WT/brief.md" "$WT/result.md" "$WT/.stratum/git-guard.json" ${auto:+"$WT/.stratum/approve"}; do [ ! -L "$p" ] || stop "$p is a symlink"; [ ! -e "$p" ] || stop "$p already exists"; done
@@ -284,15 +308,9 @@ start)
     rsh "[ ! -L $Q/.stratum ] || { echo \"$Q/.stratum is a symlink\" >&2; exit 3; }; for p in $Q/brief.md $Q/result.md $Q/.stratum/git-guard.json${auto:+ $Q/.stratum/approve}; do [ ! -L \"\$p\" ] || { echo \"\$p is a symlink\" >&2; exit 3; }; [ ! -e \"\$p\" ] || { echo \"\$p already exists\" >&2; exit 3; }; done && cat > $Q/brief.md && mkdir -p $Q/.stratum && printf '%s\n' $(printf %q "$G") > $Q/.stratum/git-guard.json$A$U" < <(brief) || { rc=$? msg=$(head -1 "$e"); [ "$rc" != 4 ] || stop "$msg"; stop "cannot write brief.md and .stratum/git-guard.json in $WT on $m: ${msg:-exit $rc}"; }
   fi
   [ -n "$m" ] || [ ! -f "$repo/.stratum/worker-setup.sh" ] || { echo 'setup output:' && (cd "$WT" && bash "$repo/.stratum/worker-setup.sh" "$repo" 2>&1); } || stop "worker-setup.sh exited $?"
-  h tab rename "$TAB" Main
   h pane split "$PANE" --direction right --cwd "$WT" --no-focus
   get p .result.pane.pane_id
   h pane run "$p" lazygit
-  for name in "Dev Servers" VM; do
-    h tab create --workspace "$WS" --cwd "$WT" --label "$name" --no-focus
-    get p .result.root_pane.pane_id
-    h pane split "$p" --direction right --cwd "$WT" --no-focus
-  done
   busy=10 # ponytail: fixed 10 s agent_pane_busy retry bound, same shape as D20 in specs/007-herdr-workspace, raise it if a live run measures a slower pane shell
   for ((i = 1; ; i++)); do
     "${H[@]}" agent start "$N" --kind claude --pane "$PANE" --timeout 120000 -- --permission-mode auto -n "$N" ${model:+--model "$model"} >/dev/null 2>"$e" && break
@@ -333,7 +351,6 @@ resend)
 followup)
   find_worker
   look
-  rx() { if [ -n "$m" ]; then rsh "$1"; else bash -c "$1"; fi; }
   case $S in idle | done) ;; *) fail "Worker $N is $S, not finished. Followup refused." ;; esac
   ! question || fail "Worker $N has an open question. Answer it first."
   rx "[ -f $Q/result.md ]" || fail "Worker $N has no result.md, not finished. Followup refused."
@@ -463,8 +480,18 @@ close)
     rm -f "$WT/.stratum/git-guard.json" || fail "Worker $N: cannot remove .stratum/git-guard.json. Close refused."
     rm -rf "$WT/.stratum/approve" || fail "Worker $N: cannot remove .stratum/approve. Close refused."
   fi
-  h workspace close "$WS"
-  for k in agent:name workspace:label; do
+  h tab close "$TAB"
+  if [ -n "$m" ]; then
+    h workspace list
+    if jq -e --arg w "$WS" 'any(.result.workspaces[]; .workspace_id == $w and .label == "st-workers")' <<<"$r" >/dev/null 2>&1; then
+      h tab list --workspace "$WS"
+      c=0
+      jq -e 'any(.result.tabs[]; .label | strings | startswith("worker-"))' <<<"$r" >/dev/null 2>&1 || c=$?
+      [ $c != 1 ] || h workspace close "$WS"
+      [ $c -le 1 ] || stop "no .result.tabs in the herdr answer"
+    fi
+  fi
+  for k in agent:name tab:label; do
     h "${k%:*}" list
     c=0
     jq -e --arg n "$N" "any(.result.${k%:*}s[]; .${k#*:} == \$n)" <<<"$r" >/dev/null 2>&1 || c=$?
@@ -474,15 +501,20 @@ close)
   printf 'closed\t%s\nfolder\t%s\tready to remove\n' "$N" "$WT"
   ;;
 list)
-  h workspace list
-  x=$(jq -er '[.result.workspaces[] | select(.label | startswith("worker-")) | "\(.workspace_id)\t\(.label)"] | join("\n")' <<<"$r") || stop "no .result.workspaces in the herdr answer"
+  h tab list
+  x=$(jq -er '[.result.tabs[] | select(.label | strings | startswith("worker-")) | "\(.tab_id)\t\(.workspace_id)\t\(.label)"] | join("\n")' <<<"$r") || stop "no .result.tabs in the herdr answer"
   h agent list
   ag=$r
   n=0
-  while IFS=$'\t' read -r -u 3 w l; do
-    [ -n "$w" ] || continue
-    h worktree list --workspace "$w"
-    p=$(jq -r --arg w "$w" 'first(.result.worktrees[] | select(.open_workspace_id == $w) | .path) // "-"' <<<"$r")
+  while IFS=$'\t' read -r -u 3 tb w l; do
+    [ -n "$tb" ] || continue
+    h pane list --workspace "$w"
+    c=$(jq -r --arg t "$tb" 'first(.result.panes[] | select(.tab_id == $t) | .cwd | strings) // empty' <<<"$r")
+    p=-
+    if [ -n "$c" ]; then
+      h worktree list --cwd "$c"
+      p=$(jq -r --arg n "$l" 'first(.result.worktrees[] | select(.branch == $n) | .path) // "-"' <<<"$r")
+    fi
     a=$(jq -r --arg n "$l" 'first(.result.agents[] | select(.name == $n) | "\(.pane_id // "-")\t\(.agent_status)") // "-\tgone"' <<<"$ag")
     case ${a#*$'\t'} in
       idle | done)
@@ -490,7 +522,7 @@ list)
         if question; then a=${a%$'\t'*}$'\tblocked'; elif unsent; then a=${a%$'\t'*}$'\tunsent'; fi
         ;;
     esac
-    printf 'found\t%s\t%s\t%s\t%s\t%s\n' "$l" "${m:-local}" "$w" "$a" "$p"
+    printf 'found\t%s\t%s\t%s\t%s\t%s\n' "$l" "${m:-local}" "$tb" "$a" "$p"
     n=$((n + 1))
   done 3<<<"$x"
   [ "$n" != 0 ] || echo "no workers on ${m:-local}"
@@ -609,7 +641,7 @@ approve | pass)
     want=$(render "$F") || fail "The input does not match request $rid. Approve nothing."
     [ ${#want} -le 4000 ] || fail "Request $rid is too long to approve. Pass it to the user."
     [ "$input" = "$want" ] || fail "The input does not match request $rid. Approve nothing."
-    printf '%s\t%s\t%s\t%s\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$N" "workspace $N, tab Main" "${want%%: *}" "${want#*: }" >>"$record" || fail "Cannot write the record file $record. Approve nothing."
+    printf '%s\t%s\t%s\t%s\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$N" "tab $N" "${want%%: *}" "${want#*: }" >>"$record" || fail "Cannot write the record file $record. Approve nothing."
   fi
   if [ -n "$m" ]; then
     rsh "[ ! -L $Q/.stratum ] && [ ! -L $Q/.stratum/approve ] && [ ! -L $Q/.stratum/approve/$rid.$x ] && : > $Q/.stratum/approve/$rid.$x" || fail "Cannot write $rid.$x for $N."

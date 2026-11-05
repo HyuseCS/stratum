@@ -29,27 +29,17 @@ fi
 upd() { jq -c "${@:2}" "$T/$1" > "$T/$1.new" && mv "$T/$1.new" "$T/$1"; }
 if [ -e "$T/closed" ] && [ "${STUB_LIST_JUNK:-}" = "$1 $2" ]; then printf '%s\n' "$STUB_JUNK_BODY"; exit 0; fi
 case "$1 $2" in
-"worktree create")
-  while [ $# -gt 0 ]; do
-    case "$1" in --path) p=$2 ;; --branch) b=$2 ;; --label) l=$2 ;; esac
-    shift
-  done
-  [ -n "$M" ] || case "${STUB_WT_LINK:-}" in
-    stratum) mkdir -p "$p" && ln -s "$T/outside-dir" "$p/.stratum" ;;
-    brief) mkdir -p "$p/.stratum" && ln -s "$T/outside.txt" "$p/brief.md" ;;
-    guard) mkdir -p "$p/.stratum" && ln -s "$T/outside.json" "$p/.stratum/git-guard.json" ;;
-    result) mkdir -p "$p/.stratum" && ln -s "$T/outside.txt" "$p/result.md" ;;
-    resultfile) mkdir -p "$p/.stratum" && printf 'TRACKED RESULT\n' > "$p/result.md" ;;
-    brieffile) mkdir -p "$p/.stratum" && printf 'TRACKED BRIEF\n' > "$p/brief.md" ;;
-    *) mkdir -p "$p/.stratum" ;;
-  esac
-  p=${STUB_WT_PATH:-$p}
-  w="stubWS$X"
-  jq -nc --arg w "$w" --arg p "$p" --arg b "$b" '{result:{type:"worktree_created",workspace:{workspace_id:$w},tab:{tab_id:($w+":t1")},root_pane:{pane_id:($w+":p1")},worktree:{path:$p,branch:$b}}}' | tee "$T/wc.json"
-  upd ws.json --arg w "$w" --arg l "$l" '. + [{workspace_id:$w,label:$l}]'
-  upd wt.json --arg w "$w" --arg p "$p" --arg b "$b" '. + [{path:$p,branch:$b,open_workspace_id:$w}]' ;;
 "worktree list")
-  jq -c --arg w "$4" '{result:{worktrees:map(select(.open_workspace_id==$w))}}' "$T/wt.json" ;;
+  f=.; [ -z "${STUB_NO_MAIN_WS:-}" ] || f='map(if .is_linked_worktree == false then del(.open_workspace_id) else . end)'
+  jq -c "{result:{worktrees:($f)}}" "$T/wt.json" ;;
+"workspace create")
+  c= l=
+  while [ $# -gt 0 ]; do case "$1" in --cwd) c=$2 ;; --label) l=$2 ;; esac; shift; done
+  w=stubNewWS$RANDOM$RANDOM; t=$w:t1; rp=$w:p1
+  upd ws.json --arg w "$w" --arg l "$l" '. + [{workspace_id:$w,label:$l}]'
+  upd tabs.json --arg w "$w" --arg t "$t" '. + [{tab_id:$t,label:"1",workspace_id:$w}]'
+  upd panes.json --arg w "$w" --arg t "$t" --arg p "$rp" --arg c "$c" '. + [{pane_id:$p,tab_id:$t,workspace_id:$w,cwd:$c}]'
+  jq -nc --arg w "$w" --arg t "$t" --arg p "$rp" '{result:{type:"workspace_created",workspace:{workspace_id:$w},tab:{tab_id:$t},root_pane:{pane_id:$p}}}' ;;
 "machine list")
   case "${STUB_ML:-}" in fail) exit 1 ;; junk) echo 'not json'; exit 0 ;; esac
   printf '%s\n' '[{"id":"stubid0001","label":"laptop","target":"u@stubhost","session":"default","enabled":true,"selected":false}]' ;;
@@ -59,6 +49,8 @@ case "$1 $2" in
 "workspace close")
   : > "$T/closed"
   upd ws.json --arg w "$3" 'map(select(.workspace_id!=$w))'
+  upd tabs.json --arg w "$3" 'map(select(.workspace_id!=$w))'
+  upd panes.json --arg w "$3" 'map(select(.workspace_id!=$w))'
   [ -n "${STUB_KEEP_AGENT:-}" ] || upd agents.json --arg w "$3" 'map(select(.workspace_id!=$w))'
   jq -nc --arg w "$3" '{result:{type:"workspace_closed",workspace_id:$w}}' ;;
 "agent start")
@@ -67,19 +59,37 @@ case "$1 $2" in
     case "$1" in --pane) pn=$2 ;; esac
     shift
   done
-  upd agents.json --arg n "$n" --arg p "$pn" --slurpfile c "$T/wc.json" '. + [{name:$n,pane_id:$p,workspace_id:$c[0].result.workspace.workspace_id,agent_status:"working"}]'
+  upd agents.json --arg n "$n" --arg p "$pn" --slurpfile c "$T/tc.json" '. + [{name:$n,pane_id:$p,workspace_id:$c[0].result.tab.workspace_id,agent_status:"working"}]'
   jq -nc --arg n "$n" '{result:{type:"agent_started",agent:{name:$n},argv:[]}}' ;;
 "agent get")
   n=$(cat "$T/n_get" 2>/dev/null || echo 0); n=$((n+1)); echo $n > "$T/n_get"
   [ -z "${STUB_NO_STATUS:-}" ] || { jq -nc --arg n "$3" '{result:{agent:{name:$n}}}'; exit 0; }
   s=$(sed -n "${n}p" "$T/states"); [ -n "$s" ] || s=$(tail -n1 "$T/states")
-  jq -nc --arg s "$s" --arg n "$3" --slurpfile c "$T/wc.json" '{result:{agent:{agent_status:$s,name:$n,pane_id:$c[0].result.root_pane.pane_id,workspace_id:$c[0].result.workspace.workspace_id}}}' ;;
+  jq -nc --arg s "$s" --arg n "$3" --slurpfile c "$T/tc.json" '{result:{agent:{agent_status:$s,name:$n,pane_id:$c[0].result.root_pane.pane_id,workspace_id:$c[0].result.tab.workspace_id}}}' ;;
 "agent list")
   jq -c '{result:{agents:.}}' "$T/agents.json" ;;
 "tab create")
-  t=stubT$RANDOM$RANDOM; rp=$t:p1
+  w= c= l=
+  while [ $# -gt 0 ]; do case "$1" in --workspace) w=$2 ;; --cwd) c=$2 ;; --label) l=$2 ;; esac; shift; done
+  t=$w:t$RANDOM$RANDOM; rp=$w:p$RANDOM$RANDOM
   printf 'tab\t%s\t%s\n' "$t" "$rp" >> "$T/made"
-  jq -nc --arg t "$t" --arg r "$rp" '{result:{type:"tab_created",tab:{tab_id:$t},root_pane:{pane_id:$r}}}' ;;
+  upd tabs.json --arg w "$w" --arg t "$t" --arg l "$l" '. + [{tab_id:$t,label:$l,workspace_id:$w}]'
+  upd panes.json --arg w "$w" --arg t "$t" --arg p "$rp" --arg c "$c" '. + [{pane_id:$p,tab_id:$t,workspace_id:$w,cwd:$c}]'
+  jq -nc --arg w "$w" --arg t "$t" --arg l "$l" --arg p "$rp" --arg c "$c" '{result:{type:"tab_created",tab:{tab_id:$t,workspace_id:$w,label:$l},root_pane:{pane_id:$p,cwd:$c}}}' | tee "$T/tc.json" ;;
+"tab list")
+  w=; while [ $# -gt 0 ]; do case "$1" in --workspace) w=$2 ;; esac; shift; done
+  jq -c --arg w "$w" '{result:{tabs:(if $w == "" then . else map(select(.workspace_id == $w)) end)}}' "$T/tabs.json" ;;
+"tab close")
+  : > "$T/closed"
+  ws=$(jq -r --arg t "$3" '.[] | select(.tab_id == $t) | .workspace_id' "$T/tabs.json")
+  [ -n "${STUB_KEEP_AGENT:-}" ] || upd agents.json --arg t "$3" --slurpfile pn "$T/panes.json" 'map(select(.pane_id as $p | [$pn[0][] | select(.tab_id == $t) | .pane_id] | index($p) | not))'
+  upd panes.json --arg t "$3" 'map(select(.tab_id != $t))'
+  upd tabs.json --arg t "$3" 'map(select(.tab_id != $t))'
+  [ -z "${STUB_TABCLOSE_WS:-}" ] || [ "$(jq --arg w "$ws" '[.[] | select(.workspace_id == $w)] | length' "$T/tabs.json")" != 0 ] || upd ws.json --arg w "$ws" 'map(select(.workspace_id != $w))'
+  jq -nc --arg t "$3" '{result:{type:"tab_closed",tab_id:$t}}' ;;
+"pane list")
+  w=; while [ $# -gt 0 ]; do case "$1" in --workspace) w=$2 ;; esac; shift; done
+  jq -c --arg w "$w" '{result:{panes:map(select(.workspace_id == $w))}}' "$T/panes.json" ;;
 "pane split")
   p=stubP$RANDOM$RANDOM
   printf 'pane\t%s\n' "$p" >> "$T/made"
@@ -92,7 +102,7 @@ case "$1 $2" in
   echo '{"result":{}}' ;;
 "agent wait")
   if [[ " $* " == *" --until "* ]] && [ -e "$T/resume_result" ]; then
-    printf 'RESULT FILE %s\n' "$X" > "$(jq -r .result.worktree.path "$T/wc.json")/result.md"
+    printf 'RESULT FILE %s\n' "$X" > "$(jq -r .result.root_pane.cwd "$T/tc.json")/result.md"
   fi
   echo '{"result":{}}' ;;
 *) echo '{"result":{}}' ;;
@@ -104,12 +114,13 @@ T=$STUB_T
 n=$(cat "$T/n_ssh" 2>/dev/null || echo 0); n=$((n+1)); echo $n > "$T/n_ssh"
 ( IFS=$'\t'; printf '%s\n' "$*" >> "$T/ssh" )
 printf 'ssh\n' >> "$T/order"
-if [ -n "${STUB_SSH_RC:-}" ]; then [ -n "${STUB_SSH_QUIET:-}" ] || echo 'ssh: stub failure' >&2; exit "$STUB_SSH_RC"; fi
+if [ -n "${STUB_SSH_RC:-}" ] && [[ "$*" == *"${STUB_SSH_ON:-}"* ]]; then [ -n "${STUB_SSH_QUIET:-}" ] || echo 'ssh: stub failure' >&2; exit "$STUB_SSH_RC"; fi
 while [ $# -gt 0 ] && [ "$1" != -- ]; do shift; done
 shift 2
 c="$*"
 [ -z "${STUB_SSH_EXEC:-}" ] || exec bash -c "$c"
 case "$c" in
+*"worktree add -b "*) set -- $c; while [ "$1" != -b ]; do shift; done; jq -c --arg p "$3" --arg b "$2" '. + [{path:$p,branch:$b}]' "$T/wt.json" > "$T/wt.new" && mv "$T/wt.new" "$T/wt.json" ;;
 *"cat > "*) cat > "$T/ssh_in.$n" ;;
 "cat -- "*result.md) printf 'RESULT FILE %s\n' "$(cat "$T/x")" ;;
 "test -f "*) [ -e "$T/ssh_has_result" ] ;;
@@ -117,7 +128,37 @@ esac
 EOF
 cat > "$tmp/bin/git" <<'EOF'
 #!/usr/bin/env bash
-if [ "$1" = fetch ]; then ( IFS=$'\t'; printf 'ENV=%s\t%s\n' "${GIT_SSH_COMMAND:-}" "$*" >> "$STUB_T/gitlog" ); exit 0; fi
+T=$STUB_T
+if [ "$1" = fetch ]; then ( IFS=$'\t'; printf 'ENV=%s\t%s\n' "${GIT_SSH_COMMAND:-}" "$*" >> "$T/gitlog" ); exit 0; fi
+if [ "$1" = -C ] && [ "$3" = worktree ] && [ "$4" = add ] && [ "$5" = -b ]; then
+  ( IFS=$'\t'; printf '%s\n' "$*" >> "$T/gitlog" )
+  printf 'worktree add\n' >> "$T/order"
+  [ "${STUB_GIT_FAIL:-}" != add ] || { echo 'fatal: stub git refused' >&2; exit 128; }
+  p=$7 b=$6
+  case "$p" in "$T"/*) ;; *) echo "stub git: path outside the test dir: $p" >&2; exit 97 ;; esac
+  [ ! -e "$p" ] || { echo "fatal: '$p' already exists" >&2; exit 128; }
+  case "${STUB_WT_LINK:-}" in
+    stratum) mkdir -p "$p" && ln -s "$T/outside-dir" "$p/.stratum" ;;
+    brief) mkdir -p "$p/.stratum" && ln -s "$T/outside.txt" "$p/brief.md" ;;
+    guard) mkdir -p "$p/.stratum" && ln -s "$T/outside.json" "$p/.stratum/git-guard.json" ;;
+    result) mkdir -p "$p/.stratum" && ln -s "$T/outside.txt" "$p/result.md" ;;
+    resultfile) mkdir -p "$p/.stratum" && printf 'TRACKED RESULT\n' > "$p/result.md" ;;
+    brieffile) mkdir -p "$p/.stratum" && printf 'TRACKED BRIEF\n' > "$p/brief.md" ;;
+    *) mkdir -p "$p/.stratum" ;;
+  esac
+  jq -c --arg p "$p" --arg b "$b" '. + [{path:$p,branch:$b}]' "$T/wt.json" > "$T/wt.new" && mv "$T/wt.new" "$T/wt.json"
+  exit 0
+fi
+if [ "$1" = -C ] && [ "$3" = worktree ] && [ "$4" = remove ]; then
+  ( IFS=$'\t'; printf '%s\n' "$*" >> "$T/gitlog" )
+  [ "${STUB_GIT_FAIL:-}" != remove ] || { echo 'fatal: stub remove refused' >&2; exit 1; }
+  case "$5" in "$T"/*) rm -rf "$5" ;; *) echo "stub git: path outside the test dir: $5" >&2; exit 97 ;; esac
+  exit 0
+fi
+if [ "$1" = -C ] && [ "$3" = branch ] && [ "$4" = -D ]; then
+  ( IFS=$'\t'; printf '%s\n' "$*" >> "$T/gitlog" )
+  exit 0
+fi
 exec "$STUB_REAL_GIT" "$@"
 EOF
 cat > "$tmp/bin/sleep" <<'EOF'
@@ -198,31 +239,40 @@ sargs=(T004 --task "$task" --test "$testcmd" --lane "$lane" --roster "$roster")
 reset() { : > "$tmp/calls"; : > "$tmp/gh_calls"; }
 states() { rm -f "$tmp/n_get"; printf '%s\n' "$@" > "$tmp/states"; }
 fresh() {
-  rm -rf "$tmp"/repo-worker-* "$tmp"/n_* "$tmp/closed" "$tmp/resume_result" "$tmp/wc.json" "$tmp/s2" "$tmp/pane.txt" "$tmp/pane.after" "$tmp/made" "$tmp/order"
+  rm -rf "$tmp"/repo-worker-* "$tmp"/rrepo-worker-* "$tmp"/n_* "$tmp/closed" "$tmp/resume_result" "$tmp/tc.json" "$tmp/s2" "$tmp/pane.txt" "$tmp/pane.after" "$tmp/made" "$tmp/order"
   printf 'x%s\n' "$RANDOM$RANDOM" > "$tmp/x"
   printf 'TASK BODY %s\nOwns: `src/a.py`.\n' "$(cat "$tmp/x")" > "$task"
-  jq -nc '[{workspace_id:"stubDecoyWS",label:"notaworker"}]' > "$tmp/ws.json"
-  jq -nc '[{path:"/stub/decoy",branch:"notaworker",open_workspace_id:"stubDecoyWS"}]' > "$tmp/wt.json"
+  jq -nc '[{workspace_id:"w1P",label:"orchestrator"},{workspace_id:"stubDecoyWS",label:"notaworker"},{workspace_id:"stubMainWS",label:"main"}]' > "$tmp/ws.json"
+  jq -nc '[{tab_id:"w1P:t1",label:"orchestrator",workspace_id:"w1P"},{tab_id:"stubDecoyWS:t1",label:"notaworker",workspace_id:"stubDecoyWS"},{tab_id:"stubMainWS:t1",label:"main",workspace_id:"stubMainWS"}]' > "$tmp/tabs.json"
+  jq -nc '[{path:"/stub/decoy",branch:"notaworker",open_workspace_id:"stubDecoyWS"},{path:"~/proj",branch:"main",is_linked_worktree:false,open_workspace_id:"stubMainWS"}]' > "$tmp/wt.json"
   echo '[]' > "$tmp/agents.json"
+  echo '[]' > "$tmp/panes.json"
   states working
   reset
+  : > "$tmp/gitlog"
 }
 run() {
-  out=$(cd "${RUNDIR:-$repo}" && PATH="$tmp/bin:$PATH" HERDR_ENV="${HENV-1}" HERDR_PANE_ID=w1P:p1 HERDR_TAB_ID=w1P:t1 HERDR_WORKSPACE_ID=w1P env ${NOENV:+-u HERDR_ENV} "$@" 2>&1); rc=$?
+  out=$(cd "${RUNDIR:-$repo}" && PATH="$tmp/bin:$PATH" HERDR_ENV="${HENV-1}" HERDR_PANE_ID=w1P:p1 HERDR_TAB_ID=w1P:t1 HERDR_WORKSPACE_ID="${HWS-w1P}" env ${NOENV:+-u HERDR_ENV} "$@" 2>&1); rc=$?
 }
 mk() { fresh; run bash "$script" start "${sargs[@]}"; reset; }
-wsid() { jq -r .result.workspace.workspace_id "$tmp/wc.json"; }
-pane() { jq -r .result.root_pane.pane_id "$tmp/wc.json"; }
-wt() { jq -r .result.worktree.path "$tmp/wc.json"; }
+wsid() { jq -r .result.tab.workspace_id "$tmp/tc.json"; }
+tabid() { jq -r .result.tab.tab_id "$tmp/tc.json"; }
+pane() { jq -r .result.root_pane.pane_id "$tmp/tc.json"; }
+wt() { jq -r .result.root_pane.cwd "$tmp/tc.json"; }
 rnd() { cat "$tmp/x"; }
 cnt() { grep -cP "$1" "$tmp/calls"; }
 hasline() { grep -qxF "$(printf "$@")" <<<"$out"; }
 hascall() { grep -qxF "$(printf "$@")" "$tmp/calls"; }
+ghascall() { grep -qxF -- "$(printf -- "$@")" "$tmp/gitlog"; }
+lazypane() { awk -F'\t' '$1=="pane"{print $2; exit}' "$tmp/made" 2>/dev/null; }
+addtab() { jq -c --arg t "$1" --arg l "$2" --arg w "$3" '. + [{tab_id:$t,label:$l,workspace_id:$w}]' "$tmp/tabs.json" > "$tmp/tabs.new" && mv "$tmp/tabs.new" "$tmp/tabs.json"; }
 never() {
-  ! grep -qx BARE "$tmp/calls" && ! grep -q w1P "$tmp/calls" &&
+  ! grep -qx BARE "$tmp/calls" && ! grep -qP '(^|\t)w1P:(t1|p1)(\t|$)' "$tmp/calls" &&
+  awk -F'\t' '{ for (i = 1; i <= NF; i++) if ($i ~ /w1P/) { ok = ($i ~ /^w1P:[tp][0-9]+$/ && $i != "w1P:t1" && $i != "w1P:p1") || ($i == "w1P" && $(i - 1) == "--workspace" && (($1 == "tab" && $2 == "create") || ($1 == "pane" && $2 == "list"))); if (!ok) bad = 1 } } END { exit bad }' "$tmp/calls" &&
+  ! grep -qP '^workspace\tclose\t.*w1P' "$tmp/calls" &&
   ! grep -qP '(^|\t)(--current|--session|--remote|--trust-repository|--group|--machine)(\t|$)' "$tmp/calls" &&
   ! grep -qP '^(pane\tclose|worktree\tremove|server\t|machine\t(reconnect|add|remove|enable|disable)(\t|$))' "$tmp/calls" &&
-  [ "$(cnt '^workspace\tclose\t')" = "$1" ] && [ "$(cnt '^agent\tprompt\t')" = "$2" ]
+  [ "$(cnt '^tab\tclose\t')" = "$1" ] && [ "$(cnt '^agent\tprompt\t')" = "$2" ] && [ "$(cnt '^workspace\tclose\t')" = "${3:-0}" ]
 }
 nopane() { ! grep -q 'STUB PANE' <<<"$out"; }
 nb=$'\xc2\xa0'
@@ -243,7 +293,8 @@ s1() {
   fresh; run bash "$1" start "${sargs[@]}"
   local b pr sd; b="$(wt)/brief.md"; pr=$(cd "$(dirname "$1")/.." && pwd); sd=$(dirname "$1")
   check "S1 exit 0" '[ $rc = 0 ]'
-  check "S1 one worktree create, argv as built" '[ "$(cnt "^worktree\tcreate\t")" = 1 ] && hascall "worktree\tcreate\t--cwd\t%s\t--branch\tworker-t004\t--base\t%s\t--path\t%s\t--label\tworker-t004\t--no-focus" "$repo" "$sha" "$tmp/repo-worker-t004"'
+  check "S1 one git worktree add from the main checkout, base is HEAD" '[ "$(grep -c . "$tmp/gitlog")" = 1 ] && ghascall "-C\t%s\tworktree\tadd\t-b\tworker-t004\t%s\t%s" "$repo" "$tmp/repo-worker-t004" "$sha"'
+  check "S1 one tab create in the orchestrator workspace, one split, lazygit, no rename, no Dev Servers or VM" '[ "$(cnt "^tab\tcreate\t")" = 1 ] && hascall "tab\tcreate\t--workspace\tw1P\t--cwd\t%s\t--label\tworker-t004\t--no-focus" "$tmp/repo-worker-t004" && [ "$(cnt "^pane\tsplit\t")" = 1 ] && hascall "pane\tsplit\t%s\t--direction\tright\t--cwd\t%s\t--no-focus" "$(pane)" "$(wt)" && hascall "pane\trun\t%s\tlazygit" "$(lazypane)" && [ "$(cnt "^tab\trename\t")" = 0 ] && ! grep -qP "Dev Servers|\tVM(\t|\$)" "$tmp/calls"'
   check "S1 brief has the task text" 'grep -qxF "TASK BODY $(rnd)" "$b"'
   check "S1 brief heading, test, lane, branch, machine, result path" 'grep -qxF "# Brief: worker-t004" "$b" && grep -qxF -- "- Test command: \`$testcmd\`" "$b" && grep -qxF -- "- Lane: $lane. If it names a skill, start it with the Skill tool. Run only task T004; skip every other task, ticked or not." "$b" && grep -qxF -- "- Branch: worker-t004" "$b" && grep -qxF -- "- Your machine: local. \`local\` is the orchestrator'"'"'s machine." "$b" && grep -qxF -- "- Result file: $(wt)/result.md" "$b"'
   check "S1 brief holds the whole B1 line" 'grep -qxF -- "- Test lock: if your task is marked [lock], run its test command as \`bash <plugin root>/scripts/st-lock.sh -- <test command>\`, with the plugin root of the Stratum plugin. Never write a wait loop of your own." "$b"'
@@ -257,7 +308,7 @@ s1() {
   check "S1 repo has no git-guard.json and is unchanged" '[ ! -e "$repo/.stratum/git-guard.json" ] && [ -z "$(git -C "$repo" status --porcelain)" ]'
   check "S1 one agent start, args after -- are exactly the permission mode and name" '[ "$(cnt "^agent\tstart\t")" = 1 ] && hascall "agent\tstart\tworker-t004\t--kind\tclaude\t--pane\t%s\t--timeout\t120000\t--\t--permission-mode\tauto\t-n\tworker-t004" "$(pane)"'
   check "S1 one agent prompt with P" 'hascall "agent\tprompt\tworker-t004\t%s\t--wait\t--until\tworking\t--until\tblocked\t--timeout\t30000" "$P"'
-  check "S1 worker line, ids from the stub log" 'hasline "worker\tworker-t004\tlocal\t%s\t%s\tworker-t004\t%s" "$(wsid)" "$(pane)" "$(wt)"'
+  check "S1 worker line, ids from the stub log" 'hasline "worker\tworker-t004\tlocal\t%s\t%s\tworker-t004\t%s" "$(tabid)" "$(pane)" "$(wt)"'
   check "S1 state line" 'hasline "state\tworking\tworker-t004\t%s" "$(pane)"'
   check "S1 never-list, one prompt, no close, no pane text" 'never 0 1 && nopane'
 }
@@ -290,7 +341,7 @@ check "S2 never-list" 'never 0 1'
 fresh
 STUB_FAIL="agent start" STUB_FAIL_CODE=agent_not_ready run bash "$script" start "${sargs[@]}"
 check "S3 exit 4" '[ $rc = 4 ]'
-check "S3 worker line with ids" 'hasline "worker\tworker-t004\tlocal\t%s\t%s\tworker-t004\t%s" "$(wsid)" "$(pane)" "$(wt)"'
+check "S3 worker line with ids" 'hasline "worker\tworker-t004\tlocal\t%s\t%s\tworker-t004\t%s" "$(tabid)" "$(pane)" "$(wt)"'
 check "S3 state blocked, pane text, the stub pane text" 'hasline "state\tblocked\tworker-t004\t%s" "$(pane)" && paneshown'
 check "S3 pane read call, no agent prompt" 'hascall "agent\tread\tworker-t004\t--source\trecent-unwrapped\t--lines\t40" && never 0 0'
 reset
@@ -299,17 +350,17 @@ check "S3 goal exit 0" '[ $rc = 0 ]'
 check "S3 goal sends exactly one agent prompt with P" 'hascall "agent\tprompt\tworker-t004\t%s\t--wait\t--until\tworking\t--until\tblocked\t--timeout\t30000" "$P" && never 0 1'
 
 fresh
-STUB_FAIL="worktree create" run bash "$script" start "${sargs[@]}"
+STUB_GIT_FAIL=add run bash "$script" start "${sargs[@]}"
 check "S4 exit 1" '[ $rc = 1 ]'
-check "S4 stopped line with the stub message" 'grep -q "^stopped: .*stub refused" <<<"$out"'
+check "S4 stopped line with the git message" 'grep -q "^stopped: .*stub git refused" <<<"$out"'
 check "S4 worker line has - ids" 'hasline "worker\tworker-t004\tlocal\t-\t-\t-\t-"'
-check "S4 no agent start, no prompt" '[ "$(cnt "^agent\tstart\t")" = 0 ] && never 0 0'
+check "S4 no tab create, no undo, no agent start, no prompt" '[ "$(cnt "^tab\tcreate\t")" = 0 ] && [ "$(cnt "^agent\tstart\t")" = 0 ] && ! grep -qP "worktree\tremove|branch\t-D" "$tmp/gitlog" && never 0 0'
 
 fresh
 STUB_FAIL="agent prompt" STUB_FAIL_CODE=agent_prompt_stalled run bash "$script" start "${sargs[@]}"
 check "S5 exit 1" '[ $rc = 1 ]'
 check "S5 stopped line" 'grep -q "^stopped: .*stub refused" <<<"$out"'
-check "S5 worker line with ids" 'hasline "worker\tworker-t004\tlocal\t%s\t%s\tworker-t004\t%s" "$(wsid)" "$(pane)" "$(wt)"'
+check "S5 worker line with ids" 'hasline "worker\tworker-t004\tlocal\t%s\t%s\tworker-t004\t%s" "$(tabid)" "$(pane)" "$(wt)"'
 check "S5 one prompt only, nothing closed" 'never 0 1'
 
 fresh; unsentpane > "$tmp/pane.txt"; sentpane > "$tmp/pane.after"
@@ -317,19 +368,19 @@ STUB_FAIL="agent prompt" STUB_FAIL_CODE=agent_prompt_stalled run bash "$script" 
 check "S5b stalled prompt in the box: one Enter, no second paste, exit 0, state working" '[ $rc = 0 ] && [ "$(cnt "^agent\tsend-keys\tworker-t004\tenter$")" = 1 ] && never 0 1 && hasline "state\tworking\tworker-t004\t%s" "$(pane)"'
 fresh; unsentpane > "$tmp/pane.txt"
 STUB_FAIL="agent prompt" STUB_FAIL_CODE=agent_prompt_stalled run bash "$script" start "${sargs[@]}"
-check "S5c prompt still in the box after the Enter: exit 7, worker line, state unsent, pane text" '[ $rc = 7 ] && [ "$(cnt "^agent\tsend-keys\tworker-t004\tenter$")" = 1 ] && never 0 1 && hasline "worker\tworker-t004\tlocal\t%s\t%s\tworker-t004\t%s" "$(wsid)" "$(pane)" "$(wt)" && hasline "state\tunsent\tworker-t004\t%s" "$(pane)" && grep -qxF "pane text:" <<<"$out"'
+check "S5c prompt still in the box after the Enter: exit 7, worker line, state unsent, pane text" '[ $rc = 7 ] && [ "$(cnt "^agent\tsend-keys\tworker-t004\tenter$")" = 1 ] && never 0 1 && hasline "worker\tworker-t004\tlocal\t%s\t%s\tworker-t004\t%s" "$(tabid)" "$(pane)" "$(wt)" && hasline "state\tunsent\tworker-t004\t%s" "$(pane)" && grep -qxF "pane text:" <<<"$out"'
 
 fresh
-jq -nc '[{workspace_id:"stubExistWS",label:"worker-t004"}]' > "$tmp/ws.json"
+addtab "stubDecoyWS:t9" worker-t004 stubDecoyWS
 run bash "$script" start "${sargs[@]}"
 check "S6 exit 1" '[ $rc = 1 ]'
 check "S6 one line, already exists" '[ "$out" = "A worker worker-t004 already exists." ]'
-check "S6 only read calls" '[ "$(cnt "^workspace\tlist(\t|\$)")" -ge 1 ] && [ "$(cnt "^workspace\tlist(\t|\$)")" = "$(grep -c . "$tmp/calls")" ] && never 0 0'
+check "S6 only tab list calls, no git worktree add" '[ "$(cnt "^tab\tlist(\t|\$)")" -ge 1 ] && [ "$(cnt "^tab\tlist(\t|\$)")" = "$(grep -c . "$tmp/calls")" ] && [ ! -s "$tmp/gitlog" ] && never 0 0'
 
 fresh
 STUB_FAIL="agent prompt" STUB_FAIL_CODE=agent_blocked run bash "$script" start "${sargs[@]}"
 check "S7 exit 4" '[ $rc = 4 ]'
-check "S7 worker line with ids" 'hasline "worker\tworker-t004\tlocal\t%s\t%s\tworker-t004\t%s" "$(wsid)" "$(pane)" "$(wt)"'
+check "S7 worker line with ids" 'hasline "worker\tworker-t004\tlocal\t%s\t%s\tworker-t004\t%s" "$(tabid)" "$(pane)" "$(wt)"'
 check "S7 state blocked, pane text, the stub pane text" 'hasline "state\tblocked\tworker-t004\t%s" "$(pane)" && paneshown'
 check "S7 one prompt only, nothing closed" 'never 0 1'
 reset
@@ -342,20 +393,13 @@ check "S8 exit 0" '[ $rc = 0 ]'
 check "S8 agent get idle prints state working, no idle" 'hasline "state\tworking\tworker-t004\t%s" "$(pane)" && ! grep -q idle <<<"$out"'
 
 fresh
-STUB_WT_PATH="$tmp/elsewhere" run bash "$script" start "${sargs[@]}"
-check "S9 exit 1" '[ $rc = 1 ]'
-check "S9 stopped line names both paths" 'hasline "stopped: herdr made the worktree in %s, not %s" "$tmp/elsewhere" "$tmp/repo-worker-t004"'
-check "S9 worker line with the ids made so far" 'hasline "worker\tworker-t004\tlocal\t%s\t%s\tworker-t004\t%s" "$(wsid)" "$(pane)" "$tmp/elsewhere"'
-check "S9 no agent start, no prompt" '[ "$(cnt "^agent\tstart\t")" = 0 ] && never 0 0'
-
-fresh
 git -C "$repo" worktree add -q "$tmp/repo-feat" -b feat
 git -C "$tmp/repo-feat" -c user.name=t -c user.email=t@t commit -q --allow-empty -m feat
 featsha=$(git -C "$tmp/repo-feat" rev-parse HEAD)
 printf '{"force_push":"deny"}\n' > "$tmp/repo-feat/.stratum/git-guard.json"
 repo="$tmp/repo-feat" run bash "$script" start "${sargs[@]}"
 check "S10 exit 0" '[ $rc = 0 ]'
-check "S10 worktree create from the main checkout, base is the linked worktree HEAD" '[ "$featsha" != "$sha" ] && [ "$(cnt "^worktree\tcreate\t")" = 1 ] && hascall "worktree\tcreate\t--cwd\t%s\t--branch\tworker-t004\t--base\t%s\t--path\t%s\t--label\tworker-t004\t--no-focus" "$repo" "$featsha" "$tmp/repo-worker-t004"'
+check "S10 git worktree add from the main checkout, base is the linked worktree HEAD" '[ "$featsha" != "$sha" ] && [ "$(grep -c . "$tmp/gitlog")" = 1 ] && ghascall "-C\t%s\tworktree\tadd\t-b\tworker-t004\t%s\t%s" "$repo" "$tmp/repo-worker-t004" "$featsha"'
 check "S10 guard file read from the linked worktree" '[ ! -e "$repo/.stratum/git-guard.json" ] && [ "$(jq -S -c . "$(wt)/.stratum/git-guard.json")" = "$(jq -S -c -n "{force_push:\"deny\",commit:\"auto\",branch:\"worker-t004\"}")" ]'
 check "S10 never-list, one prompt" 'never 0 1'
 git -C "$repo" worktree remove --force "$tmp/repo-feat"
@@ -368,14 +412,14 @@ STUB_BUSY=3 run bash "$script" start "${sargs[@]}"
 check "S11 exit 0" '[ $rc = 0 ]'
 check "S11 four agent start calls with the same argv, a sleep 1 after each busy one" '[ "$(grep -P "^(agent\tstart|sleep)\t" "$tmp/calls")" = "$(busylog 3)" ]'
 check "S11 then one agent prompt" '[ "$(grep -P "^(agent\tstart|sleep|agent\tprompt)\t" "$tmp/calls" | tail -1 | cut -f1,2)" = "$(printf "agent\tprompt")" ] && never 0 1'
-check "S11 worker and state lines" 'hasline "worker\tworker-t004\tlocal\t%s\t%s\tworker-t004\t%s" "$(wsid)" "$(pane)" "$(wt)" && hasline "state\tworking\tworker-t004\t%s" "$(pane)"'
+check "S11 worker and state lines" 'hasline "worker\tworker-t004\tlocal\t%s\t%s\tworker-t004\t%s" "$(tabid)" "$(pane)" "$(wt)" && hasline "state\tworking\tworker-t004\t%s" "$(pane)"'
 
 fresh
 STUB_FAIL="agent start" STUB_FAIL_CODE=agent_pane_busy run bash "$script" start "${sargs[@]}"
 check "S11b exit 1" '[ $rc = 1 ]'
 check "S11b exactly 10 agent start calls, 9 sleep 1" '[ "$(cnt "^agent\tstart\t")" = 10 ] && [ "$(cnt "^sleep\t1\$")" = 9 ] && [ "$(grep -P "^(agent\tstart|sleep)\t" "$tmp/calls")" = "$(busylog 9)" ]'
 check "S11b stopped line with the stub agent_pane_busy line" 'grep -qxF "stopped: {\"error\":{\"code\":\"agent_pane_busy\",\"message\":\"stub refused\"}}" <<<"$out"'
-check "S11b worker line with ids" 'hasline "worker\tworker-t004\tlocal\t%s\t%s\tworker-t004\t%s" "$(wsid)" "$(pane)" "$(wt)"'
+check "S11b worker line with ids" 'hasline "worker\tworker-t004\tlocal\t%s\t%s\tworker-t004\t%s" "$(tabid)" "$(pane)" "$(wt)"'
 check "S11b no agent prompt, nothing closed" 'never 0 0'
 
 mkdir -p "$tmp/outside-dir"
@@ -389,7 +433,7 @@ for k in brief:brief.md stratum:.stratum guard:.stratum/git-guard.json result:re
   STUB_WT_LINK=${k%%:*} run bash "$script" start "${sargs[@]}"
   check "S12 ${k%%:*} exit 1" '[ $rc = 1 ]'
   check "S12 ${k%%:*} one stopped line naming the symlink" '[ "$(grep -c "^stopped:" <<<"$out")" = 1 ] && hasline "stopped: %s is a symlink" "$(wt)/${k#*:}"'
-  check "S12 ${k%%:*} worker line with ids" 'hasline "worker\tworker-t004\tlocal\t%s\t%s\tworker-t004\t%s" "$(wsid)" "$(pane)" "$(wt)"'
+  check "S12 ${k%%:*} worker line with ids" 'hasline "worker\tworker-t004\tlocal\t%s\t%s\tworker-t004\t%s" "$(tabid)" "$(pane)" "$(wt)"'
   check "S12 ${k%%:*} no agent start, no prompt" '[ "$(cnt "^agent\tstart\t")" = 0 ] && never 0 0'
   check "S12 ${k%%:*} outside targets unchanged" '[ "$(snap)" = "$before" ]'
 done
@@ -403,6 +447,24 @@ for k in brieffile:brief.md:BRIEF resultfile:result.md:RESULT; do
   check "S12b ${k%%:*} no agent start, no prompt" '[ "$(cnt "^agent\tstart\t")" = 0 ] && never 0 0'
   check "S12b ${k%%:*} tracked file unchanged" '[ "$(cat "$(wt)/$f")" = "TRACKED ${k##*:}" ]'
 done
+
+s13() {
+  fresh; STUB_FAIL="tab create" run bash "$1" start "${sargs[@]}"
+  check "S13 exit 1" '[ $rc = 1 ]'
+  check "S13 git log in order: worktree add, worktree remove, branch -D" '[ "$(grep -c . "$tmp/gitlog")" = 3 ] && [ "$(sed -n 1p "$tmp/gitlog" | cut -f4)" = add ] && [ "$(sed -n 2p "$tmp/gitlog" | cut -f4)" = remove ] && [ "$(sed -n 3p "$tmp/gitlog" | cut -f4)" = -D ] && ghascall "-C\t%s\tworktree\tremove\t%s" "$repo" "$tmp/repo-worker-t004" && ghascall "-C\t%s\tbranch\t-D\tworker-t004" "$repo"'
+  check "S13 folder gone" '[ ! -e "$tmp/repo-worker-t004" ]'
+  check "S13 one stopped line with the stub message" '[ "$(grep -c "^stopped:" <<<"$out")" = 1 ] && grep -q "^stopped: .*stub refused" <<<"$out"'
+  check "S13 worker line has - in fields 4 to 7" 'hasline "worker\tworker-t004\tlocal\t-\t-\t-\t-"'
+  check "S13 no pane split, no agent start" '[ "$(cnt "^pane\tsplit\t")" = 0 ] && [ "$(cnt "^agent\tstart\t")" = 0 ]'
+  run bash "$1" start "${sargs[@]}"
+  check "S13 a second start with no failure exits 0 (D33)" '[ $rc = 0 ]'
+}
+s13 "$script"
+
+fresh; STUB_FAIL="tab create" STUB_GIT_FAIL=remove run bash "$script" start "${sargs[@]}"
+check "S13b exit 1" '[ $rc = 1 ]'
+check "S13b one stopped line: the stub message, then the left path and branch" '[ "$(grep -c "^stopped:" <<<"$out")" = 1 ] && grep -qF "stub refused\"}}; left $tmp/repo-worker-t004 and branch worker-t004" <<<"$out"'
+check "S13b worker line keeps the branch and the path" 'hasline "worker\tworker-t004\tlocal\t-\t-\tworker-t004\t%s" "$tmp/repo-worker-t004"'
 
 fresh; run bash "$script" start 'bad id' --task "$task" --test "$testcmd" --lane "$lane" --roster "$roster"
 prej P1 "Task id must be letters, digits or dash, start with a letter or digit, and be at most 25 characters."
@@ -432,13 +494,15 @@ fresh; run bash "$script" start T004 --task "$task" --test "$longtest" --lane "$
 prej P6 "The /goal prompt is over 4000 characters."
 fresh; HENV=0 run bash "$script" start "${sargs[@]}"
 prej P7 "Not inside a herdr pane. Run it from a herdr pane, or name a --machine."
+fresh; HWS= run bash "$script" start "${sargs[@]}"
+prej P7b "Not inside a herdr pane. Run it from a herdr pane, or name a --machine."
 
 mk; states done
 printf 'RESULT FILE %s\n' "$(rnd)" > "$(wt)/result.md"
 run bash "$script" wait T004
 check "W1 exit 0" '[ $rc = 0 ]'
 check "W1 state finished" 'hasline "state\tfinished\tworker-t004\t%s" "$(pane)"'
-check "W1 finds the worker by label and workspace" 'hascall "worktree\tlist\t--workspace\t%s" "$(wsid)" && [ "$(cnt "^agent\twait\tworker-t004\t--timeout\t")" = 1 ]'
+check "W1 finds the worker by tab label, pane list, worktree list" 'hascall "tab\tlist" && hascall "pane\tlist\t--workspace\t%s" "$(wsid)" && hascall "worktree\tlist\t--cwd\t%s" "$(wt)" && [ "$(cnt "^agent\twait\tworker-t004\t--timeout\t")" = 1 ]'
 check "W1 never-list, no prompt, no pane text" 'never 0 0 && nopane'
 
 mk; states working
@@ -515,7 +579,7 @@ check "C1b guard file present before close" '[ -e "$(wt)/.stratum/git-guard.json
 run bash "$script" close T004
 check "C1b guard file gone after close" '[ ! -e "$(wt)/.stratum/git-guard.json" ]'
 check "C1 exit 0" '[ $rc = 0 ]'
-check "C1 one workspace close on the stub WS" 'hascall "workspace\tclose\t%s" "$(wsid)" && never 1 0'
+check "C1 one tab close on the worker tab, zero workspace close" 'hascall "tab\tclose\t%s" "$(tabid)" && never 1 0'
 check "C1 closed and folder lines" 'hasline "closed\tworker-t004" && hasline "folder\t%s\tready to remove" "$(wt)"'
 check "C1 one gh call: pr list --head worker-t004 --state open" '[ "$(cat "$tmp/gh_calls")" = "$(printf "pr\tlist\t--head\tworker-t004\t--state\topen\t--json\tnumber\t-q\tlength")" ]'
 
@@ -529,7 +593,7 @@ mk; states done
 STUB_KEEP_AGENT=1 run bash "$script" close T004
 check "C3 exit 1" '[ $rc = 1 ]'
 check "C3 close left agent line" 'grep -qxF "close left agent worker-t004" <<<"$out"'
-check "C3 one workspace close on the stub WS" 'hascall "workspace\tclose\t%s" "$(wsid)" && never 1 0'
+check "C3 one tab close on the worker tab, zero workspace close" 'hascall "tab\tclose\t%s" "$(tabid)" && never 1 0'
 
 fresh
 run bash "$script" close T004
@@ -539,7 +603,7 @@ check "C4 no worker line, no workspace close" 'grep -qxF "No worker worker-t004 
 mk; states done
 STUB_FAIL="agent get" STUB_FAIL_CODE=agent_not_found run bash "$script" close T004
 check "C5 exit 0" '[ $rc = 0 ]'
-check "C5 one workspace close on the stub WS" 'hascall "workspace\tclose\t%s" "$(wsid)" && never 1 0'
+check "C5 one tab close on the worker tab, zero workspace close" 'hascall "tab\tclose\t%s" "$(tabid)" && never 1 0'
 check "C5 closed and folder lines" 'hasline "closed\tworker-t004" && hasline "folder\t%s\tready to remove" "$(wt)"'
 
 mk; states done
@@ -552,12 +616,12 @@ STUB_NO_STATUS=1 run bash "$script" close T004
 check "C7 exit 1" '[ $rc = 1 ]'
 check "C7 the cannot-read refuse line, no closed line, no workspace close" '[ "$out" = "Worker worker-t004: cannot read worker state. Close refused." ] && ! grep -q "^closed" <<<"$out" && never 0 0'
 
-for k in agent:'{}' agent:'not json' workspace:'{}' workspace:'not json'; do
+for k in agent:'{}' agent:'not json' tab:'{}' tab:'not json'; do
   mk; states done
   STUB_LIST_JUNK="${k%%:*} list" STUB_JUNK_BODY="${k#*:}" run bash "$script" close T004
   check "C8 ${k%%:*} list answers ${k#*:} after the close: exit 1" '[ $rc = 1 ]'
   check "C8 ${k%%:*} list answers ${k#*:} after the close: one cannot-read line" '[ "$out" = "close left ${k%%:*} worker-t004: cannot read the list" ]'
-  check "C8 ${k%%:*} list answers ${k#*:} after the close: one workspace close" 'hascall "workspace\tclose\t%s" "$(wsid)" && never 1 0'
+  check "C8 ${k%%:*} list answers ${k#*:} after the close: one tab close" 'hascall "tab\tclose\t%s" "$(tabid)" && never 1 0'
 done
 
 mk; states done
@@ -576,7 +640,7 @@ git -C "$repo" remote set-url origin https://gitlab.com/stub/stub.git
 STUB_GH_FAIL=1 run bash "$script" close T004
 git -C "$repo" remote set-url origin https://github.com/stub/stub.git
 check "C11 no GitHub remote: exit 0" '[ $rc = 0 ]'
-check "C11 no GitHub remote: closed and folder lines, one workspace close" 'hasline "closed\tworker-t004" && hasline "folder\t%s\tready to remove" "$(wt)" && hascall "workspace\tclose\t%s" "$(wsid)" && never 1 0'
+check "C11 no GitHub remote: closed and folder lines, one tab close" 'hasline "closed\tworker-t004" && hasline "folder\t%s\tready to remove" "$(wt)" && hascall "tab\tclose\t%s" "$(tabid)" && never 1 0'
 check "C11 no GitHub remote: no gh call" '[ ! -s "$tmp/gh_calls" ]'
 
 mk; states done
@@ -587,21 +651,40 @@ check "C12 exit 1" '[ $rc = 1 ]'
 check "C12 the symlink refuse line, no closed line, no workspace close" '[ "$out" = "Worker worker-t004: .stratum is a symlink. Close refused." ] && ! grep -q "^closed" <<<"$out" && never 0 0'
 check "C12 the symlink target keeps git-guard.json" '[ -e "$tmp/guard-target/git-guard.json" ]'
 
+mk; states done
+addtab "w1P:t9" worker-t005 w1P
+run bash "$script" close T004
+check "C13 exit 0" '[ $rc = 0 ]'
+check "C13 one tab close, on worker-t004's tab" 'hascall "tab\tclose\t%s" "$(tabid)" && [ "$(cnt "^tab\tclose\t")" = 1 ] && never 1 0'
+check "C13 worker-t005 and the orchestrator tab are still in tab list" 'jq -e "any(.[]; .label == \"worker-t005\") and any(.[]; .label == \"orchestrator\")" "$tmp/tabs.json" >/dev/null'
+
+fresh
+addtab "w1P:t7" worker-t004 w1P
+addtab "stubDecoyWS:t7" worker-t004 stubDecoyWS
+run bash "$script" close T004
+check "C16 exit 1, the more-than-one line, no tab close" '[ $rc = 1 ] && [ "$out" = "More than one tab is labelled worker-t004." ] && never 0 0'
+
+mk; states done
+jq -c 'map(if .workspace_id == "w1P" then .label = "st-workers" else . end)' "$tmp/ws.json" > "$tmp/ws.new" && mv "$tmp/ws.new" "$tmp/ws.json"
+run bash "$script" close T004
+check "C18 exit 0, one tab close, zero workspace close (a local close never closes a workspace)" '[ $rc = 0 ] && hascall "tab\tclose\t%s" "$(tabid)" && never 1 0'
+
 fresh
 x=$(rnd)
-jq -nc --arg x "$x" '[{workspace_id:("stubA"+$x),label:"worker-t004"},{workspace_id:("stubB"+$x),label:"worker-t005"},{workspace_id:("stubC"+$x),label:"notaworker"}]' > "$tmp/ws.json"
-jq -nc --arg x "$x" '[{path:("/stub/a"+$x),branch:"worker-t004",open_workspace_id:("stubA"+$x)},{path:("/stub/b"+$x),branch:"worker-t005",open_workspace_id:("stubB"+$x)},{path:("/stub/c"+$x),branch:"notaworker",open_workspace_id:("stubC"+$x)}]' > "$tmp/wt.json"
+jq -nc --arg x "$x" '[{tab_id:("stubA"+$x+":t1"),label:"worker-t004",workspace_id:("stubA"+$x)},{tab_id:("stubB"+$x+":t1"),label:"worker-t005",workspace_id:("stubB"+$x)},{tab_id:("stubC"+$x+":t1"),label:"notaworker",workspace_id:("stubC"+$x)}]' > "$tmp/tabs.json"
+jq -nc --arg x "$x" '[{pane_id:("stubA"+$x+":p1"),tab_id:("stubA"+$x+":t1"),workspace_id:("stubA"+$x),cwd:("/stub/a"+$x)},{pane_id:("stubB"+$x+":p1"),tab_id:("stubB"+$x+":t1"),workspace_id:("stubB"+$x),cwd:("/stub/b"+$x)},{pane_id:("stubC"+$x+":p1"),tab_id:("stubC"+$x+":t1"),workspace_id:("stubC"+$x),cwd:("/stub/c"+$x)}]' > "$tmp/panes.json"
+jq -nc --arg x "$x" '[{path:("/stub/a"+$x),branch:"worker-t004"},{path:("/stub/b"+$x),branch:"worker-t005"},{path:("/stub/c"+$x),branch:"notaworker"}]' > "$tmp/wt.json"
 jq -nc --arg x "$x" '[{name:"worker-t004",pane_id:("stubA"+$x+":p1"),workspace_id:("stubA"+$x),agent_status:"blocked"},{name:"other-agent",pane_id:("stubC"+$x+":p1"),workspace_id:("stubC"+$x),agent_status:"idle"}]' > "$tmp/agents.json"
 run bash "$script" list
 check "L1 exit 0" '[ $rc = 0 ]'
-check "L1 two found lines, states from the stub" '[ "$(grep -cP "^found\t" <<<"$out")" = 2 ] && hasline "found\tworker-t004\tlocal\tstubA%s\tstubA%s:p1\tblocked\t/stub/a%s" "$x" "$x" "$x" && hasline "found\tworker-t005\tlocal\tstubB%s\t-\tgone\t/stub/b%s" "$x" "$x"'
+check "L1 two found lines, states from the stub" '[ "$(grep -cP "^found\t" <<<"$out")" = 2 ] && hasline "found\tworker-t004\tlocal\tstubA%s:t1\tstubA%s:p1\tblocked\t/stub/a%s" "$x" "$x" "$x" && hasline "found\tworker-t005\tlocal\tstubB%s:t1\t-\tgone\t/stub/b%s" "$x" "$x"'
 check "L1 the other workspace is absent" '! grep -q notaworker <<<"$out" && ! grep -q "stubC" <<<"$out"'
 check "L1 never-list, no prompt, no close" 'never 0 0'
 jq '.[0].agent_status = "idle"' "$tmp/agents.json" > "$tmp/a.new" && mv "$tmp/a.new" "$tmp/agents.json"
 unsentpane > "$tmp/pane.txt"; run bash "$script" list
-check "L2 idle worker with the prompt in the box shows unsent" '[ $rc = 0 ] && hasline "found\tworker-t004\tlocal\tstubA%s\tstubA%s:p1\tunsent\t/stub/a%s" "$x" "$x" "$x"'
+check "L2 idle worker with the prompt in the box shows unsent" '[ $rc = 0 ] && hasline "found\tworker-t004\tlocal\tstubA%s:t1\tstubA%s:p1\tunsent\t/stub/a%s" "$x" "$x" "$x"'
 dialogpane > "$tmp/pane.txt"; run bash "$script" list
-check "L2 idle worker with an open question shows blocked" '[ $rc = 0 ] && hasline "found\tworker-t004\tlocal\tstubA%s\tstubA%s:p1\tblocked\t/stub/a%s" "$x" "$x" "$x"'
+check "L2 idle worker with an open question shows blocked" '[ $rc = 0 ] && hasline "found\tworker-t004\tlocal\tstubA%s:t1\tstubA%s:p1\tblocked\t/stub/a%s" "$x" "$x" "$x"'
 
 sendlog() { grep -P '^(agent\t(get|send-keys|wait)|pane\tsend-text)\t' "$tmp/calls"; }
 a1() {
@@ -689,7 +772,7 @@ rnever() {
   ! grep -qx BARE "$tmp/calls" && ! grep -q w1P "$tmp/calls" && hascall "machine\tlist\t--json" && mach &&
   ! rnorm | grep -qP '(^|\t)(--current|--session|--remote|--trust-repository|--group)(\t|$)' &&
   ! rnorm | grep -qP '^(pane\tclose|worktree\tremove|server\t|machine\t(reconnect|add|remove|enable|disable)(\t|$))' &&
-  [ "$(rcnt 'workspace\tclose\t')" = "$1" ] && [ "$(rcnt 'agent\tprompt\t')" = "$2" ]
+  [ "$(rcnt 'tab\tclose\t')" = "$1" ] && [ "$(rcnt 'agent\tprompt\t')" = "$2" ] && [ "$(rcnt 'workspace\tclose\t')" = "${3:-0}" ]
 }
 rreadonly() { ! grep -qvP '^(machine\tlist\t--json|--machine\tlaptop\tworkspace\tlist)$' "$tmp/calls"; }
 rrej() {
@@ -702,26 +785,25 @@ rrej() {
 }
 
 r1() {
-  rfresh; STUB_WT_PATH=/home/u/proj-worker-t004 rrun bash "$1" start "${rsargs[@]}"
-  local in="$tmp/ssh_in.1" g; g=$(printf '%q' '{"commit":"auto","branch":"worker-t004"}')
+  rfresh; rrun bash "$1" start "${rsargs[@]}"
+  local in="$tmp/ssh_in.2" g; g=$(printf '%q' '{"commit":"auto","branch":"worker-t004"}')
   check "R1 exit 0" '[ $rc = 0 ]'
   check "R1 machine list, every other call starts --machine laptop, never-list, one prompt" 'rnever 0 1'
-  check "R1 workspace list on the machine" 'rcall "workspace\tlist"'
-  check "R1 worktree create has --path ~/proj-worker-t004" 'rcall "worktree\tcreate\t--cwd\t%s\t--branch\tworker-t004\t--base\t%s\t--path\t%s\t--label\tworker-t004\t--no-focus" "~/proj" "$sha" "~/proj-worker-t004"'
-  check "R1 one ssh call to the saved target with BatchMode" '[ "$(grep -c . "$tmp/ssh")" = 1 ] && grep -qP "^-o\tBatchMode=yes\t--\tu@stubhost\t" "$tmp/ssh"'
-  check "R1 ssh writes brief.md and git-guard.json under the path herdr answered" 'c=$(sshs); [ "$(wt)" = /home/u/proj-worker-t004 ] && grep -qF -- "cat > /home/u/proj-worker-t004/brief.md" <<<"$c" && grep -qF -- "mkdir -p /home/u/proj-worker-t004/.stratum" <<<"$c" && grep -qF -- "> /home/u/proj-worker-t004/.stratum/git-guard.json" <<<"$c" && grep -qF -- "$g" <<<"$c" && ! grep -qF -- "~/proj-worker-t004" "$tmp/ssh"'
-  check "R1 brief on ssh stdin: heading, task, machine, result path" 'grep -qxF "# Brief: worker-t004" "$in" && grep -qxF "TASK BODY $(rnd)" "$in" && grep -qxF -- "- Your machine: laptop. \`local\` is the orchestrator'"'"'s machine." "$in" && grep -qxF -- "- Result file: /home/u/proj-worker-t004/result.md" "$in"'
+  check "R1 tab create on the machine in the main checkout workspace, no w1P" 'rcall "tab\tcreate\t--workspace\tstubMainWS\t--cwd\t%s\t--label\tworker-t004\t--no-focus" "~/proj-worker-t004"'
+  check "R1 first ssh is the git worktree add, the second writes the brief, both with BatchMode" '[ "$(grep -c . "$tmp/ssh")" = 2 ] && [ "$(sed -n 1p "$tmp/ssh")" = "$(printf -- "-o\tBatchMode=yes\t--\tu@stubhost\tgit -C ~/proj worktree add -b worker-t004 ~/proj-worker-t004 %s" "$sha")" ] && grep -qP "^-o\tBatchMode=yes\t--\tu@stubhost\t" "$tmp/ssh"'
+  check "R1 brief ssh writes brief.md and git-guard.json under ~/proj-worker-t004, no \\~" 'c=$(sed -n 2p "$tmp/ssh"); grep -qF -- "cat > ~/proj-worker-t004/brief.md" <<<"$c" && grep -qF -- "mkdir -p ~/proj-worker-t004/.stratum" <<<"$c" && grep -qF -- "> ~/proj-worker-t004/.stratum/git-guard.json" <<<"$c" && grep -qF -- "$g" <<<"$c" && ! grep -qF -- "\\~" "$tmp/ssh"'
+  check "R1 brief on ssh stdin: heading, task, machine, result path" 'grep -qxF "# Brief: worker-t004" "$in" && grep -qxF "TASK BODY $(rnd)" "$in" && grep -qxF -- "- Your machine: laptop. \`local\` is the orchestrator'"'"'s machine." "$in" && grep -qxF -- "- Result file: ~/proj-worker-t004/result.md" "$in"'
   check "R1 brief on ssh stdin: roster rows and the five rules" 'grep -qxF "| worker-t004 | laptop | worker-t004 | T004 |" "$in" && grep -qxF "| worker-t005 | local | worker-t005 | T005 |" "$in" && [ "$(grep -cxFf "$rules" "$in")" = 5 ]'
   check "R1 brief on ssh stdin: no Plugin root line, no Advisor block" '[ -s "$in" ] && ! grep -q "^- Plugin root:" "$in" && ! grep -q "^## Advisor" "$in"'
   check "R1 agent start argv" 'rcall "agent\tstart\tworker-t004\t--kind\tclaude\t--pane\t%s\t--timeout\t120000\t--\t--permission-mode\tauto\t-n\tworker-t004" "$(pane)"'
   check "R1 agent prompt with P" 'rcall "agent\tprompt\tworker-t004\t%s\t--wait\t--until\tworking\t--until\tblocked\t--timeout\t30000" "$P"'
-  check "R1 worker line names laptop, ids from the stub log" 'hasline "worker\tworker-t004\tlaptop\t%s\t%s\tworker-t004\t%s" "$(wsid)" "$(pane)" "$(wt)"'
+  check "R1 worker line names laptop, ids from the stub log" 'hasline "worker\tworker-t004\tlaptop\t%s\t%s\tworker-t004\t%s" "$(tabid)" "$(pane)" "$(wt)"'
 }
 r1 "$script"
 
 rfresh; mkdir -p "$tmp/r1d"; cp "$script" "$tmp/r1d/st-worker.sh"; : > "$tmp/r1d/st-advisor.sh"
-STUB_WT_PATH=/home/u/proj-worker-t004 rrun bash "$tmp/r1d/st-worker.sh" start "${rsargs[@]}"
-check "R1d st-advisor.sh next to the script, saved machine: exit 0, brief has no Plugin root line, no Advisor block" '[ $rc = 0 ] && [ -s "$tmp/ssh_in.1" ] && ! grep -q "^- Plugin root:" "$tmp/ssh_in.1" && ! grep -q "^## Advisor" "$tmp/ssh_in.1"'
+rrun bash "$tmp/r1d/st-worker.sh" start "${rsargs[@]}"
+check "R1d st-advisor.sh next to the script, saved machine: exit 0, brief has no Plugin root line, no Advisor block" '[ $rc = 0 ] && [ -s "$tmp/ssh_in.2" ] && ! grep -q "^- Plugin root:" "$tmp/ssh_in.2" && ! grep -q "^## Advisor" "$tmp/ssh_in.2"'
 rm -rf "$tmp/r1d"
 
 rfresh; rrun bash "$script" start "${rsargs[@]}"
@@ -769,13 +851,37 @@ rfresh
 rrun bash "$script" start T004 --task "$task" --test "$testcmd" --lane "$lane" --roster "$rroster" --machine laptop --repo proj
 prej R8b "A saved machine needs --repo <path> starting with / or ~."
 
-rmk; states done
-rrun bash "$script" close T004 --machine laptop
-check "R9 exit 0" '[ $rc = 0 ]'
-check "R9 one workspace close on the stub WS, --machine rule" 'rcall "workspace\tclose\t%s" "$(wsid)" && rnever 1 0'
-check "R9 closed and folder lines" 'hasline "closed\tworker-t004" && hasline "folder\t%s\tready to remove" "$(wt)"'
-check "R9b ssh rm -f of the quoted git-guard.json path" 'sshs | grep -qF -- "rm -f $(wt)/.stratum/git-guard.json"'
-check "R9c ssh tests .stratum is not a symlink before the rm" 'c=$(sshs); t=${c%%rm -f *}; [ "$t" != "$c" ] && [[ $t == *"[ ! -L $(wt)/.stratum ]"* ]]'
+r9() {
+  rfresh; rrun bash "$1" start "${rsargs[@]}"; reset; : > "$tmp/ssh"; rm -f "$tmp"/ssh_in.* "$tmp/n_ssh"
+  states done
+  rrun bash "$1" close T004 --machine laptop
+  check "R9 exit 0" '[ $rc = 0 ]'
+  check "R9 one tab close on the worker tab, zero workspace close, the main checkout tab stays, --machine rule" 'rcall "tab\tclose\t%s" "$(tabid)" && rnever 1 0 && jq -e "any(.[]; .tab_id == \"stubMainWS:t1\")" "$tmp/tabs.json" >/dev/null'
+  check "R9 closed and folder lines" 'hasline "closed\tworker-t004" && hasline "folder\t%s\tready to remove" "$(wt)"'
+  check "R9b ssh rm -f of the quoted git-guard.json path" 'sshs | grep -qF -- "rm -f $(wt)/.stratum/git-guard.json"'
+  check "R9c ssh tests .stratum is not a symlink before the rm" 'c=$(sshs); t=${c%%rm -f *}; [ "$t" != "$c" ] && [[ $t == *"[ ! -L $(wt)/.stratum ]"* ]]'
+}
+r9 "$script"
+
+rfresh; STUB_NO_MAIN_WS=1 rrun bash "$script" start "${rsargs[@]}"
+reset; states done
+STUB_NO_MAIN_WS=1 rrun bash "$script" close T004 --machine laptop
+check "C14 exit 0" '[ $rc = 0 ]'
+check "C14 one tab close, then one workspace close of the st-workers workspace, no --group" 'rcall "tab\tclose\t%s" "$(tabid)" && rcall "workspace\tclose\t%s" "$(wsid)" && rnever 1 0 1'
+check "C14 closed and folder lines" 'hasline "closed\tworker-t004" && hasline "folder\t%s\tready to remove" "$(wt)"'
+
+rfresh; STUB_NO_MAIN_WS=1 rrun bash "$script" start "${rsargs[@]}"
+jq -c 'map(select(.label != "1"))' "$tmp/tabs.json" > "$tmp/tabs.new" && mv "$tmp/tabs.new" "$tmp/tabs.json"
+reset; states done
+STUB_NO_MAIN_WS=1 STUB_TABCLOSE_WS=1 rrun bash "$script" close T004 --machine laptop
+check "C15 exit 0, one tab close, zero workspace close, closed and folder lines" '[ $rc = 0 ] && rcall "tab\tclose\t%s" "$(tabid)" && rnever 1 0 && hasline "closed\tworker-t004" && hasline "folder\t%s\tready to remove" "$(wt)"'
+
+rfresh; STUB_NO_MAIN_WS=1 rrun bash "$script" start T005 --task "$task" --test "$testcmd" --lane "$lane" --roster "$rroster" --machine laptop --repo '~/proj'
+STUB_NO_MAIN_WS=1 rrun bash "$script" start "${rsargs[@]}"
+reset; states done
+STUB_NO_MAIN_WS=1 rrun bash "$script" close T004 --machine laptop
+check "C17 exit 0, one tab close on worker-t004's tab, zero workspace close" '[ $rc = 0 ] && rcall "tab\tclose\t%s" "$(tabid)" && rnever 1 0'
+check "C17 worker-t005 still in tab list" 'jq -e "any(.[]; .label == \"worker-t005\")" "$tmp/tabs.json" >/dev/null'
 
 rmk; states blocked working
 rrun bash "$script" answer T004 --machine laptop --keys 1
@@ -789,27 +895,39 @@ check "R11 exactly one agent prompt with P, --machine rule" 'rcall "agent\tpromp
 
 rfresh
 x=$(rnd)
-jq -nc --arg x "$x" '[{workspace_id:("stubA"+$x),label:"worker-t004"},{workspace_id:("stubB"+$x),label:"worker-t005"},{workspace_id:("stubC"+$x),label:"notaworker"}]' > "$tmp/ws.json"
-jq -nc --arg x "$x" '[{path:("/stub/a"+$x),branch:"worker-t004",open_workspace_id:("stubA"+$x)},{path:("/stub/b"+$x),branch:"worker-t005",open_workspace_id:("stubB"+$x)},{path:("/stub/c"+$x),branch:"notaworker",open_workspace_id:("stubC"+$x)}]' > "$tmp/wt.json"
+jq -nc --arg x "$x" '[{tab_id:("stubA"+$x+":t1"),label:"worker-t004",workspace_id:("stubA"+$x)},{tab_id:("stubB"+$x+":t1"),label:"worker-t005",workspace_id:("stubB"+$x)},{tab_id:("stubC"+$x+":t1"),label:"notaworker",workspace_id:("stubC"+$x)}]' > "$tmp/tabs.json"
+jq -nc --arg x "$x" '[{pane_id:("stubA"+$x+":p1"),tab_id:("stubA"+$x+":t1"),workspace_id:("stubA"+$x),cwd:("/stub/a"+$x)},{pane_id:("stubB"+$x+":p1"),tab_id:("stubB"+$x+":t1"),workspace_id:("stubB"+$x),cwd:("/stub/b"+$x)},{pane_id:("stubC"+$x+":p1"),tab_id:("stubC"+$x+":t1"),workspace_id:("stubC"+$x),cwd:("/stub/c"+$x)}]' > "$tmp/panes.json"
+jq -nc --arg x "$x" '[{path:("/stub/a"+$x),branch:"worker-t004"},{path:("/stub/b"+$x),branch:"worker-t005"},{path:("/stub/c"+$x),branch:"notaworker"}]' > "$tmp/wt.json"
 jq -nc --arg x "$x" '[{name:"worker-t004",pane_id:("stubA"+$x+":p1"),workspace_id:("stubA"+$x),agent_status:"blocked"}]' > "$tmp/agents.json"
 rrun bash "$script" list --machine laptop
 check "R12 exit 0" '[ $rc = 0 ]'
-check "R12 found lines name laptop, the other workspace is absent" '[ "$(grep -cP "^found\t" <<<"$out")" = 2 ] && hasline "found\tworker-t004\tlaptop\tstubA%s\tstubA%s:p1\tblocked\t/stub/a%s" "$x" "$x" "$x" && hasline "found\tworker-t005\tlaptop\tstubB%s\t-\tgone\t/stub/b%s" "$x" "$x" && ! grep -q notaworker <<<"$out"'
+check "R12 found lines name laptop, the other tab is absent" '[ "$(grep -cP "^found\t" <<<"$out")" = 2 ] && hasline "found\tworker-t004\tlaptop\tstubA%s:t1\tstubA%s:p1\tblocked\t/stub/a%s" "$x" "$x" "$x" && hasline "found\tworker-t005\tlaptop\tstubB%s:t1\t-\tgone\t/stub/b%s" "$x" "$x" && ! grep -q notaworker <<<"$out"'
 check "R12 --machine rule, never-list" 'rnever 0 0'
 
-rfresh; STUB_WT_PATH=/home/u/proj-worker-t004 rrun bash "$script" start "${rsargs[@]}"
-c=$(sshs); pre=${c%%cat > *}
-check "R13 exit 0, one ssh call" '[ $rc = 0 ] && [ "$(grep -c . "$tmp/ssh")" = 1 ]'
-check "R13 ssh refuses a .stratum symlink, then a link or any existing brief.md, result.md, git-guard.json, before the cat > write" '[ "$pre" != "$c" ] && [ "${pre#*u@stubhost }" = "[ ! -L /home/u/proj-worker-t004/.stratum ] || { echo \"/home/u/proj-worker-t004/.stratum is a symlink\" >&2; exit 3; }; for p in /home/u/proj-worker-t004/brief.md /home/u/proj-worker-t004/result.md /home/u/proj-worker-t004/.stratum/git-guard.json; do [ ! -L \"\$p\" ] || { echo \"\$p is a symlink\" >&2; exit 3; }; [ ! -e \"\$p\" ] || { echo \"\$p already exists\" >&2; exit 3; }; done && " ]'
+rfresh; rrun bash "$script" start "${rsargs[@]}"
+c=$(sshs | sed -n 2p); pre=${c%%cat > *}
+check "R13 exit 0, two ssh calls" '[ $rc = 0 ] && [ "$(grep -c . "$tmp/ssh")" = 2 ]'
+check "R13 ssh refuses a .stratum symlink, then a link or any existing brief.md, result.md, git-guard.json, before the cat > write" '[ "$pre" != "$c" ] && [ "${pre#*u@stubhost }" = "[ ! -L ~/proj-worker-t004/.stratum ] || { echo \"~/proj-worker-t004/.stratum is a symlink\" >&2; exit 3; }; for p in ~/proj-worker-t004/brief.md ~/proj-worker-t004/result.md ~/proj-worker-t004/.stratum/git-guard.json; do [ ! -L \"\$p\" ] || { echo \"\$p is a symlink\" >&2; exit 3; }; [ ! -e \"\$p\" ] || { echo \"\$p already exists\" >&2; exit 3; }; done && " ]'
 
-rfresh; rm -rf "$tmp/remote-wt"; mkdir "$tmp/remote-wt"
-STUB_WT_PATH="$tmp/remote-wt" rrun bash "$script" start "${rsargs[@]}"
-check "R14 exit 0, ssh writes brief.md under the answered path" '[ $rc = 0 ] && sshs | grep -qF -- "cat > $tmp/remote-wt/brief.md"'
-check "R14 nothing written on this machine: the answered folder stays empty" '[ -d "$tmp/remote-wt" ] && [ -z "$(ls -A "$tmp/remote-wt")" ]'
-rm -rf "$tmp/remote-wt"
+rfresh; rrun bash "$script" start T004 --task "$task" --test "$testcmd" --lane "$lane" --roster "$rroster" --machine laptop --repo "$tmp/rrepo"
+check "R14 exit 0, ssh writes brief.md under the sibling of --repo" '[ $rc = 0 ] && sshs | grep -qF -- "cat > $tmp/rrepo-worker-t004/brief.md"'
+check "R14 nothing written on this machine: the sibling folder does not exist" '[ ! -e "$tmp/rrepo-worker-t004" ]'
+
+rfresh; STUB_NO_MAIN_WS=1 rrun bash "$script" start "${rsargs[@]}"
+check "R15 exit 0" '[ $rc = 0 ]'
+check "R15 one workspace create --cwd ~/proj --label st-workers --no-focus, on the machine" 'rcall "workspace\tcreate\t--cwd\t%s\t--label\tst-workers\t--no-focus" "~/proj" && [ "$(rcnt "workspace\tcreate\t")" = 1 ]'
+check "R15 tab create in the workspace the create answered, --machine rule" 'rcall "tab\tcreate\t--workspace\t%s\t--cwd\t%s\t--label\tworker-t004\t--no-focus" "$(wsid)" "~/proj-worker-t004" && rnever 0 1'
+
+rfresh; x=$(rnd); jq -c --arg x "$x" '. + [{workspace_id:("stubSW"+$x),label:"st-workers"}]' "$tmp/ws.json" > "$tmp/ws.new" && mv "$tmp/ws.new" "$tmp/ws.json"
+STUB_NO_MAIN_WS=1 rrun bash "$script" start "${rsargs[@]}"
+check "R15b exit 0, no workspace create, tab create in the st-workers workspace that exists" '[ $rc = 0 ] && [ "$(rcnt "workspace\tcreate\t")" = 0 ] && rcall "tab\tcreate\t--workspace\tstubSW%s\t--cwd\t%s\t--label\tworker-t004\t--no-focus" "$x" "~/proj-worker-t004" && rnever 0 1'
+
+rfresh; STUB_FAIL="tab create" rrun bash "$script" start "${rsargs[@]}"
+check "R16 exit 1, stopped line with the stub message" '[ $rc = 1 ] && grep -q "^stopped: .*stub refused" <<<"$out"'
+check "R16 second ssh is the git undo, no brief write" '[ "$(grep -c . "$tmp/ssh")" = 2 ] && [ "$(sed -n 2p "$tmp/ssh")" = "$(printf -- "-o\tBatchMode=yes\t--\tu@stubhost\tgit -C ~/proj worktree remove ~/proj-worker-t004 && git -C ~/proj branch -D worker-t004")" ] && ! grep -q "cat > " "$tmp/ssh" && rnever 0 0'
 
 for k in "3::ssh: stub failure" "3:1:exit 3"; do
-  rfresh; STUB_SSH_RC=${k%%:*} STUB_SSH_QUIET=$(cut -d: -f2 <<<"$k") rrun bash "$script" start "${rsargs[@]}"
+  rfresh; STUB_SSH_ON="cat >" STUB_SSH_RC=${k%%:*} STUB_SSH_QUIET=$(cut -d: -f2 <<<"$k") rrun bash "$script" start "${rsargs[@]}"
   check "R13b remote write fails (${k#*:*:}): exit 1, one stopped line with WT, machine and the reason" '[ $rc = 1 ] && [ "$(grep -c "^stopped:" <<<"$out")" = 1 ] && hasline "stopped: cannot write brief.md and .stratum/git-guard.json in ~/proj-worker-t004 on laptop: %s" "${k#*:*:}" && [ "$(cnt "^--machine\tlaptop\tagent\tstart\t")" = 0 ]'
 done
 
@@ -1002,7 +1120,15 @@ sed -E '/H\+=\(--machine/d' "$script" > "$tmp/NC1.sh" 2>/dev/null
 check "NC1 sed deletes exactly one line" '[ "$(diff "$script" "$tmp/NC1.sh" | grep -c "^<")" = 1 ]'
 nc NC1 r1
 
+sed -E '/h tab close "\$TAB"/a h workspace close "$WS"' "$script" > "$tmp/NC8.sh" 2>/dev/null
+nc NC8 r9
+
+sed -E 's/ worktree remove / worktree noop /; s/ branch -D / branch noop /' "$script" > "$tmp/NC9.sh" 2>/dev/null
+nc NC9 s13
+
 rrepo="$tmp/rrepo"
+rw="$tmp/rrepo-worker-t004"
+rxargs=(T004 --task "$task" --test "$testcmd" --lane "$lane" --roster "$rroster" --machine laptop --repo "$rrepo")
 lw="$tmp/repo-worker-t004"
 sid=sess$RANDOM$RANDOM
 rid=1700000000000000001-4242
@@ -1014,20 +1140,16 @@ aoroster="$tmp/aoff"
 oargs=(T004 --task "$tmp/task-owns.md" --test "$testcmd" --lane "$lane" --roster "$roster" --autonomous)
 printf 'TASK BODY\nOwns: `src/a.py`, `tests/t.sh`.\n' > "$tmp/task-owns.md"
 printf 'TASK BODY\n' > "$tmp/task-none.md"
-tabid() { jq -r .result.tab.tab_id "$tmp/wc.json"; }
-lazypane() { awk -F'\t' '$1=="pane"{print $2; exit}' "$tmp/made" 2>/dev/null; }
-devroot() { awk -F'\t' '$1=="tab"{print $3; exit}' "$tmp/made" 2>/dev/null; }
-vmroot() { awk -F'\t' '$1=="tab"{n++} n==2 && $1=="tab"{print $3; exit}' "$tmp/made" 2>/dev/null; }
 autoset() { printf '%s\n' "$1" > "$repo/.stratum/autonomous"; }
 autoclr() { rm -f "$repo/.stratum/autonomous"; }
 apd() { mkdir -p "$lw/.stratum/approve"; }
 mkreq() { apd; jq -nc --arg c "$2" '{tool_name:"Bash",tool_input:{command:$c},time:"2026-10-31T00:00:00Z"}' > "$lw/.stratum/approve/$1.req"; }
 apx() { mk; apd; printf '%s\n' "$sid" > "$lw/.stratum/approve/session"; autoset "$sid"; rm -f "$rec" "$repo/pwned" "$tmp/pwned"; }
 apv() { CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" approve T004 --request "$rid" --input-stdin --record "$rec" "$@"; }
-recok() { [ "$(grep -c . "$rec")" = 1 ] && awk -F'\t' 'NF==5 && $2=="worker-t004" && $3=="workspace worker-t004, tab Main" && $4=="Bash" && index($5,"touch pwned"){f=1} END{exit !f}' "$rec"; }
-xsetup() { rm -rf "$rrepo" "$tmp/rwt" "$tmp/rlink" "$tmp/rtarget"; mkdir -p "$rrepo/.stratum" "$tmp/rwt"; }
+recok() { [ "$(grep -c . "$rec")" = 1 ] && awk -F'\t' 'NF==5 && $2=="worker-t004" && $3=="tab worker-t004" && $4=="Bash" && index($5,"touch pwned"){f=1} END{exit !f}' "$rec"; }
+xsetup() { rm -rf "$rrepo" "$rw" "$tmp/rlink" "$tmp/rtarget"; mkdir -p "$rrepo/.stratum"; }
 ax() { rfresh; xsetup; printf 'worker-t004\tlaptop\tworker-t004\tT004\t%s\nworker-t005\tlocal\tworker-t005\tT005\n' "$rrepo" > "$aroster"; }
-axrun() { STUB_WT_PATH="$tmp/rwt" STUB_SSH_EXEC=1 CLAUDE_CODE_SESSION_ID="$sid" rrun bash "$script" start T004 --task "$task" --test "$testcmd" --lane "$lane" --roster "$aroster" --machine laptop --repo "$rrepo" --autonomous; }
+axrun() { STUB_SSH_EXEC=1 CLAUDE_CODE_SESSION_ID="$sid" rrun bash "$script" start T004 --task "$task" --test "$testcmd" --lane "$lane" --roster "$aroster" --machine laptop --repo "$rrepo" --autonomous; }
 wtchk() { check "$1" '[ $rc = 1 ] && [ "$out" = "Run this from the orchestrator'"'"'s checkout, not a worker worktree." ] && [ ! -s "$tmp/calls" ]'; }
 
 fresh; autoclr
@@ -1108,7 +1230,7 @@ run bash "$script" wait T004
 check "WA1 approval: exit 6" '[ $rc = 6 ]'
 check "WA1 state approval line with the pane" 'hasline "state\tapproval\tworker-t004\t%s" "$(pane)"'
 check "WA1 request line" 'hasline "request\t%s" "$rid"'
-check "WA1 tab line" 'hasline "tab\tworkspace worker-t004, tab Main"'
+check "WA1 tab line" 'hasline "tab\ttab worker-t004"'
 check "WA1 input line: the tool and one-line JSON" 'hasline "input\tBash: {\"command\":\"echo hi\"}"'
 check "WA1 pane text block with the stub pane" 'grep -qxF "pane text:" <<<"$out" && paneshown'
 check "WA1 input line comes before pane text" '[ "$(grep -n "^input" <<<"$out" | cut -d: -f1)" -lt "$(grep -n "^pane text:" <<<"$out" | cut -d: -f1)" ]'
@@ -1148,10 +1270,10 @@ check "AP1 pwned text: agent wait until working, 5 s" 'hascall "agent\twait\twor
 check "AP1 pwned text: one record line with time, worker, tab, tool and input" 'recok'
 autoclr
 
-rfresh; rm -rf "$tmp/rwt"; mkdir -p "$tmp/rwt/.stratum/approve"
-STUB_WT_PATH="$tmp/rwt" rrun bash "$script" start "${rsargs[@]}"
-autoset "$sid"; printf '%s\n' "$sid" > "$tmp/rwt/.stratum/approve/session"
-lw="$tmp/rwt" mkreq "$rid" 'echo $(touch pwned) `touch pwned`'
+rfresh; STUB_SSH_EXEC=1 rrun bash "$script" start "${rxargs[@]}"
+mkdir -p "$rw/.stratum/approve"
+autoset "$sid"; printf '%s\n' "$sid" > "$rw/.stratum/approve/session"
+lw="$rw" mkreq "$rid" 'echo $(touch pwned) `touch pwned`'
 states blocked; : > "$tmp/ssh"
 STUB_SSH_EXEC=1 rrun bash "$script" wait T004 --machine laptop
 check "AP1m wait on laptop: exit 6, approval state and the input line" '[ $rc = 6 ] && hasline "state\tapproval\tworker-t004\t%s" "$(pane)" && hasline "input\t%s" "$exp2"'
@@ -1159,10 +1281,10 @@ check "AP1m wait on laptop: exit 6, approval state and the input line" '[ $rc = 
 STUB_SSH_EXEC=1 CLAUDE_CODE_SESSION_ID="$sid" rrun bash "$script" approve T004 --request "$rid" --input-stdin --record "$rec" --machine laptop <<'ST_INPUT_END'
 Bash: {"command":"echo $(touch pwned) `touch pwned`"}
 ST_INPUT_END
-check "AP1m approve on laptop: exit 0, approved line, .ok written in the worker folder" '[ $rc = 0 ] && hasline "approved\tworker-t004\t%s" "$rid" && [ -e "$tmp/rwt/.stratum/approve/$rid.ok" ]'
+check "AP1m approve on laptop: exit 0, approved line, .ok written in the worker folder" '[ $rc = 0 ] && hasline "approved\tworker-t004\t%s" "$rid" && [ -e "$rw/.stratum/approve/$rid.ok" ]'
 check "AP1m the .req is read over ssh, and the ssh log has no pwned text" 'grep -qF -- "$rid.req" "$tmp/ssh" && ! grep -q pwned "$tmp/ssh"'
 check "AP1m ssh carries only the reads and the .ok write" '[ -s "$tmp/ssh" ] && ! grep -vE "$rid\.(req|ok)|approve/session" "$tmp/ssh" | grep -q .'
-check "AP1m no pwned file here or in the worker folder" '[ ! -e "$repo/pwned" ] && [ ! -e "$tmp/rwt/pwned" ] && [ ! -e "$tmp/pwned" ]'
+check "AP1m no pwned file here or in the worker folder" '[ ! -e "$repo/pwned" ] && [ ! -e "$rw/pwned" ] && [ ! -e "$tmp/pwned" ]'
 autoclr
 
 apx; autoclr; mkreq "$rid" 'echo hi'
@@ -1280,9 +1402,9 @@ ax; autoset "$sid"
 axrun
 check "AM1 saved machine: exit 0" '[ $rc = 0 ]'
 check "AM1 the repo flag on the machine holds the session id" '[ "$(cat "$rrepo/.stratum/autonomous")" = "$sid" ]'
-check "AM1 one ssh call writes the repo flag, before worktree create" '[ "$(grep -c "stratum/autonomous" "$tmp/ssh")" = 1 ] && o1=$(grep -n "^ssh$" "$tmp/order" | head -n1 | cut -d: -f1) && o2=$(grep -n "^worktree create$" "$tmp/order" | head -n1 | cut -d: -f1) && [ -n "$o1" ] && [ -n "$o2" ] && [ "$o1" -lt "$o2" ]'
-check "AM1 the remote session file holds the session id" '[ "$(cat "$tmp/rwt/.stratum/approve/session")" = "$sid" ]'
-check "AM1 the remote brief has the four-column roster row and no repo path" 'grep -qxF "| worker-t004 | laptop | worker-t004 | T004 |" "$tmp/rwt/brief.md" && ! grep -qF "$rrepo" "$tmp/rwt/brief.md"'
+check "AM1 one ssh call writes the repo flag, before worktree add" '[ "$(grep -c "stratum/autonomous" "$tmp/ssh")" = 1 ] && o1=$(grep -n "^ssh$" "$tmp/order" | head -n1 | cut -d: -f1) && o2=$(grep -n "^worktree add$" "$tmp/order" | head -n1 | cut -d: -f1) && [ -n "$o1" ] && [ -n "$o2" ] && [ "$o1" -lt "$o2" ]'
+check "AM1 the remote session file holds the session id" '[ "$(cat "$rw/.stratum/approve/session")" = "$sid" ]'
+check "AM1 the remote brief has the four-column roster row and no repo path" 'grep -qxF "| worker-t004 | laptop | worker-t004 | T004 |" "$rw/brief.md" && ! sed "s#$rrepo-worker-t004##g" "$rw/brief.md" | grep -qF "$rrepo"'
 autoclr
 ax; autoset "$sid"; printf 'worker-t004\tlaptop\tworker-t004\tT004\nworker-t005\tlocal\tworker-t005\tT005\n' > "$aroster"
 axrun
@@ -1297,15 +1419,15 @@ check "AM3 a stale repo flag with an old id is replaced" '[ $rc = 0 ] && [ "$(ca
 autoclr
 ax; autoset "$sid"; rm -rf "$rrepo/.stratum"; mkdir "$tmp/rlink"; ln -s "$tmp/rlink" "$rrepo/.stratum"
 axrun
-check "AM4 symlinked .stratum: exit 1, the cannot-write line, no worktree create, no agent start, target empty" '[ $rc = 1 ] && grep -q "^cannot write .stratum/autonomous on laptop: " <<<"$out" && [ ! -e "$tmp/rlink/autonomous" ] && [ "$(cnt "^--machine\tlaptop\tworktree\tcreate\t")" = 0 ] && [ "$(cnt "^--machine\tlaptop\tagent\tstart\t")" = 0 ]'
+check "AM4 symlinked .stratum: exit 1, the cannot-write line, no worktree add, no agent start, target empty" '[ $rc = 1 ] && grep -q "^cannot write .stratum/autonomous on laptop: " <<<"$out" && [ ! -e "$tmp/rlink/autonomous" ] && ! grep -q "worktree add" "$tmp/ssh" && [ "$(cnt "^--machine\tlaptop\tagent\tstart\t")" = 0 ]'
 autoclr
 ax; autoset "$sid"; printf 'keep\n' > "$tmp/rtarget"; ln -s "$tmp/rtarget" "$rrepo/.stratum/autonomous"
 axrun
-check "AM5 symlinked repo flag: exit 1, the cannot-write line, target unchanged, no worktree create" '[ $rc = 1 ] && grep -q "^cannot write .stratum/autonomous on laptop: " <<<"$out" && [ "$(cat "$tmp/rtarget")" = keep ] && [ "$(cnt "^--machine\tlaptop\tworktree\tcreate\t")" = 0 ]'
+check "AM5 symlinked repo flag: exit 1, the cannot-write line, target unchanged, no worktree add" '[ $rc = 1 ] && grep -q "^cannot write .stratum/autonomous on laptop: " <<<"$out" && [ "$(cat "$tmp/rtarget")" = keep ] && ! grep -q "worktree add" "$tmp/ssh"'
 autoclr
 ax; autoset "$sid"
 STUB_SSH_RC=255 axrun
-check "AM6 ssh down on the repo flag write: exit 1, the line, no worktree create or agent start" '[ $rc = 1 ] && hasline "cannot write .stratum/autonomous on laptop: ssh: stub failure" && [ "$(cnt "^--machine\tlaptop\tworktree\tcreate\t")" = 0 ] && [ "$(cnt "^--machine\tlaptop\tagent\tstart\t")" = 0 ]'
+check "AM6 ssh down on the repo flag write: exit 1, the line, no worktree add or agent start" '[ $rc = 1 ] && hasline "cannot write .stratum/autonomous on laptop: ssh: stub failure" && ! grep -q "worktree add" "$tmp/ssh" && [ "$(cnt "^--machine\tlaptop\tagent\tstart\t")" = 0 ]'
 autoclr
 
 wr="$tmp/wroster"; printf 'worker-t004\tlocal\tworker-t004\tT004\n' > "$wr"
@@ -1360,16 +1482,16 @@ printf '%s\n' 'printf "%s\n%s\n" "$PWD" "$1" > setup.ran' 'echo setup >> "$STUB_
 fresh; run bash "$script" start "${sargs[@]}"
 check "SU1 setup script: exit 0, its output after the header" '[ $rc = 0 ] && hasline "setup output:" && hasline "SETUP RAN"'
 check "SU1 it runs in the new worktree with the main checkout as its argument" '[ "$(cat "$(wt)/setup.ran")" = "$(printf "%s\n%s" "$(wt)" "$repo")" ]'
-check "SU1 it runs after worktree create and before agent start" 'o1=$(grep -n "^worktree create$" "$tmp/order" | cut -d: -f1) && o2=$(grep -n "^setup$" "$tmp/order" | cut -d: -f1) && o3=$(grep -n "^agent start$" "$tmp/order" | cut -d: -f1) && [ "$o1" -lt "$o2" ] && [ "$o2" -lt "$o3" ]'
+check "SU1 it runs after worktree add and before agent start" 'o1=$(grep -n "^worktree add$" "$tmp/order" | cut -d: -f1) && o2=$(grep -n "^setup$" "$tmp/order" | cut -d: -f1) && o3=$(grep -n "^agent start$" "$tmp/order" | cut -d: -f1) && [ "$o1" -lt "$o2" ] && [ "$o2" -lt "$o3" ]'
 printf '%s\n' 'echo boom' 'exit 3' > "$su"
 fresh; run bash "$script" start "${sargs[@]}"
-check "SU2 setup fails: exit 1, its output, the stopped line, the worker line, no agent start" '[ $rc = 1 ] && hasline boom && hasline "stopped: worker-setup.sh exited 3" && hasline "worker\tworker-t004\tlocal\t%s\t%s\tworker-t004\t%s" "$(wsid)" "$(pane)" "$(wt)" && [ "$(cnt "^agent\tstart\t")" = 0 ]'
+check "SU2 setup fails: exit 1, its output, the stopped line, the worker line, no agent start" '[ $rc = 1 ] && hasline boom && hasline "stopped: worker-setup.sh exited 3" && hasline "worker\tworker-t004\tlocal\t%s\t%s\tworker-t004\t%s" "$(tabid)" "$(pane)" "$(wt)" && [ "$(cnt "^agent\tstart\t")" = 0 ]'
 printf '%s\n' 'echo REMOTE SETUP "$1"' > "$su"
 rfresh; xsetup; mkdir -p "$rrepo/.stratum"; cp "$su" "$rrepo/.stratum/worker-setup.sh"
-STUB_WT_PATH="$tmp/rwt" STUB_SSH_EXEC=1 rrun bash "$script" start T004 --task "$task" --test "$testcmd" --lane "$lane" --roster "$rroster" --machine laptop --repo "$rrepo"
-check "SU3 saved machine: the machine's setup script runs with its main checkout, in the one ssh call" '[ $rc = 0 ] && hasline "setup output:" && hasline "REMOTE SETUP $rrepo" && [ "$(grep -c . "$tmp/ssh")" = 1 ]'
+STUB_SSH_EXEC=1 rrun bash "$script" start T004 --task "$task" --test "$testcmd" --lane "$lane" --roster "$rroster" --machine laptop --repo "$rrepo"
+check "SU3 saved machine: the machine's setup script runs with its main checkout, in the brief ssh call, after the worktree add ssh" '[ $rc = 0 ] && hasline "setup output:" && hasline "REMOTE SETUP $rrepo" && [ "$(grep -c . "$tmp/ssh")" = 2 ] && grep -q "worktree add" <(sed -n 1p "$tmp/ssh")'
 rfresh; xsetup; printf '%s\n' 'echo rboom' 'exit 3' > "$rrepo/.stratum/worker-setup.sh"
-STUB_WT_PATH="$tmp/rwt" STUB_SSH_EXEC=1 rrun bash "$script" start T004 --task "$task" --test "$testcmd" --lane "$lane" --roster "$rroster" --machine laptop --repo "$rrepo"
+STUB_SSH_EXEC=1 rrun bash "$script" start T004 --task "$task" --test "$testcmd" --lane "$lane" --roster "$rroster" --machine laptop --repo "$rrepo"
 check "SU5 saved machine setup fails: exit 1, its output, the stopped line, no agent start" '[ $rc = 1 ] && hasline rboom && hasline "stopped: worker-setup.sh exited 3 on laptop" && [ "$(rcnt "agent\tstart\t")" = 0 ]'
 rm -f "$su"
 fresh; run bash "$script" start "${sargs[@]}"
@@ -1405,26 +1527,25 @@ check "FU7 another session's run: exit 1, refused, owns and result unchanged" '[
 mk; states done; printf 'R\n' > "$lw/result.md"; apd; printf '%s\n' "$sid" > "$lw/.stratum/approve/session"; printf 'Fix it.\nOwns: `src/*.py`.\n' > "$tmp/round-bad.md"
 CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" followup T004 --task "$tmp/round-bad.md" --test "$testcmd"
 check "FU8 a bad round Owns path: exit 1, the line, result kept" '[ $rc = 1 ] && [ "$out" = "Owns path src/*.py must be repo-relative, with no glob." ] && [ -e "$lw/result.md" ] && never 0 0'
-rfresh; xsetup; STUB_WT_PATH="$tmp/rwt" STUB_SSH_EXEC=1 rrun bash "$script" start "${rsargs[@]}"
-states done working; printf 'REMOTE R1\n' > "$tmp/rwt/result.md"; reset
-STUB_WT_PATH="$tmp/rwt" STUB_SSH_EXEC=1 rrun bash "$script" followup T004 --task "$round" --test "$testcmd" --machine laptop
-check "FU9 saved machine: exit 0, the brief and result change on the machine, prompt on the machine" '[ $rc = 0 ] && [ "$(head -n 1 "$tmp/rwt/brief.md")" = "## Round 2" ] && [ "$(cat "$tmp/rwt/result-round1.md")" = "REMOTE R1" ] && [ ! -e "$tmp/rwt/result.md" ] && [ "$(rcnt "agent\tprompt\t")" = 1 ]'
+rfresh; xsetup; STUB_SSH_EXEC=1 rrun bash "$script" start "${rxargs[@]}"
+states done working; printf 'REMOTE R1\n' > "$rw/result.md"; reset
+STUB_SSH_EXEC=1 rrun bash "$script" followup T004 --task "$round" --test "$testcmd" --machine laptop
+check "FU9 saved machine: exit 0, the brief and result change on the machine, prompt on the machine" '[ $rc = 0 ] && [ "$(head -n 1 "$rw/brief.md")" = "## Round 2" ] && [ "$(cat "$rw/result-round1.md")" = "REMOTE R1" ] && [ ! -e "$rw/result.md" ] && [ "$(rcnt "agent\tprompt\t")" = 1 ]'
 
 fresh; run bash "$script" start "${sargs[@]}"
 check "LY1 exit 0" '[ $rc = 0 ]'
-check "LY1 layout calls after worktree create and before agent start, in order" '[ "$(grep -P "^(worktree\tcreate\t|tab\t|pane\t|agent\tstart\t)" "$tmp/calls" | cut -f1-2)" = "$(printf "worktree\tcreate\ntab\trename\npane\tsplit\npane\trun\ntab\tcreate\npane\tsplit\ntab\tcreate\npane\tsplit\nagent\tstart")" ]'
-check "LY1 tab rename, Main" 'hascall "tab\trename\t%s\tMain" "$(tabid)"'
+check "LY1 layout calls in order: tab create, pane split, pane run, agent start" '[ "$(grep -P "^(tab\tcreate\t|pane\tsplit\t|pane\trun\t|agent\tstart\t)" "$tmp/calls" | cut -f1-2)" = "$(printf "tab\tcreate\npane\tsplit\npane\trun\nagent\tstart")" ]'
+check "LY1 one tab create, in the orchestrator workspace" '[ "$(cnt "^tab\tcreate\t")" = 1 ] && hascall "tab\tcreate\t--workspace\tw1P\t--cwd\t%s\t--label\tworker-t004\t--no-focus" "$(wt)"'
 check "LY1 split the root pane right, no focus" 'hascall "pane\tsplit\t%s\t--direction\tright\t--cwd\t%s\t--no-focus" "$(pane)" "$(wt)"'
 check "LY1 lazygit in the new pane" 'hascall "pane\trun\t%s\tlazygit" "$(lazypane)"'
-check "LY1 Dev Servers tab, then a split of its root pane" 'hascall "tab\tcreate\t--workspace\t%s\t--cwd\t%s\t--label\tDev Servers\t--no-focus" "$(wsid)" "$(wt)" && hascall "pane\tsplit\t%s\t--direction\tright\t--cwd\t%s\t--no-focus" "$(devroot)" "$(wt)"'
-check "LY1 VM tab, then a split of its root pane" 'hascall "tab\tcreate\t--workspace\t%s\t--cwd\t%s\t--label\tVM\t--no-focus" "$(wsid)" "$(wt)" && hascall "pane\tsplit\t%s\t--direction\tright\t--cwd\t%s\t--no-focus" "$(vmroot)" "$(wt)"'
+check "LY1 no tab rename, no Dev Servers or VM tab" '[ "$(cnt "^tab\trename\t")" = 0 ] && ! grep -qP "Dev Servers|\tVM(\t|\$)" "$tmp/calls"'
 
-rfresh; STUB_WT_PATH=/home/u/proj-worker-t004 rrun bash "$script" start "${rsargs[@]}"
+rfresh; rrun bash "$script" start "${rsargs[@]}"
 check "LY2 exit 0" '[ $rc = 0 ]'
-check "LY2 layout calls on the machine, in order" '[ "$(grep -P "^--machine\tlaptop\t(worktree\tcreate\t|tab\t|pane\t|agent\tstart\t)" "$tmp/calls" | cut -f3-4)" = "$(printf "worktree\tcreate\ntab\trename\npane\tsplit\npane\trun\ntab\tcreate\npane\tsplit\ntab\tcreate\npane\tsplit\nagent\tstart")" ]'
-check "LY2 tab rename, Main, on the machine" 'rcall "tab\trename\t%s\tMain" "$(tabid)"'
+check "LY2 layout calls on the machine, in order" '[ "$(grep -P "^--machine\tlaptop\t(tab\tcreate\t|pane\tsplit\t|pane\trun\t|agent\tstart\t)" "$tmp/calls" | cut -f3-4)" = "$(printf "tab\tcreate\npane\tsplit\npane\trun\nagent\tstart")" ]'
+check "LY2 tab create in the main checkout workspace, on the machine" 'rcall "tab\tcreate\t--workspace\tstubMainWS\t--cwd\t%s\t--label\tworker-t004\t--no-focus" "~/proj-worker-t004"'
 check "LY2 split the root pane right, no focus, on the machine" 'rcall "pane\tsplit\t%s\t--direction\tright\t--cwd\t%s\t--no-focus" "$(pane)" "$(wt)"'
 check "LY2 lazygit in the new pane, on the machine" 'rcall "pane\trun\t%s\tlazygit" "$(lazypane)"'
-check "LY2 Dev Servers and VM tabs, each with a split of its root pane, on the machine" 'rcall "tab\tcreate\t--workspace\t%s\t--cwd\t%s\t--label\tDev Servers\t--no-focus" "$(wsid)" "$(wt)" && rcall "pane\tsplit\t%s\t--direction\tright\t--cwd\t%s\t--no-focus" "$(devroot)" "$(wt)" && rcall "tab\tcreate\t--workspace\t%s\t--cwd\t%s\t--label\tVM\t--no-focus" "$(wsid)" "$(wt)" && rcall "pane\tsplit\t%s\t--direction\tright\t--cwd\t%s\t--no-focus" "$(vmroot)" "$(wt)"'
+check "LY2 no tab rename, no Dev Servers or VM, on the machine" '[ "$(rcnt "tab\trename\t")" = 0 ] && ! grep -qP "Dev Servers|\tVM(\t|\$)" "$tmp/calls"'
 
 exit $fail
