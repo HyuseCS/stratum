@@ -200,7 +200,7 @@ copy for that project only. `scripts/st-lock.sh` runs tests marked `[lock]` one 
 ## Built in
 
 - **Advisor.** Codex (OpenAI's `codex` CLI), a model from another vendor, and `/advisor` if you set one, review four points in the Full lane: the plan before the Plan gate, a test still red after two tries, each story's small decisions, and the diff at the end of Build. At the plan point Codex only advises on a simpler or better approach and does not validate the plan (`st-inspect` does that). In mode `auto` the risk level picks Codex, `/advisor`, both or none at each point. The whole Fast lane uses `/advisor` if you set one. The Quick lane has no advisor.
-  The orchestrator runs `scripts/st-advisor.sh` in the foreground and waits for the answer. Codex runs in the read-only sandbox and only reviews: it never builds or fixes.
+  The orchestrator runs `scripts/st-advisor.sh` in the foreground and waits for the answer. Codex only reviews: it never builds or fixes.
   It answers `APPROVED`, `REVISE` (findings, checked against the source like any finding; one more run only when a CRITICAL or HIGH fix changed the plan, two rounds at most), or `BLOCKED` (the orchestrator stops and asks you).
   A failed, empty, malformed or late answer (540 seconds) is `BLOCKED`, never approval.
   Each run appends the point, a SHA256 of the input, the verdict and the findings to `specs/<feature>/advisor.md`. An approval of a plan that changed since then is stale.
@@ -211,9 +211,10 @@ copy for that project only. `scripts/st-lock.sh` runs tests marked `[lock]` one 
   A worktree with no file reads the main checkout's file. With no file in either, the point prints `no advisor: mode not set. Write .stratum/advisor.json with "mode": "auto", "codex", "both" or "off".` and the lane stops to ask you the mode, then writes it to the main checkout. `st-init` writes the file for new projects.
   With no `codex` on PATH you get one line, `no advisor: codex not found`, and the flow runs as before, with `/advisor` if you set one.
   Optional `model` and `effort` keys in the same file pick the Codex model and reasoning effort, for example `{"mode": "codex", "model": "gpt-6-astra", "effort": "high"}`. Without them Codex uses its own default.
-  Inside herdr, Codex runs as an agent in a `Codex` tab of your workspace, read-only and never asking, so you can watch it. The tab uses Stratum's own Codex home, `~/.local/state/stratum/codex-home`, which holds only a link to your Codex login and a `config.toml` that marks the project untrusted: your `~/.codex/config.toml`, `~/.codex/hooks.json` and a project's `.codex/config.toml` do not load there, and the model comes from `.stratum/advisor.json`.
-  The last line of each Codex point says where Codex ran: `codex: tab st-codex-<folder>` or `codex: headless (<reason>)`.
-  A new project folder or worktree gets its `untrusted` entry at its first Codex point. Inside herdr with no login link, the point stops with `BLOCKED: no Stratum Codex home: run st-advisor.sh codex-home`.
+  Inside herdr, Codex runs as the agent `st-codex-<workspace label>` in a `Codex` tab of your workspace, one per workspace, with your own Codex setup: your Codex home, config, login, history, skills, trust and approvals. You can watch each review there and use the tab yourself between points. Review prompts and the files Codex reads land in your own Codex history.
+  A point never types into the tab while your own turn runs, and never closes it. When `model` or `effort` in `.stratum/advisor.json` changed, the point prints a line: close the tab to apply the new values.
+  The last line of each Codex point says where Codex ran: `codex: tab st-codex-<workspace label>` or `codex: headless (<reason>)`. When that name is live in another workspace or folder (two workspaces with the same label, or a worktree in the same workspace), the point runs in the background and says so.
+  Stratum no longer uses `~/.local/state/stratum/codex-home`. You may delete that folder. Close any old `st-codex-<feature>` Codex tab yourself: points no longer use or close it.
   The background call runs with `--ignore-user-config`: neither `~/.codex/config.toml` nor a project `.codex/config.toml` is read, so no MCP server, hook or notify command from them runs during a review, and the model and effort come only from this file. Your Codex login works as before.
 - **Git guard.** One mode per command: `commit`, `worktree_remove`, `worktree_prune`,
   `branch_delete`, `reset_hard`, `clean` (`clean -f`), `discard` (`checkout .`, `restore .`), and
