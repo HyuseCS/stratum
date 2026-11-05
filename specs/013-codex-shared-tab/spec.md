@@ -67,7 +67,7 @@ When the tab opens, the orchestrator starts watching it. If Codex stops on a per
 - The tab is blocked on a prompt from the user's own turn when a point comes: the point treats the tab as in use and runs the review in the background.
 - The project folder is not trusted in the user's Codex: the trust screen at start is a prompt like any other, so it goes to the user (trusting a folder changes the user's Codex config).
 - Not inside herdr: the review runs in the background as today.
-- A linked worktree is a different folder: it gets its own tab.
+- A linked worktree in its own workspace gets its own tab. A linked worktree in the same workspace as its main checkout gets the same tab name, so while that tab is open its points run in the background with the clash line (D10).
 - The old Stratum Codex home folder stays on disk. The user is told they may delete it.
 - The user changes a file in the checkout during a review: the check cannot tell who changed it, so the point fails and the user decides.
 
@@ -77,7 +77,7 @@ When the tab opens, the orchestrator starts watching it. If Codex stops on a per
 
 - **FR-001**: The advisor tab MUST start Codex with the user's own Codex home and the user's normal sandbox and approval settings.
 - **FR-002**: The Stratum Codex home, the `codex-home` setup command, its BLOCKED check and its `untrusted` project entry MUST be removed, with st-init, st-build, the README and the tests changed to match.
-- **FR-003**: There MUST be at most one advisor tab per workspace and project folder, named `st-codex`, shared by every feature.
+- **FR-003**: There MUST be at most one advisor tab per herdr workspace, named `st-codex-<workspace label>` and shared by every feature. The label is lowercased, every character outside `a-z0-9_-` becomes `-`, and it is cut so the name has at most 32 characters; a label with no letter or digit uses the lowercased workspace id. When that name is live in another workspace or folder, the point MUST run the review in the background and say so (D10).
 - **FR-004**: The advisor scripts MUST never close the advisor tab.
 - **FR-005**: When the model or effort differs from the values the tab started with, the point MUST keep the tab and print one line telling the user to close the tab to apply the new values.
 - **FR-006**: Before it sends a review prompt, the script MUST check the tab's state; when the tab is working or blocked, it MUST NOT type into it and MUST run the review in the background, reporting `codex: headless (Codex tab in use)`.
@@ -90,7 +90,7 @@ When the tab opens, the orchestrator starts watching it. If Codex stops on a per
 
 ### Key Entities
 
-- **Advisor tab**: the one `st-codex` Codex agent in a workspace and folder. Attributes: the model and effort it started with.
+- **Advisor tab**: the one `st-codex-<workspace label>` Codex agent in a workspace and folder. Attributes: the model and effort it started with.
 - **Review snapshot**: the list of changed and untracked files, with hashes, taken before and after one review turn.
 
 ## Success Criteria *(mandatory)*
