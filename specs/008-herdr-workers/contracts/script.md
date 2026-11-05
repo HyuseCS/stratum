@@ -166,6 +166,11 @@ F2 H pane list --workspace WS            -> C: .cwd of the first pane with tab_i
 F3 H worktree list --cwd C               -> WT: .path of the entry with branch == N
 ```
 
+`ponytail:` F2 takes the cwd of the first pane in the worker tab only, so a `cd` out of the
+worktree in a stopped worker's pane breaks F3; upgrade path: fall back to
+`<repo parent>/<repo name>-N` when F3 finds no entry with `branch == N`. The script carries the
+matching `# ponytail:` marker at F2.
+
 No match in F1, F2 or F3: `No worker <N> on <m or local>.`, exit 1. More than one tab in F1:
 `More than one tab is labelled <N>.`, exit 1.
 
@@ -305,9 +310,10 @@ F1, F2, F3
 `tab close` runs once, only on the TAB from F1. `workspace close` runs at most once, only on the
 WS from F1, only on a saved machine, only when that workspace is labelled `st-workers` and holds no
 tab labelled `worker-*` after the `tab close` (D35, FR-018), never with `--group`. A
-`workspace close` that herdr refuses is the normal stop with herdr's line. So a local `close`
-never closes a workspace, and a workspace the user opened (the main checkout one included) is never
-closed.
+`workspace close` that herdr refuses is the normal stop with herdr's line. The `st-workers` label is
+reserved for the script: any workspace with that label on a saved machine counts as the script's,
+also one the user made by hand (D36). So a local `close` never closes a workspace, and a workspace
+with any other label (the main checkout one included) is never closed.
 
 `list`:
 
@@ -375,7 +381,8 @@ Rules the test enforces, for every subcommand:
   model is set (FR-013, FR-017).
 - `tab create` only in `start`, exactly once. `tab close` only in `close`, on the `TAB` from F1, at
   most once. `workspace close` only in `close` on a saved machine, on the `WS` from F1, at most
-  once, only when WS is labelled `st-workers` and no `worker-*` tab is left in it.
+  once, only when WS is labelled `st-workers` (reserved for the script, D36) and no `worker-*` tab
+  is left in it. Never on a workspace with any other label.
   `workspace create` only in `start` on a saved machine with no open main checkout and no open
   `st-workers` workspace, at most once, always with `--label st-workers`.
 - git: `worktree add` only in `start`; `worktree remove` and `branch -D` only in `start`, only after a

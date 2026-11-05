@@ -4,9 +4,9 @@
 
 **Created**: 2026-10-23
 
-**Status**: Built. Live runs passed for one worker, questions, a team and headless; the remote run (US3) was not run, the laptop times out (tasks.md T011).
+**Status**: Built. Live runs passed for one worker, questions, a team, headless, and the remote run (US3) on 2026-10-24 (quickstart section 6, tasks.md T011).
 
-**Amended**: 2026-11-05, issue #71 (D31 to D34): a pane worker is one tab in the orchestrator's workspace, not a workspace of its own (FR-001, FR-010, FR-018).
+**Amended**: 2026-11-05, issue #71 (D31 to D35): a pane worker is one tab in the orchestrator's workspace, not a workspace of its own (US1, US3, FR-001, FR-010, FR-015, FR-018, SC-005).
 
 **Input**: User description: "GitHub issues #11 and #17 on HyuseCS/stratum as one feature: the Stratum orchestrator starts worker sessions (headless `claude -p` for quick local tasks, and a `claude` in its own herdr pane and git worktree for visible or remote tasks, PC or laptop), gives each a brief and a `/goal`, relays the worker's questions to the user, collects the result, reviews and merges, and closes the pane. Workers on one project act as a team." The issue bodies are the source. Decisions D11 to D21 are in `decisions.md` (codes continue from the #32 grill). Spike #9 (`specs/003-session-mods/research.md`) proved the pieces: a session starts with no human step, gets a message by name, and stops with nothing left. #32 (`specs/007-herdr-workspace`) gives the script that opens a herdr workspace.
 
@@ -215,7 +215,7 @@ the change is in the working tree, nothing is committed by the worker, and no pr
 - **FR-009**: The orchestrator MUST review each worker branch with the Stratum review and MUST be
   the only one who merges. It merges on green, in task order; a conflict goes to the user (D16).
 - **FR-010**: After the merge the orchestrator MUST close the worker's tab (and, on a saved
-  machine, the `st-workers` workspace `start` made once no worker tab is left in it, D35), keep
+  machine, an `st-workers` workspace once no worker tab is left in it, D35, D36), keep
   the worktree folder and the branch, and name the folder as ready to remove. A failed or stopped
   worker's pane MUST stay open (D18).
 - **FR-011**: A headless worker MUST run with an allow list of tools, no question tool, a turn
@@ -244,9 +244,12 @@ the change is in the working tree, nothing is committed by the worker, and no pr
   lists `st-worker` (D27, D28).
 - **FR-018**: The script MAY read `HERDR_WORKSPACE_ID` only in `start`, to open the tab there. It
   MUST close only the one tab labelled with the worker's name, at most once, and MUST close a
-  workspace (never `--group`) only when its label is `st-workers` and no tab labelled `worker-*`
-  is left in it. It MUST NOT close any other tab or workspace, the orchestrator's included. `find`,
-  `list` and `close` find a worker by its tab label (D34, D35, #71).
+  workspace (never `--group`) only on a saved machine, only when its label is `st-workers` and no
+  tab labelled `worker-*` is left in it. The `st-workers` label is reserved for the script: any
+  workspace with it counts as the script's, also one the user made by hand (D36). It MUST NOT close
+  any other tab or any workspace with another label, the orchestrator's included. Every
+  subcommand that finds a worker (through `find_worker`), `list` and `close` find a worker by its
+  tab label (D34, D35, D36, #71).
 
 ### Key Entities
 
@@ -281,7 +284,8 @@ the change is in the working tree, nothing is committed by the worker, and no pr
 ## Assumptions
 
 - herdr 0.9.4 on both machines, with `tab create --workspace --cwd --label`, `tab list`,
-  `tab close`, `agent start --kind claude`,
+  `tab close`, `pane list`, `pane split`, `pane run`, `workspace create --label`,
+  `workspace close`, `worktree list --cwd`, `agent start --kind claude`,
   `agent prompt --wait`, `agent wait --until`, `agent read` and `--machine` as `herdr --skill`
   describes. The remote server already runs; the skill never starts or repairs it.
 - Claude Code 2.1.302 or later on both machines, with `/goal` (https://code.claude.com/docs/en/goal.md)

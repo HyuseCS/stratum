@@ -564,8 +564,10 @@ Checked on 2026-11-05 with herdr 0.9.4, read-only calls only: the group usage li
   (never `--group`). A WS that herdr already closed gets no call, so both answers to #4379 work.
 - Finding (plan F1, settled by D35): a new workspace always has a first tab, so a "last tab" rule
   (D34) never closes a workspace `start` made. D35 replaces it: `start` labels the workspace it
-  makes `st-workers` and reuses an open one; `close` closes it once no `worker-*` tab is left. A
-  workspace the user opened, and the orchestrator's own, are never closed.
+  makes `st-workers` and reuses an open one; `close` closes it once no `worker-*` tab is left.
+  D36: the `st-workers` label is reserved for the script, so any workspace with that label on a
+  saved machine counts as the script's, also one the user made by hand. A workspace with any other
+  label, and the orchestrator's own, is never closed.
 - Superseded: R1 `worktree create`, R3 (herdr makes the worktree), R10 (find by workspace label) and
   R11 (`workspace close` of a worker workspace) for every worker started after #71. Workers started
   before #71 are not handled (spec Assumptions).
@@ -574,6 +576,7 @@ Checked on 2026-11-05 with herdr 0.9.4, read-only calls only: the group usage li
   The remote brief's `- Result file:` line now reads `~/<repo name>-<N>/result.md`, not an absolute
   path.
 - Live (T023): not run yet.
+- Live (T024): not run yet (laptop, quickstart section 6b, D37).
 
 ## Open decisions
 
