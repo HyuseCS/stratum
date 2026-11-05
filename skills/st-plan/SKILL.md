@@ -27,8 +27,8 @@ Plugin root (`<plugin root>`) is two levels up from this skill's base directory.
    feature dir, that every FR has a test task before its build task, that every task names exact file paths,
    that every task names its exact test command (`Test:`), that every `[P]` task names the files it owns (`Owns:`) and no two `[P]` tasks in one phase own the same file, and that every `[screen]` task has its mode.
    Send gaps back to the same subagent.
-4. **Advisor.** Run `bash <plugin root>/scripts/st-advisor.sh plan <feature dir>` from the project root in the foreground, with a Bash timeout of 600000 ms, and wait for it.
-   Codex reads spec, plan and tasks in the read-only sandbox and only advises: a simpler or better approach, tasks to cut or merge. It does not validate; st-inspect does.
+4. **Advisor.** Run `bash <plugin root>/scripts/st-advisor.sh plan <feature dir>` as "Advisor" in `<plugin root>/skills/st-build/SKILL.md` says: the watch first, then the point in the background.
+   Codex reads spec, plan and tasks and only advises: a simpler or better approach, tasks to cut or merge. It does not validate; st-inspect does.
    Handle its answer as in "Advisor" in `<plugin root>/skills/st-build/SKILL.md`; big ones go to the user before the gate.
    Fixes go to the same `st-plan` subagent and cost a round.
 5. Have `st-git` commit the plan files with exact paths, and `<feature dir>/advisor.md` if it changed.

@@ -200,7 +200,7 @@ copy for that project only. `scripts/st-lock.sh` runs tests marked `[lock]` one 
 ## Built in
 
 - **Advisor.** Codex (OpenAI's `codex` CLI), a model from another vendor, and `/advisor` if you set one, review four points in the Full lane: the plan before the Plan gate, a test still red after two tries, each story's small decisions, and the diff at the end of Build. At the plan point Codex only advises on a simpler or better approach and does not validate the plan (`st-inspect` does that). In mode `auto` the risk level picks Codex, `/advisor`, both or none at each point. The whole Fast lane uses `/advisor` if you set one. The Quick lane has no advisor.
-  The orchestrator runs `scripts/st-advisor.sh` in the foreground and waits for the answer. Codex only reviews: it never builds or fixes.
+  The orchestrator starts `scripts/st-advisor.sh watch`, runs `scripts/st-advisor.sh` in the background, and waits for the answer. Codex only reviews: it never builds or fixes.
   It answers `APPROVED`, `REVISE` (findings, checked against the source like any finding; one more run only when a CRITICAL or HIGH fix changed the plan, two rounds at most), or `BLOCKED` (the orchestrator stops and asks you).
   A failed, empty, malformed or late answer (540 seconds) is `BLOCKED`, never approval.
   Each run appends the point, a SHA256 of the input, the verdict and the findings to `specs/<feature>/advisor.md`. An approval of a plan that changed since then is stale.
@@ -213,6 +213,7 @@ copy for that project only. `scripts/st-lock.sh` runs tests marked `[lock]` one 
   Optional `model` and `effort` keys in the same file pick the Codex model and reasoning effort, for example `{"mode": "codex", "model": "gpt-6-astra", "effort": "high"}`. Without them Codex uses its own default.
   Inside herdr, Codex runs as the agent `st-codex-<workspace label>` in a `Codex` tab of your workspace, one per workspace, with your own Codex setup: your Codex home, config, login, history, skills, trust and approvals. You can watch each review there and use the tab yourself between points. Review prompts and the files Codex reads land in your own Codex history.
   A point never types into the tab while your own turn runs, and never closes it. When `model` or `effort` in `.stratum/advisor.json` changed, the point prints a line: close the tab to apply the new values.
+  A review in the tab has no time limit. It ends early only when the tab ends (you close it or Codex exits): the point is then `BLOCKED`, and it does not run the review in the background. Press Esc in the tab to stop a hung review.
   Each review in the tab compares HEAD and the changed and untracked files before and after the turn. Any difference ends the point `BLOCKED` with the files named. Nothing is reverted.
   The last line of each Codex point says where Codex ran: `codex: tab st-codex-<workspace label>` or `codex: headless (<reason>)`. When that name is live in another workspace or folder (two workspaces with the same label, or a worktree in the same workspace), the point runs in the background and says so.
   Stratum no longer uses `~/.local/state/stratum/codex-home`. You may delete that folder. Close any old `st-codex-<feature>` Codex tab yourself: points no longer use or close it.
