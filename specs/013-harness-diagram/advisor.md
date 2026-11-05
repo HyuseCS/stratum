@@ -10,3 +10,6 @@ summary: US1+US2 small decisions: 14 of 15 ok; restore the st-close APP-constitu
 
 ## diff | 2026-11-05T16:58:46Z | /advisor
 summary: End-of-Build diff 3c5a3f7..c6e9743 docs only, approve; resolve gap G2 vs model, pre-check snap allowed by nomcp/rebuild and the snap folder, fix tasks.md dependency line at Close
+
+## plan | 2026-11-05T23:28:47Z | sha256 3dec05229e4ea303dc8d64df6054d46812910ee00db150eadc7dddf5d2af9293 | APPROVED
+summary: The earlier topic-view consolidation is incorporated. The remaining lane splits have clear ownership and a shared integration step; no further task cuts or merges are warranted within this plan review.
