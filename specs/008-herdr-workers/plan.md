@@ -140,8 +140,8 @@ no `worker-*` tab left. The older two are settled in decisions.md:
   read, stored or printed. `git fetch <target>:<path> N:N` writes only `refs/heads/N` here and
   refuses a non-fast-forward.
 - **S3. herdr session control (start, close; #71, D34, D35, FR-018).** Only the calls in
-  contracts/script.md section 4, plus `machine list --json`. The script reads one `HERDR_*` value,
-  `HERDR_WORKSPACE_ID`, only in a local `start`, only to open the worker tab there; it never reads
+  contracts/script.md section 4, plus `machine list --json`. The script reads one `HERDR_*_ID` value,
+  `HERDR_WORKSPACE_ID`, only in a local `start`, for the row 7 check and to open the worker tab there; it never reads
   `HERDR_TAB_ID` or `HERDR_PANE_ID` and never passes `--current`. On a saved machine it never uses
   this machine's ids (herdr ids are valid on one server only). `tab close` runs only on the one tab
   labelled with the script's own `worker-` name, at most once. `workspace close` runs only on a
@@ -187,7 +187,7 @@ no `worker-*` tab left. The older two are settled in decisions.md:
 - **B1. Remote live run (US3, SC-002). Closed 2026-10-24.** The laptop timed out on port 22 on
   2026-10-23 (007 plan B1). The live remote run of quickstart section 6 passed on 2026-10-24 (laptop
   repo at 3275e07: `start`, `wait`, `result` with `fetched`, `close`, all checks empty), and
-  `herdr --machine laptop workspace list` exits 0 on 2026-11-05. Open for #71: the remote path with
+  `herdr --machine laptop workspace list` exited 0 on 2026-11-05 and timed out on 2026-11-06 (research R17). Open for #71: the remote path with
   the `st-workers` workspace (R15, R15b, C14, C17) is stub-proven until T024 runs it live on the
   laptop (D37, quickstart section 6b); T023 runs on this PC.
 

@@ -12,7 +12,7 @@ bash tests/test_inspect.sh
 git status --porcelain
 ```
 
-Expected: every line `ok` (308 at close), exit 0, and `git status --porcelain` shows nothing new from the runs
+Expected: every line `ok` (577 `ok` lines from `tests/test_st_worker.sh` at the #71 close), exit 0, and `git status --porcelain` shows nothing new from the runs
 (lessons L8).
 
 ## 2. Live local run (US1, SC-001, SC-005; measures research R1, R4, R5, R6, R11)

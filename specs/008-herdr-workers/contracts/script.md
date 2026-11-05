@@ -184,11 +184,11 @@ No match in F1, F2 or F3: `No worker <N> on <m or local>.`, exit 1. More than on
                                          H workspace list -> .workspace_id of the first workspace labelled st-workers; none ->
                                          H workspace create --cwd <repo> --label st-workers --no-focus -> .result.workspace.workspace_id
                                          (D35)
-2 git -C <repo> worktree add -b N <path> <sha>              (saved machine: the same line in one ssh call)
+2 [ ! -e <path> ] || { echo "<path> already exists" >&2; exit 1; }; git -C <repo> worktree add -q -b N <path> <sha> || exit 1              (saved machine: the same string in one ssh call)
                                          -> BR = N, WT = <path>
 3 H tab create --workspace WS --cwd <path> --label N --no-focus
                                          -> TAB (.result.tab.tab_id), PANE (.result.root_pane.pane_id)
-  fails -> git -C <repo> worktree remove <path> && git -C <repo> branch -D N   (saved machine: one ssh call)
+  fails -> git -C <repo> worktree remove <path> && git -C <repo> branch -D N >/dev/null   (saved machine: one ssh call)
            then the stop below with the herdr line (D33)
 4 write brief.md and .stratum/git-guard.json (section 3), the autonomous files, then worker-setup.sh
 5 H pane split PANE --direction right --cwd <path> --no-focus -> p (.result.pane.pane_id); H pane run p lazygit
@@ -206,7 +206,7 @@ No match in F1, F2 or F3: `No worker <N> on <m or local>.`, exit 1. More than on
   it removes only the folder and the branch step 2 made in the same run, before any agent ran.
   If the undo fails too, the stop line is `stopped: <herdr line>; left <path> and branch N` and the
   `worker` line keeps BR and WT. After a good undo every field of the `worker` line but N and m is `-`.
-- A branch or folder `N` left by an earlier worker makes step 2 fail: the stop below with git's
+- A folder at `<path>` left by an earlier run stops step 2 before git runs, with `stopped: <path> already exists`. A branch `N` left by an earlier worker makes git fail: the stop below with git's
   first stderr line. Nothing is undone, nothing was made.
 - The workspace a saved-machine `start` makes in step 1 is labelled `st-workers` and keeps its own
   first tab; an open `st-workers` workspace is reused before a new one is made, so the workers of
@@ -219,7 +219,7 @@ No match in F1, F2 or F3: `No worker <N> on <m or local>.`, exit 1. More than on
   `stopped: ssh to <target> failed: <first stderr line>`; any other failure prints
   `stopped: cannot write brief.md and .stratum/git-guard.json in <WT> on <m>: <first stderr line>`.
   Both then print the `worker` line, exit 1 (R1c). The step 2 ssh call that fails with exit 255
-  prints the same `ssh to` line.
+  prints the same `ssh to` line. The step 2 string ends with `|| exit 1`, so git's own failure there exits 1 and prints its first stderr line instead (R16b).
 - Step 6 answers `agent_pane_busy` (the new pane's shell is not at its prompt yet, research R1):
   `sleep 1` and run step 6 again, up to 10 tries in total. `ponytail:` fixed 10 s bound, the same
   shape as D20 in specs/007-herdr-workspace. Any other error, or still busy after the 10th try, is
@@ -232,6 +232,7 @@ No match in F1, F2 or F3: `No worker <N> on <m or local>.`, exit 1. More than on
 - Any other failure at or after step 1: print `stopped: <first stderr line>`, then the `worker`
   line with `-` for every id not made yet, exit 1. Nothing is closed, nothing else is retried, and
   nothing but step 3's undo is removed.
+- Known gap (not built, not tested): when `tab create` exits 0 but its answer has no `.result.tab.tab_id` or no `.result.root_pane.pane_id`, `get` stops with `stopped: no <jq path> in the herdr answer`, and step 3's undo does not run. The folder and the branch stay, the `worker` line shows them, and a tab herdr made may stay too. Upgrade: run the undo on this stop too, with a stub case where `tab create` exits 0 with `{"result":{}}`.
 
 Model `M` (D27, D28, `start` and `headless`): `--model <name>` if given. Else
 `jq -r '."st-worker".model // empty'` of `<top>/.stratum/models.json`, where `<top>` is the calling
@@ -369,7 +370,7 @@ Rules the test enforces, for every subcommand:
 
 - Never: zero arguments, `pane close`, herdr `worktree remove`, `--group`, `machine reconnect|add|remove|enable|disable`,
   `server`, `--current`, `--session`, `--remote`, `--trust-repository`, the value of `HERDR_TAB_ID`
-  or `HERDR_PANE_ID`. The script reads `HERDR_WORKSPACE_ID` only in a local `start`, for its one
+  or `HERDR_PANE_ID`. The script reads `HERDR_WORKSPACE_ID` only in a local `start`: in the row 7 check and as `WS`, for
   `tab create`. The same workspace id may come back from `tab list` (F1), so it may appear only as
   the value after `--workspace` on a `tab create` or `pane list` line, never on a `tab close` or
   `workspace close` line, and never on a saved machine (FR-018).
@@ -429,19 +430,20 @@ stub log, never from built ids.
 
 | Case | What it asserts |
 |------|-----------------|
-| S1 | `start` here: one git `-C <repo> worktree add -b worker-t004 <parent>/<repo>-worker-t004 <HEAD sha>` in the git log; no herdr `worktree create`; then exactly one `tab create --workspace w1P --cwd <parent>/<repo>-worker-t004 --label worker-t004 --no-focus` (`w1P` is the test's `HERDR_WORKSPACE_ID`), one `pane split <root pane> --direction right --cwd <WT> --no-focus`, one `pane run <new pane> lazygit`, no `tab rename`, no `Dev Servers` or `VM` label; `agent start --pane` is the root pane of the `tab create` answer; brief.md in that path with the task text, test command, lane, the line `Run only task T004; skip every other task, ticked or not.`, result path, every roster row and the four team rules; the line `- Plugin root: <dir>` where `<dir>` is the parent of the folder that holds the script under test; with no guard file in the repo, `<WT>/.stratum/git-guard.json` is `{"commit":"auto","branch":"worker-t004"}` and the repo still has no guard file; no advisor block; one `agent start` with `-- --permission-mode auto -n worker-t004`; exactly one `agent prompt` with text `P` and `--wait --until working --until blocked`; `worker` line field 4 is the tab id and field 5 the root pane id of the `tab create` answer; exit 0 |
+| S1 | `start` here: one git `-C <repo> worktree add -q -b worker-t004 <parent>/<repo>-worker-t004 <HEAD sha>` in the git log; no herdr `worktree create`; then exactly one `tab create --workspace w1P --cwd <parent>/<repo>-worker-t004 --label worker-t004 --no-focus` (`w1P` is the test's `HERDR_WORKSPACE_ID`), one `pane split <root pane> --direction right --cwd <WT> --no-focus`, one `pane run <new pane> lazygit`, no `tab rename`, no `Dev Servers` or `VM` label; `agent start --pane` is the root pane of the `tab create` answer; brief.md in that path with the task text, test command, lane, the line `Run only task T004; skip every other task, ticked or not.`, result path, every roster row and the four team rules; the line `- Plugin root: <dir>` where `<dir>` is the parent of the folder that holds the script under test; with no guard file in the repo, `<WT>/.stratum/git-guard.json` is `{"commit":"auto","branch":"worker-t004"}` and the repo still has no guard file; no advisor block; one `agent start` with `-- --permission-mode auto -n worker-t004`; exactly one `agent prompt` with text `P` and `--wait --until working --until blocked`; `worker` line field 4 is the tab id and field 5 the root pane id of the `tab create` answer; exit 0 |
 | S1b | `start` here with the repo file `.stratum/git-guard.json` = `{"force_push":"deny","branch":"main"}`: `<WT>/.stratum/git-guard.json` is the one line `{"force_push":"deny","commit":"auto","branch":"worker-t004"}`; the repo file is unchanged |
 | S2 | same with a dummy `st-advisor.sh` next to a copy of the script: the advisor block is in the brief |
 | S3 | `agent start` fails with `agent_not_ready`: `state blocked`, `pane text:`, the stub pane text, no `agent prompt`, exit 4; then `goal` sends exactly one `agent prompt`, exit 0 |
 | S4 | git `worktree add` fails (the wrapper's `STUB_GIT_FAIL`): `stopped: ` with the wrapper's message, `worker` line with `-` in every id field and in the branch and path fields, no `tab create`, no `worktree remove`, no `branch -D`, no `agent start`, exit 1 |
+| S4b | `<path>` already exists before `start`: one line `stopped: <path> already exists`, the `worker` line with `-` in fields 4 to 7, no `worktree add` in the git log, no `tab create`, exit 1 |
 | S5 | `agent prompt` fails with `agent_prompt_stalled`: `stopped:` line, no second prompt, nothing closed, exit 1 |
 | S6 | `start` when `tab list` already has a tab labelled `worker-t004` in another workspace: one line `A worker worker-t004 already exists.`, only `tab list` calls, no git `worktree add`, exit 1 (plan G10, lessons L11) |
 | S7 | `agent prompt` fails with `agent_blocked`: `worker` line, `state blocked`, `pane text:`, the stub pane text, no second prompt, nothing closed, exit 4; then `goal` sends exactly one `agent prompt` |
 | S8 | `start` with `agent get` answering `idle` after the prompt: the `state` line says `working`, no `idle` word, exit 0 |
 | S9 | Removed by #71: the script names the path itself, so herdr cannot put it elsewhere |
 | S10 | `start` run from a linked worktree of the temp repo: git `worktree add` has `-C <main checkout>` and the path `<main checkout parent>/<main checkout name>-worker-t004`, the commit is HEAD of the linked worktree, and the guard file is read from the linked worktree's `.stratum/git-guard.json` |
-| S13 | `tab create` fails (`STUB_FAIL="tab create"`): the git log has, in order, `worktree add`, `-C <repo> worktree remove <WT>`, `-C <repo> branch -D worker-t004`; the folder is gone; one `stopped: ` line with the stub message; the `worker` line has `-` in fields 4 to 7; no brief, no `pane split`, no `agent start`, exit 1. A second `start` with no `STUB_FAIL` then exits 0 (D33) |
-| S13b | `tab create` fails and the wrapper fails `worktree remove`: one line `stopped: <stub message>; left <WT> and branch worker-t004`, the `worker` line keeps `worker-t004` and `<WT>` in fields 6 and 7, exit 1 |
+| S13 | `tab create` fails (`STUB_FAIL="tab create"`): the git log has, in order, `worktree add`, `-C <repo> worktree remove <WT>`, `-C <repo> branch -D worker-t004`; the folder is gone; one `stopped: ` line with the first stderr line of the failed `tab create` (herdr's JSON error line); the `worker` line has `-` in fields 4 to 7; no brief, no `pane split`, no `agent start`, exit 1. A second `start` with no `STUB_FAIL` then exits 0 (D33) |
+| S13b | `tab create` fails and the wrapper fails `worktree remove`: one line `stopped: <the JSON error line of the failed tab create>; left <WT> and branch worker-t004`, the `worker` line keeps `worker-t004` and `<WT>` in fields 6 and 7, exit 1 |
 | S11 | the stub's `agent start` answers `agent_pane_busy` on the first N calls (N below 10), then succeeds; a stub `sleep` exits 0 at once: the log shows N+1 `agent start` calls with the same argv and N `sleep 1`, then one `agent prompt`, exit 0 |
 | S11b | `agent start` answers `agent_pane_busy` on every call: exactly 10 `agent start` calls, then `stopped: ` with the stub's `agent_pane_busy` line, the `worker` line, no `agent prompt`, nothing closed, exit 1 |
 | P1-P7 | each check of section 2 rows 1 to 7: one line with the phrase, no herdr call, exit 1 |
@@ -465,6 +467,7 @@ stub log, never from built ids.
 | C3 | `close`, stub keeps the agent after close: `close left agent worker-t004`, exit 1 |
 | C4 | `close`, no tab with the label: `No worker worker-t004 on local.`, no `tab close`, no `workspace close`, exit 1 |
 | C5 | `close`, `agent get` fails (agent gone): one `tab close` on the worker's tab, zero `workspace close`, `closed`, `folder <WT> ready to remove`, exit 0 |
+| C11 | `close` with no GitHub remote: no `gh` call; one `tab close` on the worker's tab, zero `workspace close`, `closed` and `folder <WT> ready to remove`, exit 0 |
 | C8 | as before, with `tab list` in place of `workspace list` for the after-close check: `close left tab worker-t004: cannot read the list` |
 | C13 | `close` with tabs `worker-t004` and `worker-t005` and the orchestrator's tab in `w1P`: exactly one `tab close`, on worker-t004's tab id; the other two tabs are still in `tab list` |
 | C14 | `close --machine laptop`, the worker tab is in a workspace labelled `st-workers` whose only other tab is its first tab (not `worker-*`): one `tab close`, then one `workspace close <WS>` with no `--group`, `closed`, exit 0 (D35) |
@@ -473,12 +476,14 @@ stub log, never from built ids.
 | C18 | local `close`, the orchestrator's workspace `w1P` labelled `st-workers` in the stub and no other worker tab: one `tab close`, zero `workspace close` (a local `close` never closes a workspace) |
 | C16 | two tabs labelled `worker-t004`: `More than one tab is labelled worker-t004.`, no `tab close`, exit 1 |
 | L1 | `list` with two worker tabs and one other tab: two `found` lines, field 4 each worker's tab id, the other label absent, states from the stub, paths from `worktree list --cwd` |
-| R1 | `start --machine laptop --repo '~/proj'`, the stub's `worktree list --cwd ~/proj` has a main entry open in `stubMainWS` with one other tab: every call `--machine laptop` but `machine list --json`; `w1P` in no call; no `workspace create`; first ssh line `git -C ~/proj worktree add -b worker-t004 ~/proj-worker-t004 <HEAD sha>`; then `tab create --workspace stubMainWS --cwd ~/proj-worker-t004 --label worker-t004 --no-focus`; then a second ssh line `-o BatchMode=yes -- u@stubhost` with `cat > ~/proj-worker-t004/brief.md` and the `git-guard.json` write, no `\~`; the brief on its stdin holds the roster and rules, and has no `- Plugin root:` line and no `## Advisor` line |
+| L2 | `list` with an idle worker tab: state `unsent` when its prompt is still in the box, `blocked` when the pane shows an open question; field 4 the tab id, exit 0 |
+| R1 | `start --machine laptop --repo '~/proj'`, the stub's `worktree list --cwd ~/proj` has a main entry open in `stubMainWS` with one other tab: every call `--machine laptop` but `machine list --json`; `w1P` in no call; no `workspace create`; first ssh line: the step 2 string of section 4 for `~/proj`, ending `git -C ~/proj worktree add -q -b worker-t004 ~/proj-worker-t004 <HEAD sha> || exit 1`; then `tab create --workspace stubMainWS --cwd ~/proj-worker-t004 --label worker-t004 --no-focus`; then a second ssh line `-o BatchMode=yes -- u@stubhost` with `cat > ~/proj-worker-t004/brief.md` and the `git-guard.json` write, no `\~`; the brief on its stdin holds the roster and rules, and has no `- Plugin root:` line and no `## Advisor` line |
 | R1d | as R1, run from a copy of the script with a dummy `st-advisor.sh` next to it: the brief on ssh stdin still has no `- Plugin root:` line and no `## Advisor` line |
 | R1b | Folded into R1 by #71: the path is always the one `--repo` gives |
 | R15 | as R1, but the main entry has no `open_workspace_id` and no workspace is labelled `st-workers`: one `workspace create --cwd ~/proj --label st-workers --no-focus`, then `tab create --workspace <the WS it answered>` (D32, D35) |
 | R15b | as R15, but `workspace list` has a workspace labelled `st-workers`: no `workspace create`, `tab create --workspace <that WS>` (D35 reuse) |
-| R16 | as R1, `tab create` fails: one more ssh line `git -C ~/proj worktree remove ~/proj-worker-t004 && git -C ~/proj branch -D worker-t004`, no brief ssh line, `stopped: ` with the stub message, exit 1 (D33) |
+| R16 | as R1, `tab create` fails: one more ssh line `git -C ~/proj worktree remove ~/proj-worker-t004 && git -C ~/proj branch -D worker-t004 >/dev/null`, no brief ssh line, `stopped: ` with the stub message, exit 1 (D33) |
+| R16b | `start --machine laptop`, git `worktree add` exits 255 on the remote: `stopped: fatal: ...` with git's first stderr line and no `ssh to` text, the `worker` line with `-` in fields 4 to 7, no `tab create`, exit 1 (the `|| exit 1` of step 2) |
 | R1c | `start --machine laptop`, ssh exits 255: one `stopped: ssh to u@stubhost failed` line, one `worker` line, exit 1 |
 | R14 | `start --machine laptop --repo <tmp>/rrepo` with no ssh exec: ssh holds `cat > <tmp>/rrepo-worker-t004/brief.md`, and `<tmp>/rrepo-worker-t004` does not exist on this machine after `start` |
 | R2 | `result --machine laptop`: ssh `cat --` of the quoted result path, then `git fetch u@stubhost:<WT> worker-t004:worker-t004` in the git log with `GIT_SSH_COMMAND=ssh -o BatchMode=yes` in its environment (the wrapper logs it); the test makes branch `worker-t004` in the temp repo first, and the `fetched` line has its sha |

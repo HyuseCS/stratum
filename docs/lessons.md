@@ -344,3 +344,18 @@
 
 - What happened: Plan validation F1 found that lock 2 denied any Bash text naming `st-worker`, so a worker could not `git add`, `cat` or `grep` Stratum's own `st-worker.sh`. Decision D30 narrowed the rule to a call with a risky subcommand, and `tests/test_approve_hook.py` asserts that `ls scripts/st-worker.sh` gives no output.
 - Rule: A deny rule for a script matches a call with a risky subcommand, and a test shows that reading the script is still allowed.
+
+### L50. A remote git failure read as a dead machine
+
+- What happened: `start --machine` ran `git worktree add` over ssh. Git exits 255 when the branch already exists, and `rsh` read that as ssh's own 255, so the stop line said "ssh to <target> failed". Commit `5c825e0` ends the remote string with `|| exit 1`.
+- Rule: A remote command ends each of its own failures with `|| exit 1`, and a stub case where git exits 255 over ssh prints no `ssh to` line (test R16b).
+
+### L51. Line numbers in task text go stale
+
+- What happened: #71 task text cited line numbers in the test file and the script. The edits of earlier tasks moved those lines, and plan review findings cited lines that had moved.
+- Rule: The tasks a phase adds name a function, a case ID or a quoted string, never a line number, so `grep -nE 'lines? [0-9]+'` on them prints nothing.
+
+### L52. A probe ran the real herdr and left two workspaces
+
+- What happened: during T019 a probe ran with the real `herdr` first on PATH, not the stub, and made two local `st-workers` workspaces. The agent closed both and checked the local lists; the laptop was not checked.
+- Rule: A task that may call the real herdr compares `herdr workspace list` before and after its calls, and fails when a workspace it did not ask for is left.

@@ -10,3 +10,6 @@ summary: The revised plan keeps implementation focused, reuses existing helpers 
 
 ## decisions | 2026-11-05T17:25:14Z | /advisor
 summary: advisor: list acceptable; verify the real-herdr incident left nothing (local clean, laptop unreachable); hand T023/T024 steps to user; drift for st-close: S13b raw line, T019 w1P wording, F7 gap
+
+## diff | 2026-11-05T17:34:55Z | /advisor
+summary: advisor: no hidden regression in 1b1666b..5c825e0; stdout-only-TAB check left to the T023 live run

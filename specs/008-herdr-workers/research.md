@@ -18,7 +18,7 @@ branch `18-codex-advisor`.
 - Decision: the script uses only the calls in contracts/script.md section 4 and reads ids and
   states from the JSON paths below.
 - Evidence: `herdr api schema --json` (the bundled schema) and the live calls above.
-  - `worktree create` answers `type: worktree_created` with `.result.workspace.workspace_id`,
+  - `worktree create` (not called since #71, R17) answers `type: worktree_created` with `.result.workspace.workspace_id`,
     `.result.tab.tab_id`, `.result.root_pane.pane_id`, `.result.worktree.path`,
     `.result.worktree.branch` (all required in the schema).
   - `agent start` answers `agent_started` with `.result.agent` (AgentInfo) and `.result.argv`.
@@ -323,7 +323,7 @@ Since #71 a worker is found by its tab label (R17).
 
 ## R11. Close (FR-010, FR-012, D18)
 
-Since #71 `close` closes the worker's tab, and its workspace only when that tab was the last (R17).
+Since #71 `close` closes the worker's tab, and on a saved machine its `st-workers` workspace once no `worker-*` tab is left in it (R17, D35, D36).
 
 - Decision: `close` refuses while the worker is `working` or `blocked`, with the line
   `Worker <N> is <state>. Close refused.` Else it runs
@@ -550,13 +550,13 @@ Checked on 2026-11-05 with herdr 0.9.4, read-only calls only: the group usage li
   workspace labelled `st-workers` in `H workspace list`; when none is, the
   `.result.workspace.workspace_id` of `H workspace create --cwd <repo> --label st-workers --no-focus`
   (D32, D35). Then
-  `git -C <repo> worktree add -b N <path> <sha>` (over ssh on a saved machine), then
+  `git -C <repo> worktree add -q -b N <path> <sha>` (over ssh on a saved machine, after a `[ ! -e <path> ]` check), then
   `H tab create --workspace WS --cwd <path> --label N --no-focus`. The tab create comes right after
   the worktree, before `brief.md`, so on a failed tab the folder is still clean and
-  `git worktree remove <path>` (no `--force`) and `git branch -D N` undo it (D33). A branch or folder
-  `N` left by an earlier worker makes `git worktree add` fail; its first stderr line is the stop line.
+  `git worktree remove <path>` (no `--force`) and `git branch -D N` undo it (D33). A folder at
+  `<path>` left by an earlier run stops with `stopped: <path> already exists`; a branch `N` left by an earlier worker makes `git worktree add` fail, and its first stderr line is the stop line.
 - Decision (find, list, close): `H tab list` finds the one tab labelled `N`, its `tab_id` and
-  `workspace_id`; `H pane list --workspace WS` gives the cwd of a pane in that tab;
+  `workspace_id`; `H pane list --workspace WS` gives the cwd of the tab's first pane;
   `H worktree list --cwd <cwd>` gives the `path` of the entry with `branch == N`. This works when
   the agent is gone and from any workspace. `close` runs `H tab close TAB`; then, on a saved
   machine only, it reads `H workspace list`: if WS is still there and labelled `st-workers`, and
@@ -576,7 +576,9 @@ Checked on 2026-11-05 with herdr 0.9.4, read-only calls only: the group usage li
   The remote brief's `- Result file:` line now reads `~/<repo name>-<N>/result.md`, not an absolute
   path.
 - Live (T023): not run yet.
-- Live (T024): not run yet (laptop, quickstart section 6b, D37).
+- Live (T024): not run yet (laptop, quickstart section 6b, D37). The laptop answered at Inspect (plan Validate, 2026-11-06) and timed out later at Build (`ssh` timed out), so it has not started.
+- Incident (T019, 2026-11-06): an accidental real-herdr probe during T019 made two local `st-workers` workspaces. The agent closed both and checked the local lists: clean. The laptop was not checked.
+- Known gap: a `tab create` that exits 0 without ids stops with no undo (contracts/script.md section 4).
 
 ## Open decisions
 

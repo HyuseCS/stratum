@@ -300,4 +300,11 @@ the change is in the working tree, nothing is committed by the worker, and no pr
 - A worker's transcript stays on disk after close, as the spike found.
 - Token cost grows with every worker. The user decides the team size per request.
 - Workers started before #71, with a workspace of their own, are not found or closed by the new
-  script. No such worker was open on this PC on 2026-11-05; the laptop was not checked.
+  script. No such worker was open on this PC on 2026-11-05; the laptop did not answer on 2026-11-06 (research R17), so it was not checked.
+
+## Deferred gaps (#71)
+
+- G1. T023 is deferred to the user: the live run on this PC (quickstart section 2b).
+- G2. T024 is deferred to the user: the live run on the laptop (quickstart section 6b). The laptop did not answer on 2026-11-06 (research R17).
+- G3. The process part of FR-012, and the remote parts of SC-002 and SC-005, are live only. They wait for T023 and T024.
+- G4 dropped: a `tab create` that exits 0 without ids. herdr does not answer that way. The gap stays in contracts/script.md section 4.
