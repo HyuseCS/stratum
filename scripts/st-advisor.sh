@@ -197,6 +197,7 @@ if [ "${HERDR_ENV:-}" = 1 ] && [ -n "${HERDR_WORKSPACE_ID:-}" ] && command -v he
   cp "$tmp/prompt" "$tmp/prompt.tab" || block "cannot copy the prompt"
   timeout -k 10 540 bash "$sd/st-lock.sh" --name "codex-$HERDR_WORKSPACE_ID" --timeout 50 -- bash "$sd/st-codex-agent.sh" "$name" "$tmp/prompt.tab" "$tmp/answer.json" "$tabs" "${opts[@]}" > "$tmp/tab" 2>&1 || rc=$?
   [ $rc = 75 ] && block "Codex agent busy with another review"
+  [ $rc = 4 ] && { r=$(grep -a -m1 '^BLOCKED: ' "$tmp/tab"); block "${r#BLOCKED: }"; }
   grep -a '^codex: the Codex tab runs with ' "$tmp/tab"
   case $rc in
     0) via=$(grep -a '^codex: tab ' "$tmp/tab" | tail -n1) ;;
