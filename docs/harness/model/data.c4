@@ -222,6 +222,78 @@ model {
         data '.gitignore'
       }
     }
+    specs = datafile 'specs' {
+      summary 'The folder that holds one specs/NNN-feature folder per feature. st-init creates it empty.'
+      metadata {
+        data 'specs'
+      }
+    }
+    apps-app-ordinance-md = datafile 'apps/APP/ORDINANCE.md' {
+      summary 'The rules for one app in a multi-app repo. The st-plan and st-inspect agents read it, /st-close adds kept lessons to it.'
+      metadata {
+        data 'apps/APP/ORDINANCE.md'
+      }
+    }
+    apps-app-claude-md = datafile 'apps/APP/CLAUDE.md' {
+      summary 'The one-line file that loads ORDINANCE.md in that app. /st-close creates it when it is missing.'
+      metadata {
+        data 'apps/APP/CLAUDE.md'
+      }
+    }
+    package-json = datafile 'package.json' {
+      summary 'The project package file. /st-design reads the framework and the dev script port from it.'
+      metadata {
+        data 'package.json'
+      }
+    }
+    product-md = datafile 'PRODUCT.md' {
+      summary 'The product context for design work. /st-impeccable writes it with init and reads it before each design task.'
+      metadata {
+        data 'PRODUCT.md'
+      }
+    }
+    design-system = datafile 'design-system' {
+      summary 'The persisted design system: MASTER.md and page overrides. /st-ui-ux writes and reads it.'
+      metadata {
+        data 'design-system'
+      }
+    }
+    hallmark = datafile '.hallmark' {
+      summary 'The hallmark folder: brand spec, preflight cache and build log. /st-hallmark reads and writes it.'
+      metadata {
+        data '.hallmark'
+      }
+    }
+    design = datafile 'design' {
+      summary 'The FigCraft design files and their read exports. st-figcraft.sh start creates it and FigCraft may write only here.'
+      metadata {
+        data 'design'
+      }
+    }
+    git-stratum-name-lock = datafile '.git/stratum-NAME.lock' {
+      summary 'The test lock folder with the owner pid and start time. st-lock.sh makes it in the git common dir and removes it.'
+      metadata {
+        data '.git/stratum-NAME.lock'
+      }
+    }
+    claude-local-md = datafile 'CLAUDE.local.md' {
+      summary 'The machine-only Claude Code instructions. st-update.sh reads it for the constitution pointer.'
+      metadata {
+        data 'CLAUDE.local.md'
+      }
+    }
+    brief-md = datafile 'brief.md' {
+      summary 'The worker brief in a worker worktree: task, facts, roster and team rules. st-worker.sh writes it.'
+      metadata {
+        data 'brief.md'
+      }
+    }
+    result-md = datafile 'result.md' {
+      summary 'The worker result in a worker worktree. The worker writes it and st-worker.sh reads it and renames it at followup.'
+      metadata {
+        data 'result.md'
+      }
+    }
   }
 
   extend plugin {
@@ -291,6 +363,18 @@ model {
         path 'THIRD_PARTY_NOTICES.md'
       }
     }
+    workflows-pr-js = pluginfile 'workflows/pr.js' {
+      summary 'The pull request workflow script. /st-pr runs it as the Workflow stratum:pr.'
+      metadata {
+        path 'workflows/pr.js'
+      }
+    }
+    templates = pluginfile 'templates' {
+      summary 'The plugin template folder. /st-template lists it and copies one template into .stratum/templates.'
+      metadata {
+        path 'templates'
+      }
+    }
   }
 
   extend outside {
@@ -304,6 +388,54 @@ model {
       summary 'The user Claude Code settings: enabled plugins and plugin options. Stratum reads it and never changes it.'
       metadata {
         data '~/.claude/settings.json'
+      }
+    }
+    claude-ponytail-active = datafile '~/.claude/.ponytail-active' {
+      summary 'The live ponytail mode as a shared flag. ponytail-runtime.js writes it and the ponytail statusline reads it.'
+      metadata {
+        data '~/.claude/.ponytail-active'
+      }
+    }
+    claude-ponytail-modes = datafile '~/.claude/ponytail-modes' {
+      summary 'The live ponytail mode for each project. ponytail-runtime.js reads and writes it.'
+      metadata {
+        data '~/.claude/ponytail-modes'
+      }
+    }
+    config-ponytail-config-json = datafile '~/.config/ponytail/config.json' {
+      summary 'The user ponytail settings: default mode, quiet startup and hide status. ponytail-config.js reads and writes it.'
+      metadata {
+        data '~/.config/ponytail/config.json'
+      }
+    }
+    codex-auth-json = datafile '~/.codex/auth.json' {
+      summary 'The user Codex login. st-advisor.sh links it into the Stratum Codex home.'
+      metadata {
+        data '~/.codex/auth.json'
+      }
+    }
+    xdg-runtime-dir-st-figcraft-port = datafile '$XDG_RUNTIME_DIR/st-figcraft-PORT' {
+      summary 'The record of a running FigCraft: pid, project folder and start log. st-figcraft.sh writes and reads it.'
+      metadata {
+        data '$XDG_RUNTIME_DIR/st-figcraft-PORT'
+      }
+    }
+    claude-plugins-installed-plugins-json = datafile '~/.claude/plugins/installed_plugins.json' {
+      summary 'The Claude Code record of installed plugins. st-update.sh reads the Stratum install records from it.'
+      metadata {
+        data '~/.claude/plugins/installed_plugins.json'
+      }
+    }
+    claude-plugins-known-marketplaces-json = datafile '~/.claude/plugins/known_marketplaces.json' {
+      summary 'The Claude Code list of plugin marketplaces. st-update.sh reads the Stratum marketplace location from it.'
+      metadata {
+        data '~/.claude/plugins/known_marketplaces.json'
+      }
+    }
+    claude-projects-project-memory = datafile '~/.claude/projects/PROJECT/memory' {
+      summary 'The Claude memory folder of a checkout. st-worktree.sh links the worktree memory to the main checkout one.'
+      metadata {
+        data '~/.claude/projects/PROJECT/memory'
       }
     }
   }
@@ -321,4 +453,5 @@ model {
   claude -[reads]-> project.claude-settings-local-json 'statusline command'
   claude -[reads]-> outside.claude-settings-json 'enabled plugins and plugin options'
   codex -[reads]-> outside.local-state-stratum-codex-home 'Codex login link and project trust level'
+  plugin.claude-plugin-plugin-json -[runs]-> scripts.st-figcraft-sh 'mcp server'
 }

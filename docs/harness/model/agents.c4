@@ -106,7 +106,7 @@ model {
   agents.st-build -[writes]-> feature.tasks-md 'tick of a green task'
   agents.st-build -[passes]-> skills.st-build 'build report: files, tests, findings'
   agents.st-build -[passes]-> skills.st-fast 'build report: files, tests, findings'
-  agents.st-build -[passes]-> skills.st-close 'build report for a drift fix'
+  agents.st-build -[passes]-> skills.st-close 'build report for a shortcut fix'
   agents.st-build -[passes]-> skills.st-quick 'brief-mode build report'
   agents.st-build -[passes]-> skills.st 'brief-mode build report'
 

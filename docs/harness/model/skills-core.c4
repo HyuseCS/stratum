@@ -179,7 +179,6 @@ model {
   skills.st-close -[writes]-> stratum.lessons-md 'dropped and kept lessons removed'
   skills.st-close -[writes]-> stratum.constitution-md 'kept lesson rule, version and amend date'
   skills.st-close -[reads]-> procedures.constitution-md 'version bump rule'
-  skills.st-close -[writes]-> stratum.app-constitution-md 'kept lesson rule, version and amend date'
   skills.st-close -[writes]-> project.apps-app-ordinance-md 'kept lesson rule'
   skills.st-close -[writes]-> project.apps-app-claude-md 'the ORDINANCE.md import line'
   skills.st-close -[starts]-> agents.st-build 'shortcut row to fix now'
