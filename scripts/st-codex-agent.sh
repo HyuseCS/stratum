@@ -25,10 +25,13 @@ for l in sys.stdin:
 hd() { out=$(herdr "$@" 2>&1) || die "ERROR: $(head -n1 <<<"$out")"; }
 # ponytail: a path with a newline breaks the snapshot lines, use -z through to the compare if one shows up
 snap() {
-  local c e
+  local - c e i x=(-- . ':(exclude).stratum/state.json' ':(exclude,glob)**/.syncthing.*.tmp' ':(exclude,glob)**/~syncthing~*.tmp')
+  set -o pipefail
   c=$(git rev-parse --show-cdup 2>/dev/null)
   echo "HEAD $(git rev-parse -q --verify HEAD 2>/dev/null)"
-  git --no-optional-locks status --porcelain=v1 -z --untracked-files=all --no-renames -- . ':(exclude).stratum/state.json' ':(exclude,glob)**/.syncthing.*.tmp' ':(exclude,glob)**/~syncthing~*.tmp' 2>/dev/null |
+  i=$(git --no-optional-locks diff --cached --raw --no-abbrev --no-renames "${x[@]}" 2>/dev/null) || return 1
+  echo "INDEX $(sha256sum <<<"$i" | cut -d' ' -f1)"
+  git --no-optional-locks status --porcelain=v1 -z --untracked-files=all --no-renames "${x[@]}" 2>/dev/null |
     while IFS= read -r -d '' e; do
       printf '%s\t%s\t%s\n' "${e:3}" "${e:0:2}" "$([ -f "$c${e:3}" ] && sha256sum < "$c${e:3}" | cut -d' ' -f1)"
     done
@@ -68,7 +71,7 @@ else
   (umask 077; mkdir -p "$tabs" && printf '%s\n' "$made" "$@" > "$tabs/$name") || die "ERROR: cannot write $tabs/$name"
 fi
 
-before=$(snap)
+before=$(snap) || die "ERROR: cannot read git status in $root"
 hd agent get "$name"
 # ponytail: herdr cannot see text typed but not sent in the tab, a point may type after it; check the pane input if herdr exposes it
 case $(jget result agent agent_status <<<"$out") in working|blocked) die "codex: tab in use" 3 ;; esac
@@ -80,8 +83,8 @@ printf '%s\n' "The project root is $root. Read every path above relative to it."
   "Print the line ST-ADVISOR-BEGIN-$nonce alone, then the JSON object on one line, then the line ST-ADVISOR-END-$nonce alone. Print nothing after the end line." >> "$pf" || die "ERROR: cannot write $pf"
 out=$(herdr agent prompt "$name" "Read the review request in $pf and follow it. Change no file." --wait --until done --until idle --until blocked --timeout $(( (480 - SECONDS) * 1000 )) 2>&1)
 prc=$?
-after=$(snap)
-[ "$before" = "$after" ] || die "BLOCKED: Codex changed files during the review: $(comm -3 <(sort <<<"$before") <(sort <<<"$after") | sed 's/^\t//; s/^HEAD .*/HEAD/; s/\t.*//' | LC_ALL=C sort -u | awk 'NR > 1 { printf ", " } { printf "%s", $0 }')" 4
+after=$(snap) || die "BLOCKED: cannot read git status in $root" 4
+[ "$before" = "$after" ] || die "BLOCKED: Codex changed files during the review: $(comm -3 <(sort <<<"$before") <(sort <<<"$after") | sed 's/^\t//; s/^HEAD .*/HEAD/; s/^INDEX .*/INDEX/; s/\t[^\t]*\t[^\t]*$//' | LC_ALL=C sort -u | awk 'NR > 1 { printf ", " } { printf "%s", $0 }')" 4
 [ $prc = 0 ] || {
   [ "$(jget error code <<<"$out")" = agent_blocked ] && die "codex: tab in use" 3
   die "ERROR: $(head -n1 <<<"$out")"

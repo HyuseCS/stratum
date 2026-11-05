@@ -91,6 +91,7 @@ new() {
   printf '%s\n' "$chat" > "$S/screen"
   printf '%s' "$ans" > "$S/screen_prompt"
   printf 'REQUEST BODY\n' > "$pf"
+  repo
 }
 go() {
   out=$(cd "$proj" && bash "$root/scripts/st-codex-agent.sh" st-codex-t1 "$pf" "$af" "$tabs" "$@" 2>&1)
@@ -168,6 +169,18 @@ check "C15 no change: exit 0, answer written, no BLOCKED line" '[ $rc -eq 0 ] &&
 
 new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; printf dirty > "$proj/a.txt"; go
 check "C16 tree dirty before and the same after: exit 0, no BLOCKED line" '[ $rc -eq 0 ] && ! outhas "BLOCKED:"'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; echo 'rm a.txt; printf x > b.txt' > "$S/on_prompt"; go
+check "C10b Codex deletes a tracked file and adds one: exit 4, BLOCKED names both" '[ $rc -eq 4 ] && outline "BLOCKED: Codex changed files during the review: a.txt, b.txt"'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; (cd "$proj" && printf X > a.txt && git add a.txt && printf Y > a.txt); echo 'printf Z > a.txt; git add a.txt; printf Y > a.txt' > "$S/on_prompt"; go
+check "C16b Codex restages a file that was MM: exit 4, BLOCKED names INDEX" '[ $rc -eq 4 ] && outline "BLOCKED: Codex changed files during the review: INDEX"'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; GIT_DIR="$tmp/nowhere" go
+check "C16c git status fails before the prompt: ERROR, exit 1, no prompt" '[ $rc -eq 1 ] && outline "ERROR: cannot read git status in $pp" && [ "$(cnt "^agent prompt")" = 0 ]'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; echo 'mv .git .git.x' > "$S/on_prompt"; go
+check "C16d git status fails after the prompt: exit 4, BLOCKED cannot read git status" '[ $rc -eq 4 ] && outline "BLOCKED: cannot read git status in $pp"'
 
 new; echo 2 > "$S/start_busy"; go
 check "e busy twice then ok: 3 start calls" '[ $rc -eq 0 ] && [ "$(cnt "^agent start")" = 3 ]'
