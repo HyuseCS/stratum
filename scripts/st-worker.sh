@@ -251,6 +251,12 @@ start)
   h tab list
   c=$(jq -er --arg n "$N" '[.result.tabs[] | select(.label == $n)] | length' <<<"$r") || stop "no .result.tabs in the herdr answer"
   [ "$c" = 0 ] || fail "A worker $N already exists."
+  if [[ $repo == \~* ]]; then
+    quote "$repo"
+    rsh "cd $Q && pwd" >"$t" || stop "$(head -1 "$e")"
+    repo=$(<"$t")
+    [[ $repo == /* && $repo != *$'\n'* ]] || stop "no absolute path for --repo on $m"
+  fi
   path="$(dirname "$repo")/$(basename "$repo")-$N"
   if [ -n "$auto" ] && [ -n "$m" ]; then
     quote "$repo"

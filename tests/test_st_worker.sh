@@ -18,6 +18,7 @@ if [ $# -eq 0 ]; then echo BARE >> "$T/calls"; exit 99; fi
 ( IFS=$'\t'; printf '%s\n' "$*" >> "$T/calls" )
 M=; if [ "$1" = --machine ]; then M=$2; shift 2; fi
 printf '%s\n' "$1 $2" >> "$T/order"
+p=; for a in "$@"; do [ "$p" != --cwd ] || [[ $a != \~* ]] || [ "$1 $2" = "worktree list" ] || { printf '{"error":{"code":"stub_tilde","message":"stub --cwd %s"}}\n' "$a" >&2; exit 1; }; p=$a; done
 if [ "$1 $2" = "agent start" ] && [ -n "${STUB_BUSY:-}" ]; then
   b=$(cat "$T/n_busy" 2>/dev/null || echo 0); b=$((b+1)); echo $b > "$T/n_busy"
   if [ $b -le "$STUB_BUSY" ]; then printf '{"error":{"code":"agent_pane_busy","message":"stub busy"}}\n' >&2; exit 1; fi
@@ -121,6 +122,7 @@ c="$*"
 [ -z "${STUB_SSH_EXEC:-}" ] || exec bash -c "$c"
 case "$c" in
 *"worktree add -q -b "*) set -- $c; while [ "$1" != -b ]; do shift; done; jq -c --arg p "$3" --arg b "$2" '. + [{path:$p,branch:$b}]' "$T/wt.json" > "$T/wt.new" && mv "$T/wt.new" "$T/wt.json" ;;
+"cd "*" && pwd") d=${c#cd }; d=${d% && pwd}; printf '%s\n' "${d/#\~//stubhome}" ;;
 *"cat > "*) cat > "$T/ssh_in.$n" ;;
 "cat -- "*result.md) printf 'RESULT FILE %s\n' "$(cat "$T/x")" ;;
 "test -f "*) [ -e "$T/ssh_has_result" ] ;;
@@ -790,13 +792,13 @@ rrej() {
 
 r1() {
   rfresh; rrun bash "$1" start "${rsargs[@]}"
-  local in="$tmp/ssh_in.2" g; g=$(printf '%q' '{"commit":"auto","branch":"worker-t004"}')
+  local in="$tmp/ssh_in.3" g; g=$(printf '%q' '{"commit":"auto","branch":"worker-t004"}')
   check "R1 exit 0" '[ $rc = 0 ]'
   check "R1 machine list, every other call starts --machine laptop, never-list, one prompt" 'rnever 0 1'
-  check "R1 tab create on the machine in the main checkout workspace, no w1P" 'rcall "tab\tcreate\t--workspace\tstubMainWS\t--cwd\t%s\t--label\tworker-t004\t--no-focus" "~/proj-worker-t004"'
-  check "R1 first ssh is the git worktree add, the second writes the brief, both with BatchMode" '[ "$(grep -c . "$tmp/ssh")" = 2 ] && [ "$(sed -n 1p "$tmp/ssh")" = "$(printf -- "-o\tBatchMode=yes\t--\tu@stubhost\t[ ! -e ~/proj-worker-t004 ] || { echo \"~/proj-worker-t004 already exists\" >&2; exit 1; }; git -C ~/proj worktree add -q -b worker-t004 ~/proj-worker-t004 %s || exit 1" "$sha")" ] && grep -qP "^-o\tBatchMode=yes\t--\tu@stubhost\t" "$tmp/ssh"'
-  check "R1 brief ssh writes brief.md and git-guard.json under ~/proj-worker-t004, no \\~" 'c=$(sed -n 2p "$tmp/ssh"); grep -qF -- "cat > ~/proj-worker-t004/brief.md" <<<"$c" && grep -qF -- "mkdir -p ~/proj-worker-t004/.stratum" <<<"$c" && grep -qF -- "> ~/proj-worker-t004/.stratum/git-guard.json" <<<"$c" && grep -qF -- "$g" <<<"$c" && ! grep -qF -- "\\~" "$tmp/ssh"'
-  check "R1 brief on ssh stdin: heading, task, machine, result path" 'grep -qxF "# Brief: worker-t004" "$in" && grep -qxF "TASK BODY $(rnd)" "$in" && grep -qxF -- "- Your machine: laptop. \`local\` is the orchestrator'"'"'s machine." "$in" && grep -qxF -- "- Result file: ~/proj-worker-t004/result.md" "$in"'
+  check "R1 tab create on the machine in the main checkout workspace, no w1P" 'rcall "tab\tcreate\t--workspace\tstubMainWS\t--cwd\t%s\t--label\tworker-t004\t--no-focus" "/stubhome/proj-worker-t004"'
+  check "R1 first ssh resolves ~/proj, the second is the git worktree add, the third writes the brief, all with BatchMode" '[ "$(grep -c . "$tmp/ssh")" = 3 ] && [ "$(sed -n 1p "$tmp/ssh")" = "$(printf -- "-o\tBatchMode=yes\t--\tu@stubhost\tcd ~/proj && pwd")" ] && [ "$(sed -n 2p "$tmp/ssh")" = "$(printf -- "-o\tBatchMode=yes\t--\tu@stubhost\t[ ! -e /stubhome/proj-worker-t004 ] || { echo \"/stubhome/proj-worker-t004 already exists\" >&2; exit 1; }; git -C /stubhome/proj worktree add -q -b worker-t004 /stubhome/proj-worker-t004 %s || exit 1" "$sha")" ] && grep -qP "^-o\tBatchMode=yes\t--\tu@stubhost\t" "$tmp/ssh"'
+  check "R1 brief ssh writes brief.md and git-guard.json under /stubhome/proj-worker-t004, no \\~" 'c=$(sed -n 3p "$tmp/ssh"); grep -qF -- "cat > /stubhome/proj-worker-t004/brief.md" <<<"$c" && grep -qF -- "mkdir -p /stubhome/proj-worker-t004/.stratum" <<<"$c" && grep -qF -- "> /stubhome/proj-worker-t004/.stratum/git-guard.json" <<<"$c" && grep -qF -- "$g" <<<"$c" && ! grep -qF -- "\\~" "$tmp/ssh"'
+  check "R1 brief on ssh stdin: heading, task, machine, result path" 'grep -qxF "# Brief: worker-t004" "$in" && grep -qxF "TASK BODY $(rnd)" "$in" && grep -qxF -- "- Your machine: laptop. \`local\` is the orchestrator'"'"'s machine." "$in" && grep -qxF -- "- Result file: /stubhome/proj-worker-t004/result.md" "$in"'
   check "R1 brief on ssh stdin: roster rows and the five rules" 'grep -qxF "| worker-t004 | laptop | worker-t004 | T004 |" "$in" && grep -qxF "| worker-t005 | local | worker-t005 | T005 |" "$in" && [ "$(grep -cxFf "$rules" "$in")" = 5 ]'
   check "R1 brief on ssh stdin: no Plugin root line, no Advisor block" '[ -s "$in" ] && ! grep -q "^- Plugin root:" "$in" && ! grep -q "^## Advisor" "$in"'
   check "R1 agent start argv" 'rcall "agent\tstart\tworker-t004\t--kind\tclaude\t--pane\t%s\t--timeout\t120000\t--\t--permission-mode\tauto\t-n\tworker-t004" "$(pane)"'
@@ -807,12 +809,12 @@ r1 "$script"
 
 rfresh; mkdir -p "$tmp/r1d"; cp "$script" "$tmp/r1d/st-worker.sh"; : > "$tmp/r1d/st-advisor.sh"
 rrun bash "$tmp/r1d/st-worker.sh" start "${rsargs[@]}"
-check "R1d st-advisor.sh next to the script, saved machine: exit 0, brief has no Plugin root line, no Advisor block" '[ $rc = 0 ] && [ -s "$tmp/ssh_in.2" ] && ! grep -q "^- Plugin root:" "$tmp/ssh_in.2" && ! grep -q "^## Advisor" "$tmp/ssh_in.2"'
+check "R1d st-advisor.sh next to the script, saved machine: exit 0, brief has no Plugin root line, no Advisor block" '[ $rc = 0 ] && [ -s "$tmp/ssh_in.3" ] && ! grep -q "^- Plugin root:" "$tmp/ssh_in.3" && ! grep -q "^## Advisor" "$tmp/ssh_in.3"'
 rm -rf "$tmp/r1d"
 
 rfresh; rrun bash "$script" start "${rsargs[@]}"
 check "R1b exit 0" '[ $rc = 0 ]'
-check "R1b ssh writes brief.md under ~/proj-worker-t004, no \\~" 'sshs | grep -qF -- "cat > ~/proj-worker-t004/brief.md" && ! grep -qF -- "\\~" "$tmp/ssh"'
+check "R1b ssh writes brief.md under /stubhome/proj-worker-t004, no \\~" 'sshs | grep -qF -- "cat > /stubhome/proj-worker-t004/brief.md" && ! grep -qF -- "\\~" "$tmp/ssh"'
 
 rfresh; STUB_SSH_RC=255 rrun bash "$script" start "${rsargs[@]}"
 check "R1c ssh down on start: exit 1, one stopped line, one worker line" '[ $rc = 1 ] && [ "$(grep -c "^stopped: ssh to u@stubhost failed" <<<"$out")" = 1 ] && [ "$(grep -c "^stopped:" <<<"$out")" = 1 ] && [ "$(grep -cP "^worker\t" <<<"$out")" = 1 ]'
@@ -822,9 +824,9 @@ git -C "$repo" branch -q worker-t004
 bsha=$(git -C "$repo" rev-parse worker-t004)
 rrun bash "$script" result T004 --machine laptop
 check "R2 exit 0" '[ $rc = 0 ]'
-check "R2 one ssh cat of the quoted result path" '[ "$(grep -c . "$tmp/ssh")" = 1 ] && grep -qP "^-o\tBatchMode=yes\t--\tu@stubhost\t" "$tmp/ssh" && sshs | grep -qF -- "cat -- ~/proj-worker-t004/result.md"'
-check "R2 result line and the file text" 'hasline "result\tworker-t004\t~/proj-worker-t004/result.md" && grep -qxF "RESULT FILE $(rnd)" <<<"$out"'
-check "R2 one git fetch of target:WT worker-t004:worker-t004 with GIT_SSH_COMMAND BatchMode" '[ "$(grep -c . "$tmp/gitlog")" = 1 ] && grep -qxF "$(printf "ENV=ssh -o BatchMode=yes\tfetch\t--\tu@stubhost:~/proj-worker-t004\tworker-t004:worker-t004")" "$tmp/gitlog"'
+check "R2 one ssh cat of the quoted result path" '[ "$(grep -c . "$tmp/ssh")" = 1 ] && grep -qP "^-o\tBatchMode=yes\t--\tu@stubhost\t" "$tmp/ssh" && sshs | grep -qF -- "cat -- /stubhome/proj-worker-t004/result.md"'
+check "R2 result line and the file text" 'hasline "result\tworker-t004\t/stubhome/proj-worker-t004/result.md" && grep -qxF "RESULT FILE $(rnd)" <<<"$out"'
+check "R2 one git fetch of target:WT worker-t004:worker-t004 with GIT_SSH_COMMAND BatchMode" '[ "$(grep -c . "$tmp/gitlog")" = 1 ] && grep -qxF "$(printf "ENV=ssh -o BatchMode=yes\tfetch\t--\tu@stubhost:/stubhome/proj-worker-t004\tworker-t004:worker-t004")" "$tmp/gitlog"'
 check "R2 fetched line has the branch sha" 'hasline "fetched\tworker-t004\t%s" "$bsha"'
 check "R2 the pane is not printed, never-list" 'nopane && rnever 0 0'
 git -C "$repo" branch -q -D worker-t004
@@ -837,11 +839,11 @@ rmk; states done; : > "$tmp/ssh_has_result"
 rrun bash "$script" wait T004 --machine laptop
 check "R3 exit 0" '[ $rc = 0 ]'
 check "R3 state finished" 'hasline "state\tfinished\tworker-t004\t%s" "$(pane)"'
-check "R3 the result check is one ssh test -f" '[ "$(grep -c . "$tmp/ssh")" = 1 ] && grep -qP "^-o\tBatchMode=yes\t--\tu@stubhost\t" "$tmp/ssh" && sshs | grep -qF -- "test -f ~/proj-worker-t004/result.md"'
+check "R3 the result check is one ssh test -f" '[ "$(grep -c . "$tmp/ssh")" = 1 ] && grep -qP "^-o\tBatchMode=yes\t--\tu@stubhost\t" "$tmp/ssh" && sshs | grep -qF -- "test -f /stubhome/proj-worker-t004/result.md"'
 check "R3 never-list" 'rnever 0 0'
 rmk; states done
 STUB_FAIL_UNTIL="agent wait" STUB_FAIL_CODE=timeout rrun bash "$script" wait T004 --machine laptop
-check "R3b no result file on the machine: exit 5, state stopped" '[ $rc = 5 ] && hasline "state\tstopped\tworker-t004\t%s" "$(pane)" && sshs | grep -qF -- "test -f ~/proj-worker-t004/result.md"'
+check "R3b no result file on the machine: exit 5, state stopped" '[ $rc = 5 ] && hasline "state\tstopped\tworker-t004\t%s" "$(pane)" && sshs | grep -qF -- "test -f /stubhome/proj-worker-t004/result.md"'
 
 rrej R4 "Unknown machine: nosuch. Saved: laptop." --machine nosuch --repo '~/proj'
 STUB_DOWN=1 rrej R5 "Machine laptop does not answer: Error: stub machine down" --machine laptop --repo '~/proj'
@@ -909,9 +911,9 @@ check "R12 found lines name laptop, the other tab is absent" '[ "$(grep -cP "^fo
 check "R12 --machine rule, never-list" 'rnever 0 0'
 
 rfresh; rrun bash "$script" start "${rsargs[@]}"
-c=$(sshs | sed -n 2p); pre=${c%%cat > *}
-check "R13 exit 0, two ssh calls" '[ $rc = 0 ] && [ "$(grep -c . "$tmp/ssh")" = 2 ]'
-check "R13 ssh refuses a .stratum symlink, then a link or any existing brief.md, result.md, git-guard.json, before the cat > write" '[ "$pre" != "$c" ] && [ "${pre#*u@stubhost }" = "[ ! -L ~/proj-worker-t004/.stratum ] || { echo \"~/proj-worker-t004/.stratum is a symlink\" >&2; exit 3; }; for p in ~/proj-worker-t004/brief.md ~/proj-worker-t004/result.md ~/proj-worker-t004/.stratum/git-guard.json; do [ ! -L \"\$p\" ] || { echo \"\$p is a symlink\" >&2; exit 3; }; [ ! -e \"\$p\" ] || { echo \"\$p already exists\" >&2; exit 3; }; done && " ]'
+c=$(sshs | sed -n 3p); pre=${c%%cat > *}
+check "R13 exit 0, three ssh calls" '[ $rc = 0 ] && [ "$(grep -c . "$tmp/ssh")" = 3 ]'
+check "R13 ssh refuses a .stratum symlink, then a link or any existing brief.md, result.md, git-guard.json, before the cat > write" '[ "$pre" != "$c" ] && [ "${pre#*u@stubhost }" = "[ ! -L /stubhome/proj-worker-t004/.stratum ] || { echo \"/stubhome/proj-worker-t004/.stratum is a symlink\" >&2; exit 3; }; for p in /stubhome/proj-worker-t004/brief.md /stubhome/proj-worker-t004/result.md /stubhome/proj-worker-t004/.stratum/git-guard.json; do [ ! -L \"\$p\" ] || { echo \"\$p is a symlink\" >&2; exit 3; }; [ ! -e \"\$p\" ] || { echo \"\$p already exists\" >&2; exit 3; }; done && " ]'
 
 rfresh; rrun bash "$script" start T004 --task "$task" --test "$testcmd" --lane "$lane" --roster "$rroster" --machine laptop --repo "$tmp/rrepo"
 check "R14 exit 0, ssh writes brief.md under the sibling of --repo" '[ $rc = 0 ] && sshs | grep -qF -- "cat > $tmp/rrepo-worker-t004/brief.md"'
@@ -919,20 +921,23 @@ check "R14 nothing written on this machine: the sibling folder does not exist" '
 
 rfresh; STUB_NO_MAIN_WS=1 rrun bash "$script" start "${rsargs[@]}"
 check "R15 exit 0" '[ $rc = 0 ]'
-check "R15 one workspace create --cwd ~/proj --label st-workers --no-focus, on the machine" 'rcall "workspace\tcreate\t--cwd\t%s\t--label\tst-workers\t--no-focus" "~/proj" && [ "$(rcnt "workspace\tcreate\t")" = 1 ]'
-check "R15 tab create in the workspace the create answered, --machine rule" 'rcall "tab\tcreate\t--workspace\t%s\t--cwd\t%s\t--label\tworker-t004\t--no-focus" "$(wsid)" "~/proj-worker-t004" && rnever 0 1'
+check "R15 one workspace create --cwd /stubhome/proj --label st-workers --no-focus, on the machine" 'rcall "workspace\tcreate\t--cwd\t%s\t--label\tst-workers\t--no-focus" "/stubhome/proj" && [ "$(rcnt "workspace\tcreate\t")" = 1 ]'
+check "R15 tab create in the workspace the create answered, --machine rule" 'rcall "tab\tcreate\t--workspace\t%s\t--cwd\t%s\t--label\tworker-t004\t--no-focus" "$(wsid)" "/stubhome/proj-worker-t004" && rnever 0 1'
 
 rfresh; x=$(rnd); jq -c --arg x "$x" '. + [{workspace_id:("stubSW"+$x),label:"st-workers"}]' "$tmp/ws.json" > "$tmp/ws.new" && mv "$tmp/ws.new" "$tmp/ws.json"
 STUB_NO_MAIN_WS=1 rrun bash "$script" start "${rsargs[@]}"
-check "R15b exit 0, no workspace create, tab create in the st-workers workspace that exists" '[ $rc = 0 ] && [ "$(rcnt "workspace\tcreate\t")" = 0 ] && rcall "tab\tcreate\t--workspace\tstubSW%s\t--cwd\t%s\t--label\tworker-t004\t--no-focus" "$x" "~/proj-worker-t004" && rnever 0 1'
+check "R15b exit 0, no workspace create, tab create in the st-workers workspace that exists" '[ $rc = 0 ] && [ "$(rcnt "workspace\tcreate\t")" = 0 ] && rcall "tab\tcreate\t--workspace\tstubSW%s\t--cwd\t%s\t--label\tworker-t004\t--no-focus" "$x" "/stubhome/proj-worker-t004" && rnever 0 1'
+
+rfresh; STUB_NO_MAIN_WS=1 rrun bash "$script" start "${rsargs[@]}"
+check "R17 --repo ~/proj on a saved machine: exit 0, workspace create, tab create and pane split get absolute --cwd values, no herdr call has a --cwd starting with ~" '[ $rc = 0 ] && rcall "workspace\tcreate\t--cwd\t%s\t--label\tst-workers\t--no-focus" "/stubhome/proj" && rcall "tab\tcreate\t--workspace\t%s\t--cwd\t%s\t--label\tworker-t004\t--no-focus" "$(wsid)" "/stubhome/proj-worker-t004" && rcall "pane\tsplit\t%s\t--direction\tright\t--cwd\t%s\t--no-focus" "$(pane)" "/stubhome/proj-worker-t004" && ! grep -qP "\t--cwd\t[^/]" "$tmp/calls"'
 
 rfresh; STUB_FAIL="tab create" rrun bash "$script" start "${rsargs[@]}"
 check "R16 exit 1, stopped line with the stub message" '[ $rc = 1 ] && grep -q "^stopped: .*stub refused" <<<"$out"'
-check "R16 second ssh is the git undo, no brief write" '[ "$(grep -c . "$tmp/ssh")" = 2 ] && [ "$(sed -n 2p "$tmp/ssh")" = "$(printf -- "-o\tBatchMode=yes\t--\tu@stubhost\tgit -C ~/proj worktree remove ~/proj-worker-t004 && git -C ~/proj branch -D worker-t004 >/dev/null")" ] && ! grep -q "cat > " "$tmp/ssh" && rnever 0 0'
+check "R16 third ssh is the git undo, no brief write" '[ "$(grep -c . "$tmp/ssh")" = 3 ] && [ "$(sed -n 3p "$tmp/ssh")" = "$(printf -- "-o\tBatchMode=yes\t--\tu@stubhost\tgit -C /stubhome/proj worktree remove /stubhome/proj-worker-t004 && git -C /stubhome/proj branch -D worker-t004 >/dev/null")" ] && ! grep -q "cat > " "$tmp/ssh" && rnever 0 0'
 
 for k in "3::ssh: stub failure" "3:1:exit 3"; do
   rfresh; STUB_SSH_ON="cat >" STUB_SSH_RC=${k%%:*} STUB_SSH_QUIET=$(cut -d: -f2 <<<"$k") rrun bash "$script" start "${rsargs[@]}"
-  check "R13b remote write fails (${k#*:*:}): exit 1, one stopped line with WT, machine and the reason" '[ $rc = 1 ] && [ "$(grep -c "^stopped:" <<<"$out")" = 1 ] && hasline "stopped: cannot write brief.md and .stratum/git-guard.json in ~/proj-worker-t004 on laptop: %s" "${k#*:*:}" && [ "$(cnt "^--machine\tlaptop\tagent\tstart\t")" = 0 ]'
+  check "R13b remote write fails (${k#*:*:}): exit 1, one stopped line with WT, machine and the reason" '[ $rc = 1 ] && [ "$(grep -c "^stopped:" <<<"$out")" = 1 ] && hasline "stopped: cannot write brief.md and .stratum/git-guard.json in /stubhome/proj-worker-t004 on laptop: %s" "${k#*:*:}" && [ "$(cnt "^--machine\tlaptop\tagent\tstart\t")" = 0 ]'
 done
 
 h1() {
@@ -1549,7 +1554,7 @@ check "LY1 no tab rename, no Dev Servers or VM tab" '[ "$(cnt "^tab\trename\t")"
 rfresh; rrun bash "$script" start "${rsargs[@]}"
 check "LY2 exit 0" '[ $rc = 0 ]'
 check "LY2 layout calls on the machine, in order" '[ "$(grep -P "^--machine\tlaptop\t(tab\tcreate\t|pane\tsplit\t|pane\trun\t|agent\tstart\t)" "$tmp/calls" | cut -f3-4)" = "$(printf "tab\tcreate\npane\tsplit\npane\trun\nagent\tstart")" ]'
-check "LY2 tab create in the main checkout workspace, on the machine" 'rcall "tab\tcreate\t--workspace\tstubMainWS\t--cwd\t%s\t--label\tworker-t004\t--no-focus" "~/proj-worker-t004"'
+check "LY2 tab create in the main checkout workspace, on the machine" 'rcall "tab\tcreate\t--workspace\tstubMainWS\t--cwd\t%s\t--label\tworker-t004\t--no-focus" "/stubhome/proj-worker-t004"'
 check "LY2 split the root pane right, no focus, on the machine" 'rcall "pane\tsplit\t%s\t--direction\tright\t--cwd\t%s\t--no-focus" "$(pane)" "$(wt)"'
 check "LY2 lazygit in the new pane, on the machine" 'rcall "pane\trun\t%s\tlazygit" "$(lazypane)"'
 check "LY2 no tab rename, no Dev Servers or VM, on the machine" '[ "$(rcnt "tab\trename\t")" = 0 ] && ! grep -qP "Dev Servers|\tVM(\t|\$)" "$tmp/calls"'
