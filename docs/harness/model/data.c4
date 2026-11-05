@@ -30,6 +30,12 @@ model {
         data '.stratum/constitution.md'
       }
     }
+    app-constitution-md = datafile '.stratum/APP-constitution.md' {
+      summary 'The rules for how we work on one app in a multi-app repo. /st-close creates it or adds kept lessons to it.'
+      metadata {
+        data '.stratum/APP-constitution.md'
+      }
+    }
     decisions-md = datafile '.stratum/decisions.md' {
       summary 'Grill decisions when no feature is set. /st-grill writes it.'
       metadata {

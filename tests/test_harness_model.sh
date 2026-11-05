@@ -69,6 +69,7 @@ DYN = re.compile(r"^\s*dynamic view ([a-z0-9-]+) \{")
 ARROW = re.compile(r"^\s*\S+\s+-(?:\[\w+\]-)?>\s+\S+\s+'((?:[^'\\]|\\.)*)'\s*$")
 NUMBERED = re.compile(r"^\((\d+)\) (.*)$")
 STRATUM = re.compile(rb"\.stratum/[A-Za-z0-9_-]+(?:\.[a-z]+)?")
+PLACEHOLDER = re.compile(rb"\.stratum/(?:[A-Za-z0-9_-]|<[^>\s]+>)+(?:\.[a-z]+)?")
 ALLOWED = re.compile(r"^(likec4\.config\.json|README\.md|model/[^/]+\.c4|views/[^/]+\.c4|\.likec4/[^/]+\.likec4\.snap)$")
 SPEC = {
     "element": {"group", "actor", "event", "skill", "agent", "hook", "statusline", "script", "procedure", "pluginfile", "datafile"},
@@ -133,14 +134,14 @@ def parse():
     return els, bare, links
 
 
-def stratum_names():
+def stratum_names(pat=STRATUM):
     names = set()
     for d in ["scripts", "hooks", "statusline", "skills", "agents", "procedures"]:
         for dp, _, fn in os.walk(at(d)):
             for f in fn:
                 b = open(os.path.join(dp, f), "rb").read()
                 if b"\0" not in b:
-                    names.update(m.decode() for m in STRATUM.findall(b))
+                    names.update(m.decode() for m in pat.findall(b))
     return names
 
 
@@ -194,11 +195,11 @@ def c_data():
 
 def c_missing():
     els = parse()[0]
-    names = stratum_names()
+    names = stratum_names() | {re.sub(r"<[^>]*>", "<>", n) for n in stratum_names(PLACEHOLDER)}
     for e in els:
         if e["path"] and not os.path.exists(at(e["path"])):
             fail(f"{e['path']} does not exist")
-        if e["data"] and e["data"].startswith(".stratum/") and e["data"] not in names:
+        if e["data"] and e["data"].startswith(".stratum/") and e["data"] not in names and re.sub(r"[A-Z]+", "<>", e["data"]) not in names:
             fail(f"{e['data']} is not named in the harness code")
     done("every path exists and every .stratum name is in the code")
 
@@ -259,6 +260,9 @@ def c_vendored():
 
 
 def c_views():
+    for v in ["1-full", "2-fast", "3-quick", "4-design"]:
+        if not os.path.isfile(at(DOCS, "views", f"{v}.c4")):
+            fail(f"{DOCS}/views/{v}.c4 does not exist")
     for f in sorted(glob.glob(at(DOCS, "model", "*.c4")) + glob.glob(at(DOCS, "views", "*.c4"))):
         for n, line in enumerate(open(f, encoding="utf-8"), 1):
             if "`" in line:

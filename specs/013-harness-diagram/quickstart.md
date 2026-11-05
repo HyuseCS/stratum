@@ -20,7 +20,8 @@ and `SKIP rebuild`, the other checks `ok`.
 2. Expected: 7 headings, Full lane to Data flow, and each Mermaid block draws with no
    "Syntax error" or "Maximum text size" box.
 3. In the Full lane diagram, read the steps `(1)`, `(2)` ... in order. Name Define, Plan, Inspect,
-   Build and Close in order and each `gate:` step. Time it: under 2 minutes.
+   Build and Close in order and each `gate:` step. Expected gates: `(17)` spec, `(31)` open
+   decisions, `(45)` OK to build, `(77)` push. Time it: under 2 minutes.
 4. US1 scenario 3: find `st-build agent` in the Full lane and in the Fast lane diagrams. Expected:
    in the Full lane its steps carry Full-lane data (tasks from `tasks.md`), in the Fast lane they
    carry Fast-lane data (tests from the change plan), and no step of one lane shows in the other.

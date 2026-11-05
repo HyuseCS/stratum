@@ -55,7 +55,7 @@ model {
       }
     }
     st-design = skill '/st-design' {
-      summary 'Design lane in three modes: new look, autonomous and custom. Builds and checks a screen with the st-design agent and asks at one gate.'
+      summary 'Design lane in three modes: new look, autonomous and custom. Builds and checks a screen with the st-design agent and asks at one gate in the new-look and custom modes.'
       metadata {
         path 'skills/st-design'
       }
@@ -178,6 +178,7 @@ model {
   skills.st-close -[reads]-> stratum.lessons-md 'lessons with target file and reason'
   skills.st-close -[writes]-> stratum.lessons-md 'dropped and kept lessons removed'
   skills.st-close -[writes]-> stratum.constitution-md 'kept lesson rule, version and amend date'
+  skills.st-close -[writes]-> stratum.app-constitution-md 'kept lesson rule, version and amend date, created when missing'
   skills.st-close -[reads]-> procedures.constitution-md 'version bump rule'
   skills.st-close -[writes]-> project.apps-app-ordinance-md 'kept lesson rule'
   skills.st-close -[writes]-> project.apps-app-claude-md 'the ORDINANCE.md import line'

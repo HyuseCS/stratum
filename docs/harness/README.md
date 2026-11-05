@@ -53,9 +53,9 @@ graph LR
   ScriptsSt_shortcuts_sh@{ shape: rectangle, label: "st-shortcuts.sh" }
   SkillsSt_graphify@{ shape: rectangle, label: "/st-graphify" }
   User -. "`(1) task in plain words`" .-> SkillsSt
-  SkillsSt -. "`(2) risk level`" .-> ScriptsSt_state_sh
-  ScriptsSt_state_sh -. "`(3) risk level`" .-> StratumState_json
-  SkillsSt -. "`(4) lane and risk line`" .-> User
+  SkillsSt -. "`(2) lane and risk line`" .-> User
+  SkillsSt -. "`(3) risk level`" .-> ScriptsSt_state_sh
+  ScriptsSt_state_sh -. "`(4) risk level`" .-> StratumState_json
   SkillsSt -. "`(5) feature description`" .-> SkillsSt_define
   SkillsSt_define -. "`(6) feature description`" .-> SkillsSt_grill
   SkillsSt_grill -. "`(7) one question at a time with a 
@@ -132,11 +132,9 @@ shortcut base`" .-> AgentsSt_close
   AgentsSt_close -. "`(68) shortcut base`" .-> ScriptsSt_shortcuts_sh
   AgentsSt_close -. "`(69) drift fixes, gaps, lessons and 
 shortcut rows`" .-> SkillsSt_close
-  SkillsSt_close -. "`(70) gate: send back, defer or drop each 
-gap`" .-> User
-  SkillsSt_close -. "`(71) gate: keep, retarget or drop each 
-lesson`" .-> User
-  SkillsSt_close -. "`(72) gate: fix now or keep each shortcut`" .-> User
+  SkillsSt_close -. "`(70) send back, defer or drop each gap`" .-> User
+  SkillsSt_close -. "`(71) keep, retarget or drop each lesson`" .-> User
+  SkillsSt_close -. "`(72) fix now or keep each shortcut`" .-> User
   SkillsSt_close -. "`(73) docs graph update`" .-> SkillsSt_graphify
   SkillsSt_close -. "`(74) changed doc paths`" .-> AgentsSt_git
   AgentsSt_git -. "`(75) close commit`" .-> Git
@@ -696,6 +694,7 @@ graph TB
   ProceduresSpecify_md@{ shape: rectangle, label: "procedures/specify.md" }
   ProceduresTasks_md@{ shape: rectangle, label: "procedures/tasks.md" }
   StatuslineSt_statusline_sh@{ shape: rectangle, label: "st-statusline.sh" }
+  StratumApp_constitution_md@{ shape: rectangle, label: ".stratum/APP-constitution.md" }
   ProjectApps_app_claude_md@{ shape: rectangle, label: "apps/APP/CLAUDE.md" }
   ProjectSpecs@{ shape: rectangle, label: "specs" }
   StratumDecisions_md@{ shape: rectangle, label: ".stratum/decisions.md" }
@@ -752,6 +751,8 @@ graph TB
   SkillsSt_build -. "`advisor mode answer`" .-> StratumAdvisor_json
   SkillsSt_build -. "`feature directory`" .-> StratumState_json
   SkillsSt_close -. "`kept lesson rule, version and amend date`" .-> StratumConstitution_md
+  SkillsSt_close -. "`kept lesson rule, version and amend 
+date, created when missing`" .-> StratumApp_constitution_md
   SkillsSt_close -. "`[...]`" .-> StratumLessons_md
   SkillsSt_close -. "`feature directory`" .-> StratumState_json
   SkillsSt_review -. "`feature directory`" .-> StratumState_json

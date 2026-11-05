@@ -4,3 +4,6 @@ summary: Simplify the task split by combining the three small topic-view tasks.
 
 ## plan | 2026-11-05T16:14:35Z | sha256 9b1745e00bc6618a52755d1c97cd47c09750749f519818be634026eea4609b8c | WAIVED
 reason: Plan changed at Inspect only by fixes of Inspect findings F1-F14 (test greps, negative controls, README commit order, wording) and user decisions D11 (pin note) and D12 (drop lane tags); no story, task or file-list change.
+
+## decisions | 2026-11-05T16:46:13Z | /advisor
+summary: US1+US2 small decisions: 14 of 15 ok; restore the st-close APP-constitution write (fix missing check), make views fail on a missing lane file, quickstart names the 3 phase gates; render the page in a browser before the PR
