@@ -328,7 +328,7 @@ sr="$tmp/sc" hrun folder
 kill "$holder" 2>/dev/null
 wait "$holder" 2>/dev/null
 rm -rf "$proj/.git/stratum-codex-$ws.lock"
-check "(k5) lock held: BLOCKED: Codex agent busy with another review, codex exec not run" '[ "$(head -n1 <<<"$out")" = "BLOCKED: Codex agent busy with another review" ] && [ ! -e "$tmp/argv" ] && [ ! -e "$tmp/herdr.log" ]'
+check "(k5) lock held: BLOCKED: Codex agent busy with another review, codex exec not run" '[ "$(head -n1 <<<"$out")" = "BLOCKED: Codex agent busy with another review" ] && [ ! -e "$tmp/argv" ] && ! grep -vqx "workspace list" "$tmp/herdr.log" 2>/dev/null'
 
 hreset() { rm -f "$tmp/htab" "$tmp/helsewhere" "$tmp/hnows" "$tmp/hlabel" "$tmp/hstatus"; }
 hreset

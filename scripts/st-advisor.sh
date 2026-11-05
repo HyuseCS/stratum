@@ -1,29 +1,25 @@
 #!/usr/bin/env bash
 set -o pipefail
 SECONDS=0
-usage() { echo "usage: st-advisor.sh plan|test|diff|decisions|change|round|check|continued|waive|note|talk|count|codex-home ..."; exit 2; }
-dir=${XDG_STATE_HOME:-$HOME/.local/state}/stratum/codex-home
-root=$(pwd -P)
-entry="[projects.\"$root\"]"
-add_entry() {
-  if [[ $root = *[[:cntrl:]\"\\]* ]]; then
-    echo "project root has a quote, backslash or control character in its path: no entry, Codex runs in the background here"
-  elif ! grep -qxF "$entry" "$dir/config.toml" 2>/dev/null; then
-    { [ -n "$(tail -c1 "$dir/config.toml" 2>/dev/null)" ] && echo; printf '%s\ntrust_level = "untrusted"\n' "$entry"; } >> "$dir/config.toml"
-  fi
+usage() { echo "usage: st-advisor.sh plan|test|diff|decisions|change|round|check|continued|waive|note|talk|count ..."; exit 2; }
+tabs=${XDG_STATE_HOME:-$HOME/.local/state}/stratum/codex-tabs
+tabname() {
+  local l
+  l=$(herdr workspace list 2>/dev/null) || l=
+  python3 -I -c '
+import json, re, sys
+ws = sys.argv[1]
+def slug(s):
+    return re.sub(r"[^a-z0-9_-]", "-", s.lower())[:23]
+try:
+    l = next(w["label"] for w in json.loads(sys.stdin.read())["result"]["workspaces"] if w["workspace_id"] == ws)
+    n = slug(l)
+except Exception:
+    n = ""
+if not re.search(r"[a-z0-9]", n):
+    n = slug(ws)
+print("st-codex-" + n)' "$HERDR_WORKSPACE_ID" <<<"$l"
 }
-if [ $# = 1 ] && [ "$1" = codex-home ]; then
-  login=${CODEX_HOME:-$HOME/.codex}/auth.json
-  [ -f "$login" ] || { echo "no codex login: run codex login, then run this again"; exit 1; }
-  mkdir -p "$dir" || exit 1
-  [ "$(cd "$dir" && pwd -P)" = "$(cd "$(dirname "$login")" && pwd -P)" ] && { echo "codex home is your Codex login folder: unset CODEX_HOME, then run this again"; exit 1; }
-  [ -e "$dir/auth.json" ] && [ ! -L "$dir/auth.json" ] && { echo "$dir/auth.json is a file, not a link to your Codex login: run codex login status, move that file away, then run this again"; exit 1; }
-  chmod 700 "$dir" || exit 1
-  [ "$(readlink "$dir/auth.json")" = "$login" ] || ln -sfn "$login" "$dir/auth.json" || exit 1
-  add_entry || exit 1
-  echo "codex home: $dir"
-  exit 0
-fi
 cmd=run
 case ${1:-} in check|continued|waive|note|round|talk) cmd=$1; shift ;; count) cmd=count ;; esac
 point=${1:-}
@@ -195,15 +191,20 @@ printf '%s\n' '{"type":"object","additionalProperties":false,"required":["verdic
 
 rc=1 via="codex: headless (not in herdr)"
 if [ "${HERDR_ENV:-}" = 1 ] && [ -n "${HERDR_WORKSPACE_ID:-}" ] && command -v herdr >/dev/null; then
-  [ -L "$dir/auth.json" ] || block "no Stratum Codex home: run st-advisor.sh codex-home"
-  add_entry || block "cannot write $dir/config.toml"
   rc=0
   sd=$(dirname "$0")
+  name=$(tabname)
   cp "$tmp/prompt" "$tmp/prompt.tab" || block "cannot copy the prompt"
-  timeout -k 10 540 bash "$sd/st-lock.sh" --name "codex-$HERDR_WORKSPACE_ID" --timeout 50 -- bash "$sd/st-codex-agent.sh" "$f" "$tmp/prompt.tab" "$tmp/answer.json" "$dir" "${opts[@]}" > "$tmp/tab" 2>&1 || rc=$?
+  timeout -k 10 540 bash "$sd/st-lock.sh" --name "codex-$HERDR_WORKSPACE_ID" --timeout 50 -- bash "$sd/st-codex-agent.sh" "$name" "$tmp/prompt.tab" "$tmp/answer.json" "$tabs" "${opts[@]}" > "$tmp/tab" 2>&1 || rc=$?
   [ $rc = 75 ] && block "Codex agent busy with another review"
-  case $rc in 0) via=$(grep -a '^codex: tab ' "$tmp/tab" | tail -n1) ;; 124|137) echo "ERROR: Codex tab timed out" ;; *) grep -a '^ERROR:' "$tmp/tab" | tail -n1 ;; esac
-  [ $rc = 0 ] || via="codex: headless (Codex tab failed)"
+  grep -a '^codex: the Codex tab runs with ' "$tmp/tab"
+  case $rc in
+    0) via=$(grep -a '^codex: tab ' "$tmp/tab" | tail -n1) ;;
+    3) via="codex: headless (Codex tab in use)" ;;
+    5) via="codex: headless (Codex tab name $name in use elsewhere)" ;;
+    124|137) echo "ERROR: Codex tab timed out"; via="codex: headless (Codex tab failed)" ;;
+    *) grep -a '^ERROR:' "$tmp/tab" | tail -n1; via="codex: headless (Codex tab failed)" ;;
+  esac
 fi
 left=$((540 - SECONDS))
 # ponytail: the 60 s floor has no test (it needs a 60 s wait), add one with a fake clock if the budget changes
