@@ -287,7 +287,7 @@ phrases <<'EOF'
 #18 FR-016 readme	README.md	What leaves the machine: each call sends the prompt and the files Codex reads to OpenAI
 #18 FR-016 readme	README.md	`"mode": "off"` is the off switch: nothing goes to OpenAI.
 #18 FR-016 readme	README.md	With no `codex` on PATH you get one line, `no advisor: codex not found`
-#18 FR-016 readme	README.md	A failed, empty, malformed or late answer (540 seconds) is `BLOCKED`, never approval.
+#18 FR-016 readme	README.md	A failed, empty, malformed or late answer is `BLOCKED`, never approval. Late means 540 seconds, and only in the background (headless) run.
 #18 FR-016 readme	README.md	An approval of a plan that changed since then is stale.
 #18 D13 readme	README.md	Whether Codex's own shell sees your environment variables is not checked.
 FR-002 readme	README.md	Stratum no longer uses `~/.local/state/stratum/codex-home`. You may delete that folder. Close any old `st-codex-<feature>` Codex tab yourself: points no longer use or close it.

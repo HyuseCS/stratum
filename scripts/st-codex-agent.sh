@@ -95,6 +95,7 @@ printf '%s\n' "The project root is $root. Read every path above relative to it."
   "Print the line ST-ADVISOR-BEGIN-$nonce alone, then the JSON object on one line, then the line ST-ADVISOR-END-$nonce alone. Print nothing after the end line." >> "$pf" || die "ERROR: cannot write $pf"
 out=$(herdr agent prompt "$name" "Read the review request in $pf and follow it. Change no file." --wait --until done --until idle 2>&1)
 prc=$?
+rm -f "$tabs/$name.review"
 after=$(snap) || die "BLOCKED: cannot read git status in $root" 4
 [ "$before" = "$after" ] || die "BLOCKED: Codex changed files during the review: $(comm -3 <(sort <<<"$before") <(sort <<<"$after") | sed 's/^\t//; s/^HEAD .*/HEAD/; s/^INDEX .*/INDEX/; s/\t[^\t]*\t[^\t]*$//' | LC_ALL=C sort -u | awk 'NR > 1 { printf ", " } { printf "%s", $0 }')" 4
 [ $prc = 0 ] || {

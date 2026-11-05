@@ -12,7 +12,7 @@ The advisor tab starts Codex with the user's own Codex home and normal approvals
 
 Each review in the tab takes a snapshot of HEAD and the changed and untracked files before and after the turn. A difference ends the point BLOCKED with the files named. Nothing is reverted.
 
-The review waits on a Codex prompt instead of failing, with no time limit (D11). The orchestrator starts a new `st-advisor.sh watch` with the Monitor tool before it starts the point in the background. The watch reports a blocked tab only while a review drives it, with the screen text. The orchestrator answers a prompt on the allow list with a one-time yes through a new `st-advisor.sh answer --keys <key>` and brings every other prompt to the user. The point ends early only when the tab ends (the user closes it or Codex exits): BLOCKED, and never headless once the review started in the tab.
+The review waits on a Codex prompt instead of failing, with no time limit (D11). The orchestrator starts a new `st-advisor.sh watch` with the Monitor tool before it starts the point in the background. The watch reports a blocked tab only while a review drives it, with the screen text. The orchestrator answers a prompt on the allow list with a one-time yes through a new `st-advisor.sh answer --screen <hash> --keys <key>` and brings every other prompt to the user. The point ends early only when the tab ends (the user closes it or Codex exits): BLOCKED, and never headless once the review started in the tab.
 
 ## Technical Context
 

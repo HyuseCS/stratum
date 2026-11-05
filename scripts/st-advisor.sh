@@ -22,29 +22,33 @@ print("st-codex-" + n)' "$HERDR_WORKSPACE_ID" <<<"$l"
 }
 case ${1:-} in answer|watch)
   if [ $1 = answer ]; then
-    [ "${2:-}" = --keys ] && [ $# -gt 2 ] || usage
-    for k in "${@:3}"; do [[ $k =~ ^[A-Za-z0-9+_][A-Za-z0-9+_-]{0,15}$ ]] || usage; done
+    [ "${2:-}" = --screen ] && [[ ${3:-} =~ ^[0-9a-f]{12}$ ]] && [ "${4:-}" = --keys ] && [ $# -gt 4 ] || usage
+    for k in "${@:5}"; do [[ $k =~ ^[A-Za-z0-9+_][A-Za-z0-9+_-]{0,15}$ ]] || usage; done
   else
     [ $# = 1 ] || usage
   fi
   [ "${HERDR_ENV:-}" = 1 ] && [ -n "${HERDR_WORKSPACE_ID:-}" ] && command -v herdr >/dev/null || { echo "not in herdr"; exit 1; }
   name=$(tabname)
+  root=$(pwd -P)
   live() { local p; p=$(cat "$tabs/$name.review" 2>/dev/null) && [[ $p =~ ^[0-9]+$ ]] && kill -0 "$p" 2>/dev/null; }
-  waits() { herdr agent get "$name" 2>/dev/null | python3 -I -c 'import json, sys; sys.exit(json.load(sys.stdin)["result"]["agent"]["agent_status"] != "blocked")' 2>/dev/null; }
+  waits() { herdr agent get "$name" 2>/dev/null | python3 -I -c 'import json, sys; a = json.load(sys.stdin)["result"]["agent"]; sys.exit((a["agent_status"], a.get("workspace_id"), a.get("cwd")) != ("blocked", *sys.argv[1:]))' "$HERDR_WORKSPACE_ID" "$root" 2>/dev/null; }
+  screen() { local r; s=$(herdr agent read "$name" --source recent-unwrapped --lines 20 2>&1 | sed $'s/\e\\[[0-9;]*[A-Za-z]//g'); r=$?; h=$(sha256sum <<<"$s"); h=${h:0:12}; return $r; }
   if [ $1 = answer ]; then
     live && waits || { echo "no review waits in the Codex tab"; exit 1; }
-    out=$(herdr agent send-keys "$name" "${@:3}" 2>&1) || { echo "ERROR: $(head -n1 <<<"$out")"; exit 1; }
-    echo "sent: ${*:3}"
+    screen && [ "$h" = "$3" ] || { echo "the Codex tab shows another prompt"; exit 1; }
+    out=$(herdr agent send-keys "$name" "${@:5}" 2>&1) || { echo "ERROR: $(head -n1 <<<"$out")"; exit 1; }
+    echo "sent: ${*:5}"
     exit 0
   fi
-  seen=0 shown=0
+  seen=0 last=
   while :; do
     if live; then
       seen=1
       if waits; then
-        [ $shown = 1 ] || { echo "codex tab waits: $name"; herdr agent read "$name" --source recent-unwrapped --lines 20 2>&1 | sed $'s/\e\\[[0-9;]*[A-Za-z]//g'; echo "codex tab waits: end"; shown=1; }
+        screen
+        [ "$h" = "$last" ] || { echo "codex tab waits: $name $h"; printf '%s\n' "$s"; echo "codex tab waits: end"; last=$h; }
       else
-        shown=0
+        last=
       fi
     elif [ $seen = 1 ]; then
       exit 0

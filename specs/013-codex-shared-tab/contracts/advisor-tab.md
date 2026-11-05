@@ -30,7 +30,7 @@ Flow:
 4. Snapshot (data-model.md).
 5. `herdr agent get <tab name>`: `agent_status` `working` or `blocked` prints `codex: tab in use`, exit 3. Nothing is typed. A reused tab has no marker yet.
 6. Write the marker `<state dir>/<tab name>.review` (its pid), removed by a trap on exit. Append today's three nonce lines to the prompt file.
-7. `herdr agent prompt <tab name> "Read the review request in <prompt file> and follow it. Change no file." --wait --until done --until idle`, with no `--timeout` (D11).
+7. `herdr agent prompt <tab name> "Read the review request in <prompt file> and follow it. Change no file." --wait --until done --until idle`, with no `--timeout` (D11). Remove the marker as soon as it returns, whatever it returned. The trap stays for an earlier exit.
 8. Snapshot again, whatever step 7 returned. A difference: print `BLOCKED: Codex changed files during the review: <path>, <path>` (sorted, each once, `HEAD` when HEAD moved), exit 4.
 9. Step 7 failed:
    - error code `agent_blocked`: print `codex: tab in use`, exit 3.
@@ -61,12 +61,13 @@ Point run inside herdr (`HERDR_ENV=1`, `HERDR_WORKSPACE_ID` set, `herdr` on PATH
 New command `answer`:
 
 ```text
-st-advisor.sh answer --keys <key> [<key>...]
+st-advisor.sh answer --screen <hash> --keys <key> [<key>...]
 ```
 
-- Each key must match `^[A-Za-z0-9+_][A-Za-z0-9+_-]{0,15}$` (no leading `-`, so herdr never reads a key as a flag). Else the usage line, exit 2, no herdr call.
+- `<hash>` must match `^[0-9a-f]{12}$`, and the arguments come in this order. Each key must match `^[A-Za-z0-9+_][A-Za-z0-9+_-]{0,15}$` (no leading `-`, so herdr never reads a key as a flag). Else the usage line, exit 2, no herdr call.
 - Not in herdr: `not in herdr`, exit 1.
-- The marker is missing, its pid is not alive, or `herdr agent get <tab name>` does not say `blocked`: `no review waits in the Codex tab`, exit 1, no key sent.
+- The tab waits only when the marker has a live pid and `herdr agent get <tab name>` says `agent_status` `blocked`, `workspace_id` = `$HERDR_WORKSPACE_ID` and `cwd` = `pwd -P`. Else `no review waits in the Codex tab`, exit 1, no key sent.
+- Read the screen as section 6 says. Its hash differs from `<hash>`, or the read fails: `the Codex tab shows another prompt`, exit 1, no key sent.
 - Else `herdr agent send-keys <tab name> <key>...`, print `sent: <key> ...`, exit 0.
 
 New command `watch`:
@@ -76,7 +77,7 @@ st-advisor.sh watch
 ```
 
 - Not in herdr: `not in herdr`, exit 1.
-- Every 2 s: when the marker has a live pid and the tab is `blocked`, and this blocked spell is not reported yet, print `codex tab waits: <tab name>`, the screen (section 6), then `codex tab waits: end`. A spell ends when the tab is not `blocked`.
+- Every 2 s: when the tab waits (as for `answer`), read the screen (section 6). When its hash differs from the last one printed in this blocked spell, print `codex tab waits: <tab name> <hash>`, the screen, then `codex tab waits: end`. A spell ends when the tab does not wait.
 - Exits 0 when a marker it saw is gone or dead (the review ended). No time limit: the orchestrator stops it when the point ends.
 - Prints nothing for a blocked tab with no live marker (the user's own turn).
 
@@ -107,13 +108,13 @@ K2a, a new line right before K2 (FR-007, CHK010):
 K3 (FR-011):
 
 ```text
-- On a `codex tab waits:` line, read the screen lines after it. A prompt on the allow list: answer it with `bash <plugin root>/scripts/st-advisor.sh answer --keys <key>`, the key of the one-time yes only ("Yes, proceed", "Yes, just this once"). Never pick an option that says "don't ask again", "allow ... for this session", "in the future" or "for these files", or one that names a host. Every other prompt: show the user the exact screen lines and leave the tab open.
+- On a `codex tab waits:` line, read the screen lines after it. A prompt on the allow list: answer it with `bash <plugin root>/scripts/st-advisor.sh answer --screen <hash> --keys <key>`. Pass the hash from that `codex tab waits:` line, and the key of the one-time yes only ("Yes, proceed", "Yes, just this once"). Never pick an option that says "don't ask again", "allow ... for this session", "in the future" or "for these files", or one that names a host. Every other prompt: show the user the exact screen lines and leave the tab open.
 ```
 
 K4, allow list (FR-011, CHK001, CHK005):
 
 ```text
-  Allow list: read a file or list a folder anywhere, except a `.env` file or a key, credential, token or other secret file; run one command only, with no `;`, `&&`, `||`, `|`, `$(` or backticks: `git log`, `git diff`, `git show`, `git status`, `git blame`, `ls`, `cat`, `head`, `tail`, `wc`, `grep`, `rg` or `find`, with no `>`, `>>`, `tee`, `--output`, `--pre`, `-fprint`, `-fprintf`, `-fls`, `-delete`, `-exec`, `-execdir`, `-ok` or `-okdir`; or the project's test or lint command with no `--fix`, `--write`, `-w`, `-u` or `--update-snapshots`.
+  Allow list: read a file or list a folder anywhere, except a `.env` file or a key, credential, token or other secret file; run one command only, with no `;`, `&&`, `||`, `|`, `$(` or backticks: `git log`, `git diff`, `git show`, `git status`, `git blame`, `ls`, `cat`, `head`, `tail`, `wc`, `grep`, `rg` or `find`, with no `>`, `>>`, `tee`, `--output`, `--pre`, `-fprint`, `-fprint0`, `-fprintf`, `-fls`, `-delete`, `-exec`, `-execdir`, `-ok` or `-okdir`; or the project's test or lint command with no `--fix`, `--write`, `-w`, `-u` or `--update-snapshots`. Also no `VAR=` before the command, no option between `git` and its subcommand (`-c`, `--config-env`, `--exec-path`), no `--ext-diff`. Allow the test or lint command only when the project has no changed or new file since the point started. Else the prompt goes to the user.
 ```
 
 K5, never list (FR-011):
@@ -170,7 +171,7 @@ K11, lines 214-216 become (line 3 "A review in the tab has no time limit ..." is
 
 ## 6. Screen text
 
-Printed only by `watch`. The last 20 lines of `herdr agent read <tab name> --source recent-unwrapped --lines 20`, CSI escape codes removed (`sed $'s/\e\\[[0-9;]*[A-Za-z]//g'`).
+Printed only by `watch`, and read the same way by `answer`. The last 20 lines of `herdr agent read <tab name> --source recent-unwrapped --lines 20`, CSI escape codes removed (`sed $'s/\e\\[[0-9;]*[A-Za-z]//g'`). The screen hash is the first 12 hex characters of the sha256 of that text plus one newline.
 
 ## 7. Test cases
 
@@ -202,20 +203,25 @@ Printed only by `watch`. The last 20 lines of `herdr agent read <tab name> --sou
 | C21 | US3 | `agent_not_ready`, wait fails, agent gone | exit 4, `BLOCKED: the Codex tab ended during the review`; no prompt; no close |
 | C22 | US3 | marker | holds a live pid during the prompt; gone after exit; never written in C4; written before `agent wait` in C20 |
 | C23 | US3 | no marker pair in the answer (guard D11) | exit 4, `BLOCKED: no answer between the markers` |
+| C24 | US3 | marker after the prompt (guard: removed when step 7 returns) | `agent read` runs once and sees no marker |
 | M1 | US1 | `codex-home` (guard FR-002) | usage line, exit 2, no `codex-home` folder |
 | M2 | US1 | tab path | no `--env CODEX_HOME`; record under `codex-tabs`; last line `codex: tab <tab name>` |
 | M3 | US1 | two feature folders | the same tab name in both `agent start` lines |
 | M4 | US1 | tab `working` | codex exec runs; no `agent prompt`; last line `codex: headless (Codex tab in use)` |
 | M5 | US1 | tab idle, record differs | the settings line is in the output |
 | M6 | US2 | Codex writes a file in the tab | first line `BLOCKED: Codex changed files during the review: <file>`; BLOCKED record; codex exec not run; file kept |
-| M7 | US3 | `answer --keys y`, no marker (guard FR-010) | `no review waits in the Codex tab`, exit 1, no send-keys |
+| M7 | US3 | `answer --screen <hash> --keys y`, no marker (guard FR-010) | `no review waits in the Codex tab`, exit 1, no send-keys |
 | M8 | US3 | marker with a dead pid | as M7 |
 | M9 | US3 | live marker, tab `idle` | as M7 |
-| M10 | US3 | live marker, tab `blocked` | `agent send-keys <tab name> y` once, `sent: y`, exit 0 |
+| M10 | US3 | live marker, tab `blocked`, `--screen` the hash of the screen | `agent send-keys <tab name> y` once, `sent: y`, exit 0 |
 | M11 | US3 | key `a;b`, key `$(x)`, key `-x`, key `--help` | usage, exit 2, no herdr call |
 | M12 | US3 | `answer` or `watch` outside herdr | `not in herdr`, exit 1 |
-| M13 | US3 | `watch`, live marker, tab `blocked` | `codex tab waits: <tab name>`, screen, `codex tab waits: end`, once per spell; exit 0 after the marker goes |
+| M13 | US3 | `watch`, live marker, tab `blocked` | `codex tab waits: <tab name> <hash>`, screen, `codex tab waits: end`, once per screen; exit 0 after the marker goes |
 | M14 | US3 | `watch`, no marker, tab `blocked` | no output within 3 s |
+| M21 | US3 | `answer` with a hash that is not the screen's, live marker, tab `blocked` (guard: approve only the prompt read) | `the Codex tab shows another prompt`, exit 1, no send-keys |
+| M22 | US3 | `--screen` missing, too short, too long, uppercase or not hex, no keys after it, or `--keys` first | usage, exit 2, no herdr call |
+| M23 | US3 | `watch`, the blocked screen changes (guard: print again on a new screen) | a second block with the new hash; the same screen not again |
+| M24 | US3 | `agent get` names another `workspace_id`, or another `cwd` (guard: waits checks both) | `answer`: `no review waits in the Codex tab`, no send-keys; `watch`: no output |
 | M15 | US3 | the tab ends during the review (guard FR-012, no headless after a started review) | first line `BLOCKED: the Codex tab ended during the review`, then `record:`; BLOCKED record; codex exec not run |
 | M18 | US3 | tab path is not wrapped in `timeout` (guard D11) | the fake `timeout` logs its arguments; no logged call runs `st-lock.sh` or `st-codex-agent.sh` |
 | M19 | US3 | no marker pair in the tab answer (old k6, guard D11) | first line `BLOCKED: no answer between the markers`; codex exec not run |

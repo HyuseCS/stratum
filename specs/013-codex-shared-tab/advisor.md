@@ -9,3 +9,6 @@ summary: /advisor: 7 US1 small decisions reviewed, all small and in plan; k5 tes
 
 ## decisions | 2026-11-05T16:22:55Z | /advisor
 summary: /advisor: 6 US2 small decisions in plan; state.json exclude checked live from a subfolder project (ignored, a project file change caught, a file outside the project folder not caught = plan S1); every rc 4 path in T016 must print a BLOCKED first line
+
+## decisions | 2026-11-05T16:55:16Z | /advisor
+summary: /advisor: 9 US3 small decisions in plan; K1 already stops the watch when the point ends; pid reuse accepted; T019 first tab here will show the Codex trust screen (stratum-013 not trusted), the user answers it

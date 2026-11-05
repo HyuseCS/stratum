@@ -219,6 +219,7 @@ check "C23 no marker pair: exit 4, BLOCKED no answer between the markers, no ans
 
 new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; go
 check "C22 marker holds a live pid during the prompt and is gone after exit" '[ -e "$S/marker_live" ] && [ ! -e "$tabs/st-codex-t1.review" ]'
+check "C24 marker gone right after the prompt returns: agent read sees no marker" '[ "$(cnt "^agent read st-codex-t1 ")" = 1 ] && [ ! -e "$S/marker_at_read" ]'
 
 check "C8 no tab close in any case of this file" 'grep -q "^agent prompt" "$ALLLOG" && ! grep -q "^tab close" "$ALLLOG"'
 check "C22 marker gone after every case of this file" '[ "$left" = 0 ]'

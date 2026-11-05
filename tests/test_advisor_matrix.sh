@@ -268,7 +268,10 @@ case "$1 $2" in
     fi
     n=$(( $(cat "$d/hget.n" 2>/dev/null || echo 0) + 1 )); echo "$n" > "$d/hget.n"
     [ "$n" = 3 ] && rm -f "$XDG_STATE_HOME/stratum/codex-tabs/st-codex-demo.review"
-    echo "{\"result\":{\"agent\":{\"agent_status\":\"$hs\"}}}" ;;
+    gws=$HERDR_WORKSPACE_ID gcwd=$(pwd -P)
+    [ -e "$d/hgetws" ] && gws=wOther
+    [ -e "$d/hgetcwd" ] && gcwd=/elsewhere
+    echo "{\"result\":{\"agent\":{\"agent_status\":\"$hs\",\"workspace_id\":\"$gws\",\"cwd\":\"$gcwd\"}}}" ;;
   "workspace list")
     lab=$(cat "$d/hlabel" 2>/dev/null)
     [ -e "$d/hnows" ] && echo '{"result":{"workspaces":[]}}' || echo "{\"result\":{\"workspaces\":[{\"workspace_id\":\"$HERDR_WORKSPACE_ID\",\"label\":\"${lab:-demo}\"}]}}" ;;
@@ -287,7 +290,12 @@ case "$1 $2" in
       cat "$d/answer"; echo
       echo "ST-ADVISOR-END-$nonce"
     else
-      printf 'Do you want to run this command?\n> 1. Yes, proceed\n  2. No, tell Codex what to do differently\n'
+      r=$(( $(cat "$d/hread.n" 2>/dev/null || echo 0) + 1 )); echo "$r" > "$d/hread.n"
+      if [ -e "$d/hscreen2" ] && [ "$r" -ge 2 ]; then
+        printf 'Do you want to run this command?\n> 1. Yes, proceed\n  2. No, and rm -rf x\n'
+      else
+        printf 'Do you want to run this command?\n> 1. Yes, proceed\n  2. No, tell Codex what to do differently\n'
+      fi
     fi ;;
 esac
 exit 0
@@ -352,48 +360,90 @@ check "(M6) Codex writes a file in the tab: first line BLOCKED with the file, ex
 rm -f "$proj/new.txt"
 mk="$tmp/state/stratum/codex-tabs/st-codex-demo.review"
 mkdir -p "$tmp/state/stratum/codex-tabs"
-akey() { rm -f "$tmp/herdr.log" "$tmp/hget.n"; out=$(cd "$proj" && PATH="$tmp/hbin2:$PATH" HERDR_ENV=1 HERDR_WORKSPACE_ID=$ws bash "$root/scripts/st-advisor.sh" answer "$@"); rc=$?; }
-wrun() { rm -f "$tmp/herdr.log" "$tmp/hget.n"; out=$(cd "$proj" && PATH="$tmp/nosleep:$tmp/hbin2:$PATH" HERDR_ENV=1 HERDR_WORKSPACE_ID=$ws "$realtimeout" "$1" bash "$root/scripts/st-advisor.sh" watch); rc=$?; }
+akey() { rm -f "$tmp/herdr.log" "$tmp/hget.n" "$tmp/hread.n"; out=$(cd "$proj" && PATH="$tmp/hbin2:$PATH" HERDR_ENV=1 HERDR_WORKSPACE_ID=$ws bash "$root/scripts/st-advisor.sh" answer "$@"); rc=$?; }
+wrun() { rm -f "$tmp/herdr.log" "$tmp/hget.n" "$tmp/hread.n"; out=$(cd "$proj" && PATH="$tmp/nosleep:$tmp/hbin2:$PATH" HERDR_ENV=1 HERDR_WORKSPACE_ID=$ws "$realtimeout" "$1" bash "$root/scripts/st-advisor.sh" watch); rc=$?; }
 mark() { sleep 120 & live=$!; echo "$live" > "$mk"; }
 unmark() { kill "$live" 2>/dev/null; wait "$live" 2>/dev/null; rm -f "$mk"; }
+nokeys() { ! grep -q "^agent send-keys" "$tmp/herdr.log" 2>/dev/null; }
+scr1=$'Do you want to run this command?\n> 1. Yes, proceed\n  2. No, tell Codex what to do differently'
+scr2=$'Do you want to run this command?\n> 1. Yes, proceed\n  2. No, and rm -rf x'
+sh1=$(sha256sum <<<"$scr1" | cut -c1-12)
+sh2=$(sha256sum <<<"$scr2" | cut -c1-12)
 printf blocked > "$tmp/hstatus"
 rm -f "$mk"
-akey --keys y
-check "(M7) answer --keys y, no marker: no review waits in the Codex tab, exit 1, no send-keys" '[ $rc = 1 ] && [ "$out" = "no review waits in the Codex tab" ] && ! grep -q "^agent send-keys" "$tmp/herdr.log" 2>/dev/null'
+akey --screen "$sh1" --keys y
+check "(M7) answer --keys y, no marker: no review waits in the Codex tab, exit 1, no send-keys" '[ $rc = 1 ] && [ "$out" = "no review waits in the Codex tab" ] && nokeys'
 sleep 120 & dead=$!; kill "$dead"; wait "$dead" 2>/dev/null
 echo "$dead" > "$mk"
-akey --keys y
-check "(M8) answer, marker with a dead pid, tab blocked: no review waits in the Codex tab, exit 1, no send-keys" '[ $rc = 1 ] && [ "$out" = "no review waits in the Codex tab" ] && ! grep -q "^agent send-keys" "$tmp/herdr.log" 2>/dev/null'
+akey --screen "$sh1" --keys y
+check "(M8) answer, marker with a dead pid, tab blocked: no review waits in the Codex tab, exit 1, no send-keys" '[ $rc = 1 ] && [ "$out" = "no review waits in the Codex tab" ] && nokeys'
 rm -f "$mk"
 printf idle > "$tmp/hstatus"
 mark
-akey --keys y
+akey --screen "$sh1" --keys y
 unmark
-check "(M9) answer, live marker, tab idle: no review waits in the Codex tab, exit 1, no send-keys" '[ $rc = 1 ] && [ "$out" = "no review waits in the Codex tab" ] && ! grep -q "^agent send-keys" "$tmp/herdr.log" 2>/dev/null'
+check "(M9) answer, live marker, tab idle: no review waits in the Codex tab, exit 1, no send-keys" '[ $rc = 1 ] && [ "$out" = "no review waits in the Codex tab" ] && nokeys'
 printf blocked > "$tmp/hstatus"
 mark
-akey --keys y
+akey --screen "$sh1" --keys y
 unmark
-check "(M10) answer, live marker, tab blocked: one send-keys y, sent: y, exit 0" '[ $rc = 0 ] && [ "$out" = "sent: y" ] && [ "$(grep -cxF "agent send-keys st-codex-demo y" "$tmp/herdr.log" 2>/dev/null)" = 1 ]'
+check "(M10) answer with the screen hash, live marker, tab blocked: one send-keys y, sent: y, exit 0" '[ $rc = 0 ] && [ "$out" = "sent: y" ] && [ "$(grep -cxF "agent send-keys st-codex-demo y" "$tmp/herdr.log" 2>/dev/null)" = 1 ]'
+mark
+akey --screen 000000000000 --keys y
+unmark
+check "(M21) answer with another screen hash, live marker, tab blocked: the Codex tab shows another prompt, exit 1, no send-keys" '[ $rc = 1 ] && [ "$out" = "the Codex tab shows another prompt" ] && nokeys'
+mark
+akey --screen "$sh2" --keys y
+unmark
+check "(M21) answer with the hash of a screen not shown: refused, no send-keys" '[ $rc = 1 ] && [ "$out" = "the Codex tab shows another prompt" ] && nokeys'
+ul="usage: st-advisor.sh plan|test|diff|decisions|change|round|check|continued|waive|note|talk|count|answer|watch ..."
 ok=1
 for k in 'a;b' '$(x)' -x --help; do
-  akey --keys "$k"
-  [ $rc = 2 ] && [ "$(head -n1 <<<"$out")" = "usage: st-advisor.sh plan|test|diff|decisions|change|round|check|continued|waive|note|talk|count|answer|watch ..." ] && [ ! -e "$tmp/herdr.log" ] || ok=0
+  akey --screen "$sh1" --keys "$k"
+  [ $rc = 2 ] && [ "$(head -n1 <<<"$out")" = "$ul" ] && [ ! -e "$tmp/herdr.log" ] || ok=0
 done
 check "(M11) answer --keys with a;b, \$(x), -x or --help: usage line names answer|watch, exit 2, no herdr call" '[ $ok = 1 ]'
-out=$(cd "$proj" && bash "$root/scripts/st-advisor.sh" answer --keys y); rc=$?
+ok=1
+mark
+for a in "--keys y" "--screen --keys y" "--screen ${sh1}0 --keys y" "--screen ${sh1:1} --keys y" "--screen ABCDEF012345 --keys y" "--screen 0123456789ag --keys y" "--screen $sh1" "--keys y --screen $sh1"; do
+  read -ra av <<<"$a"
+  akey "${av[@]}"
+  [ $rc = 2 ] && [ "$(head -n1 <<<"$out")" = "$ul" ] && [ ! -e "$tmp/herdr.log" ] || { ok=0; echo "  bad case: answer $a rc=$rc" >&2; }
+done
+unmark
+check "(M22) answer with no, a short, a long, an uppercase or a non-hex --screen, or keys first: usage, exit 2, no herdr call" '[ $ok = 1 ]'
+out=$(cd "$proj" && bash "$root/scripts/st-advisor.sh" answer --screen "$sh1" --keys y); rc=$?
 outw=$(cd "$proj" && "$realtimeout" 20 bash "$root/scripts/st-advisor.sh" watch); rcw=$?
 check "(M12) answer and watch outside herdr: not in herdr, exit 1" '[ $rc = 1 ] && [ "$out" = "not in herdr" ] && [ $rcw = 1 ] && [ "$outw" = "not in herdr" ]'
 printf blocked > "$tmp/hstatus"
 mark
 wrun 20
 unmark
-exp=$(printf 'codex tab waits: st-codex-demo\nDo you want to run this command?\n> 1. Yes, proceed\n  2. No, tell Codex what to do differently\ncodex tab waits: end')
-check "(M13) watch, live marker, tab blocked: the screen once between the waits lines, exit 0 after the marker goes" '[ $rc = 0 ] && [ "$out" = "$exp" ]'
+exp=$(printf 'codex tab waits: st-codex-demo %s\n%s\ncodex tab waits: end' "$sh1" "$scr1")
+check "(M13) watch, live marker, tab blocked: the screen once between the waits lines, the header names the screen hash, exit 0 after the marker goes" '[ $rc = 0 ] && [ "$out" = "$exp" ]'
+touch "$tmp/hscreen2"
+mark
+wrun 20
+unmark
+rm -f "$tmp/hscreen2"
+exp=$(printf 'codex tab waits: st-codex-demo %s\n%s\ncodex tab waits: end\ncodex tab waits: st-codex-demo %s\n%s\ncodex tab waits: end' "$sh1" "$scr1" "$sh2" "$scr2")
+check "(M23) watch, the blocked screen changes: a second block with the new hash, the same screen not again" '[ $rc = 0 ] && [ "$out" = "$exp" ]'
 printf blocked > "$tmp/hstatus"
 rm -f "$mk"
 wrun 3
 check "(M14) watch, no marker, tab blocked: no output and no exit within 3 s" '[ $rc = 124 ] && [ -z "$out" ]'
+for f in hgetws hgetcwd; do
+  touch "$tmp/$f"
+  mark
+  akey --screen "$sh1" --keys y
+  unmark
+  check "(M24) answer, live marker, tab blocked, $f differs: no review waits in the Codex tab, exit 1, no send-keys" '[ $rc = 1 ] && [ "$out" = "no review waits in the Codex tab" ] && nokeys'
+  mark
+  wrun 20
+  unmark
+  check "(M24) watch, live marker, tab blocked, $f differs: no output" '[ -z "$out" ] && [ $rc = 0 ]'
+  rm -f "$tmp/$f"
+done
 setmode '{"mode": "codex"}'
 approve
 h=$(plan_hash)

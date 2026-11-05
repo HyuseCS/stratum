@@ -28,7 +28,7 @@ Prerequisites: inside herdr (`HERDR_ENV=1`), `codex` logged in, this repo truste
 4. Start a long turn of your own in the tab, then run a point while it works.
    Expect: nothing typed into the tab. Last line `codex: headless (Codex tab in use)`.
 5. Run a point whose review input asks Codex to run one command that needs the network (for example `git ls-remote origin`). With your normal settings, Codex asks for approval.
-   Expect: the watch prints `codex tab waits: st-codex-stratum`, the screen, and `codex tab waits: end`. The orchestrator handles the prompt by the rule: a prompt on the allow list gets a one-time yes through `st-advisor.sh answer --keys <key>`; any other prompt (a network command is on the never list) comes to you with the exact screen lines. You answer it in the tab. The review ends in the tab.
+   Expect: the watch prints `codex tab waits: st-codex-<workspace label> <hash>`, the screen, and `codex tab waits: end`. The orchestrator handles the prompt by the rule: a prompt on the allow list gets a one-time yes through `st-advisor.sh answer --screen <hash> --keys <key>`; any other prompt (a network command is on the never list) comes to you with the exact screen lines. You answer it in the tab. The review ends in the tab.
 6. The orchestrator saves the screen lines of step 5 as case M20 in `tests/test_advisor_matrix.sh` and runs `bash tests/test_advisor_matrix.sh`.
 7. Run a point and close the Codex tab while the review runs.
    Expect: the point ends `BLOCKED: the Codex tab ended during the review`, and no headless run follows. If the point does not end, tell the orchestrator to stop it and report it (plan risk R6).
