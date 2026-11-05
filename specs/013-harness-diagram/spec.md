@@ -55,8 +55,9 @@ Compare the answer with a search of the repo.
    file is one element with a summary of 1 or 2 short sentences.
 2. **Given** any link in the model, **When** it is read, **Then** it has a kind (starts, reads,
    writes, runs or passes) and a label that names the data.
-3. **Given** a vendored skill (ponytail, impeccable, ui-ux, hallmark, graphify), **When** it is
-   read, **Then** it carries a `vendored` tag.
+3. **Given** a vendored skill (the 11 skills whose folder `THIRD_PARTY_NOTICES.md` names: the six
+   `st-ponytail*` skills, `st-grill`, `st-ui-ux`, `st-impeccable`, `st-graphify`, `st-hallmark`),
+   **When** it is read, **Then** it carries a `vendored` tag.
 
 ---
 
@@ -103,8 +104,8 @@ Remove the folder. The test passes.
 2. **Given** an element whose file was removed, **When** the test runs, **Then** it fails and names
    the file.
 3. **Given** a model change with no rebuild of the page, **When** the test runs, **Then** it fails.
-4. **Given** a machine with no `npx`, **When** the test runs, **Then** the validity and rebuild
-   checks print SKIP and the coverage check still runs.
+4. **Given** a machine with no `npx`, or with Node below 22.22.3, **When** the test runs, **Then**
+   the validity and rebuild checks print SKIP and the coverage check still runs.
 
 ### Edge Cases
 
@@ -126,13 +127,18 @@ Remove the folder. The test passes.
   under `hooks/` (with `hooks/ponytail/`), per `scripts/*.sh`, per file under `statusline/`, per
   `procedures/*.md`, and per data file the harness reads or writes (`.stratum/*` and the files in
   `specs/<feature>/`: spec, plan, research, data model, contracts, quickstart, tasks, checklists,
-  changes, decisions, advisor.md, gaps.md).
+  changes, decisions, advisor.md, gaps.md). Another file that a link needs (for example the
+  project's `DESIGN.md`, `graphify-out/GRAPH_REPORT.md`, `templates/*`) also gets one element (D10).
+  The coverage check does not require these, and the test checks that each one that is a plugin
+  file exists.
 - **FR-003**: Each element MUST have a plain summary of 1 or 2 short sentences.
 - **FR-004**: Each link MUST have a kind (starts, reads, writes, runs or passes) and a label that
   names the data it carries.
 - **FR-005**: There MUST be one ordered view per lane (Full, Fast, Quick, Design) that shows who
-  passes what to whom, and each gate. A gate is a step whose label starts with `gate:` and names
-  what the user must say. A skill that is in no lane shows only in the topic views.
+  passes what to whom, and each gate. Each step label starts with its step number `(n)` (D8). A
+  gate is a step whose label has `gate:` after the step number and names what the user must say,
+  for example `(4) gate: you agree the spec`. A skill that is in no lane shows only in the topic
+  views.
 - **FR-006**: There MUST be an agents view, a harness view (hooks by event, statusline, advisors
   and risk level) and a data-flow view. The user, Codex, `/advisor` and GitHub are elements too,
   because steps pass data to them.
@@ -146,7 +152,8 @@ Remove the folder. The test passes.
 - **FR-012**: The repo MUST NOT get any file that Claude Code loads as a plugin component for this
   feature (no root `.mcp.json`) (D6).
 - **FR-013**: `tests/test_harness_model.sh` MUST check coverage (FR-002 items both ways), model
-  validity and that the page is rebuilt. The last two print SKIP when `npx` is missing.
+  validity and that the page is rebuilt. The last two print SKIP when `npx` is missing or Node is
+  below 22.22.3 (D9).
 - **FR-014**: The model MUST describe the harness as it is now. No skill, agent, hook or script
   changes in this feature.
 
@@ -174,8 +181,9 @@ Remove the folder. The test passes.
 
 ## Assumptions
 
-- The format is LikeC4, pinned at 1.60.0 and run with `npx` (D1). Node 24 is on the PC. The
-  laptop is assumed to have Node 18 or later.
+- The format is LikeC4, pinned at 1.60.0 and run with `npx` (D1). LikeC4 1.60.0 needs Node
+  22.22.3 or later (D9). Node 24 is on the PC. The laptop must have Node 22.22.3 or later to
+  validate and rebuild the page. With an older Node the test prints SKIP for those checks.
 - GitHub draws the Mermaid blocks of the page with automatic layout. The dragged layout shows only
   in the LikeC4 preview (D2).
 - Dragging needs the LikeC4 VS Code extension. Drag-and-save was not tested in the spike, so it is
