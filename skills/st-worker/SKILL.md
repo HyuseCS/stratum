@@ -15,7 +15,7 @@ Make no herdr call yourself. Run only `scripts/st-worker.sh`, git and the `st-re
 4. Start one worker per task, each value as one quoted argument, and `--machine "<m>" --repo "<path>"` only for a saved machine:
    `bash <plugin root>/scripts/st-worker.sh start "<id>" --task "<file>" --test "<cmd>" --lane "<lane>" --roster "<file>"`
    Show the `worker` line.
-   Each worker workspace gets the full layout: Main (the worker agent and lazygit), Dev Servers and VM.
+   Each worker is one tab labelled `worker-<id>` in this workspace (on a saved machine, in its workspace that has the main checkout open, else in an `st-workers` workspace): the worker agent and lazygit side by side.
    `start` exit 4 (state blocked): handle it as in step 6 `blocked`, then run `bash <plugin root>/scripts/st-worker.sh goal <id> --test <cmd> [--machine <m>]`, then go on with step 6.
    If the project has `.stratum/worker-setup.sh`, `start` runs it in the new worktree first and shows its output after `setup output:`. If it fails, `start` stops with `stopped: worker-setup.sh exited <n>`: show the output to the user and stop. Never write or change that file: the user owns it.
    `start` exit 7 (state unsent): handle it as in step 6 `unsent`, then go on with step 6.

@@ -12,7 +12,7 @@ bash tests/test_inspect.sh
 git status --porcelain
 ```
 
-Expected: every line `ok` (308 at close), exit 0, and `git status --porcelain` shows nothing new from the runs
+Expected: every line `ok` (577 `ok` lines from `tests/test_st_worker.sh` at the #71 close), exit 0, and `git status --porcelain` shows nothing new from the runs
 (lessons L8).
 
 ## 2. Live local run (US1, SC-001, SC-005; measures research R1, R4, R5, R6, R11)
@@ -45,9 +45,42 @@ Record in research.md:
    `git merge --no-ff --no-edit worker-t910` and `grep -qx hi demo/hello.txt; echo $?` gives `0`.
 7. `bash $S close T910`: `closed worker-t910` and `folder ... ready to remove`. Then all three are
    empty: `herdr agent list | jq -r '.result.agents[].name' | grep -x worker-t910`,
-   `herdr workspace list | jq -r '.result.workspaces[].label' | grep -x worker-t910`,
+   `herdr tab list | jq -r '.result.tabs[].label' | grep -x worker-t910` (before #71:
+   `workspace list`),
    `pgrep -af -- '-n worker-t91[0]'` (SC-005; the bracket keeps pgrep from matching the shell
-   that runs it, lessons L21). The answer of `workspace close` (R1).
+   that runs it, lessons L21). The answer of `workspace close` (R1). Since #71 see section 2b.
+
+## 2b. Worker tab live (#71, FR-001, FR-010, FR-018, SC-005; measures research R17)
+
+Needs: this PC, a herdr pane (`HERDR_ENV=1`), the #71 script. Run from the orchestrator's own pane
+(the plugin root is this checkout; `S=<project root>/scripts/st-worker.sh`). Pick an id with no
+folder or branch `worker-<id>` yet (`git branch --list 'worker-t92*'`); T920 is used below.
+
+```bash
+herdr tab list --workspace "$HERDR_WORKSPACE_ID" | jq -c '[.result.tabs[] | {tab_id, label}]' > /tmp/tabs-before.json
+printf 'Create demo/hello.txt with the one line hi.\n' > /tmp/t920.txt
+printf 'worker-t920\tlocal\tworker-t920\tT920\n' > /tmp/roster-t920.txt
+time bash $S start T920 --task /tmp/t920.txt --test 'grep -qx hi demo/hello.txt' --lane 'plain edit, no lane' --roster /tmp/roster-t920.txt
+herdr tab list --workspace "$HERDR_WORKSPACE_ID" | jq -c '[.result.tabs[] | {tab_id, label}]'
+herdr pane list --workspace "$HERDR_WORKSPACE_ID" | jq -c --arg t "<tab id from field 4 of the worker line>" '[.result.panes[] | select(.tab_id == $t) | {pane_id, cwd}]'
+bash $S wait T920
+bash $S result T920
+bash $S close T920
+herdr tab list --workspace "$HERDR_WORKSPACE_ID" | jq -c '[.result.tabs[] | {tab_id, label}]' > /tmp/tabs-after.json
+diff /tmp/tabs-before.json /tmp/tabs-after.json && echo same-tabs
+herdr workspace list | jq -r --arg w "$HERDR_WORKSPACE_ID" '.result.workspaces[] | select(.workspace_id == $w) | .workspace_id'
+herdr agent list | jq -r '.result.agents[].name' | grep -x worker-t920; echo "agent grep exit $?"
+pgrep -af -- '-n worker-t92[0]'; echo "pgrep exit $?"
+```
+
+Expected: `start` exit 0, the `worker` line's field 4 is a tab id in this workspace; the tab list
+after `start` is the one before plus one tab labelled `worker-t920`, with no `Dev Servers` or `VM`
+tab added; that tab has two panes, both with cwd `/home/hyuse/Desktop/stratum-worker-t920`, lazygit
+in the right one (look at it). The user sees the tab in this workspace. `wait` ends
+`state finished`, `result` prints the four lines. `close` prints `closed worker-t920` and
+`folder /home/hyuse/Desktop/stratum-worker-t920 ready to remove`; `same-tabs` prints (the
+orchestrator's own tab ids unchanged), this workspace id is still printed, the agent grep and pgrep
+exit 1. Do not merge `worker-t920`: the folder and branch stay for the user to remove.
 
 The user removes `../stratum-003-demo`, `../stratum-worker-t910` (next to the main checkout
 `/home/hyuse/Desktop/stratum`, research R3) and the two branches when they want.
@@ -136,3 +169,48 @@ Live 2026-10-24 (laptop repo at 3275e07): `start` exit 0 in 10 s, `state working
 `git show worker-t905:demo/hello.txt` gives `hi` here; `close` printed `closed worker-t905` and
 `folder ... ready to remove`; agent, workspace and pgrep checks on the laptop all empty. The no-answer
 path was not run live.
+
+## 6b. Worker tab on the laptop, new `st-workers` workspace (#71, US3, FR-001, FR-010, FR-018, D35, D37; measures research R17)
+
+Only when `herdr --machine laptop workspace list` exits 0. Needs, on the laptop: the repo at
+`~/Desktop/stratum` at a commit that holds this repo's `HEAD`, no branch or folder `worker-t921`
+(pick a fresh id otherwise), no workspace with the main checkout open (the main entry of
+`worktree list --cwd` has no `open_workspace_id`), and no workspace labelled `st-workers`. Run from
+a herdr pane here, after T021 and T022 (`S=<project root>/scripts/st-worker.sh`).
+
+```bash
+L='herdr --machine laptop'
+$L worktree list --cwd '~/Desktop/stratum' | jq -c '.result.worktrees[] | select(.is_linked_worktree == false) | {path, open_workspace_id}'
+$L workspace list | jq -c '[.result.workspaces[] | {workspace_id, label, tab_count}]'
+$L tab list | jq -c '[.result.tabs[] | {tab_id, label, workspace_id}]'
+printf 'Create demo/hello.txt with the one line hi.\n' > /tmp/t921.txt
+printf 'worker-t921\tlaptop\tworker-t921\tT921\n' > /tmp/roster-t921.txt
+time bash $S start T921 --machine laptop --repo '~/Desktop/stratum' --task /tmp/t921.txt --test 'grep -qx hi demo/hello.txt' --lane 'plain edit, no lane' --roster /tmp/roster-t921.txt
+$L workspace list | jq -c '[.result.workspaces[] | {workspace_id, label, tab_count}]'
+$L tab list | jq -c '[.result.tabs[] | {tab_id, label, workspace_id}]'
+$L pane list --workspace "<WS of the st-workers workspace>" | jq -c '[.result.panes[] | {pane_id, tab_id, cwd}]'
+bash $S wait T921 --machine laptop
+bash $S result T921 --machine laptop
+bash $S close T921 --machine laptop
+$L workspace list | jq -c '[.result.workspaces[] | {workspace_id, label, tab_count}]'
+$L tab list | jq -c '[.result.tabs[] | {tab_id, label, workspace_id}]'
+$L tab list | jq -r '.result.tabs[].label' | grep -x worker-t921; echo "tab grep exit $?"
+$L workspace list | jq -r '.result.workspaces[].label' | grep -x st-workers; echo "workspace grep exit $?"
+```
+
+Expected: before `start`, no `open_workspace_id` on the main entry and no `st-workers` workspace. `start` first makes one extra ssh call, `cd ~/Desktop/stratum && pwd`, because `--repo` starts with `~`; it must print `/home/hyuse/Desktop/stratum`.
+`start` exit 0; after it, one new workspace labelled `st-workers` with two tabs: its own first tab
+and `worker-t921` (field 4 of the `worker` line). The worker tab has two panes, both with cwd
+`/home/hyuse/Desktop/stratum-worker-t921` (absolute, because `start` resolved `~` first, and herdr does not expand `~` in `--cwd`;
+`tab create --cwd` and `pane split --cwd` got the absolute path), lazygit in the right one. `wait` ends `state finished`,
+`result` prints the four lines and `fetched worker-t921 <sha>`. `close` prints `closed worker-t921`
+and `folder ~/Desktop/stratum-worker-t921 ready to remove`; then the `st-workers` workspace is gone
+(`close` ran `workspace close`: the workspace's own first tab is still there when the worker tab
+closes, so herdr has no reason to close it by itself), every other laptop workspace and tab is as
+before, and both greps exit 1. The herdr #4379 case (closing a workspace's last tab) is not reached
+here, because the worker tab is never the last tab; record that, and record a workspace that was
+already gone before `workspace close` ran (a `close` stop with herdr's line) as a finding. Do not
+merge `worker-t921`: the folder and branch stay on the laptop, the fetched branch here, for the
+user to remove.
+
+Live 2026-11-06 (research R17): the first 6b run, T921, opened both panes at `/home/hyuse` (herdr does not expand `~` in `--cwd`), and Claude asked to trust `/home/hyuse`. Fixed in f0d61fc, which adds one ssh call first (`cd ~/Desktop/stratum && pwd`). The rerun, T922, passed with the cwd lines above. T921 left `~/Desktop/stratum-worker-t921` and the branch `worker-t921` on the laptop; the user removes them.

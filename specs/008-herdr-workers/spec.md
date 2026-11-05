@@ -4,7 +4,9 @@
 
 **Created**: 2026-10-23
 
-**Status**: Built. Live runs passed for one worker, questions, a team and headless; the remote run (US3) was not run, the laptop times out (tasks.md T011).
+**Status**: Built. Live runs passed for one worker, questions, a team, headless, and the remote run (US3) on 2026-10-24 (quickstart section 6, tasks.md T011).
+
+**Amended**: 2026-11-05, issue #71 (D31 to D35): a pane worker is one tab in the orchestrator's workspace, not a workspace of its own (US1, US3, FR-001, FR-010, FR-015, FR-018, SC-005).
 
 **Input**: User description: "GitHub issues #11 and #17 on HyuseCS/stratum as one feature: the Stratum orchestrator starts worker sessions (headless `claude -p` for quick local tasks, and a `claude` in its own herdr pane and git worktree for visible or remote tasks, PC or laptop), gives each a brief and a `/goal`, relays the worker's questions to the user, collects the result, reviews and merges, and closes the pane. Workers on one project act as a team." The issue bodies are the source. Decisions D11 to D21 are in `decisions.md` (codes continue from the #32 grill). Spike #9 (`specs/003-session-mods/research.md`) proved the pieces: a session starts with no human step, gets a message by name, and stops with nothing left. #32 (`specs/007-herdr-workspace`) gives the script that opens a herdr workspace.
 
@@ -12,32 +14,33 @@
 
 ### User Story 1 - One worker in a herdr pane on this machine (Priority: P1)
 
-The user asks the orchestrator: "run T004 in a worker". The orchestrator makes a git worktree and
-a herdr workspace for it, labelled after the task, starts a `claude` in the pane, writes the brief
+The user asks the orchestrator: "run T004 in a worker". The orchestrator makes a git worktree for
+it and opens one tab, labelled after the task, in the orchestrator's own herdr workspace (#71),
+starts a `claude` in the tab's pane with lazygit beside it, writes the brief
 into the worktree, and sends one prompt: a `/goal` with a short, checkable condition that points
 at the brief. The worker builds on its own. The user can watch the pane the whole time. When the
 worker settles, the orchestrator reads the result file, reviews the branch, merges it on green,
-closes the pane and workspace, and names the worktree folder as ready to remove.
+closes the tab, and names the worktree folder as ready to remove.
 
 **Why this priority**: This is the Done-when of #17 and the base of every other story. Without
 it nothing else has value.
 
 **Independent Test**: Ask for one small task in a worker. See the worker in its pane, get the
-result back with no human step, see the branch merged, and find no pane, workspace, worker
+result back with no human step, see the branch merged, and find no tab, pane, worker
 process or session left afterwards, only the worktree and the branch.
 
 **Acceptance Scenarios**:
 
 1. **Given** a task with a test command, **When** the user asks for it in a worker, **Then** a
-   worktree and a workspace labelled after the task exist, a `claude` runs in the pane, and the
-   brief is in the worktree.
+   worktree exists, a tab labelled after the task is open in the orchestrator's workspace, a
+   `claude` runs in its pane, and the brief is in the worktree.
 2. **Given** the worker is running, **When** the user looks at the pane, **Then** they see the
    worker's work as it happens, and can type into it.
 3. **Given** the worker settles, **When** the orchestrator reads the result file, **Then** the
    result names what was built, the test result, and the commit, and the orchestrator reviews the
    branch and merges it on green with no human step.
-4. **Given** the merge is done, **When** the orchestrator closes the worker, **Then** the pane and
-   workspace are gone, the worktree folder and the branch stay, the report names the folder as
+4. **Given** the merge is done, **When** the orchestrator closes the worker, **Then** the tab and
+   its panes are gone, the worktree folder and the branch stay, the report names the folder as
    ready to remove, and no worker process or session is left.
 5. **Given** the worker fails or is stopped, **When** the orchestrator reports, **Then** the pane
    stays open so the user can read it, and nothing is merged.
@@ -80,8 +83,10 @@ through the orchestrator, both answers reach the worker, and the worker finishes
 
 ### User Story 3 - A worker on the laptop (Priority: P3)
 
-The user asks: "run T004 in a worker on the laptop". The worktree, workspace, brief, pane and
-result live on the laptop. Every herdr call names the machine. The brief goes over ssh, the
+The user asks: "run T004 in a worker on the laptop". The worktree, tab, brief, pane and
+result live on the laptop. The tab opens in the laptop workspace that has the project's main
+checkout open; if none is open, it uses an open `st-workers` workspace there, else makes one with
+that label, and closes it when its last worker closes (D32, D35). Every herdr call names the machine. The brief goes over ssh, the
 result comes back over ssh. The rest is the same as story 1, including the question path.
 
 **Why this priority**: D11: workers are cross-machine, PC to laptop and back.
@@ -93,7 +98,7 @@ worktree and the branch.
 **Acceptance Scenarios**:
 
 1. **Given** a saved, reachable machine, **When** the user asks for a worker there, **Then** the
-   worktree, workspace and pane are on that machine, and the brief is in that worktree.
+   worktree, tab and pane are on that machine, and the brief is in that worktree.
 2. **Given** the worker settles, **When** the orchestrator reads the result, **Then** it reads the
    file on that machine and merges the branch here after fetching it.
 3. **Given** the machine does not answer, **When** the user asks, **Then** nothing is made and one
@@ -175,8 +180,13 @@ the change is in the working tree, nothing is committed by the worker, and no pr
 
 ### Functional Requirements
 
-- **FR-001**: A pane worker MUST get its own git worktree and herdr workspace, made together by
-  herdr, labelled after the task, on this machine or on one saved machine (D15, D11).
+- **FR-001**: A pane worker MUST get its own git worktree, made with `git worktree add` from the
+  main checkout, and one herdr tab labelled after the task, with the agent pane and lazygit side
+  by side. On this machine the tab opens in the orchestrator's own workspace; on a saved machine
+  it opens in that machine's workspace that has the main checkout open, else in an `st-workers`
+  workspace there, made if none is (D15, D11,
+  D32). If the tab cannot be opened, the worktree folder and the branch just made MUST be removed
+  again and `start` stops with the herdr error (D33).
 - **FR-002**: The brief MUST be a file in the worker's worktree and MUST hold: the task text and
   its test command, the Stratum lane the worker runs, the model line (FR-017), the plugin root, the
   result file path, the roster (name,
@@ -204,7 +214,8 @@ the change is in the working tree, nothing is committed by the worker, and no pr
   into the base (D16).
 - **FR-009**: The orchestrator MUST review each worker branch with the Stratum review and MUST be
   the only one who merges. It merges on green, in task order; a conflict goes to the user (D16).
-- **FR-010**: After the merge the orchestrator MUST close the worker's pane and workspace, keep
+- **FR-010**: After the merge the orchestrator MUST close the worker's tab (and, on a saved
+  machine, an `st-workers` workspace once no worker tab is left in it, D35, D36), keep
   the worktree folder and the branch, and name the folder as ready to remove. A failed or stopped
   worker's pane MUST stay open (D18).
 - **FR-011**: A headless worker MUST run with an allow list of tools, no question tool, a turn
@@ -218,7 +229,7 @@ the change is in the working tree, nothing is committed by the worker, and no pr
   worker on the laptop", "build US2 with a team of three"). The existing build loop MUST stay as
   it is (D17).
 - **FR-015**: The steps MUST be the same on every run and checkable without herdr, ssh or a real
-  `claude`: a test with stand-ins that record every call MUST show the worktree and workspace
+  `claude`: a test with stand-ins that record every call MUST show the worktree and tab
   calls, the brief content, the one prompt, the wait, the result read, the review and merge order,
   and the close, for both machines.
 - **FR-016**: The orchestrator MUST be able to find running workers again after its own session
@@ -231,10 +242,18 @@ the change is in the working tree, nothing is committed by the worker, and no pr
   line. The brief MUST say `Model: <model or default>`. `hooks/st-models.py` accepts `st-worker`
   beside the agent names, `tests/test_model_hook.py` covers it, and `skills/st-model/SKILL.md`
   lists `st-worker` (D27, D28).
+- **FR-018**: The script MAY read `HERDR_WORKSPACE_ID` only in `start`, to open the tab there. It
+  MUST close only the one tab labelled with the worker's name, at most once, and MUST close a
+  workspace (never `--group`) only on a saved machine, only when its label is `st-workers` and no
+  tab labelled `worker-*` is left in it. The `st-workers` label is reserved for the script: any
+  workspace with it counts as the script's, also one the user made by hand (D36). It MUST NOT close
+  any other tab or any workspace with another label, the orchestrator's included. Every
+  subcommand that finds a worker (through `find_worker`), `list` and `close` find a worker by its
+  tab label (D34, D35, D36, #71).
 
 ### Key Entities
 
-- **Worker**: one `claude` session for one task: name, machine, worktree, branch, workspace and
+- **Worker**: one `claude` session for one task: name, machine, worktree, branch, tab and
   pane ids, state, result file.
 - **Brief**: the file the worker reads first: task, test command, lane, model, plugin root, result
   path, roster, team rules, advisor line.
@@ -255,7 +274,7 @@ the change is in the working tree, nothing is committed by the worker, and no pr
   worker through the orchestrator.
 - **SC-004**: Two workers on one machine share work through git and reach each other by name. Each
   branch is reviewed and merged by the orchestrator.
-- **SC-005**: After a worker is closed, no pane, workspace, worker process or session of it is
+- **SC-005**: After a worker is closed, no tab, pane, worker process or session of it is
   left, only its worktree folder, branch and transcript.
 - **SC-006**: One quick task runs headless with its result read from JSON, nothing committed by the
   worker, and no process left.
@@ -264,7 +283,9 @@ the change is in the working tree, nothing is committed by the worker, and no pr
 
 ## Assumptions
 
-- herdr 0.9.4 on both machines, with `herdr worktree create`, `agent start --kind claude`,
+- herdr 0.9.4 on both machines, with `tab create --workspace --cwd --label`, `tab list`,
+  `tab close`, `pane list`, `pane split`, `pane run`, `workspace create --label`,
+  `workspace close`, `worktree list --cwd`, `agent start --kind claude`,
   `agent prompt --wait`, `agent wait --until`, `agent read` and `--machine` as `herdr --skill`
   describes. The remote server already runs; the skill never starts or repairs it.
 - Claude Code 2.1.302 or later on both machines, with `/goal` (https://code.claude.com/docs/en/goal.md)
@@ -278,3 +299,12 @@ the change is in the working tree, nothing is committed by the worker, and no pr
   orchestrator merges locally; nothing is pushed unless the user says push.
 - A worker's transcript stays on disk after close, as the spike found.
 - Token cost grows with every worker. The user decides the team size per request.
+- Workers started before #71, with a workspace of their own, are not found or closed by the new
+  script. No such worker was open on this PC on 2026-11-05; the laptop did not answer on 2026-11-06 (research R17), so it was not checked.
+
+## Gaps (#71)
+
+- G1. Done. T023 passed on this PC on 2026-11-06 (research R17, Live (T023)).
+- G2. Done. T024 passed on the laptop on 2026-11-06, after the `~` fix in f0d61fc. The first run found that bug (research R17, Live (T024)).
+- G3. Done. The live checks of FR-012 (after close: agent gone, and no process left in T024), SC-002 and SC-005 passed in T023 and T024 (research R17).
+- G4 dropped: a `tab create` that exits 0 without ids. herdr does not answer that way. The gap stays in contracts/script.md section 4.

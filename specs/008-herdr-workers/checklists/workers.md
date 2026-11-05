@@ -29,6 +29,14 @@
 - [ ] Does the spec say which permissions a worker gets and does not get? [FR-013]
 - [ ] Does the spec say what crosses to the other machine (brief, result) and over which channel? [FR-007]
 
+## Worker tab (#71)
+
+- [ ] Does the spec say which workspace the worker tab opens in, on this machine and on a saved machine, and what happens when none is open there? [FR-001, US3]
+- [ ] Does the spec say what `start` removes when the tab cannot be opened, and that nothing with commits is removed? [FR-001, D33]
+- [ ] Is the set of tabs and workspaces the script may close a closed list, so the orchestrator's own tab can never be closed? [FR-018, FR-010]
+- [ ] Does the spec say how a worker is found again by its tab label after the orchestrator session ends, also from another workspace? [FR-016, FR-018]
+- [ ] Is it clear that workers started before #71, with a workspace of their own, are not handled? [Assumptions]
+
 ## Notes
 
 - Items are reviewer-owned. `[x]` means the requirement is written well enough, not that it is built.
