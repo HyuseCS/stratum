@@ -56,7 +56,7 @@ Dependencies).
 
 **Purpose**: the project folder, the kinds, the groups and the actors that every other file uses.
 
-- [ ] T002 Write `docs/harness/likec4.config.json` (`{"name": "stratum-harness", "title": "Stratum harness"}`) and `docs/harness/model/0-spec.c4`: the specification block of model-format.md exactly; the 12 groups and the 6 actors of data-model.md, each with a title and a summary (Codex: the OpenAI CLI that reviews at the advisor points, read-only; `/advisor`: the reviewer model the user sets in Claude Code; read `README.md` "Advisor" and `scripts/st-advisor.sh` for both). Depends on T001 (its test uses T001's script). Test: `bash tests/test_harness_model.sh kinds summaries links && npx -y likec4@1.60.0 validate docs/harness`.
+- [X] T002 Write `docs/harness/likec4.config.json` (`{"name": "stratum-harness", "title": "Stratum harness"}`) and `docs/harness/model/0-spec.c4`: the specification block of model-format.md exactly; the 12 groups and the 6 actors of data-model.md, each with a title and a summary (Codex: the OpenAI CLI that reviews at the advisor points, read-only; `/advisor`: the reviewer model the user sets in Claude Code; read `README.md` "Advisor" and `scripts/st-advisor.sh` for both). Depends on T001 (its test uses T001's script). Test: `bash tests/test_harness_model.sh kinds summaries links && npx -y likec4@1.60.0 validate docs/harness`.
 
 **Checkpoint**: `0-spec.c4` validates alone. US2 and US1 file tasks can all start.
 
