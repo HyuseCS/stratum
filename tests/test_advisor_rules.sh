@@ -23,6 +23,14 @@ A13|skills/st-build/SKILL.md|`no change since <base>: skip`: nothing changed aft
 A14|skills/st-build/SKILL.md|Codex only reviews: it never creates, changes or deletes a file, and never builds or fixes anything. The user may use the Codex tab for their own work.
 A15|skills/st-build/SKILL.md|`BLOCKED: Codex changed files during the review: <paths>`: show the paths. Revert nothing. The user checks them with `git diff` and keeps or reverts them, then says run the point again or continue (`continued`).
 A16|README.md|Each review in the tab compares HEAD and the changed and untracked files before and after the turn. Any difference ends the point `BLOCKED` with the files named. Nothing is reverted.
+A17|skills/st-build/SKILL.md|Start `bash <plugin root>/scripts/st-advisor.sh watch` with the Monitor tool, then run `bash <plugin root>/scripts/st-advisor.sh <point> ...` with Bash `run_in_background`, both from the project root (a worktree's root for the test point of a `[P]` task). Change no file in that folder until the point ends. When it ends, stop the watch and handle the point's output.
+A18|skills/st-build/SKILL.md|On a `codex tab waits:` line, read the screen lines after it. A prompt on the allow list: answer it with `bash <plugin root>/scripts/st-advisor.sh answer --keys <key>`, the key of the one-time yes only ("Yes, proceed", "Yes, just this once"). Never pick an option that says "don't ask again", "allow ... for this session", "in the future" or "for these files", or one that names a host. Every other prompt: show the user the exact screen lines and leave the tab open.
+A19|skills/st-build/SKILL.md|Allow list: read a file or list a folder anywhere, except a `.env` file or a key, credential, token or other secret file; run one command only, with no `;`, `&&`, `||`, `|`, `$(` or backticks: `git log`, `git diff`, `git show`, `git status`, `git blame`, `ls`, `cat`, `head`, `tail`, `wc`, `grep`, `rg` or `find`, with no `>`, `>>`, `tee`, `--output`, `--pre`, `-fprint`, `-fprintf`, `-fls`, `-delete`, `-exec`, `-execdir`, `-ok` or `-okdir`; or the project's test or lint command with no `--fix`, `--write`, `-w`, `-u` or `--update-snapshots`.
+A20|skills/st-build/SKILL.md|Never approve a file write, move or delete, a git change (`commit`, `checkout`, `switch`, `reset`, `restore`, `stash`, `add`, `rm`, `mv`, `merge`, `rebase`, `pull`, `fetch`, `push`, `tag`, `branch`, `clean`, `apply`, `am`), an install, network use, a `.env` file or secret, or a change to Codex settings or folder trust.
+A21|skills/st-build/SKILL.md|`BLOCKED: the Codex tab ended during the review` or `BLOCKED: the Codex tab failed during the review: ...`: show the line. A review in the tab has no time limit; it ends early only this way. Run the point again on the user's word, or `continued`. To stop a hung review, the user presses Esc in the tab or tells you to stop the point.
+A22|skills/st-build/SKILL.md|the key of the one-time yes only ("Yes, proceed", "Yes, just this once"). Never pick an option that says "don't ask again", "allow ... for this session", "in the future" or "for these files", or one that names a host.
+A23|skills/st-build/SKILL.md|run one command only, with no `;`, `&&`, `||`, `|`, `$(` or backticks
+A24|README.md|A review in the tab has no time limit. It ends early only when the tab ends (you close it or Codex exits): the point is then `BLOCKED`, and it does not run the review in the background. Press Esc in the tab to stop a hung review.
 TABLE
 
 while IFS='|' read -r id file phrase; do
@@ -30,6 +38,8 @@ while IFS='|' read -r id file phrase; do
 done <<'TABLE'
 G1|skills/st-build/SKILL.md|Then run the same point once more on the changed input.
 G2|skills/st-build/SKILL.md|consult the advisor if one is set (`/advisor`) on the feature's full
+G3|skills/st-build/SKILL.md|No background run, no polling.
+G4|skills/st-plan/SKILL.md|in the foreground, with a Bash timeout of 600000 ms
 TABLE
 
 exit $fail

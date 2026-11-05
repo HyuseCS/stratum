@@ -263,8 +263,8 @@ phrases <<'EOF'
 #18 FR-001 build quick	skills/st-build/SKILL.md	The Quick lane has no advisor.
 #18 FR-001 build worktree	skills/st-build/SKILL.md	with the working directory at that worktree's root and `<feature dir>` as the main checkout's absolute path, so the record lands in the main checkout.
 #18 FR-001 plan point	skills/st-plan/SKILL.md	bash <plugin root>/scripts/st-advisor.sh plan <feature dir>
-#18 FR-002 wait build	skills/st-build/SKILL.md	in the foreground, with a Bash timeout of 600000 ms, and wait for it. No background run, no polling.
-#18 FR-002 wait plan	skills/st-plan/SKILL.md	in the foreground, with a Bash timeout of 600000 ms, and wait for it.
+#18 FR-002 wait build	skills/st-build/SKILL.md	Change no file in that folder until the point ends. When it ends, stop the watch and handle the point's output.
+#18 FR-002 wait plan	skills/st-plan/SKILL.md	as "Advisor" in `<plugin root>/skills/st-build/SKILL.md` says: the watch first, then the point in the background.
 #18 FR-005 revise	skills/st-build/SKILL.md	Two rounds at most per point per gate pass, then the user decides.
 #18 FR-006 blocked	skills/st-build/SKILL.md	stop and show the user the reason. Nothing passes the gate.
 #18 FR-006 blocked	skills/st-build/SKILL.md	bash <plugin root>/scripts/st-advisor.sh continued <point> <feature dir>
@@ -282,7 +282,7 @@ phrases <<'EOF'
 #18 FR-016 plan rules	skills/st-plan/SKILL.md	Handle its answer as in "Advisor" in `<plugin root>/skills/st-build/SKILL.md`
 #18 FR-015 init	skills/st-init/SKILL.md	advisor mode `auto` (recommended: the risk level picks Codex, `/advisor` or both at each point; needs `codex` logged in for Codex), `codex` (Codex reviews the plan and a test red after 2 tries), `both` (Codex, then `/advisor` if set), or `off` (no Codex, nothing sent to OpenAI)?
 #18 FR-015 init	skills/st-init/SKILL.md	Write `.stratum/advisor.json` as `{"mode": "<answer>"}`.
-#18 FR-016 readme	README.md	The orchestrator runs `scripts/st-advisor.sh` in the foreground and waits for the answer.
+#18 FR-016 readme	README.md	The orchestrator starts `scripts/st-advisor.sh watch`, runs `scripts/st-advisor.sh` in the background, and waits for the answer.
 #18 FR-016 readme	README.md	Codex only reviews: it never builds or fixes.
 #18 FR-016 readme	README.md	What leaves the machine: each call sends the prompt and the files Codex reads to OpenAI
 #18 FR-016 readme	README.md	`"mode": "off"` is the off switch: nothing goes to OpenAI.

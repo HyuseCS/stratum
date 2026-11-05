@@ -6,3 +6,6 @@ summary: The revised approach remains focused: reuse existing scripts, retain se
 
 ## decisions | 2026-11-05T16:05:39Z | /advisor
 summary: /advisor: 7 US1 small decisions reviewed, all small and in plan; k5 test allows only workspace list before the lock (negative control red); drift to log: T002 mislabels the agent_not_ready case
+
+## decisions | 2026-11-05T16:22:55Z | /advisor
+summary: /advisor: 6 US2 small decisions in plan; state.json exclude checked live from a subfolder project (ignored, a project file change caught, a file outside the project folder not caught = plan S1); every rc 4 path in T016 must print a BLOCKED first line
