@@ -197,6 +197,35 @@ AGENTS.md, CLAUDE.md     point every tool at the constitution
 Templates and scripts stay in the plugin. A file in `.stratum/templates/` overrides the plugin's
 copy for that project only. `scripts/st-lock.sh` runs tests marked `[lock]` one at a time per repo; it is not checked on Windows.
 
+## Harness diagram
+
+[docs/harness/README.md](docs/harness/README.md) shows the harness in 7 views: the Full, Fast,
+Quick and Design lanes step by step with their gates, the agents, the harness (hooks by event,
+statusline, advisors), and the data flow between files. A LikeC4 model in `docs/harness/` makes
+the page.
+
+To edit, change `docs/harness/model/*.c4` for elements and links, and `docs/harness/views/*.c4`
+for views. A drag in the VS Code LikeC4 preview saves the layout to `docs/harness/.likec4/`.
+
+The commands need Node 22.22.3 or later. To check and rebuild:
+
+```bash
+npx -y likec4@1.60.0 validate docs/harness
+bash tests/test_harness_model.sh
+npx -y likec4@1.60.0 export markdown docs/harness
+```
+
+Commit the new page with the model change.
+
+To let Claude Code query the model, add the MCP server once per machine:
+
+```bash
+claude mcp add --scope user likec4 -- npx -y @likec4/mcp@1.60.0
+```
+
+User scope starts this server in every project you open, not only this repo. An LLM can also
+read the `.c4` text, or run `npx -y likec4@1.60.0 export json docs/harness`.
+
 ## Built in
 
 - **Advisor.** Codex (OpenAI's `codex` CLI), a model from another vendor, and `/advisor` if you set one, review four points in the Full lane: the plan before the Plan gate, a test still red after two tries, each story's small decisions, and the diff at the end of Build. At the plan point Codex only advises on a simpler or better approach and does not validate the plan (`st-inspect` does that). In mode `auto` the risk level picks Codex, `/advisor`, both or none at each point. The whole Fast lane uses `/advisor` if you set one. The Quick lane has no advisor.
@@ -393,6 +422,7 @@ bash tests/test_local_files.sh
 bash tests/test_st_update.sh
 bash tests/test_update_rules.sh
 bash tests/test_update_items.sh
+bash tests/test_harness_model.sh
 node tests/test_token_weather.mjs
 node tests/test_pr_workflow.mjs
 claude plugin validate .claude-plugin/plugin.json
