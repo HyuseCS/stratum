@@ -199,9 +199,11 @@ copy for that project only. `scripts/st-lock.sh` runs tests marked `[lock]` one 
 
 ## Harness diagram
 
-[docs/harness/README.md](docs/harness/README.md) shows the harness in 7 views: the Full, Fast,
+[docs/harness/README.md](docs/harness/README.md) shows the harness in 15 views: the Full, Fast,
 Quick and Design lanes step by step with their gates, the agents, the harness (hooks by event,
-statusline, advisors), and the data flow between files. A LikeC4 model in `docs/harness/` makes
+statusline, advisors), and the data flow between files. The Full and Design lanes each have an
+overview, and in the VS Code LikeC4 preview a click on a phase or mode step opens its own view.
+GitHub shows all 15 views on the page, with no clicks. A LikeC4 model in `docs/harness/` makes
 the page.
 
 To edit, change `docs/harness/model/*.c4` for elements and links, and `docs/harness/views/*.c4`

@@ -9,19 +9,77 @@
 title: "Full lane"
 ---
 graph LR
+  SkillsSt_define@{ shape: rectangle, label: "/st-define" }
+  SkillsSt_plan@{ shape: rectangle, label: "/st-plan" }
+  SkillsSt_inspect@{ shape: rectangle, label: "/st-inspect" }
+  SkillsSt_build@{ shape: rectangle, label: "/st-build" }
+  SkillsSt_close@{ shape: rectangle, label: "/st-close" }
   User@{ shape: rectangle, label: "User" }
   SkillsSt@{ shape: rectangle, label: "/st" }
   ScriptsSt_state_sh@{ shape: rectangle, label: "st-state.sh" }
   StratumState_json@{ shape: rectangle, label: ".stratum/state.json" }
+  User -. "`(1) task in plain words`" .-> SkillsSt
+  SkillsSt -. "`(2) lane and risk line`" .-> User
+  SkillsSt -. "`(3) risk level`" .-> ScriptsSt_state_sh
+  ScriptsSt_state_sh -. "`(4) risk level`" .-> StratumState_json
+  SkillsSt -. "`(5) feature description`" .-> SkillsSt_define
+  SkillsSt_define -. "`(6) gate: you agree the spec`" .-> User
+  SkillsSt -. "`(7) feature dir`" .-> SkillsSt_plan
+  SkillsSt_plan -. "`(8) gate: you answer each open decision`" .-> User
+  SkillsSt -. "`(9) feature dir`" .-> SkillsSt_inspect
+  SkillsSt_inspect -. "`(10) gate: OK to build`" .-> User
+  SkillsSt -. "`(11) feature dir`" .-> SkillsSt_build
+  SkillsSt -. "`(12) feature dir`" .-> SkillsSt_close
+  SkillsSt_close -. "`(13) gate: push`" .-> User
+```
+
+### Full lane: Define
+
+```mermaid
+---
+title: "Full lane: Define"
+---
+graph LR
+  SkillsSt@{ shape: rectangle, label: "/st" }
   SkillsSt_define@{ shape: rectangle, label: "/st-define" }
   SkillsSt_grill@{ shape: rectangle, label: "/st-grill" }
+  User@{ shape: rectangle, label: "User" }
   ProceduresSpecify_md@{ shape: rectangle, label: "procedures/specify.md" }
   FeatureSpec_md@{ shape: rectangle, label: "specs/NNN-feature/spec.md" }
   FeatureChecklists@{ shape: rectangle, label: "specs/NNN-feature/checklists" }
+  ScriptsSt_state_sh@{ shape: rectangle, label: "st-state.sh" }
   ProceduresClarify_md@{ shape: rectangle, label: "procedures/clarify.md" }
   ProceduresChecklist_md@{ shape: rectangle, label: "procedures/checklist.md" }
   AgentsSt_git@{ shape: rectangle, label: "st-git agent" }
   Git@{ shape: rectangle, label: "git repository" }
+  SkillsSt -. "`(1) feature description`" .-> SkillsSt_define
+  SkillsSt_define -. "`(2) feature description`" .-> SkillsSt_grill
+  SkillsSt_grill -. "`(3) one question at a time with a 
+recommended answer`" .-> User
+  User -. "`(4) answers on scope, users, data, 
+privacy and done-criteria`" .-> SkillsSt_grill
+  SkillsSt_define -. "`(5) description and grilling summary`" .-> ProceduresSpecify_md
+  ProceduresSpecify_md -. "`(6) spec from the spec template`" .-> FeatureSpec_md
+  ProceduresSpecify_md -. "`(7) requirements checklist`" .-> FeatureChecklists
+  ProceduresSpecify_md -. "`(8) feature dir and phase define`" .-> ScriptsSt_state_sh
+  SkillsSt_define -. "`(9) spec with open markers, only if gaps 
+remain`" .-> ProceduresClarify_md
+  ProceduresClarify_md -. "`(10) clarified spec`" .-> FeatureSpec_md
+  SkillsSt_define -. "`(11) highest impact areas`" .-> ProceduresChecklist_md
+  ProceduresChecklist_md -. "`(12) impact-area checklist`" .-> FeatureChecklists
+  SkillsSt_define -. "`(13) gate: you agree the spec`" .-> User
+  SkillsSt_define -. "`(14) spec file paths`" .-> AgentsSt_git
+  AgentsSt_git -. "`(15) spec commit`" .-> Git
+```
+
+### Full lane: Plan
+
+```mermaid
+---
+title: "Full lane: Plan"
+---
+graph LR
+  SkillsSt@{ shape: rectangle, label: "/st" }
   SkillsSt_plan@{ shape: rectangle, label: "/st-plan" }
   AgentsSt_plan@{ shape: rectangle, label: "st-plan agent" }
   ProceduresPlan_md@{ shape: rectangle, label: "procedures/plan.md" }
@@ -32,114 +90,137 @@ graph LR
   FeatureQuickstart_md@{ shape: rectangle, label: "specs/NNN-feature/quickstart.md" }
   ProceduresTasks_md@{ shape: rectangle, label: "procedures/tasks.md" }
   FeatureTasks_md@{ shape: rectangle, label: "specs/NNN-feature/tasks.md" }
+  User@{ shape: rectangle, label: "User" }
   ScriptsSt_advisor_sh@{ shape: rectangle, label: "st-advisor.sh" }
   Codex@{ shape: rectangle, label: "Codex" }
   FeatureAdvisor_md@{ shape: rectangle, label: "specs/NNN-feature/advisor.md" }
+  AgentsSt_git@{ shape: rectangle, label: "st-git agent" }
+  Git@{ shape: rectangle, label: "git repository" }
+  SkillsSt -. "`(1) feature dir`" .-> SkillsSt_plan
+  SkillsSt_plan -. "`(2) plugin root, project root, feature 
+dir`" .-> AgentsSt_plan
+  AgentsSt_plan -. "`(3) plan steps to follow`" .-> ProceduresPlan_md
+  ProceduresPlan_md -. "`(4) plan`" .-> FeaturePlan_md
+  ProceduresPlan_md -. "`(5) research decisions`" .-> FeatureResearch_md
+  ProceduresPlan_md -. "`(6) entities`" .-> FeatureData_model_md
+  ProceduresPlan_md -. "`(7) interface contracts`" .-> FeatureContracts
+  ProceduresPlan_md -. "`(8) validation guide`" .-> FeatureQuickstart_md
+  AgentsSt_plan -. "`(9) task steps to follow`" .-> ProceduresTasks_md
+  ProceduresTasks_md -. "`(10) tasks with test commands`" .-> FeatureTasks_md
+  AgentsSt_plan -. "`(11) plan report and open decisions`" .-> SkillsSt_plan
+  SkillsSt_plan -. "`(12) gate: you answer each open decision`" .-> User
+  SkillsSt_plan -. "`(13) answers, same agent`" .-> AgentsSt_plan
+  SkillsSt_plan -. "`(14) plan point and feature dir`" .-> ScriptsSt_advisor_sh
+  ScriptsSt_advisor_sh -. "`(15) spec, plan and tasks, read-only`" .-> Codex
+  Codex -. "`(16) verdict and findings`" .-> ScriptsSt_advisor_sh
+  ScriptsSt_advisor_sh -. "`(17) plan point record`" .-> FeatureAdvisor_md
+  SkillsSt_plan -. "`(18) plan file paths and advisor.md`" .-> AgentsSt_git
+  AgentsSt_git -. "`(19) plan commit`" .-> Git
+```
+
+### Full lane: Inspect
+
+```mermaid
+---
+title: "Full lane: Inspect"
+---
+graph LR
+  SkillsSt@{ shape: rectangle, label: "/st" }
   SkillsSt_inspect@{ shape: rectangle, label: "/st-inspect" }
   AgentsSt_inspect@{ shape: rectangle, label: "st-inspect agent" }
   ProceduresAnalyze_md@{ shape: rectangle, label: "procedures/analyze.md" }
+  FeaturePlan_md@{ shape: rectangle, label: "specs/NNN-feature/plan.md" }
+  ScriptsSt_advisor_sh@{ shape: rectangle, label: "st-advisor.sh" }
+  User@{ shape: rectangle, label: "User" }
+  SkillsSt -. "`(1) feature dir`" .-> SkillsSt_inspect
+  SkillsSt_inspect -. "`(2) plugin root, project root, feature 
+dir`" .-> AgentsSt_inspect
+  AgentsSt_inspect -. "`(3) analysis steps to follow`" .-> ProceduresAnalyze_md
+  AgentsSt_inspect -. "`(4) Validate section`" .-> FeaturePlan_md
+  AgentsSt_inspect -. "`(5) findings and verdict`" .-> SkillsSt_inspect
+  SkillsSt_inspect -. "`(6) check plan, stale or approved`" .-> ScriptsSt_advisor_sh
+  SkillsSt_inspect -. "`(7) gate: OK to build`" .-> User
+```
+
+### Full lane: Build
+
+```mermaid
+---
+title: "Full lane: Build"
+---
+graph LR
+  SkillsSt@{ shape: rectangle, label: "/st" }
   SkillsSt_build@{ shape: rectangle, label: "/st-build" }
   AgentsSt_test@{ shape: rectangle, label: "st-test agent" }
   AgentsSt_build@{ shape: rectangle, label: "st-build agent" }
+  FeatureTasks_md@{ shape: rectangle, label: "specs/NNN-feature/tasks.md" }
   ScriptsSt_verify_sh@{ shape: rectangle, label: "st-verify.sh" }
+  ScriptsSt_advisor_sh@{ shape: rectangle, label: "st-advisor.sh" }
   AgentsSt_debug@{ shape: rectangle, label: "st-debug agent" }
+  AgentsSt_git@{ shape: rectangle, label: "st-git agent" }
+  Git@{ shape: rectangle, label: "git repository" }
   SkillsSt_design@{ shape: rectangle, label: "/st-design" }
   AgentsSt_review@{ shape: rectangle, label: "st-review agent" }
   SkillsSt_impeccable@{ shape: rectangle, label: "/st-impeccable" }
+  SkillsSt -. "`(1) feature dir`" .-> SkillsSt_build
+  SkillsSt_build -. "`(2) test task ids and absolute paths`" .-> AgentsSt_test
+  AgentsSt_test -. "`(3) failing test output`" .-> SkillsSt_build
+  SkillsSt_build -. "`(4) build task ids and absolute paths`" .-> AgentsSt_build
+  AgentsSt_build -. "`(5) ticked task`" .-> FeatureTasks_md
+  SkillsSt_build -. "`(6) test command and touched files`" .-> ScriptsSt_verify_sh
+  ScriptsSt_verify_sh -. "`(7) one PASS or FAIL line`" .-> SkillsSt_build
+  SkillsSt_build -. "`(8) test point after 2 red tries, task 
+and both failures`" .-> ScriptsSt_advisor_sh
+  SkillsSt_build -. "`(9) task, test, both failures and 
+advisor answer`" .-> AgentsSt_debug
+  SkillsSt_build -. "`(10) task paths, tasks.md and advisor.md`" .-> AgentsSt_git
+  AgentsSt_git -. "`(11) task commit`" .-> Git
+  SkillsSt_build -. "`(12) screen task and its mode`" .-> SkillsSt_design
+  SkillsSt_build -. "`(13) story diff`" .-> AgentsSt_review
+  AgentsSt_review -. "`(14) review findings`" .-> SkillsSt_build
+  SkillsSt_build -. "`(15) decisions point and small-decision 
+list`" .-> ScriptsSt_advisor_sh
+  SkillsSt_build -. "`(16) changed screens not done by the 
+Design lane`" .-> SkillsSt_impeccable
+  SkillsSt_build -. "`(17) diff point after the last review`" .-> ScriptsSt_advisor_sh
+```
+
+### Full lane: Close
+
+```mermaid
+---
+title: "Full lane: Close"
+---
+graph LR
+  SkillsSt@{ shape: rectangle, label: "/st" }
   SkillsSt_close@{ shape: rectangle, label: "/st-close" }
   AgentsSt_close@{ shape: rectangle, label: "st-close agent" }
+  FeatureSpec_md@{ shape: rectangle, label: "specs/NNN-feature/spec.md" }
   ProceduresConverge_md@{ shape: rectangle, label: "procedures/converge.md" }
   StratumLessons_md@{ shape: rectangle, label: ".stratum/lessons.md" }
   ScriptsSt_shortcuts_sh@{ shape: rectangle, label: "st-shortcuts.sh" }
+  User@{ shape: rectangle, label: "User" }
   SkillsSt_graphify@{ shape: rectangle, label: "/st-graphify" }
-  User -. "`(1) task in plain words`" .-> SkillsSt
-  SkillsSt -. "`(2) lane and risk line`" .-> User
-  SkillsSt -. "`(3) risk level`" .-> ScriptsSt_state_sh
-  ScriptsSt_state_sh -. "`(4) risk level`" .-> StratumState_json
-  SkillsSt -. "`(5) feature description`" .-> SkillsSt_define
-  SkillsSt_define -. "`(6) feature description`" .-> SkillsSt_grill
-  SkillsSt_grill -. "`(7) one question at a time with a 
-recommended answer`" .-> User
-  User -. "`(8) answers on scope, users, data, 
-privacy and done-criteria`" .-> SkillsSt_grill
-  SkillsSt_define -. "`(9) description and grilling summary`" .-> ProceduresSpecify_md
-  ProceduresSpecify_md -. "`(10) spec from the spec template`" .-> FeatureSpec_md
-  ProceduresSpecify_md -. "`(11) requirements checklist`" .-> FeatureChecklists
-  ProceduresSpecify_md -. "`(12) feature dir and phase define`" .-> ScriptsSt_state_sh
-  SkillsSt_define -. "`(13) spec with open markers, only if 
-gaps remain`" .-> ProceduresClarify_md
-  ProceduresClarify_md -. "`(14) clarified spec`" .-> FeatureSpec_md
-  SkillsSt_define -. "`(15) highest impact areas`" .-> ProceduresChecklist_md
-  ProceduresChecklist_md -. "`(16) impact-area checklist`" .-> FeatureChecklists
-  SkillsSt_define -. "`(17) gate: you agree the spec`" .-> User
-  SkillsSt_define -. "`(18) spec file paths`" .-> AgentsSt_git
-  AgentsSt_git -. "`(19) spec commit`" .-> Git
-  SkillsSt -. "`(20) feature dir`" .-> SkillsSt_plan
-  SkillsSt_plan -. "`(21) plugin root, project root, feature 
-dir`" .-> AgentsSt_plan
-  AgentsSt_plan -. "`(22) plan steps to follow`" .-> ProceduresPlan_md
-  ProceduresPlan_md -. "`(23) plan`" .-> FeaturePlan_md
-  ProceduresPlan_md -. "`(24) research decisions`" .-> FeatureResearch_md
-  ProceduresPlan_md -. "`(25) entities`" .-> FeatureData_model_md
-  ProceduresPlan_md -. "`(26) interface contracts`" .-> FeatureContracts
-  ProceduresPlan_md -. "`(27) validation guide`" .-> FeatureQuickstart_md
-  AgentsSt_plan -. "`(28) task steps to follow`" .-> ProceduresTasks_md
-  ProceduresTasks_md -. "`(29) tasks with test commands`" .-> FeatureTasks_md
-  AgentsSt_plan -. "`(30) plan report and open decisions`" .-> SkillsSt_plan
-  SkillsSt_plan -. "`(31) gate: you answer each open decision`" .-> User
-  SkillsSt_plan -. "`(32) answers, same agent`" .-> AgentsSt_plan
-  SkillsSt_plan -. "`(33) plan point and feature dir`" .-> ScriptsSt_advisor_sh
-  ScriptsSt_advisor_sh -. "`(34) spec, plan and tasks, read-only`" .-> Codex
-  Codex -. "`(35) verdict and findings`" .-> ScriptsSt_advisor_sh
-  ScriptsSt_advisor_sh -. "`(36) plan point record`" .-> FeatureAdvisor_md
-  SkillsSt_plan -. "`(37) plan file paths and advisor.md`" .-> AgentsSt_git
-  AgentsSt_git -. "`(38) plan commit`" .-> Git
-  SkillsSt -. "`(39) feature dir`" .-> SkillsSt_inspect
-  SkillsSt_inspect -. "`(40) plugin root, project root, feature 
-dir`" .-> AgentsSt_inspect
-  AgentsSt_inspect -. "`(41) analysis steps to follow`" .-> ProceduresAnalyze_md
-  AgentsSt_inspect -. "`(42) Validate section`" .-> FeaturePlan_md
-  AgentsSt_inspect -. "`(43) findings and verdict`" .-> SkillsSt_inspect
-  SkillsSt_inspect -. "`(44) check plan, stale or approved`" .-> ScriptsSt_advisor_sh
-  SkillsSt_inspect -. "`(45) gate: OK to build`" .-> User
-  SkillsSt -. "`(46) feature dir`" .-> SkillsSt_build
-  SkillsSt_build -. "`(47) test task ids and absolute paths`" .-> AgentsSt_test
-  AgentsSt_test -. "`(48) failing test output`" .-> SkillsSt_build
-  SkillsSt_build -. "`(49) build task ids and absolute paths`" .-> AgentsSt_build
-  AgentsSt_build -. "`(50) ticked task`" .-> FeatureTasks_md
-  SkillsSt_build -. "`(51) test command and touched files`" .-> ScriptsSt_verify_sh
-  ScriptsSt_verify_sh -. "`(52) one PASS or FAIL line`" .-> SkillsSt_build
-  SkillsSt_build -. "`(53) test point after 2 red tries, task 
-and both failures`" .-> ScriptsSt_advisor_sh
-  SkillsSt_build -. "`(54) task, test, both failures and 
-advisor answer`" .-> AgentsSt_debug
-  SkillsSt_build -. "`(55) task paths, tasks.md and advisor.md`" .-> AgentsSt_git
-  AgentsSt_git -. "`(56) task commit`" .-> Git
-  SkillsSt_build -. "`(57) screen task and its mode`" .-> SkillsSt_design
-  SkillsSt_build -. "`(58) story diff`" .-> AgentsSt_review
-  AgentsSt_review -. "`(59) review findings`" .-> SkillsSt_build
-  SkillsSt_build -. "`(60) decisions point and small-decision 
-list`" .-> ScriptsSt_advisor_sh
-  SkillsSt_build -. "`(61) changed screens not done by the 
-Design lane`" .-> SkillsSt_impeccable
-  SkillsSt_build -. "`(62) diff point after the last review`" .-> ScriptsSt_advisor_sh
-  SkillsSt -. "`(63) feature dir`" .-> SkillsSt_close
-  SkillsSt_close -. "`(64) feature dir, gap report choice, 
+  AgentsSt_git@{ shape: rectangle, label: "st-git agent" }
+  Git@{ shape: rectangle, label: "git repository" }
+  ScriptsSt_state_sh@{ shape: rectangle, label: "st-state.sh" }
+  SkillsSt -. "`(1) feature dir`" .-> SkillsSt_close
+  SkillsSt_close -. "`(2) feature dir, gap report choice, 
 shortcut base`" .-> AgentsSt_close
-  AgentsSt_close -. "`(65) drift fixes`" .-> FeatureSpec_md
-  AgentsSt_close -. "`(66) gap steps 1 to 6, only when asked`" .-> ProceduresConverge_md
-  AgentsSt_close -. "`(67) proposed lessons`" .-> StratumLessons_md
-  AgentsSt_close -. "`(68) shortcut base`" .-> ScriptsSt_shortcuts_sh
-  AgentsSt_close -. "`(69) drift fixes, gaps, lessons and 
+  AgentsSt_close -. "`(3) drift fixes`" .-> FeatureSpec_md
+  AgentsSt_close -. "`(4) gap steps 1 to 6, only when asked`" .-> ProceduresConverge_md
+  AgentsSt_close -. "`(5) proposed lessons`" .-> StratumLessons_md
+  AgentsSt_close -. "`(6) shortcut base`" .-> ScriptsSt_shortcuts_sh
+  AgentsSt_close -. "`(7) drift fixes, gaps, lessons and 
 shortcut rows`" .-> SkillsSt_close
-  SkillsSt_close -. "`(70) send back, defer or drop each gap`" .-> User
-  SkillsSt_close -. "`(71) keep, retarget or drop each lesson`" .-> User
-  SkillsSt_close -. "`(72) fix now or keep each shortcut`" .-> User
-  SkillsSt_close -. "`(73) docs graph update`" .-> SkillsSt_graphify
-  SkillsSt_close -. "`(74) changed doc paths`" .-> AgentsSt_git
-  AgentsSt_git -. "`(75) close commit`" .-> Git
-  SkillsSt_close -. "`(76) phase done`" .-> ScriptsSt_state_sh
-  SkillsSt_close -. "`(77) gate: push`" .-> User
+  SkillsSt_close -. "`(8) send back, defer or drop each gap`" .-> User
+  SkillsSt_close -. "`(9) keep, retarget or drop each lesson`" .-> User
+  SkillsSt_close -. "`(10) fix now or keep each shortcut`" .-> User
+  SkillsSt_close -. "`(11) docs graph update`" .-> SkillsSt_graphify
+  SkillsSt_close -. "`(12) changed doc paths`" .-> AgentsSt_git
+  AgentsSt_git -. "`(13) close commit`" .-> Git
+  SkillsSt_close -. "`(14) phase done`" .-> ScriptsSt_state_sh
+  SkillsSt_close -. "`(15) gate: push`" .-> User
 ```
 
 ### Fast lane
@@ -263,14 +344,6 @@ graph LR
   SkillsSt_design@{ shape: rectangle, label: "/st-design" }
   ScriptsSt_design_check_sh@{ shape: rectangle, label: "st-design-check.sh" }
   ProjectDesign_md@{ shape: rectangle, label: "DESIGN.md" }
-  SkillsSt_hallmark@{ shape: rectangle, label: "/st-hallmark" }
-  SkillsSt_impeccable@{ shape: rectangle, label: "/st-impeccable" }
-  AgentsSt_design@{ shape: rectangle, label: "st-design agent" }
-  ProjectImpeccable@{ shape: rectangle, label: ".impeccable" }
-  AgentsSt_git@{ shape: rectangle, label: "st-git agent" }
-  Git@{ shape: rectangle, label: "git repository" }
-  ScriptsSt_figcraft_sh@{ shape: rectangle, label: "st-figcraft.sh" }
-  ProjectDesign@{ shape: rectangle, label: "design" }
   User -. "`(1) task in plain words`" .-> SkillsSt_design
   SkillsSt_design -. "`(2) tool check, --custom in the custom 
 mode`" .-> ScriptsSt_design_check_sh
@@ -280,90 +353,152 @@ mode`" .-> ScriptsSt_design_check_sh
 custom`" .-> User
   SkillsSt_design -. "`(5) new look: grill questions, each with 
 a recommended answer`" .-> User
-  User -. "`(6) audience, use, tone, material and 
-the other answers`" .-> SkillsSt_design
-  SkillsSt_design -. "`(7) deal: genre and brief`" .-> SkillsSt_hallmark
-  SkillsSt_design -. "`(8) 3 themes with pictures and a 
-recommended one`" .-> User
-  User -. "`(9) picked theme`" .-> SkillsSt_design
-  SkillsSt_design -. "`(10) scaffold: picked theme`" .-> SkillsSt_hallmark
-  SkillsSt_design -. "`(11) document in scan mode with the 
-grill answers`" .-> SkillsSt_impeccable
-  SkillsSt_impeccable -. "`(12) DESIGN.md to confirm`" .-> User
-  User -. "`(13) confirm the design file`" .-> SkillsSt_impeccable
-  SkillsSt_design -. "`(14) task, mode, answers, assumed 
-answers, dev server URL`" .-> AgentsSt_design
-  AgentsSt_design -. "`(15) DESIGN.md as the locked system`" .-> ProjectDesign_md
-  AgentsSt_design -. "`(16) build flow and sloplint check`" .-> SkillsSt_hallmark
-  AgentsSt_design -. "`(17) report: files, screenshots, picks, 
-lint and render results`" .-> SkillsSt_design
-  SkillsSt_design -. "`(18) ignore rules from the engine ignore 
-line`" .-> ProjectImpeccable
-  SkillsSt_design -. "`(19) audit dimensions 1 and 2, then 
-critique in full`" .-> SkillsSt_impeccable
-  SkillsSt_impeccable -. "`(20) audit and critique findings`" .-> SkillsSt_design
-  SkillsSt_design -. "`(21) fix round: findings that block a 
-pass, at most 2 rounds`" .-> AgentsSt_design
-  SkillsSt_design -. "`(22) added ignore rules removed`" .-> ProjectImpeccable
-  SkillsSt_design -. "`(23) screenshots, picks and report`" .-> User
-  User -. "`(24) gate: yes, commit the reference 
+  User -. "`(6) gate: yes, commit the reference 
 screen`" .-> SkillsSt_design
-  SkillsSt_design -. "`(25) agent paths, DESIGN.md, 
-.impeccable/design.json, tokens.css, 
-base.css`" .-> AgentsSt_git
-  AgentsSt_git -. "`(26) commit`" .-> Git
-  SkillsSt_design -. "`(27) autonomous, no design file: grill 
+  SkillsSt_design -. "`(7) autonomous, no design file: grill 
 from the look in the code, once per 
 project`" .-> User
-  SkillsSt_design -. "`(28) document in scan mode with the 
-grill answers`" .-> SkillsSt_impeccable
-  SkillsSt_design -. "`(29) page job, visitor and main action`" .-> ProjectDesign_md
-  SkillsSt_design -. "`(30) missing job, visitor or main 
-action, asked once`" .-> User
-  SkillsSt_design -. "`(31) task, mode, job, visitor, main 
-action, assumed answers`" .-> AgentsSt_design
-  AgentsSt_design -. "`(32) report: files, screenshots, lint 
-and render results`" .-> SkillsSt_design
-  SkillsSt_design -. "`(33) audit and critique, at most 2 fix 
-rounds`" .-> SkillsSt_impeccable
-  SkillsSt_design -. "`(34) report with no picks`" .-> User
-  User -. "`(35) OK to commit`" .-> SkillsSt_design
-  SkillsSt_design -. "`(36) agent paths and changed design 
-files`" .-> AgentsSt_git
-  AgentsSt_git -. "`(37) commit`" .-> Git
-  SkillsSt_design -. "`(38) custom: grill questions, theme deal 
+  User -. "`(8) OK to commit`" .-> SkillsSt_design
+  SkillsSt_design -. "`(9) custom: grill questions, theme deal 
 only for a new look`" .-> User
-  User -. "`(39) grill answers`" .-> SkillsSt_design
-  SkillsSt_design -. "`(40) start: project root`" .-> ScriptsSt_figcraft_sh
-  SkillsSt_design -. "`(41) step draw: screen name, answers`" .-> AgentsSt_design
-  AgentsSt_design -. "`(42) drawn screen saved as a FigCraft 
-file`" .-> ProjectDesign
-  AgentsSt_design -. "`(43) document id`" .-> SkillsSt_design
-  SkillsSt_design -. "`(44) design is open in the design tool, 
-say when it looks good`" .-> User
-  User -. "`(45) change request or looks good`" .-> SkillsSt_design
-  SkillsSt_design -. "`(46) step change: request and document 
-id`" .-> AgentsSt_design
-  SkillsSt_design -. "`(47) step save: document id`" .-> AgentsSt_design
-  AgentsSt_design -. "`(48) saved design and its read export`" .-> ProjectDesign
-  AgentsSt_design -. "`(49) saved design path and token files 
-written`" .-> SkillsSt_design
-  SkillsSt_design -. "`(50) document in scan mode, file shown 
-at the gate`" .-> SkillsSt_impeccable
-  SkillsSt_design -. "`(51) step build: screen name`" .-> AgentsSt_design
-  AgentsSt_design -. "`(52) saved design layout, picture and 
-variables`" .-> ProjectDesign
-  AgentsSt_design -. "`(53) report: files, screenshots, lint 
-and render results`" .-> SkillsSt_design
-  SkillsSt_design -. "`(54) audit and critique, at most 2 fix 
-rounds`" .-> SkillsSt_impeccable
-  SkillsSt_design -. "`(55) screenshots, theme pick, report and 
-DESIGN.md`" .-> User
-  User -. "`(56) gate: yes, commit the screen and 
+  User -. "`(10) gate: yes, commit the screen and 
 the saved design`" .-> SkillsSt_design
-  SkillsSt_design -. "`(57) agent paths, DESIGN.md and the 
+```
+
+### Design lane: New look
+
+```mermaid
+---
+title: "Design lane: New look"
+---
+graph LR
+  SkillsSt_design@{ shape: rectangle, label: "/st-design" }
+  User@{ shape: rectangle, label: "User" }
+  SkillsSt_hallmark@{ shape: rectangle, label: "/st-hallmark" }
+  SkillsSt_impeccable@{ shape: rectangle, label: "/st-impeccable" }
+  AgentsSt_design@{ shape: rectangle, label: "st-design agent" }
+  ProjectDesign_md@{ shape: rectangle, label: "DESIGN.md" }
+  ProjectImpeccable@{ shape: rectangle, label: ".impeccable" }
+  AgentsSt_git@{ shape: rectangle, label: "st-git agent" }
+  Git@{ shape: rectangle, label: "git repository" }
+  SkillsSt_design -. "`(1) new look: grill questions, each with 
+a recommended answer`" .-> User
+  User -. "`(2) audience, use, tone, material and 
+the other answers`" .-> SkillsSt_design
+  SkillsSt_design -. "`(3) deal: genre and brief`" .-> SkillsSt_hallmark
+  SkillsSt_design -. "`(4) 3 themes with pictures and a 
+recommended one`" .-> User
+  User -. "`(5) picked theme`" .-> SkillsSt_design
+  SkillsSt_design -. "`(6) scaffold: picked theme`" .-> SkillsSt_hallmark
+  SkillsSt_design -. "`(7) document in scan mode with the grill 
+answers`" .-> SkillsSt_impeccable
+  SkillsSt_impeccable -. "`(8) DESIGN.md to confirm`" .-> User
+  User -. "`(9) confirm the design file`" .-> SkillsSt_impeccable
+  SkillsSt_design -. "`(10) task, mode, answers, assumed 
+answers, dev server URL`" .-> AgentsSt_design
+  AgentsSt_design -. "`(11) DESIGN.md as the locked system`" .-> ProjectDesign_md
+  AgentsSt_design -. "`(12) build flow and sloplint check`" .-> SkillsSt_hallmark
+  AgentsSt_design -. "`(13) report: files, screenshots, picks, 
+lint and render results`" .-> SkillsSt_design
+  SkillsSt_design -. "`(14) ignore rules from the engine ignore 
+line`" .-> ProjectImpeccable
+  SkillsSt_design -. "`(15) audit dimensions 1 and 2, then 
+critique in full`" .-> SkillsSt_impeccable
+  SkillsSt_impeccable -. "`(16) audit and critique findings`" .-> SkillsSt_design
+  SkillsSt_design -. "`(17) fix round: findings that block a 
+pass, at most 2 rounds`" .-> AgentsSt_design
+  SkillsSt_design -. "`(18) added ignore rules removed`" .-> ProjectImpeccable
+  SkillsSt_design -. "`(19) screenshots, picks and report`" .-> User
+  User -. "`(20) gate: yes, commit the reference 
+screen`" .-> SkillsSt_design
+  SkillsSt_design -. "`(21) agent paths, DESIGN.md, 
+.impeccable/design.json, tokens.css, 
+base.css`" .-> AgentsSt_git
+  AgentsSt_git -. "`(22) commit`" .-> Git
+```
+
+### Design lane: Autonomous
+
+```mermaid
+---
+title: "Design lane: Autonomous"
+---
+graph LR
+  SkillsSt_design@{ shape: rectangle, label: "/st-design" }
+  User@{ shape: rectangle, label: "User" }
+  SkillsSt_impeccable@{ shape: rectangle, label: "/st-impeccable" }
+  ProjectDesign_md@{ shape: rectangle, label: "DESIGN.md" }
+  AgentsSt_design@{ shape: rectangle, label: "st-design agent" }
+  AgentsSt_git@{ shape: rectangle, label: "st-git agent" }
+  Git@{ shape: rectangle, label: "git repository" }
+  SkillsSt_design -. "`(1) autonomous, no design file: grill 
+from the look in the code, once per 
+project`" .-> User
+  SkillsSt_design -. "`(2) document in scan mode with the grill 
+answers`" .-> SkillsSt_impeccable
+  SkillsSt_design -. "`(3) page job, visitor and main action`" .-> ProjectDesign_md
+  SkillsSt_design -. "`(4) missing job, visitor or main action, 
+asked once`" .-> User
+  SkillsSt_design -. "`(5) task, mode, job, visitor, main 
+action, assumed answers`" .-> AgentsSt_design
+  AgentsSt_design -. "`(6) report: files, screenshots, lint and 
+render results`" .-> SkillsSt_design
+  SkillsSt_design -. "`(7) audit and critique, at most 2 fix 
+rounds`" .-> SkillsSt_impeccable
+  SkillsSt_design -. "`(8) report with no picks`" .-> User
+  User -. "`(9) OK to commit`" .-> SkillsSt_design
+  SkillsSt_design -. "`(10) agent paths and changed design 
+files`" .-> AgentsSt_git
+  AgentsSt_git -. "`(11) commit`" .-> Git
+```
+
+### Design lane: Custom
+
+```mermaid
+---
+title: "Design lane: Custom"
+---
+graph LR
+  SkillsSt_design@{ shape: rectangle, label: "/st-design" }
+  User@{ shape: rectangle, label: "User" }
+  ScriptsSt_figcraft_sh@{ shape: rectangle, label: "st-figcraft.sh" }
+  AgentsSt_design@{ shape: rectangle, label: "st-design agent" }
+  ProjectDesign@{ shape: rectangle, label: "design" }
+  SkillsSt_impeccable@{ shape: rectangle, label: "/st-impeccable" }
+  AgentsSt_git@{ shape: rectangle, label: "st-git agent" }
+  Git@{ shape: rectangle, label: "git repository" }
+  SkillsSt_design -. "`(1) custom: grill questions, theme deal 
+only for a new look`" .-> User
+  User -. "`(2) grill answers`" .-> SkillsSt_design
+  SkillsSt_design -. "`(3) start: project root`" .-> ScriptsSt_figcraft_sh
+  SkillsSt_design -. "`(4) step draw: screen name, answers`" .-> AgentsSt_design
+  AgentsSt_design -. "`(5) drawn screen saved as a FigCraft 
+file`" .-> ProjectDesign
+  AgentsSt_design -. "`(6) document id`" .-> SkillsSt_design
+  SkillsSt_design -. "`(7) design is open in the design tool, 
+say when it looks good`" .-> User
+  User -. "`(8) change request or looks good`" .-> SkillsSt_design
+  SkillsSt_design -. "`(9) step change: request and document id`" .-> AgentsSt_design
+  SkillsSt_design -. "`(10) step save: document id`" .-> AgentsSt_design
+  AgentsSt_design -. "`(11) saved design and its read export`" .-> ProjectDesign
+  AgentsSt_design -. "`(12) saved design path and token files 
+written`" .-> SkillsSt_design
+  SkillsSt_design -. "`(13) document in scan mode, file shown 
+at the gate`" .-> SkillsSt_impeccable
+  SkillsSt_design -. "`(14) step build: screen name`" .-> AgentsSt_design
+  AgentsSt_design -. "`(15) saved design layout, picture and 
+variables`" .-> ProjectDesign
+  AgentsSt_design -. "`(16) report: files, screenshots, lint 
+and render results`" .-> SkillsSt_design
+  SkillsSt_design -. "`(17) audit and critique, at most 2 fix 
+rounds`" .-> SkillsSt_impeccable
+  SkillsSt_design -. "`(18) screenshots, theme pick, report and 
+DESIGN.md`" .-> User
+  User -. "`(19) gate: yes, commit the screen and 
+the saved design`" .-> SkillsSt_design
+  SkillsSt_design -. "`(20) agent paths, DESIGN.md and the 
 saved design`" .-> AgentsSt_git
-  AgentsSt_git -. "`(58) commit`" .-> Git
+  AgentsSt_git -. "`(21) commit`" .-> Git
 ```
 
 ### Agents
