@@ -45,9 +45,42 @@ Record in research.md:
    `git merge --no-ff --no-edit worker-t910` and `grep -qx hi demo/hello.txt; echo $?` gives `0`.
 7. `bash $S close T910`: `closed worker-t910` and `folder ... ready to remove`. Then all three are
    empty: `herdr agent list | jq -r '.result.agents[].name' | grep -x worker-t910`,
-   `herdr workspace list | jq -r '.result.workspaces[].label' | grep -x worker-t910`,
+   `herdr tab list | jq -r '.result.tabs[].label' | grep -x worker-t910` (before #71:
+   `workspace list`),
    `pgrep -af -- '-n worker-t91[0]'` (SC-005; the bracket keeps pgrep from matching the shell
-   that runs it, lessons L21). The answer of `workspace close` (R1).
+   that runs it, lessons L21). The answer of `workspace close` (R1). Since #71 see section 2b.
+
+## 2b. Worker tab live (#71, FR-001, FR-010, FR-018, SC-005; measures research R17)
+
+Needs: this PC, a herdr pane (`HERDR_ENV=1`), the #71 script. Run from the orchestrator's own pane
+(the plugin root is this checkout; `S=<project root>/scripts/st-worker.sh`). Pick an id with no
+folder or branch `worker-<id>` yet (`git branch --list 'worker-t92*'`); T920 is used below.
+
+```bash
+herdr tab list --workspace "$HERDR_WORKSPACE_ID" | jq -c '[.result.tabs[] | {tab_id, label}]' > /tmp/tabs-before.json
+printf 'Create demo/hello.txt with the one line hi.\n' > /tmp/t920.txt
+printf 'worker-t920\tlocal\tworker-t920\tT920\n' > /tmp/roster-t920.txt
+time bash $S start T920 --task /tmp/t920.txt --test 'grep -qx hi demo/hello.txt' --lane 'plain edit, no lane' --roster /tmp/roster-t920.txt
+herdr tab list --workspace "$HERDR_WORKSPACE_ID" | jq -c '[.result.tabs[] | {tab_id, label}]'
+herdr pane list --workspace "$HERDR_WORKSPACE_ID" | jq -c --arg t "<tab id from field 4 of the worker line>" '[.result.panes[] | select(.tab_id == $t) | {pane_id, cwd}]'
+bash $S wait T920
+bash $S result T920
+bash $S close T920
+herdr tab list --workspace "$HERDR_WORKSPACE_ID" | jq -c '[.result.tabs[] | {tab_id, label}]' > /tmp/tabs-after.json
+diff /tmp/tabs-before.json /tmp/tabs-after.json && echo same-tabs
+herdr workspace list | jq -r --arg w "$HERDR_WORKSPACE_ID" '.result.workspaces[] | select(.workspace_id == $w) | .workspace_id'
+herdr agent list | jq -r '.result.agents[].name' | grep -x worker-t920; echo "agent grep exit $?"
+pgrep -af -- '-n worker-t92[0]'; echo "pgrep exit $?"
+```
+
+Expected: `start` exit 0, the `worker` line's field 4 is a tab id in this workspace; the tab list
+after `start` is the one before plus one tab labelled `worker-t920`, with no `Dev Servers` or `VM`
+tab added; that tab has two panes, both with cwd `/home/hyuse/Desktop/stratum-worker-t920`, lazygit
+in the right one (look at it). The user sees the tab in this workspace. `wait` ends
+`state finished`, `result` prints the four lines. `close` prints `closed worker-t920` and
+`folder /home/hyuse/Desktop/stratum-worker-t920 ready to remove`; `same-tabs` prints (the
+orchestrator's own tab ids unchanged), this workspace id is still printed, the agent grep and pgrep
+exit 1. Do not merge `worker-t920`: the folder and branch stay for the user to remove.
 
 The user removes `../stratum-003-demo`, `../stratum-worker-t910` (next to the main checkout
 `/home/hyuse/Desktop/stratum`, research R3) and the two branches when they want.

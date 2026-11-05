@@ -8,12 +8,14 @@ every fact again from the worker id (research R10).
 | Field | Source | Rule |
 |-------|--------|------|
 | id | the request (`T004`) | `^[A-Za-z0-9][A-Za-z0-9-]{0,24}$` |
-| name | `worker-` + id in lower case | agent name, workspace label, branch, `-n` session name, folder suffix (R2) |
+| name | `worker-` + id in lower case | agent name, tab label, branch, `-n` session name, folder suffix (R2, R17) |
 | machine | `--machine` or none | a `label` or `id` in `herdr machine list --json`; none means this machine (`local`) |
 | repo | the main checkout here, `dirname "$(git rev-parse --path-format=absolute --git-common-dir)"` (herdr refuses a linked worktree, research R3); `--repo` on a saved machine | `--repo` starts with `/` or `~` |
 | base | `git rev-parse HEAD` here | full sha |
-| workspace, pane, branch | `worktree create` answer (`.result.workspace.workspace_id`, `.result.root_pane.pane_id`, `.result.worktree.branch`) | never built, only read (L26); the tab id is not used |
-| path | `.result.worktree.path`; later `worktree list --workspace <ws>` where `open_workspace_id == ws` | absolute |
+| workspace | `start` here: `$HERDR_WORKSPACE_ID` (the only `HERDR_*` value read, FR-018); `start` on a saved machine: `open_workspace_id` of the main entry of `worktree list --cwd <repo>`, else the first workspace labelled `st-workers` in `workspace list`, else `.result.workspace.workspace_id` of `workspace create --label st-workers` (D35); later: `.workspace_id` of the tab labelled name in `tab list` | never built (L26); never this machine's id on a saved machine |
+| tab, pane | `tab create` answer (`.result.tab.tab_id`, `.result.root_pane.pane_id`); later `tab list` (`tab_id`) and `agent get` (`pane_id`) | never built, only read (L26); the tab id is field 4 of the `worker` and `found` lines |
+| branch | name, made by `git worktree add -b <name>` | `git worktree add` fails if it exists |
+| path | `start`: `<repo parent>/<repo name>-<name>`, made by `git worktree add`; later: `.path` of the entry with `branch == name` in `worktree list --cwd <cwd>`, where `<cwd>` is the `cwd` of a pane of the tab in `pane list --workspace <ws>` | here absolute; on a saved machine as `--repo` gives it (`~/...` allowed) |
 | state | `agent get <name>` `.result.agent.agent_status` | `idle`, `working`, `blocked`, `done`, `unknown` |
 
 State as the script reports it (`wait`, `list`):
@@ -27,6 +29,7 @@ finished -> closed                           (close, after the skill merged)
 ```
 
 A `blocked` or `stopped` worker keeps its pane (FR-010). `close` refuses `working` and `blocked` with `Worker <N> is <state>. Close refused.`
+`closed` means the tab is gone; on a saved machine its workspace is closed too only when it is labelled `st-workers` and no `worker-*` tab is left in it (FR-018, D35).
 
 ## Brief (`<path>/brief.md`)
 

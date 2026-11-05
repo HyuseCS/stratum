@@ -107,6 +107,8 @@ branch `18-codex-advisor`.
 
 ## R3. Worktree folder and base (FR-001, D15)
 
+Since #71 the worktree is made by `git worktree add` and the worker is one tab (R17).
+
 - Decision: `H worktree create --cwd <repo> --branch <name> --base <sha> --path <path> --label <name> --no-focus`.
   `<repo>` here is the main checkout, `dirname "$(git rev-parse --path-format=absolute --git-common-dir)"`,
   or `--repo` on a saved machine. `<path>` is `<repo parent>/<repo name>-<name>`, the
@@ -311,6 +313,8 @@ branch `18-codex-advisor`.
 
 ## R10. Finding workers again (FR-016)
 
+Since #71 a worker is found by its tab label (R17).
+
 - Decision: `list` reads `H workspace list` and keeps labels that start `worker-`, then
   `H agent list` for each name's state and pane, then `H worktree list --workspace <ws>` for the
   path (`open_workspace_id == ws`). Every subcommand after `start` finds its worker the same way,
@@ -318,6 +322,8 @@ branch `18-codex-advisor`.
 - Rationale: all three calls were run live and their fields are in R1.
 
 ## R11. Close (FR-010, FR-012, D18)
+
+Since #71 `close` closes the worker's tab, and its workspace only when that tab was the last (R17).
 
 - Decision: `close` refuses while the worker is `working` or `blocked`, with the line
   `Worker <N> is <state>. Close refused.` Else it runs
@@ -503,6 +509,73 @@ branch `18-codex-advisor`.
   contracts/script.md section 2 row 13), so a value such as `--dangerously-skip-permissions`
   cannot land after `--model` as an option.
 
+## R17. A worker is one tab (#71, FR-001, FR-010, FR-018, D31 to D35)
+
+Checked on 2026-11-05 with herdr 0.9.4, read-only calls only: the group usage lines, `herdr --skill`,
+`herdr api schema --json`, `tab list`, `pane list --workspace "$HERDR_WORKSPACE_ID"`,
+`worktree list --cwd /home/hyuse/Desktop/stratum-071`, and on the laptop
+`herdr --machine laptop workspace list` (exit 0), `worktree list --cwd '~/Desktop/stratum'` and
+`tab list`. No call that makes or closes anything was run.
+
+- Facts:
+  - A herdr pane has `HERDR_WORKSPACE_ID`, `HERDR_TAB_ID` and `HERDR_PANE_ID` (this pane: `w3V`,
+    `w3V:t1`, `w3V:p1`). `workspace list` `focused` is the UI focus, not the caller's workspace, so
+    it is wrong for this purpose; `--current` stays on the never-list.
+  - `tab create [--workspace ID] [--cwd PATH] [--label TEXT] [--no-focus]` answers `.result.tab`
+    (TabInfo: `tab_id`, `workspace_id`, `label`) and `.result.root_pane` (PaneInfo: `pane_id`, `cwd`)
+    (`herdr --skill`, schema `tab_created`).
+  - `tab list` with no `--workspace` lists the tabs of every workspace: `tab_id`, `label`,
+    `workspace_id`, `agent_status`. It has no cwd.
+  - `pane list --workspace <WS>` gives per pane `pane_id`, `tab_id`, `cwd`, `workspace_id`.
+  - `worktree list --cwd <path>` answers `.result.worktrees[]` with `branch` (short name, for example
+    `071-worker-workspace`), `path`, `is_linked_worktree`, and `open_workspace_id` only when a
+    workspace has that checkout open (the key is absent otherwise: the laptop main checkout had none).
+    It works from a linked worktree. On the laptop `--cwd '~/Desktop/stratum'` resolved to
+    `/home/hyuse/Desktop/stratum`, so `~` is expanded there.
+  - `tab close <tab_id>` takes only the tab id (schema `TabTarget`) and answers `tab_closed` with
+    `tab_id` and `workspace_id`. `herdr --skill`: "Ordinary CLI/API closes do not inherit the TUI's
+    last-pane confirmation", so no prompt is expected. Not known: whether closing the last tab of a
+    workspace also closes the workspace (herdr issue herdrdev/herdr#4379). `tab close` was not run.
+  - `workspace create [--cwd PATH] [--label TEXT] [--no-focus]` answers `.result.workspace`,
+    `.result.tab` and `.result.root_pane` (`herdr --skill`, schema `workspace_created`). So a new
+    workspace always has a first tab of its own.
+  - `workspace close <id> [--group]`; herdr may refuse a group primary with
+    `workspace_group_close_required`, and `--group` must never be added to get past it
+    (`herdr --skill`).
+  - Ids and agent names are valid on one server only (`herdr --skill`), so `HERDR_WORKSPACE_ID` of
+    this pane means nothing on a saved machine.
+- Decision (start): the worker name `N` is the tab label. Here the workspace is
+  `$HERDR_WORKSPACE_ID`; on a saved machine it is the `open_workspace_id` of the entry with
+  `is_linked_worktree == false` in `H worktree list --cwd <repo>`; when none is open, the first
+  workspace labelled `st-workers` in `H workspace list`; when none is, the
+  `.result.workspace.workspace_id` of `H workspace create --cwd <repo> --label st-workers --no-focus`
+  (D32, D35). Then
+  `git -C <repo> worktree add -b N <path> <sha>` (over ssh on a saved machine), then
+  `H tab create --workspace WS --cwd <path> --label N --no-focus`. The tab create comes right after
+  the worktree, before `brief.md`, so on a failed tab the folder is still clean and
+  `git worktree remove <path>` (no `--force`) and `git branch -D N` undo it (D33). A branch or folder
+  `N` left by an earlier worker makes `git worktree add` fail; its first stderr line is the stop line.
+- Decision (find, list, close): `H tab list` finds the one tab labelled `N`, its `tab_id` and
+  `workspace_id`; `H pane list --workspace WS` gives the cwd of a pane in that tab;
+  `H worktree list --cwd <cwd>` gives the `path` of the entry with `branch == N`. This works when
+  the agent is gone and from any workspace. `close` runs `H tab close TAB`; then, on a saved
+  machine only, it reads `H workspace list`: if WS is still there and labelled `st-workers`, and
+  `H tab list --workspace WS` holds no tab labelled `worker-*`, it runs `H workspace close WS`
+  (never `--group`). A WS that herdr already closed gets no call, so both answers to #4379 work.
+- Finding (plan F1, settled by D35): a new workspace always has a first tab, so a "last tab" rule
+  (D34) never closes a workspace `start` made. D35 replaces it: `start` labels the workspace it
+  makes `st-workers` and reuses an open one; `close` closes it once no `worker-*` tab is left. A
+  workspace the user opened, and the orchestrator's own, are never closed.
+- Superseded: R1 `worktree create`, R3 (herdr makes the worktree), R10 (find by workspace label) and
+  R11 (`workspace close` of a worker workspace) for every worker started after #71. Workers started
+  before #71 are not handled (spec Assumptions).
+- Not known (stub-proven only, T023 is local): whether `tab create --cwd ~/...` and
+  `pane split --cwd ~/...` expand `~` on a saved machine (only `worktree list --cwd` was run there).
+  The remote brief's `- Result file:` line now reads `~/<repo name>-<N>/result.md`, not an absolute
+  path.
+- Live (T023): not run yet.
+
 ## Open decisions
 
-None. D24 (R7) and D25 (R9) are settled in decisions.md.
+None. D24 (R7) and D25 (R9) are settled in decisions.md. #71: D31 to D35 are settled; D35
+settles the R17 finding about the made workspace.

@@ -1,0 +1,6 @@
+## plan | 2026-11-05T15:50:20Z | sha256 b6d93e1d0b6efa2717ec853a2a7b61dd27c253a30d2a7e4caf141f35f78c7e0c | REVISE
+summary: Simplify the #71 negative-control design so test mechanics do not dictate production formatting.
+- [MEDIUM] specs/008-herdr- workers/tasks.md:238 and :251: Define NC8 and NC9 by the behavior they disable, and keep their mutation mechanics in the test task rather than prescribing production line layout. Evidence: T019 implements controls by deleting exact source text; T021 consequently requires the last-tab expression to appear exactly once and the worktree-removal operation to occupy a uniquely removable line that leaves valid Bash. Retain the green baseline, changed-copy and parse checks, but let the test mutation accommodate the chosen implementation. This removes formatting constraints from the build task while preserving the planned negative controls.
+
+## plan | 2026-11-05T15:56:08Z | sha256 c04eb0a84f8b2679adea2694cee96218e12ff75301566980d5b0816ea2fc9f6a | APPROVED
+summary: The revised plan resolves the previous finding: negative-control mutation mechanics stay in the tests without dictating production formatting. No further approach or task-structure changes are warranted within this plan-only review.

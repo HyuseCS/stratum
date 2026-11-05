@@ -6,15 +6,22 @@
 [decisions.md](decisions.md), GitHub issues #11 and #17, spike #9
 (`specs/003-session-mods/research.md`), #32 (`specs/007-herdr-workspace`).
 
+**Amended 2026-11-05 for issue #71** (D31 to D35, spec FR-001, FR-010, FR-015, FR-018): a pane
+worker is one tab labelled `worker-<id>` in the orchestrator's workspace (on a saved machine, in the
+workspace that has the main checkout open), with the agent pane and lazygit side by side. The
+worktree comes from `git worktree add`. Research R17 holds the facts; tasks T019 to T023 the work.
+
 ## Summary
 
-One script, `scripts/st-worker.sh`, with eight subcommands: `start` (herdr makes the worktree and
-workspace in one call, the script writes `brief.md`, starts `claude` in auto mode in the pane and
-sends the one `/goal` prompt), `goal`, `wait`, `answer`, `result`, `close`, `list` and
+One script, `scripts/st-worker.sh`, with eight subcommands: `start` (`git worktree add` makes the
+worktree from the main checkout, `herdr tab create` opens one tab labelled `worker-<id>` in the
+orchestrator's workspace (#71), the script writes `brief.md`, starts `claude` in auto mode in the
+tab's pane with lazygit beside it and sends the one `/goal` prompt), `goal`, `wait`, `answer`,
+`result`, `close` (closes that tab), `list` and
 `headless`. Every herdr call goes through `herdr --machine <m>` for a saved machine; the brief and
 result cross by ssh to the `target` in herdr's profile. herdr is the only store: every subcommand
-finds its worker again from the task id (`worker-<id>`), so a new orchestrator session takes over
-(FR-016). One thin skill, `skills/st-worker/SKILL.md`, turns the request into script calls,
+finds its worker again from the task id (`worker-<id>`, the tab label), so a new orchestrator
+session takes over (FR-016). One thin skill, `skills/st-worker/SKILL.md`, turns the request into script calls,
 answers small worker questions itself and brings big ones to the user (D26), runs `st-review` per branch, merges in task order and closes. One stub test,
 `tests/test_st_worker.sh`, proves every call, the brief, the prompt, the wait, the result read and
 the close on both machines, with negative controls (SC-007).
@@ -41,12 +48,17 @@ worktree: `brief.md` (orchestrator) and `result.md` (worker).
 `wait` 540 s, `headless` 540 s (research R6, R12).
 
 **Constraints**: bash and jq only, minimal code, no abstractions, no comments except `ponytail:`
-markers. Never: bare `herdr`, `pane close`, `worktree remove`, `--group`, `machine reconnect`,
-`machine add|remove|enable|disable`, `server`, `--trust-repository`, a push.
+markers. Never: bare `herdr`, `pane close`, herdr `worktree remove`, `--group`, `machine reconnect`,
+`machine add|remove|enable|disable`, `server`, `--trust-repository`, a push. `git worktree remove`
+and `git branch -D` run only in `start`, only on the folder and branch that run just made, when
+`tab create` failed (D33, S3). The skill's rule "never remove a worktree folder"
+(`skills/st-worker/SKILL.md:54`) is the orchestrator's rule for finished workers and still holds.
 
 **Scale/Scope**: 1 script, 1 skill, 1 test file. Edits: `tests/test_on_demand.sh`, `README.md`,
 `DESIGN.md`, `skills/st-status/SKILL.md`, `hooks/st-models.py`, `skills/st-model/SKILL.md`,
-`tests/test_model_hook.py`, `tests/test_model_files.sh` (D27, D28).
+`tests/test_model_hook.py`, `tests/test_model_files.sh` (D27, D28). #71 edits:
+`scripts/st-worker.sh`, `tests/test_st_worker.sh`, `tests/test_worker_rules.sh` (W14),
+`skills/st-worker/SKILL.md` (line 18).
 
 ## Constitution Check
 
@@ -66,24 +78,31 @@ orchestrator passed, the settled decisions and `docs/lessons.md`.
 | G7. lessons L7: README lists are checked both ways | Pass: the skill row and the test line go into README in the same task as the file they name (`tests/test_inspect.sh` checks both ways) |
 | G8. lessons L8: test runs leave no file in the repo | Pass: stubs, repos and briefs in `mktemp -d`, removed by `trap`; the headless brief is outside the repo (H5) |
 | G9. lessons L10: the guard that stops a write is named and controlled | Pass: the `HEAD` compare before and after is the main guard against a headless commit (H2, H3b; research R12). The tool list (`--tools`, `--allowedTools`, `dontAsk`) narrows the worker but does not stop a commit; NC6 removes it. Close is guarded by the label match (C4) |
-| G10. lessons L11: each background action has its failure states | Pass: start that cannot start (S4), a worker that already exists (S6), start blocked (S3, S7), prompt stalled (S5), wait with no end (W2), wait with no output (W4), result missing (G2), close of a worker still at work (C2), close that leaves something (C3), close of a worker whose agent is gone (C5), a worktree made in another folder (S9), a pane busy for good (S11b), ssh down on start, result and wait (R1c, R2b, R3b) |
+| G10. lessons L11: each background action has its failure states | Pass: start that cannot start (S4), a worker that already exists (S6), start blocked (S3, S7), prompt stalled (S5), wait with no end (W2), wait with no output (W4), result missing (G2), close of a worker still at work (C2), close that leaves something (C3), close of a worker whose agent is gone (C5), a tab that cannot open (S13, S13b, R16; S9 is gone since #71), a pane busy for good (S11b), ssh down on start, result and wait (R1c, R2b, R3b) |
 | G11. lessons L12: a lane runs through the Skill tool | Pass: the brief says "Start it with the Skill tool"; the skill runs `st-review` with the Skill tool |
 | G12. lessons L24: a gated task that does not run says why | Pass in the design: the remote live run (quickstart section 6) gets `Not run, <herdr error>.` while the laptop is down |
 | G13. lessons L26: stub ids have a random part; expectations come from the stub log | Pass: contracts/script.md section 6 |
 | G14. lessons L27: a report line only after its call succeeded | Pass: contracts/script.md section 5, S4 asserts `-` ids on a stop |
 | G15. lessons L28: "started" comes from herdr, not from echoed text | Pass: started means `agent start` exited 0, which herdr gives only after it detected `claude` ready (`herdr --skill`) |
-| G16. Settled decisions kept | Pass: D12 two paths, D13 file result (the prompt is sent with `--wait`; the long wait is `agent wait`, D14, because one call must end under 600 s), D14 one question path, D15 `herdr worktree create`, D16 roster and rules, D17 one skill with st-build unchanged, D18 close keeps folder and branch, D19 headless allow list, D21 one `/goal` prompt pointing at `brief.md`, D26 the orchestrator answers small questions itself and brings big ones to the user |
+| G16. Settled decisions kept | Pass: D12 two paths, D13 file result (the prompt is sent with `--wait`; the long wait is `agent wait`, D14, because one call must end under 600 s), D14 one question path, D15 one worktree per worker (made by `git worktree add` since #71, D33), D16 roster and rules, D17 one skill with st-build unchanged, D18 close keeps folder and branch, D19 headless allow list, D21 one `/goal` prompt pointing at `brief.md`, D26 the orchestrator answers small questions itself and brings big ones to the user |
 | G17. Decisions D24 and D25 kept | Pass: S1 and R1 assert the worktree's `git-guard.json` and NC7 removes its write (D24); team rule 2 and the skill's machine rule keep commits on one machine (D25) |
 | G18. lessons L9: lines other branches edit are diffed against main | Pass: the README skill table, tool row and `## Tests` list and the DESIGN.md skill count are also edited on other branches; T016 merges a moved `main` first and keeps main's lines plus ours |
 | G19. lessons L13: a guard added by review updates every plan file | Pass: when a review adds a guard to `scripts/st-worker.sh`, the same commit updates contracts/script.md, research.md, data-model.md, quickstart.md and plan.md S1 to S6 |
 | G20. D28 kept: the model hook accepts the `st-worker` key | Pass: `hooks/st-models.py` accepts `st-worker` beside the names from `agents/*.md`, so an `st-worker` entry in `.stratum/models.json` does not deny agent starts; `tests/test_model_hook.py` covers it (T017, T018) |
 
-Post-design re-check: G1 to G20 pass. Complexity
+| G21. #71 decisions D31 to D35 kept | Pass in the design: contracts/script.md section 4 (tab per worker, `git worktree add`, undo on a failed tab, find by tab label, `tab close` and the `st-workers` rule of D35), section 6 cases S13, S13b, C13 to C18, R15, R15b, R16, NC8, NC9; tasks T019 to T023 |
+| G22. lessons L5 for #71: the plan matches herdr's real schema | Pass: research R17, read-only calls and `herdr api schema --json` on 2026-11-05. Not known: whether herdr closes a workspace with its last tab (#4379); `close` works either way (C15). Measured live in T023 |
+
+Post-design re-check: G1 to G22 pass. Complexity
 Tracking stays empty.
 
 ## Open decisions
 
-None. Both are settled in decisions.md:
+None. #71 is settled by D31 to D35. D35 (user, 2026-11-05) settles the plan finding F1: a new
+workspace always has a first tab, so the D34 last-tab rule never closed a workspace `start` made.
+Now `start` on a saved machine uses the main checkout's workspace, else an open `st-workers`
+workspace, else makes one labelled `st-workers`; `close` closes only an `st-workers` workspace with
+no `worker-*` tab left. The older two are settled in decisions.md:
 
 - D24: `start` writes `{"commit":"auto"}` to `.stratum/git-guard.json` in the worker's worktree
   only (git-ignored, `.gitignore:8`). Plain commits pass with no human step; amend, push,
@@ -109,16 +128,35 @@ None. Both are settled in decisions.md:
 - **S2. External service: ssh to the saved machine (start, wait, result).** The target comes only
   from the `target` field of `herdr machine list --json` for a matched label or id.
   `ssh -o BatchMode=yes -- <target> ...`: no password prompt, no option injection. Remote paths
-  are `printf %q` of the absolute path herdr returned. What crosses: the brief (task text, test
+  are `printf %q` of the path (since #71 the `--repo` based path, `~` kept unquoted as in #32).
+  Since #71 `start` also sends `git -C <repo> worktree add -b <N> <path> <sha>` and, on a failed tab,
+  the undo of S7. What crosses: the brief (task text, test
   command, roster, rules) to the laptop, the result file and the branch back. No credential is
   read, stored or printed. `git fetch <target>:<path> N:N` writes only `refs/heads/N` here and
   refuses a non-fast-forward.
-- **S3. herdr session control.** Only the calls in contracts/script.md section 4, plus
-  `machine list --json`. `workspace close` only on the one workspace labelled with the script's
-  own `worker-` name, never `--group`; `close` refuses a `working` or `blocked` worker. Never
-  `pane close`, `worktree remove`, `machine reconnect`, `server stop`, `--trust-repository`. Local
-  runs need `HERDR_ENV=1`. A failed remote call may still have acted: the script stops, closes
-  nothing, and the skill runs `list` instead of a retry (S5 of #32).
+- **S3. herdr session control (start, close; #71, D34, D35, FR-018).** Only the calls in
+  contracts/script.md section 4, plus `machine list --json`. The script reads one `HERDR_*` value,
+  `HERDR_WORKSPACE_ID`, only in a local `start`, only to open the worker tab there; it never reads
+  `HERDR_TAB_ID` or `HERDR_PANE_ID` and never passes `--current`. On a saved machine it never uses
+  this machine's ids (herdr ids are valid on one server only). `tab close` runs only on the one tab
+  labelled with the script's own `worker-` name, at most once. `workspace close` runs only on a
+  saved machine, only on that tab's workspace, at most once, never with `--group`, and only when
+  that workspace is labelled `st-workers` and no tab labelled `worker-*` is left in it after the
+  `tab close`. `workspace create` runs only on a saved machine with no open main checkout and no
+  open `st-workers` workspace, and always labels it `st-workers`. So the orchestrator's own tab and
+  workspace, and any workspace the user opened, are never closed (tests C1, C17, C18, R9, NC8).
+  An `st-workers` workspace the user opened by hand can be closed once no worker tab is left in it;
+  the label is reserved for this use (D35). `close` refuses a `working` or
+  `blocked` worker. Never `pane close`, herdr `worktree remove`, `machine reconnect`, `server stop`,
+  `--trust-repository`. Local runs need `HERDR_ENV=1`. A failed remote call may still have acted:
+  the script stops, closes nothing, and the skill runs `list` instead of a retry (S5 of #32).
+- **S7. Undo of a failed tab (start; data on disk; D33).** When `tab create` fails, `start` runs
+  `git -C <repo> worktree remove <path>` (no `--force`) and `git -C <repo> branch -D <N>`, here or
+  over ssh. Both target only the folder and branch that `git worktree add -b <N>` made in the same
+  run, before any agent ran or any file was written there, so no commit or user file can be lost:
+  `-b` fails when the branch already exists, and `worktree remove` without `--force` refuses a
+  folder with changes. If the undo fails, the stop line names what was left (test S13b). Over ssh
+  every value is `printf %q` quoted (S2).
 - **S4. Worker permissions (start; access rule).** A pane worker is the user's own `claude` with
   the user's plugins and settings, started with `--permission-mode auto -n <name>`, plus
   `--model <name>` when a model is set, and nothing else (FR-013, FR-017, tests S1, M1): no `--dangerously-skip-permissions`, no `--allowedTools`. Auto mode's
@@ -145,6 +183,9 @@ None. Both are settled in decisions.md:
   (R1 to R8). The live check is quickstart section 6, run only when
   `herdr --machine laptop workspace list` exits 0. Also not verified until then: herdr and Claude
   Code versions on the laptop, the repo path there, `/goal` and auto mode there.
+  2026-11-05: `herdr --machine laptop workspace list` exits 0 (quickstart section 6 records a remote
+  run on 2026-10-24). The #71 remote path, including `workspace create` (R15), is stub-proven only;
+  T023 runs on this PC.
 
 ## ponytail notes
 
@@ -164,6 +205,12 @@ None. New files, one README tool row and the `st-status` tool line widened to na
 test line, one DESIGN row and its count (Twenty-three to Twenty-four), phrase rows in
 `tests/test_on_demand.sh`. `skills/st-build/SKILL.md` does not change (FR-014). Rollback: revert
 the feature's commits.
+
+#71: field 4 of the `worker` and `found` lines changes from the workspace id to the tab id, the
+`approval` `tab` line and the approvals record's third field change from `workspace <N>, tab Main`
+to `tab <N>`, and workers started before #71 (a workspace of their own) are no longer found, listed
+or closed by the script (spec Assumptions). Only the skill reads these lines. Rollback: revert the
+#71 commits.
 
 ## Project Structure
 
@@ -199,6 +246,7 @@ hooks/st-models.py              # accept the st-worker key (D28)
 skills/st-model/SKILL.md        # list st-worker (D28)
 tests/test_model_hook.py        # case: an st-worker entry does not deny an agent start (D28)
 tests/test_model_files.sh       # check: st-model names st-worker (D28)
+tests/test_worker_rules.sh      # #71: W14 pins the new skill line 18
 ```
 
 **Structure Decision**: same layout as #32 (`scripts/st-herdr-workspace.sh`,

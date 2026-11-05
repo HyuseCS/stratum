@@ -85,7 +85,8 @@ through the orchestrator, both answers reach the worker, and the worker finishes
 
 The user asks: "run T004 in a worker on the laptop". The worktree, tab, brief, pane and
 result live on the laptop. The tab opens in the laptop workspace that has the project's main
-checkout open; if none is open, the orchestrator makes one there (D32). Every herdr call names the machine. The brief goes over ssh, the
+checkout open; if none is open, it uses an open `st-workers` workspace there, else makes one with
+that label, and closes it when its last worker closes (D32, D35). Every herdr call names the machine. The brief goes over ssh, the
 result comes back over ssh. The rest is the same as story 1, including the question path.
 
 **Why this priority**: D11: workers are cross-machine, PC to laptop and back.
@@ -182,7 +183,8 @@ the change is in the working tree, nothing is committed by the worker, and no pr
 - **FR-001**: A pane worker MUST get its own git worktree, made with `git worktree add` from the
   main checkout, and one herdr tab labelled after the task, with the agent pane and lazygit side
   by side. On this machine the tab opens in the orchestrator's own workspace; on a saved machine
-  it opens in that machine's workspace that has the main checkout open, made if none is (D15, D11,
+  it opens in that machine's workspace that has the main checkout open, else in an `st-workers`
+  workspace there, made if none is (D15, D11,
   D32). If the tab cannot be opened, the worktree folder and the branch just made MUST be removed
   again and `start` stops with the herdr error (D33).
 - **FR-002**: The brief MUST be a file in the worker's worktree and MUST hold: the task text and
@@ -212,8 +214,8 @@ the change is in the working tree, nothing is committed by the worker, and no pr
   into the base (D16).
 - **FR-009**: The orchestrator MUST review each worker branch with the Stratum review and MUST be
   the only one who merges. It merges on green, in task order; a conflict goes to the user (D16).
-- **FR-010**: After the merge the orchestrator MUST close the worker's tab (and the tab's
-  workspace only when no other tab is left in it, D34), keep
+- **FR-010**: After the merge the orchestrator MUST close the worker's tab (and, on a saved
+  machine, the `st-workers` workspace `start` made once no worker tab is left in it, D35), keep
   the worktree folder and the branch, and name the folder as ready to remove. A failed or stopped
   worker's pane MUST stay open (D18).
 - **FR-011**: A headless worker MUST run with an allow list of tools, no question tool, a turn
@@ -242,9 +244,9 @@ the change is in the working tree, nothing is committed by the worker, and no pr
   lists `st-worker` (D27, D28).
 - **FR-018**: The script MAY read `HERDR_WORKSPACE_ID` only in `start`, to open the tab there. It
   MUST close only the one tab labelled with the worker's name, at most once, and MUST close a
-  workspace (never `--group`) only when that tab was its last tab. It MUST NOT close any other tab
-  or a workspace that still has tabs. `find`, `list` and `close` find a worker by its tab label
-  (D34, #71).
+  workspace (never `--group`) only when its label is `st-workers` and no tab labelled `worker-*`
+  is left in it. It MUST NOT close any other tab or workspace, the orchestrator's included. `find`,
+  `list` and `close` find a worker by its tab label (D34, D35, #71).
 
 ### Key Entities
 
