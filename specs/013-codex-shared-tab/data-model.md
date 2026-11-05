@@ -24,6 +24,7 @@ States seen by a point:
 absent  --point-->  started (tab create + agent start)  --> idle --> review turn (working <-> blocked) --> done/idle
 idle/done/unknown --point--> review turn
 working/blocked   --point--> not touched, review runs headless
+review turn --tab closed or Codex exits--> point BLOCKED, no headless run (no time limit otherwise)
 ```
 
 ## Settings record
@@ -55,8 +56,8 @@ Text, built twice per review (before the prompt, after the prompt call returns).
 | Line | Value |
 |------|-------|
 | 1 | `HEAD <sha>` (`git rev-parse -q --verify HEAD`, empty in a repo with no commit) |
-| 2.. | `<path>\t<XY>\t<sha256 of the file, empty when gone>` for each entry of `git --no-optional-locks status --porcelain=v1 -z --untracked-files=all --no-renames` |
+| 2.. | `<path>\t<XY>\t<sha256 of the file, empty when gone>` for each entry of `git --no-optional-locks status --porcelain=v1 -z --untracked-files=all --no-renames -- . ':(exclude).stratum/state.json' ':(exclude,glob)**/.syncthing.*.tmp' ':(exclude,glob)**/~syncthing~*.tmp'` |
 
 Rules:
 - Any line that differs makes the point BLOCKED, with each differing path (and `HEAD`) named once, in sorted order.
-- Covers tracked changes, untracked files that are not ignored, and HEAD. Not ignored files, not files outside the folder.
+- Covers tracked changes, untracked files that are not ignored, and HEAD. Not ignored files, not files outside the folder, not `.stratum/state.json` (written by `hooks/st-phase.py`) and not Syncthing temp files (research R6).

@@ -6,7 +6,7 @@
 
 **Status**: Draft
 
-**Input**: Issue #75 ("Summoned Codex tab cannot be used by the user") and item 1 of issue #74 ("Orchestrator answers the permission prompts of agents it summons", Codex tab only). Grilling decisions D1 to D9 are in `decisions.md`. Items 2 to 4 of #74 (D7, Q8) are a later change.
+**Input**: Issue #75 ("Summoned Codex tab cannot be used by the user") and item 1 of issue #74 ("Orchestrator answers the permission prompts of agents it summons", Codex tab only). Grilling decisions D1 to D12 are in `decisions.md`. Items 2 to 4 of #74 (D7, Q8) are a later change.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -20,7 +20,7 @@ The orchestrator opens one Codex tab in the user's workspace for advisor reviews
 
 **Acceptance Scenarios**:
 
-1. **Given** no Codex tab in the workspace, **When** an advisor point runs, **Then** one tab named `st-codex` opens with the user's own Codex setup, and the review runs in it.
+1. **Given** no Codex tab in the workspace, **When** an advisor point runs, **Then** one tab with the agent `st-codex-<workspace label>` opens with the user's own Codex setup, and the review runs in it.
 2. **Given** the tab exists and is idle, **When** the user types a request in it, **Then** Codex answers with the user's normal config and approvals.
 3. **Given** the user's turn is running in the tab, **When** an advisor point comes, **Then** nothing is typed into the tab, the review runs in the background instead, and the point says `codex: headless (Codex tab in use)`.
 4. **Given** the model or effort in `advisor.json` changed since the tab opened, **When** a point runs, **Then** the tab stays open with the old values and the point prints a line telling the user to close the tab to apply the new ones.
@@ -59,7 +59,7 @@ When the tab opens, the orchestrator starts watching it. If Codex stops on a per
 2. **Given** Codex asks to read a file or run a read-only command (tests, lint, `git log`, `git diff`), **When** the orchestrator sees it, **Then** it approves it and the review goes on in the tab.
 3. **Given** Codex asks to write or delete a file, change git state, install anything, or touch `.env` or secrets, **Then** the orchestrator approves nothing and shows the user the exact screen text; the tab stays open.
 4. **Given** a prompt the orchestrator does not recognise, **Then** it goes to the user with the exact screen text.
-5. **Given** a prompt is still open when the point's time runs out, **Then** the point ends BLOCKED with the screen text, and the tab stays open.
+5. **Given** a review runs in the tab, **When** the tab ends (the user closes it or Codex exits), **Then** the point ends BLOCKED with that reason and does not run the review in the background. A review in the tab has no time limit (D11).
 
 ### Edge Cases
 
@@ -86,7 +86,7 @@ When the tab opens, the orchestrator starts watching it. If Codex stops on a per
 - **FR-009**: When Codex stops on a prompt during a review, the script MUST keep waiting for the review's answer instead of failing or falling back to the background.
 - **FR-010**: There MUST be a command the orchestrator uses to send an answer key to the advisor tab.
 - **FR-011**: The st-build skill MUST tell the orchestrator to start watching the advisor tab as soon as it exists, to approve only reads and read-only commands, never a write, delete, git change, install, `.env` or secret, and to bring every other prompt to the user with the exact screen text.
-- **FR-012**: When the point's time runs out with a prompt open, the point MUST end BLOCKED with the screen text and leave the tab open.
+- **FR-012**: A review in the tab MUST have no time limit. When the tab ends during a review (the user closes it or Codex exits), the point MUST end BLOCKED with that reason. Once a review has started in the tab, the point MUST NOT run it in the background (D11).
 
 ### Key Entities
 
@@ -99,7 +99,7 @@ When the tab opens, the orchestrator starts watching it. If Codex stops on a per
 
 - **SC-001**: The user can hold a conversation in the advisor tab between two advisor points, and the tab and that conversation are still there after both points.
 - **SC-002**: 100% of reviews that change a file end BLOCKED with the file named; 0 files are reverted by the advisor.
-- **SC-003**: In the live run, a review that stops on a read prompt gets its answer from the orchestrator and finishes in the tab, with no fallback to the background.
+- **SC-003**: In the live run, one real prompt during a review, made by asking the review for something that needs approval (for example a command that needs the network), reaches the orchestrator through the watch and is handled by the rule: approved when on the allow list, else brought to the user with the exact text. The approve key path is covered by the stub tests (D12).
 - **SC-004**: 0 advisor prompts are typed into the tab while the user's turn is running.
 - **SC-005**: Each new guard in FR-004, FR-006, FR-008, FR-009, FR-010 and FR-002 has a test that goes red when the guard is broken.
 
