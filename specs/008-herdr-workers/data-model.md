@@ -10,12 +10,12 @@ every fact again from the worker id (research R10).
 | id | the request (`T004`) | `^[A-Za-z0-9][A-Za-z0-9-]{0,24}$` |
 | name | `worker-` + id in lower case | agent name, tab label, branch, `-n` session name, folder suffix (R2, R17) |
 | machine | `--machine` or none | a `label` or `id` in `herdr machine list --json`; none means this machine (`local`) |
-| repo | the main checkout here, `dirname "$(git rev-parse --path-format=absolute --git-common-dir)"` (herdr refuses a linked worktree, research R3); `--repo` on a saved machine | `--repo` starts with `/` or `~` |
+| repo | the main checkout here, `dirname "$(git rev-parse --path-format=absolute --git-common-dir)"` (herdr refuses a linked worktree, research R3); `--repo` on a saved machine, resolved over ssh first when it starts with `~` (contracts/script.md step 0b) | `--repo` starts with `/` or `~` |
 | base | `git rev-parse HEAD` here | full sha |
 | workspace | `start` here: `$HERDR_WORKSPACE_ID` (the only `HERDR_*_ID` read, FR-018); `start` on a saved machine: `open_workspace_id` of the main entry of `worktree list --cwd <repo>`, else the first workspace labelled `st-workers` in `workspace list`, else `.result.workspace.workspace_id` of `workspace create --label st-workers` (D35); later: `.workspace_id` of the tab labelled name in `tab list` | never built (L26); never this machine's id on a saved machine |
 | tab, pane | `tab create` answer (`.result.tab.tab_id`, `.result.root_pane.pane_id`); later `tab list` (`tab_id`) and `agent get` (`pane_id`) | never built, only read (L26); the tab id is field 4 of the `worker` and `found` lines |
 | branch | name, made by `git worktree add -b <name>` | `git worktree add` fails if it exists |
-| path | `start`: `<repo parent>/<repo name>-<name>`, made by `git worktree add`; later: `.path` of the entry with `branch == name` in `worktree list --cwd <cwd>`, where `<cwd>` is the `cwd` of the first pane of the tab in `pane list --workspace <ws>` | here absolute; on a saved machine as `--repo` gives it (`~/...` allowed) |
+| path | `start`: `<repo parent>/<repo name>-<name>`, made by `git worktree add`; later: `.path` of the entry with `branch == name` in `worktree list --cwd <cwd>`, where `<cwd>` is the `cwd` of the first pane of the tab in `pane list --workspace <ws>` | here absolute; on a saved machine absolute too, since `start` resolves a `~` `--repo` first (contracts/script.md step 0b) |
 | state | `agent get <name>` `.result.agent.agent_status` | `idle`, `working`, `blocked`, `done`, `unknown` |
 
 State as the script reports it (`wait`, `list`):

@@ -302,9 +302,9 @@ the change is in the working tree, nothing is committed by the worker, and no pr
 - Workers started before #71, with a workspace of their own, are not found or closed by the new
   script. No such worker was open on this PC on 2026-11-05; the laptop did not answer on 2026-11-06 (research R17), so it was not checked.
 
-## Deferred gaps (#71)
+## Gaps (#71)
 
-- G1. T023 is deferred to the user: the live run on this PC (quickstart section 2b).
-- G2. T024 is deferred to the user: the live run on the laptop (quickstart section 6b). The laptop did not answer on 2026-11-06 (research R17).
-- G3. The process part of FR-012, and the remote parts of SC-002 and SC-005, are live only. They wait for T023 and T024.
+- G1. Done. T023 passed on this PC on 2026-11-06 (research R17, Live (T023)).
+- G2. Done. T024 passed on the laptop on 2026-11-06, after the `~` fix in f0d61fc. The first run found that bug (research R17, Live (T024)).
+- G3. Done. The live checks of FR-012 (after close: agent gone, and no process left in T024), SC-002 and SC-005 passed in T023 and T024 (research R17).
 - G4 dropped: a `tab create` that exits 0 without ids. herdr does not answer that way. The gap stays in contracts/script.md section 4.

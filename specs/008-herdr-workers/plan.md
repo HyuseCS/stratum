@@ -187,9 +187,7 @@ no `worker-*` tab left. The older two are settled in decisions.md:
 - **B1. Remote live run (US3, SC-002). Closed 2026-10-24.** The laptop timed out on port 22 on
   2026-10-23 (007 plan B1). The live remote run of quickstart section 6 passed on 2026-10-24 (laptop
   repo at 3275e07: `start`, `wait`, `result` with `fetched`, `close`, all checks empty), and
-  `herdr --machine laptop workspace list` exited 0 on 2026-11-05 and timed out on 2026-11-06 (research R17). Open for #71: the remote path with
-  the `st-workers` workspace (R15, R15b, C14, C17) is stub-proven until T024 runs it live on the
-  laptop (D37, quickstart section 6b); T023 runs on this PC.
+  `herdr --machine laptop workspace list` exited 0 on 2026-11-05 and timed out on 2026-11-06 (research R17). For #71, T023 (this PC) and T024 (laptop) ran live on 2026-11-06 and passed (research R17). The first T024 run found the `~` `--cwd` bug, fixed in f0d61fc; the rerun passed.
 
 ## ponytail notes
 

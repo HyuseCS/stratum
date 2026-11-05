@@ -531,7 +531,7 @@ Checked on 2026-11-05 with herdr 0.9.4, read-only calls only: the group usage li
     `071-worker-workspace`), `path`, `is_linked_worktree`, and `open_workspace_id` only when a
     workspace has that checkout open (the key is absent otherwise: the laptop main checkout had none).
     It works from a linked worktree. On the laptop `--cwd '~/Desktop/stratum'` resolved to
-    `/home/hyuse/Desktop/stratum`, so `~` is expanded there.
+    `/home/hyuse/Desktop/stratum`, so `worktree list` expands `~` (T024: `workspace create`, `tab create` and `pane split` do not).
   - `tab close <tab_id>` takes only the tab id (schema `TabTarget`) and answers `tab_closed` with
     `tab_id` and `workspace_id`. `herdr --skill`: "Ordinary CLI/API closes do not inherit the TUI's
     last-pane confirmation", so no prompt is expected. Not known: whether closing the last tab of a
@@ -549,7 +549,7 @@ Checked on 2026-11-05 with herdr 0.9.4, read-only calls only: the group usage li
   `is_linked_worktree == false` in `H worktree list --cwd <repo>`; when none is open, the first
   workspace labelled `st-workers` in `H workspace list`; when none is, the
   `.result.workspace.workspace_id` of `H workspace create --cwd <repo> --label st-workers --no-focus`
-  (D32, D35). Then
+  (D32, D35). Since f0d61fc a `~` `--repo` on a saved machine is resolved first over ssh (`cd <repo> && pwd`), so every `--cwd` herdr gets is absolute. Then
   `git -C <repo> worktree add -q -b N <path> <sha>` (over ssh on a saved machine, after a `[ ! -e <path> ]` check), then
   `H tab create --workspace WS --cwd <path> --label N --no-focus`. The tab create comes right after
   the worktree, before `brief.md`, so on a failed tab the folder is still clean and
@@ -571,12 +571,9 @@ Checked on 2026-11-05 with herdr 0.9.4, read-only calls only: the group usage li
 - Superseded: R1 `worktree create`, R3 (herdr makes the worktree), R10 (find by workspace label) and
   R11 (`workspace close` of a worker workspace) for every worker started after #71. Workers started
   before #71 are not handled (spec Assumptions).
-- Not known (stub-proven only, T023 is local): whether `tab create --cwd ~/...` and
-  `pane split --cwd ~/...` expand `~` on a saved machine (only `worktree list --cwd` was run there).
-  The remote brief's `- Result file:` line now reads `~/<repo name>-<N>/result.md`, not an absolute
-  path.
-- Live (T023): not run yet.
-- Live (T024): not run yet (laptop, quickstart section 6b, D37). The laptop answered at Inspect (plan Validate, 2026-11-06) and timed out later at Build (`ssh` timed out), so it has not started.
+- Resolved (T024, 2026-11-06): herdr does not expand a leading `~` in `--cwd` for `workspace create`, `tab create` or `pane split`. `worktree list --cwd` does. Fix f0d61fc: `start` resolves a `~` repo path over ssh once, so these `--cwd` values are absolute. The remote brief's `- Result file:` line is absolute too.
+- Live (T023), 2026-11-06, this PC: PASSED. `worker-t920` opened as one tab in this workspace (`w3V`) with two panes, the agent left and lazygit right (the user saw it). The worker committed `cdcd948` (`demo/hello.txt`). After `close`: no `worker-t920` tab, the agent gone, `.stratum/git-guard.json` removed, the orchestrator's own tabs (Main, Dev Servers, VM, Codex, Test) all still there, no new workspace. The folder `/home/hyuse/Desktop/stratum-worker-t920` and the branch `worker-t920` are kept.
+- Live (T024), 2026-11-06, laptop (quickstart section 6b, D37). The first run, T921, FAILED on the `~` path. herdr does not expand a leading `~` in `--cwd` for `workspace create`, `tab create` or `pane split`: all three panes opened at `/home/hyuse`, and Claude asked to trust `/home/hyuse`. `git worktree add` over ssh and `brief.md` were fine. The orchestrator closed the laptop `st-workers` workspace `w1K` by hand (the user's OK). The folder `~/Desktop/stratum-worker-t921` and the branch `worker-t921` are left on the laptop for the user to remove. Fix f0d61fc: `start` resolves a `~` repo path over ssh once, and every `--cwd` is absolute (case R17 in `tests/test_st_worker.sh`). The rerun, T922, PASSED: a new workspace `st-workers` (`w1M`) next to the user's `~` workspace; its first tab at `/home/hyuse/Desktop/stratum`; tab `worker-t922` with two panes at `/home/hyuse/Desktop/stratum-worker-t922`; no trust prompt; the worker committed `a3647e0`. After `close` the laptop has only the `~` workspace with its one tab, no `worker-t922` agent, no process, the guard file removed, and the branch `worker-t922` fetched here. herdr #4379 (closing a workspace's last tab) was not reached, as quickstart 6b predicted. Earlier on 2026-11-06 the laptop answered at Inspect (plan Validate) and timed out at Build.
 - Incident (T019, 2026-11-06): an accidental real-herdr probe during T019 made two local `st-workers` workspaces. The agent closed both and checked the local lists: clean. The laptop was not checked.
 - Known gap: a `tab create` that exits 0 without ids stops with no undo (contracts/script.md section 4).
 

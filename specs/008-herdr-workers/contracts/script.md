@@ -178,6 +178,8 @@ No match in F1, F2 or F3: `No worker <N> on <m or local>.`, exit 1. More than on
 
 ```text
 0 H tab list                             -> a tab labelled N anywhere: row 12 line, exit 1
+0b saved machine, `--repo` starts with `~`: `ssh -o BatchMode=yes -- <target> "cd <repo> && pwd"`, once (`<repo>` quoted as in section 3, `~` kept)
+                                         -> one line that starts with `/` is `<repo>`; else `stopped: no absolute path for --repo on <m>`, exit 1
 1 WS                                     here: $HERDR_WORKSPACE_ID
                                          saved machine: H worktree list --cwd <repo> -> .open_workspace_id of the
                                          entry with is_linked_worktree == false; absent ->
@@ -198,9 +200,10 @@ No match in F1, F2 or F3: `No worker <N> on <m or local>.`, exit 1. More than on
 ```
 
 - `<repo>`: here, the main checkout, `dirname "$(git rev-parse --path-format=absolute --git-common-dir)"`,
-  also when the script runs in a linked worktree. On a saved machine, `--repo`. `<path>` is
+  also when the script runs in a linked worktree. On a saved machine, `--repo` (step 0b first when it starts with `~`). `<path>` is
   `<repo parent>/<repo name>-N` from that same `<repo>`. `<sha>`: `git rev-parse HEAD` of the
   calling folder. Over ssh every value is `printf %q` quoted, `~` restored as in section 3.
+- Step 0b (since f0d61fc). Its ssh failures follow the step 2 rules: exit 255 prints the `ssh to` line, any other failure prints the first stderr line of the failed `cd`. After 0b `<repo>` is absolute, so every `--cwd` herdr gets (`workspace create`, `tab create`, `pane split`) is absolute. Herdr does not expand a leading `~` in `--cwd` (research R17). Step 0b is one extra ssh call, and it runs only when `--repo` starts with `~`. No section 6 case covers the `no absolute path` stop.
 - The order is fixed: step 3 comes right after step 2, so on a failed tab the folder holds
   nothing of the script's and `git worktree remove` needs no `--force`. Step 3 is the only undo:
   it removes only the folder and the branch step 2 made in the same run, before any agent ran.
@@ -218,7 +221,7 @@ No match in F1, F2 or F3: `No worker <N> on <m or local>.`, exit 1. More than on
 - On a saved machine the ssh write of step 4 that fails with ssh's own exit 255 prints
   `stopped: ssh to <target> failed: <first stderr line>`; any other failure prints
   `stopped: cannot write brief.md and .stratum/git-guard.json in <WT> on <m>: <first stderr line>`.
-  Both then print the `worker` line, exit 1 (R1c). The step 2 ssh call that fails with exit 255
+  Both then print the `worker` line, exit 1 (R1c). The step 0b and step 2 ssh calls that fail with exit 255
   prints the same `ssh to` line. The step 2 string ends with `|| exit 1`, so git's own failure there exits 1 and prints its first stderr line instead (R16b).
 - Step 6 answers `agent_pane_busy` (the new pane's shell is not at its prompt yet, research R1):
   `sleep 1` and run step 6 again, up to 10 tries in total. `ponytail:` fixed 10 s bound, the same
@@ -420,7 +423,7 @@ the argv), and a `git` wrapper that logs `fetch`, `worktree add`, `worktree remo
 and passes every other call to the real git. Since #71 the wrapper does `worktree add` itself (makes
 the folder with a `.stratum/` inside, the `STUB_WT_LINK` cases, records path and branch for
 `worktree list`), so the temp repo gets no real branch or worktree; `worktree remove` deletes the
-folder, `branch -D` only logs. The stub `ssh` records the same on a `git ... worktree add` line. The
+folder, `branch -D` only logs. The stub `ssh` records the same on a `git ... worktree add` line, and answers `cd <dir> && pwd` with the path under `/stubhome` (`~` becomes `/stubhome`), so a `--repo '~/proj'` case sees `/stubhome/proj`. The
 stub `herdr` logs each argv as one TAB-joined line, gives ids with
 a random part per run (L26), keeps the tabs `tab create` and `workspace create` make (with
 workspace, label and cwd) for `tab list`, `pane list` and `tab close`, answers `agent get`
@@ -477,12 +480,13 @@ stub log, never from built ids.
 | C16 | two tabs labelled `worker-t004`: `More than one tab is labelled worker-t004.`, no `tab close`, exit 1 |
 | L1 | `list` with two worker tabs and one other tab: two `found` lines, field 4 each worker's tab id, the other label absent, states from the stub, paths from `worktree list --cwd` |
 | L2 | `list` with an idle worker tab: state `unsent` when its prompt is still in the box, `blocked` when the pane shows an open question; field 4 the tab id, exit 0 |
-| R1 | `start --machine laptop --repo '~/proj'`, the stub's `worktree list --cwd ~/proj` has a main entry open in `stubMainWS` with one other tab: every call `--machine laptop` but `machine list --json`; `w1P` in no call; no `workspace create`; first ssh line: the step 2 string of section 4 for `~/proj`, ending `git -C ~/proj worktree add -q -b worker-t004 ~/proj-worker-t004 <HEAD sha> || exit 1`; then `tab create --workspace stubMainWS --cwd ~/proj-worker-t004 --label worker-t004 --no-focus`; then a second ssh line `-o BatchMode=yes -- u@stubhost` with `cat > ~/proj-worker-t004/brief.md` and the `git-guard.json` write, no `\~`; the brief on its stdin holds the roster and rules, and has no `- Plugin root:` line and no `## Advisor` line |
+| R1 | `start --machine laptop --repo '~/proj'`, the stub's `worktree list --cwd /stubhome/proj` has a main entry open in `stubMainWS` with one other tab: every call `--machine laptop` but `machine list --json`; `w1P` in no call; no `workspace create`; three ssh calls in order: first `cd ~/proj && pwd` (step 0b; the stub answers `/stubhome/proj`), then the step 2 string for `/stubhome/proj` and `/stubhome/proj-worker-t004`, ending `git -C /stubhome/proj worktree add -q -b worker-t004 /stubhome/proj-worker-t004 <HEAD sha> || exit 1`, then the brief write with `cat > /stubhome/proj-worker-t004/brief.md` and the `git-guard.json` write, no `\~`; between the second and the third call `tab create --workspace stubMainWS --cwd /stubhome/proj-worker-t004 --label worker-t004 --no-focus`; the brief on the third call's stdin holds the roster and rules, `- Result file: /stubhome/proj-worker-t004/result.md`, and has no `- Plugin root:` line and no `## Advisor` line |
 | R1d | as R1, run from a copy of the script with a dummy `st-advisor.sh` next to it: the brief on ssh stdin still has no `- Plugin root:` line and no `## Advisor` line |
 | R1b | Folded into R1 by #71: the path is always the one `--repo` gives |
-| R15 | as R1, but the main entry has no `open_workspace_id` and no workspace is labelled `st-workers`: one `workspace create --cwd ~/proj --label st-workers --no-focus`, then `tab create --workspace <the WS it answered>` (D32, D35) |
+| R15 | as R1, but the main entry has no `open_workspace_id` and no workspace is labelled `st-workers`: one `workspace create --cwd /stubhome/proj --label st-workers --no-focus` (the stub's answer for `--repo '~/proj'`), then `tab create --workspace <the WS it answered>` (D32, D35) |
 | R15b | as R15, but `workspace list` has a workspace labelled `st-workers`: no `workspace create`, `tab create --workspace <that WS>` (D35 reuse) |
-| R16 | as R1, `tab create` fails: one more ssh line `git -C ~/proj worktree remove ~/proj-worker-t004 && git -C ~/proj branch -D worker-t004 >/dev/null`, no brief ssh line, `stopped: ` with the stub message, exit 1 (D33) |
+| R17 | `start --machine laptop --repo '~/proj'` with `STUB_NO_MAIN_WS=1` (no workspace has the main checkout open): every `--cwd` herdr gets is absolute and no herdr call has a `--cwd` that does not start with `/`: `workspace create --cwd /stubhome/proj --label st-workers --no-focus`, `tab create --workspace <the WS it answered> --cwd /stubhome/proj-worker-t004`, `pane split ... --cwd /stubhome/proj-worker-t004`; exit 0 (f0d61fc). No case covers the `no absolute path` stop of step 0b |
+| R16 | as R1, `tab create` fails: the third ssh call, after `cd` and the worktree add, is the undo `git -C /stubhome/proj worktree remove /stubhome/proj-worker-t004 && git -C /stubhome/proj branch -D worker-t004 >/dev/null`, no brief ssh call, `stopped: ` with the stub message, exit 1 (D33) |
 | R16b | `start --machine laptop`, git `worktree add` exits 255 on the remote: `stopped: fatal: ...` with git's first stderr line and no `ssh to` text, the `worker` line with `-` in fields 4 to 7, no `tab create`, exit 1 (the `|| exit 1` of step 2) |
 | R1c | `start --machine laptop`, ssh exits 255: one `stopped: ssh to u@stubhost failed` line, one `worker` line, exit 1 |
 | R14 | `start --machine laptop --repo <tmp>/rrepo` with no ssh exec: ssh holds `cat > <tmp>/rrepo-worker-t004/brief.md`, and `<tmp>/rrepo-worker-t004` does not exist on this machine after `start` |

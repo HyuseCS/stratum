@@ -198,11 +198,11 @@ $L tab list | jq -r '.result.tabs[].label' | grep -x worker-t921; echo "tab grep
 $L workspace list | jq -r '.result.workspaces[].label' | grep -x st-workers; echo "workspace grep exit $?"
 ```
 
-Expected: before `start`, no `open_workspace_id` on the main entry and no `st-workers` workspace.
+Expected: before `start`, no `open_workspace_id` on the main entry and no `st-workers` workspace. `start` first makes one extra ssh call, `cd ~/Desktop/stratum && pwd`, because `--repo` starts with `~`; it must print `/home/hyuse/Desktop/stratum`.
 `start` exit 0; after it, one new workspace labelled `st-workers` with two tabs: its own first tab
 and `worker-t921` (field 4 of the `worker` line). The worker tab has two panes, both with cwd
-`/home/hyuse/Desktop/stratum-worker-t921` (an absolute path, so `~` was expanded by
-`tab create --cwd` and `pane split --cwd`), lazygit in the right one. `wait` ends `state finished`,
+`/home/hyuse/Desktop/stratum-worker-t921` (absolute, because `start` resolved `~` first, and herdr does not expand `~` in `--cwd`;
+`tab create --cwd` and `pane split --cwd` got the absolute path), lazygit in the right one. `wait` ends `state finished`,
 `result` prints the four lines and `fetched worker-t921 <sha>`. `close` prints `closed worker-t921`
 and `folder ~/Desktop/stratum-worker-t921 ready to remove`; then the `st-workers` workspace is gone
 (`close` ran `workspace close`: the workspace's own first tab is still there when the worker tab
@@ -212,3 +212,5 @@ here, because the worker tab is never the last tab; record that, and record a wo
 already gone before `workspace close` ran (a `close` stop with herdr's line) as a finding. Do not
 merge `worker-t921`: the folder and branch stay on the laptop, the fetched branch here, for the
 user to remove.
+
+Live 2026-11-06 (research R17): the first 6b run, T921, opened both panes at `/home/hyuse` (herdr does not expand `~` in `--cwd`), and Claude asked to trust `/home/hyuse`. Fixed in f0d61fc, which adds one ssh call first (`cd ~/Desktop/stratum && pwd`). The rerun, T922, passed with the cwd lines above. T921 left `~/Desktop/stratum-worker-t921` and the branch `worker-t921` on the laptop; the user removes them.
