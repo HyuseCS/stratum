@@ -20,6 +20,9 @@ A10|skills/st-build/SKILL.md|Note `git rev-parse HEAD` after each story's review
 A11|skills/st-build/SKILL.md|Then run `bash <plugin root>/scripts/st-advisor.sh count <feature dir>` and show its line word for word.
 A12|skills/st-build/SKILL.md|After each `/advisor` call, run `bash <plugin root>/scripts/st-advisor.sh note <point> <feature dir> "<one-line summary>"`.
 A13|skills/st-build/SKILL.md|`no change since <base>: skip`: nothing changed after the last review, so the pass is skipped.
+A14|skills/st-build/SKILL.md|Codex only reviews: it never creates, changes or deletes a file, and never builds or fixes anything. The user may use the Codex tab for their own work.
+A15|skills/st-build/SKILL.md|`BLOCKED: Codex changed files during the review: <paths>`: show the paths. Revert nothing. The user checks them with `git diff` and keeps or reverts them, then says run the point again or continue (`continued`).
+A16|README.md|Each review in the tab compares HEAD and the changed and untracked files before and after the turn. Any difference ends the point `BLOCKED` with the files named. Nothing is reverted.
 TABLE
 
 while IFS='|' read -r id file phrase; do
