@@ -93,6 +93,7 @@ The advisor is Codex (the `codex` CLI), a model from another vendor. In mode `au
 The other Fast-lane points use `/advisor`. The Quick lane has no advisor.
 
 - Run `bash <plugin root>/scripts/st-advisor.sh <point> ...` from the project root in the foreground, with a Bash timeout of 600000 ms, and wait for it. No background run, no polling.
+- Codex only reviews: it never creates, changes or deletes a file, and never builds or fixes anything. The user may use the Codex tab for their own work.
 - Never run `codex` to build or fix. In herdr, Codex runs as the `st-codex-<workspace label>` agent in the `Codex` tab of this workspace, with the user's own Codex setup, and the user can watch it there. Otherwise it runs in the background in the read-only sandbox. The last line says which: `codex: tab st-codex-<workspace label>` or `codex: headless (<reason>)`. Show it to the user.
 - `no advisor: codex not found` or `no advisor: mode off`: go on as before; consult `/advisor` only if the user set one.
 - `no advisor: mode not set`: stop. Ask the user the advisor question of `/stratum:st-init` step 11, write the answer to `"$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/.stratum/advisor.json"`, then run the point again.
@@ -113,6 +114,7 @@ The other Fast-lane points use `/advisor`. The Quick lane has no advisor.
   Two rounds at most per point per gate pass, then the user decides. A later gate pass starts a new count.
 - `no change since <base>: skip`: nothing changed after the last review, so the pass is skipped.
 - After each `/advisor` call, run `bash <plugin root>/scripts/st-advisor.sh note <point> <feature dir> "<one-line summary>"`.
+- `BLOCKED: Codex changed files during the review: <paths>`: show the paths. Revert nothing. The user checks them with `git diff` and keeps or reverts them, then says run the point again or continue (`continued`).
 - `BLOCKED: <reason>`: stop and show the user the reason. Nothing passes the gate. If the user says to continue, run `bash <plugin root>/scripts/st-advisor.sh continued <point> <feature dir>` and skip the point. Do not retry it in this gate pass.
 - Each run appends a record to `<feature dir>/advisor.md`: the point, the time, the SHA256 of the input, the verdict and the findings. The mode comes from `.stratum/advisor.json`: `auto` (the default when the file has no `mode`), `codex`, `both` or `off`. A worktree with no file reads the main checkout's file. No file in either gives the `mode not set` line.
 - At the build gate, `check plan` compares the latest plan record with the current input. `advisor approval is stale` or `no record` counts as no approval: run the plan point once more, as a round. Skip the check after a `no advisor` line.
