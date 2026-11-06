@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -75,9 +76,9 @@ class PhaseHookTest(unittest.TestCase):
     def prompt(self, text, cwd=None, sid="s1"):
         return self.run_hook({"hook_event_name": "UserPromptSubmit", "prompt": text, "session_id": sid}, cwd)
 
-    def skill(self, name, sid="s1"):
+    def skill(self, name, sid="s1", args="x"):
         return self.run_hook({"hook_event_name": "PreToolUse", "tool_name": "Skill", "session_id": sid,
-                              "tool_input": {"skill": name, "args": "x"}})
+                              "tool_input": {"skill": name, "args": args}})
 
     def context(self, out, event):
         out = json.loads(out)["hookSpecificOutput"]
@@ -136,6 +137,12 @@ class PhaseHookTest(unittest.TestCase):
             os.makedirs(os.path.join(folder, ".stratum"))
             self.put(state_path(folder), feature_directory="specs/001-x", phase="build", lane="full", risk="normal")
         return main, linked
+
+    def spec_folder(self, name, spec=True):
+        folder = os.path.join(self.proj, "specs", name)
+        os.makedirs(folder, exist_ok=True)
+        if spec:
+            open(os.path.join(folder, "spec.md"), "w").close()
 
     def test_prompt_sets_phase_keeps_keys(self):
         self.write_state(feature_directory="specs/001-x", phase="define", lane="full")
@@ -296,7 +303,8 @@ class PhaseHookTest(unittest.TestCase):
         self.assertEqual(self.read_state(), {"feature_directory": "specs/001-x", "phase": "close", "lane": "fast"})
         self.write_state(feature_directory="specs/001-x", phase="fast", lane="fast")
         self.skill("stratum:st-define")
-        self.assertEqual(self.read_state(), {"feature_directory": "specs/001-x", "phase": "define", "lane": "full"})
+        self.assertEqual(self.read_state(), {"feature_directory": "specs/001-x", "phase": "define", "lane": "full",
+                                             "define_floor": 0})
 
     def test_agents_write_done(self):
         for name in ("st", "st-fast", "st-quick", "st-full", "st-close"):
@@ -309,10 +317,11 @@ class PhaseHookTest(unittest.TestCase):
             self.assertIn(phrase, f.read())
         with open(os.path.join(ROOT, "agents", "st-close.md")) as f:
             self.assertNotIn(phrase, f.read())
+        done = "say `Phase: done` on its own line"
         with open(os.path.join(ROOT, "skills", "st-close", "SKILL.md")) as f:
-            self.assertIn(phrase, f.read())
+            self.assertIn(done, f.read())
         with open(os.path.join(ROOT, "skills", "st-fast", "SKILL.md")) as f:
-            self.assertIn(phrase, f.read())
+            self.assertIn(done, f.read())
 
     def test_write_replaces_file_atomically(self):
         self.write_state(feature_directory="specs/001-x", phase="define", lane="full")
@@ -509,6 +518,212 @@ class PhaseHookTest(unittest.TestCase):
             with self.subTest(line):
                 before = self.reset()
                 self.stop_event(self.transcript(prompt_line("go"), reply_line(line)))
+                self.assertEqual(self.raw(), before)
+
+    def test_risk_stops_at_other_prompt_past_block(self):
+        before = self.reset("high")
+        self.stop_event(self.transcript(
+            prompt_line("first", "p0"), reply_line("Lane: full, risk low (x)"), reply_line("y" * (70 * 1024)),
+            result_line("r", "p0"), result_line("z" * (70 * 1024)),
+        ))
+        self.assertEqual(self.raw(), before)
+
+    def test_risk_prompt(self):
+        for text, level in (("risk low", "low"), (" Risk Normal ", "normal")):
+            with self.subTest(text):
+                self.reset("high")
+                self.prompt(text)
+                self.assertEqual(self.read_state().get("risk"), level)
+        for text in ("risk low please", "set risk low", "risk extreme", "/stratum:st risk low"):
+            with self.subTest(text):
+                before = self.reset("high")
+                self.prompt(text)
+                self.assertEqual(self.raw(), before)
+        with self.subTest("linked worktree writes the main checkout only"):
+            main, linked = self.make_worktree()
+            linked_before = self.read_text(state_path(linked))
+            self.prompt("risk low", cwd=linked)
+            self.assertEqual(json.loads(self.read_text(state_path(main))).get("risk"), "low")
+            self.assertEqual(self.read_text(state_path(linked)), linked_before)
+        with self.subTest("label unchanged"):
+            self.reset("high")
+            self.assertEqual(self.context(self.prompt("risk low"), "UserPromptSubmit"),
+                             "Start your reply with [Full lane | Build].")
+            self.assertEqual(self.read_state().get("risk"), "low")
+
+    def spec_folders_reset(self, folders, **state):
+        shutil.rmtree(os.path.join(self.proj, "specs"), ignore_errors=True)
+        for name in folders:
+            self.spec_folder(name)
+        self.write_state(**state)
+
+    def test_define_floor(self):
+        with self.subTest("no specs folder"):
+            self.write_state(feature_directory="specs/001-x", phase="build", lane="full")
+            self.prompt("/stratum:st-define new thing")
+            self.assertEqual(self.read_state()["define_floor"], 0)
+            self.write_state(feature_directory="specs/001-x", phase="build", lane="full")
+            self.skill("stratum:st-define", args="new thing")
+            self.assertEqual(self.read_state()["define_floor"], 0)
+        self.spec_folder("013-x")
+        self.spec_folder("015-y")
+        with self.subTest("prompt sets the floor"):
+            self.write_state(feature_directory="specs/001-x", phase="build", lane="full")
+            self.prompt("/stratum:st-define new thing")
+            self.assertEqual(self.read_state()["define_floor"], 15)
+        with self.subTest("skill sets the floor"):
+            self.write_state(feature_directory="specs/001-x", phase="build", lane="full")
+            self.skill("stratum:st-define", args="new thing")
+            self.assertEqual(self.read_state()["define_floor"], 15)
+        with self.subTest("redo removes the floor"):
+            self.write_state(feature_directory="specs/013-x", phase="done", lane="full", define_floor=15)
+            self.prompt("/stratum:st-define")
+            self.assertNotIn("define_floor", self.read_state())
+            self.write_state(feature_directory="specs/013-x", phase="done", lane="full", define_floor=15)
+            self.skill("stratum:st-define", args="")
+            self.assertNotIn("define_floor", self.read_state())
+        with self.subTest("other skills keep the floor"):
+            self.write_state(feature_directory="specs/001-x", phase="define", lane="full", define_floor=15)
+            self.prompt("/stratum:st-plan")
+            self.assertEqual(self.read_state()["define_floor"], 15)
+            self.write_state(feature_directory="specs/001-x", phase="define", lane="full", define_floor=15)
+            self.skill("stratum:st-plan")
+            self.assertEqual(self.read_state()["define_floor"], 15)
+
+    def test_feature_directory_on_define(self):
+        with self.subTest("redo keeps the feature, no floor"):
+            self.spec_folders_reset(("013-x", "015-y"), phase="define", feature_directory="specs/013-x")
+            before = self.raw()
+            self.assertEqual(self.post_tool("Write"), "")
+            self.assertEqual(self.raw(), before)
+        for tool in ("Write", "Bash", "Agent"):
+            with self.subTest("new define moves to 016-z on " + tool):
+                self.spec_folders_reset(("013-x", "015-y"), phase="define", define_floor=15,
+                                        feature_directory="specs/013-x")
+                self.spec_folder("016-z")
+                self.assertEqual(self.post_tool(tool), "")
+                self.assertEqual(self.read_state()["feature_directory"], "specs/016-z")
+        with self.subTest("edit in the old folder keeps the new feature"):
+            self.spec_folders_reset(("013-x", "016-z"), phase="define", define_floor=15,
+                                    feature_directory="specs/016-z")
+            before = self.raw()
+            self.assertEqual(self.post_tool("Edit"), "")
+            self.assertEqual(self.raw(), before)
+        with self.subTest("no feature set, floor 15"):
+            self.spec_folders_reset(("016-z",), phase="define", define_floor=15)
+            self.assertEqual(self.post_tool("Write"), "")
+            self.assertEqual(self.read_state().get("feature_directory"), "specs/016-z")
+        with self.subTest("tie goes to the name that sorts last"):
+            self.spec_folders_reset(("016-a", "016-z"), phase="define", define_floor=15)
+            self.assertEqual(self.post_tool("Write"), "")
+            self.assertEqual(self.read_state().get("feature_directory"), "specs/016-z")
+        with self.subTest("lower folder does not replace the current feature"):
+            self.spec_folders_reset(("015-y",), phase="define", define_floor=13, feature_directory="specs/016-z")
+            before = self.raw()
+            self.assertEqual(self.post_tool("Write"), "")
+            self.assertEqual(self.raw(), before)
+        with self.subTest("floor 16 blocks 016-z"):
+            self.spec_folders_reset(("016-z",), phase="define", define_floor=16)
+            before = self.raw()
+            self.assertEqual(self.post_tool("Write"), "")
+            self.assertEqual(self.raw(), before)
+        with self.subTest("plan phase does not scan"):
+            self.spec_folders_reset(("016-z",), phase="plan", define_floor=15)
+            before = self.raw()
+            self.assertEqual(self.post_tool("Write"), "")
+            self.assertEqual(self.raw(), before)
+        with self.subTest("folder without spec.md"):
+            self.spec_folders_reset(("013-x",), phase="define", define_floor=15)
+            self.spec_folder("017-w", spec=False)
+            before = self.raw()
+            self.assertEqual(self.post_tool("Write"), "")
+            self.assertEqual(self.raw(), before)
+        with self.subTest("names that are not spec folders"):
+            self.spec_folders_reset(("abc-x", "999-x$(y)"), phase="define", define_floor=15)
+            before = self.raw()
+            self.assertEqual(self.post_tool("Write"), "")
+            self.assertEqual(self.raw(), before)
+        with self.subTest("status skill and stop while define"):
+            self.spec_folders_reset(("016-z",), phase="define", define_floor=15)
+            before = self.raw()
+            self.assertEqual(self.pre_skill("stratum:st-status"), "")
+            self.assertEqual(self.stop_event(), "")
+            self.assertEqual(self.raw(), before)
+
+    def test_phase_done_marker(self):
+        for phase in ("close", "fast", "build"):
+            with self.subTest(phase):
+                self.write_state(feature_directory="specs/001-x", phase=phase, lane="full")
+                self.stop_event(self.transcript(prompt_line("go"), reply_line("Phase: done")))
+                self.assertEqual(self.read_state()["phase"], "done")
+        with self.subTest("last message alone"):
+            self.write_state(feature_directory="specs/001-x", phase="close", lane="full")
+            self.stop_event(self.transcript(prompt_line("go"), reply_line("ok")), last="Phase: done")
+            self.assertEqual(self.read_state()["phase"], "done")
+        rows = {
+            "more text on the line": [prompt_line("go"), reply_line("- Phase: done | Lane: full")],
+            "text after done": [prompt_line("go"), reply_line("Phase: done and pushed")],
+            "tool result": [prompt_line("go"), result_line("Phase: done"), reply_line("ok")],
+            "meta line": [prompt_line("go"), meta_line("Phase: done"), reply_line("ok")],
+            "earlier turn": [prompt_line("first", "p0"), reply_line("Phase: done"), prompt_line("second"),
+                             reply_line("ok")],
+        }
+        for name, lines in rows.items():
+            with self.subTest(name):
+                self.write_state(feature_directory="specs/001-x", phase="close", lane="full")
+                before = self.raw()
+                self.stop_event(self.transcript(*lines))
+                self.assertEqual(self.raw(), before)
+
+    def test_build_done_clears_label(self):
+        for name in ("st-build", "st-worker"):
+            with self.subTest(name):
+                self.write_state(feature_directory="specs/001-x", phase="done", lane="none", skill=name,
+                                 skill_session="s1")
+                self.stop_event(self.transcript(prompt_line("go"), reply_line("Build done.")))
+                self.assertEqual(self.read_state()["skill"], "")
+                self.assertEqual(self.prompt("what next?").strip(), "")
+        rows = {
+            "same line as the next step": [prompt_line("go"), reply_line("Build done. Next: /stratum:st-close")],
+            "tool result": [prompt_line("go"), result_line("Build done."), reply_line("ok")],
+            "earlier turn": [prompt_line("first", "p0"), reply_line("Build done."), prompt_line("second"),
+                             reply_line("ok")],
+        }
+        for name, lines in rows.items():
+            with self.subTest(name):
+                self.write_state(feature_directory="specs/001-x", phase="done", lane="none", skill="st-build",
+                                 skill_session="s1")
+                before = self.raw()
+                self.stop_event(self.transcript(*lines))
+                self.assertEqual(self.raw(), before)
+
+    def test_done_marker_forms(self):
+        for line, key, value in (
+            ("[Orchestrator] Phase: done", "phase", "done"),
+            ("- Phase: done", "phase", "done"),
+            ("[Orchestrator] - Phase: done", "phase", "done"),
+            ("`Phase: done`", "phase", "done"),
+            ("**Phase: done**", "phase", "done"),
+            ("Phase: done.", "phase", "done"),
+            ("[st-build] Build done.", "skill", ""),
+            ("- Build done", "skill", ""),
+            ("`Build done.`", "skill", ""),
+            ("**Build done.**", "skill", ""),
+        ):
+            with self.subTest(line):
+                self.write_state(feature_directory="specs/001-x", phase="close", lane="full", skill="st-build",
+                                 skill_session="s1")
+                out = self.stop_event(self.transcript(prompt_line("go"), reply_line(line)))
+                self.assertEqual(out, "")
+                self.assertEqual(self.read_state()[key], value)
+        for line in ("- Phase: done | Lane: full", "[Orchestrator] Phase: done and pushed",
+                     "- Build done. Next: /stratum:st-close", "Note: Phase: done", "-- Phase: done"):
+            with self.subTest(line):
+                self.write_state(feature_directory="specs/001-x", phase="close", lane="full", skill="st-build",
+                                 skill_session="s1")
+                before = self.raw()
+                out = self.stop_event(self.transcript(prompt_line("go"), reply_line(line)))
+                self.assertEqual(out, "")
                 self.assertEqual(self.raw(), before)
 
 

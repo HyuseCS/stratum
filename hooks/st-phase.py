@@ -15,6 +15,10 @@ NAME = re.compile(r"/stratum:st-([a-z][a-z-]*)(?:\s|$)")
 SKILLS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "skills")
 PRE = r"^(?:\[[^\]\n]*\][ \t]*)?(?:- )?(?:\*\*|`)?"
 RISK = re.compile(PRE + r"Lane: [A-Za-z]+, risk ((?i:high|normal|low|none))\b", re.M)
+ASK = re.compile(r"\s*risk (high|normal|low|none)\s*", re.I)
+DONE = re.compile(PRE + r"Phase: done\.?(?:\*\*|`)?[ \t]*$", re.M)
+CLEAR = re.compile(PRE + r"Build done\.?(?:\*\*|`)?[ \t]*$", re.M)
+SPEC = re.compile(r"\d{3}-[a-z0-9-]+")
 
 
 def turn_text(path, pid):
@@ -50,6 +54,13 @@ def turn_text(path, pid):
     except Exception:
         return ""
     return "\n".join(reversed(texts))
+
+
+def folders(root):
+    try:
+        return [e.name for e in os.scandir(os.path.join(root, "specs")) if e.is_dir()]
+    except OSError:
+        return []
 
 
 def save(path, state):
@@ -88,7 +99,8 @@ def main():
         text = turn_text(data.get("transcript_path"), data.get("prompt_id"))
         if event == "Stop" and isinstance(data.get("last_assistant_message"), str):
             text += "\n" + data["last_assistant_message"]
-    risk = RISK.findall(text)
+    ask = prompt and ASK.fullmatch(data["prompt"])
+    risk = [ask.group(1)] if ask else RISK.findall(text)
     if risk:
         risk, top = risk[-1].lower(), path
         try:
@@ -109,6 +121,20 @@ def main():
             if stale:
                 other["risk"] = risk
                 save(top, other)
+    if DONE.search(text):
+        state["phase"] = "done"
+    if CLEAR.search(text):
+        state["skill"] = ""
+    old = state.get("phase")
+    floor = state.get("define_floor")
+    if event == "PostToolUse" and old == "define" and isinstance(floor, int):
+        found = [(int(n[:3]), n) for n in folders(d)
+                 if SPEC.fullmatch(n) and os.path.isfile(os.path.join(d, "specs", n, "spec.md"))]
+        if found:
+            num, pick = max(found)
+            cur = re.match(r"specs/(\d{3})-", str(state.get("feature_directory") or ""))
+            if num > floor and (not cur or int(cur.group(1)) < num):
+                state["feature_directory"] = "specs/" + pick
     notes = []
     sid = data.get("session_id")
     name = m and m.group(1)
@@ -120,6 +146,12 @@ def main():
             state["phase"] = phase
         elif old in ("fast", "quick"):
             state["phase"] = None
+        if phase == "define":
+            desc = data["prompt"].lstrip()[m.end():] if prompt else (data.get("tool_input") or {}).get("args")
+            if isinstance(desc, str) and desc.strip():
+                state["define_floor"] = max((int(n[:3]) for n in folders(d) if re.match(r"\d{3}-", n)), default=0)
+            else:
+                state.pop("define_floor", None)
         if phase in ("fast", "quick"):
             state["lane"] = phase
         elif phase in ("define", "full") or state.get("lane") in (None, "", "none"):
