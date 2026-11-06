@@ -22,6 +22,22 @@ for l in sys.stdin:
     break' "$@"
 }
 hd() { out=$(herdr "$@" 2>&1) || die "ERROR: $(head -n1 <<<"$out")"; }
+# ponytail: polls agent get every 2 s, so a closed tab is seen up to 2 s late; use a herdr event if herdr adds one
+hw() {
+  local f p r
+  f=$(mktemp) || die "ERROR: cannot make a temp file"
+  herdr "$@" > "$f" 2>&1 &
+  p=$!
+  while kill -0 $p 2>/dev/null; do
+    sleep 2
+    [ "$(herdr agent get "$name" 2>&1 | jget error code)" = agent_not_found ] && kill $p 2>/dev/null && break
+  done
+  wait $p
+  r=$?
+  out=$(<"$f")
+  rm -f "$f"
+  return $r
+}
 # ponytail: a pid reused after a kill looks like a live review, store the start time too if that bites
 mark() {
   trap 'rm -f "$tabs/$name.review"' EXIT
@@ -82,7 +98,7 @@ else
   done
   [[ $made =~ ^[A-Za-z0-9:_-]+$ ]] || die "ERROR: bad tab id from herdr: $made"
   (umask 077; mkdir -p "$tabs" && printf '%s\n' "$made" "$@" > "$tabs/$name") || die "ERROR: cannot write $tabs/$name"
-  [ "$code" = agent_not_ready ] && { mark; out=$(herdr agent wait "$name" --until idle --until done 2>&1) || ended; }
+  [ "$code" = agent_not_ready ] && { mark; hw agent wait "$name" --until idle --until done || ended; }
 fi
 
 before=$(snap) || die "ERROR: cannot read git status in $root"
@@ -96,7 +112,7 @@ nonce=$(od -An -N6 -tx1 /dev/urandom | tr -d ' \n')
 printf '%s\n' "The project root is $root. Read every path above relative to it." \
   'The JSON object has the keys verdict ("APPROVED", "REVISE" or "BLOCKED"), summary (a string) and findings (a list of objects with the string keys claim, evidence, location and severity, severity one of "CRITICAL", "HIGH", "MEDIUM", "LOW").' \
   "Print the line ST-ADVISOR-BEGIN-$nonce alone, then the JSON object on one line, then the line ST-ADVISOR-END-$nonce alone. Print nothing after the end line." >> "$pf" || die "ERROR: cannot write $pf"
-out=$(herdr agent prompt "$name" "Read the review request in $pf and follow it. Change no file." --wait --until done --until idle 2>&1)
+hw agent prompt "$name" "Read the review request in $pf and follow it. Change no file." --wait --until done --until idle
 prc=$?
 rm -f "$tabs/$name.review"
 after=$(snap) || die "BLOCKED: cannot read git status in $root" 4

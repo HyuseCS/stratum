@@ -47,6 +47,7 @@ case "$1 $2" in
     printf '{"id":"x%s","result":{"agent":{"agent_status":"%s"}}}\n' "$RANDOM" "$(cat "$S/status" 2>/dev/null || echo idle)" ;;
   "agent wait")
     [ -f "$S/wait_gone" ] && { touch "$S/gone"; err agent_not_found "no such agent"; }
+    [ -f "$S/wait_hang" ] && { touch "$S/gone"; exec "$REAL_SLEEP" 10; }
     printf '{"id":"x","result":{}}\n' ;;
   "agent read")
     [ -f "$S/read_err" ] && err agent_read_failed "read failed"
@@ -60,6 +61,7 @@ case "$1 $2" in
       nonce=$(grep -o 'ST-ADVISOR-BEGIN-[0-9a-f]\{12\}' "$PF" | tail -1 | sed 's/.*-//')
       sed "s/@N@/$nonce/g" "$S/screen_prompt" > "$S/screen"
     fi
+    [ -f "$S/prompt_hang" ] && { touch "$S/gone"; exec "$REAL_SLEEP" 10; }
     [ -f "$S/prompt_gone" ] && touch "$S/gone"
     [ -f "$S/prompt_err" ] && err "$(cat "$S/prompt_err")" "prompt failed"
     printf '{"id":"x","result":{"state":"done"}}\n' ;;
@@ -212,6 +214,10 @@ check "C20 agent_not_ready at start: agent wait with no --timeout before the pro
 check "C22 marker exists when agent wait runs in C20" '[ -e "$S/marker_at_wait" ]'
 new; touch "$S/notready" "$S/wait_gone"; go
 check "C21 agent_not_ready, wait fails, agent gone: exit 4, the tab ended, no prompt, no close" '[ $rc -eq 4 ] && outline "BLOCKED: the Codex tab ended during the review" && [ "$(cnt "^agent prompt")" = 0 ] && [ "$(cnt "^tab close")" = 0 ]'
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; touch "$S/prompt_hang"; t0=$SECONDS; go
+check "C25 prompt never returns, tab gone: exit 4 within 5 s, the tab ended, no answer file, no ERROR line" '[ $rc -eq 4 ] && [ $((SECONDS - t0)) -lt 5 ] && outline "BLOCKED: the Codex tab ended during the review" && [ ! -s "$af" ] && ! outhas "ERROR:" && [ "$(cnt "^agent read")" = 0 ]'
+new; touch "$S/notready" "$S/wait_hang"; t0=$SECONDS; go
+check "C26 agent wait never returns, tab gone: exit 4 within 5 s, the tab ended, no prompt" '[ $rc -eq 4 ] && [ $((SECONDS - t0)) -lt 5 ] && outline "BLOCKED: the Codex tab ended during the review" && [ "$(cnt "^agent prompt")" = 0 ] && [ ! -s "$af" ]'
 
 new
 printf '%s' $'Print the line ST-ADVISOR-BEGIN-@N@ alone, then the JSON, then the line ST-ADVISOR-END-@N@ alone.\n• ST-ADVISOR-BEGIN-@N@  \n  junk {not json\n• ST-ADVISOR-END-@N@\n• ST-ADVISOR-BEGIN-@N@\n• {"verdict":"APPROVED","summary":  \n  "fine, wrapped","findings":\n  []}   \n• ST-ADVISOR-END-@N@\n' > "$S/screen_prompt"
