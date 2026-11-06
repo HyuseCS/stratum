@@ -13,7 +13,7 @@ hash = the first 12 hex characters of sha256sum <<<"$s"
 
 `$(...)` drops the trailing newlines and `<<<` adds one, as in `st-advisor.sh`. A read that fails gives no hash. One helper does this read for `st blocked` and for `answer`, so the text the orchestrator judges and the text that is hashed are the same (D9).
 
-The pane shows a permission dialog when a line of the last 15 lines of `s` matches `PERM` (`scripts/st-worker.sh:155`). Only the last 15 count, as before, so a dialog more than 15 lines up is not a dialog (AN4).
+The pane shows a permission dialog when a line of the last 15 lines of `s` matches `PERM` (`scripts/st-worker.sh:167`). Only the last 15 count, as before, so a dialog more than 15 lines up is not a dialog (AN4).
 
 ## 2. `wait` and `watch`
 
@@ -98,7 +98,7 @@ Run in T015:
 8. Hash a different read than the printed text (in `st blocked`, hash a fresh `--lines 20` read, and keep printing `s`): AN9b goes red. AN11b stays green here, because `answer` then refuses on any hash.
 9. Make the shared helper read `--lines 20` again (both places): AN11b goes red (the change 25 lines up is not seen, so key 1 is sent), and AN9b goes red (no `line 5` in the pane text).
 
-Run in the review fix of 760ae90:
+Run in the review fix of 81cfcc0:
 
 10. Drop the one-head check (step 3.5: allow more than one head line in the last 15 lines): AN6f goes red.
 

@@ -15,3 +15,6 @@ summary: US2 decisions: 1-3 fine; 760ae90 (T014/T015) had no st-review: review 9
 
 ## decisions | 2026-11-06T04:31:23Z | /advisor
 summary: US3 decisions: 1,2 fine; 3 drop is right but reason is wrong (st-build can run without st loaded): drop as outside the agreed contract, put N2 in st-close gap report; FR-008 vs fact 9 is a close drift fix
+
+## diff | 2026-11-06T04:49:41Z | /advisor
+summary: end-of-Build diff c9714e7..81cfcc0 approved: one-head check correct and fails closed; run full sweep; commit advisor.md; carry the drift list to st-close

@@ -67,6 +67,7 @@ Rule sentence R (FR-005): `Watch each agent you summon. Answer its permission pr
 | W23 | `skills/st/SKILL.md` | the line after R, 2-space indent | ``The lists: the Codex tab in `/stratum:st-build` (Advisor), herdr workers in `/stratum:st-worker` (step 6), in-session subagents in the next lines.`` |
 | W26 | `skills/st-build/SKILL.md` | the line after R, 2-space indent | `The Codex tab lists are under Advisor. The worker lists are in the st-worker skill, step 6.` |
 | W27 | `skills/st-worker/SKILL.md` | the same line as R, after it | ``The worker lists are in step 6, under `approval`.`` |
+| W33 | `skills/st-build/SKILL.md` | the same line as W26, after it (Convergence T017) | ``In-session subagents: see the note under this rule in `/stratum:st`.`` |
 
 R is one physical line in each file. Lines 98 to 100 of `skills/st-build/SKILL.md` do not change (FR-009, rows A18 to A28).
 
@@ -86,7 +87,7 @@ The W30 and W25 line as it goes in the file:
 First put the `model` and `effort` from `.stratum/models.json` in the Agent call yourself, so the hook changes nothing. An Agent call denied because a hook changed its input after auto mode reviewed it: send it once more with exactly the input the denial quotes. Denied again: tell the user.
 ```
 
-Each claim maps to `research.md` R4: W24 to facts 1, 2 and 8. W30 to facts 5 and 9. W25 to facts 5 and 6. No line points to `research.md`.
+Each claim maps to `research.md` R4: W24 to facts 1, 2, 7 and 8. W30 to facts 5 and 9. W25 to facts 5 and 6. No line points to `research.md`.
 
 Source rows for FR-008, in the first table, word for word:
 

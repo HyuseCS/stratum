@@ -38,7 +38,7 @@ None.
 
 **Goal**: in normal mode the orchestrator sends the one-time yes on a worker dialog for an action on the worker allow list. `answer --keys` refuses a lasting option. Every other dialog goes to the user with the workspace, the tab and the exact text.
 
-**Independent Test**: `bash tests/test_st_worker.sh` (AN1 to AN13, AN6e, AN9b, AN11b) and `bash tests/test_worker_rules.sh` (W1, W2, W18, W19, W28, W29, W31, W32, O1, G5 to G9) pass.
+**Independent Test**: `bash tests/test_st_worker.sh` (AN1 to AN13, AN6e, AN6f, AN9b, AN11b) and `bash tests/test_worker_rules.sh` (W1, W2, W18, W19, W28, W29, W31, W32, O1, G5 to G9) pass.
 
 ### Tests for User Story 1
 
@@ -59,11 +59,11 @@ T001 to T004 are built (b2e19c4, 42c758b). T010 to T013 change them. They run be
 - [X] T012 [US1] In `scripts/st-worker.sh`, build `contracts/answer.md` sections 1 to 3:
   - In `st()`, for `blocked`, print `screen<TAB><hash>` after the `state` line and before `pane text:` when the pane shows a permission dialog.
   - Parse `answer --screen <hash>`: before `--keys`, it must match `^[0-9a-f]{12}$`, else `usage`.
-  - In `answer`, read 20 lines with the `scripts/st-advisor.sh:35` hash method, and judge the dialog by the last 15 lines.
+  - In `answer`, read 20 lines (T015 changes this to 40, D9) with the `scripts/st-advisor.sh:35` hash method, and judge the dialog by the last 15 lines.
   - On a permission dialog, refuse in the order of section 3 step 3, with the exact lines there.
   - Remove T003's no-option line and its lasting-phrase `grep`. Keep the permission line for `--text` and for a failed read.
   - Use one helper for the read and hash, shared by `st()` and `answer`, so both read the same way.
-  - On the line of the hash compare, add this note word for word (D8, `contracts/answer.md` section 6): `# ponytail: the whole 20-line screen must match, add --expect <text> if a real worker pane redraws so its hash never matches`. Add no other comment lines.
+  - On the line of the hash compare, add this note word for word (D8, `contracts/answer.md` section 6): `# ponytail: the whole 20-line screen must match, add --expect <text> if a real worker pane redraws so its hash never matches`. T015 changes 20 to 40 lines (D9). Add no other comment lines.
   - Then run negative controls 1 to 6 of section 5, one at a time with the Edit tool, and see AN11, AN12, AN6, AN9 and AN10, AN6d, and AN13 go `FAIL`, each undone with the Edit tool.
   Test: bash tests/test_st_worker.sh.
 - [X] T013 [US1] In `skills/st-worker/SKILL.md`, replace the W1 line (the line that starts `A permission dialog in normal mode`) with the line of `contracts/skill-lines.md` section 1b, keeping its 5-space indent. Change no other line. Then, one at a time with the Edit tool: delete only the W31 text, run the test, see W31 `FAIL`, put it back; delete only `--screen <hash> ` in the command, run the test, see W32 `FAIL`, put it back. Test: bash tests/test_worker_rules.sh && bash tests/test_lane_steps.sh && bash tests/test_on_demand.sh.
@@ -97,7 +97,7 @@ T010 to T013 are built (90113d2, 9c1e04b). T014 and T015 change them. They run b
 
 ### Implementation for User Story 2
 
-- [X] T006 [US2] Add the rule sentence R and its pointer as `contracts/skill-lines.md` section 3 says: in `skills/st/SKILL.md`, a new `## Always` bullet with R after the bullet that ends "and why." (:68), and the W23 line under it, 2-space indent; in `skills/st-build/SKILL.md`, a new last bullet in `## Always` with R, and the W26 line under it, 2-space indent; in `skills/st-worker/SKILL.md`, a blank line and then one line with R and the W27 text after line 10. R is one physical line in each file. Do not change `skills/st-build/SKILL.md:98-100`. Then delete R from `skills/st-build/SKILL.md` once with the Edit tool, run the test, see W21 `FAIL`, and put it back with the Edit tool. Test: bash tests/test_worker_rules.sh && bash tests/test_advisor_rules.sh && bash tests/test_risk_rules.sh && bash tests/test_lane_steps.sh.
+- [X] T006 [US2] Add the rule sentence R and its pointer as `contracts/skill-lines.md` section 3 says: in `skills/st/SKILL.md`, a new `## Always` bullet with R after the bullet that ends "and why." (:68), and the W23 line under it, 2-space indent; in `skills/st-build/SKILL.md`, a new last bullet in `## Always` with R, and the W26 line under it, 2-space indent; in `skills/st-worker/SKILL.md`, a blank line and then one line with R and the W27 text after line 10. R is one physical line in each file. Do not change `skills/st-build/SKILL.md:98-100`. Then delete R from `skills/st-build/SKILL.md` once with the Edit tool, run the test, see W21 `FAIL`, and put it back with the Edit tool. Test: bash tests/test_worker_rules.sh && bash tests/test_advisor_rules.sh && bash tests/test_risk_rules.sh && bash tests/test_lane_steps.sh && bash tests/test_on_demand.sh.
 
 **Checkpoint**: SC-002: `grep -cF` of R gives 1 in each of the three files.
 
@@ -115,7 +115,7 @@ T010 to T013 are built (90113d2, 9c1e04b). T014 and T015 change them. They run b
 
 ### Implementation for User Story 3
 
-- [X] T008 [US3] In `skills/st/SKILL.md`, add the W24 line and the W30-plus-W25 line (`contracts/skill-lines.md` section 4) right after the W23 line, 2-space indent, one line each. Each claim must map to `research.md` R4: W24 to facts 1, 2 and 8, W30 to facts 5 and 9, and W25 to facts 5 and 6. No line points to `research.md`. Add no other claim. Then, one at a time with the Edit tool: delete the W25 sentences, run the test, see W25 `FAIL`, put them back; delete only the W30 sentence, run the test, see W30 `FAIL`, put it back. Test: bash tests/test_worker_rules.sh && bash tests/test_risk_rules.sh && bash tests/test_state.sh.
+- [X] T008 [US3] In `skills/st/SKILL.md`, add the W24 line and the W30-plus-W25 line (`contracts/skill-lines.md` section 4) right after the W23 line, 2-space indent, one line each. Each claim must map to `research.md` R4: W24 to facts 1, 2, 7 and 8, W30 to facts 5 and 9, and W25 to facts 5 and 6. No line points to `research.md`. Add no other claim. Then, one at a time with the Edit tool: delete the W25 sentences, run the test, see W25 `FAIL`, put them back; delete only the W30 sentence, run the test, see W30 `FAIL`, put it back. Test: bash tests/test_worker_rules.sh && bash tests/test_risk_rules.sh && bash tests/test_state.sh.
 
 **Checkpoint**: all three stories work. The `quickstart.md` steps pass.
 
@@ -156,6 +156,15 @@ MVP is US1: the gap the issue reports. US2 and US3 are text only and add no beha
 | FR-007 | T007 (W24, W25, W30) | T008 |
 | FR-008 | T007 (S1 to S6, S1 and S4 negative controls) | Plan (`research.md` R4) |
 | FR-009 | T005 (A18 to A28 in `tests/test_advisor_rules.sh`) | T006 (no change to :98-100) |
-| FR-010 | T001 (AN1, AN6, AN7, AN8), T010 (AN6 to AN6d, AN7, AN8, AN10; negative controls 3 and 5), T014 (AN6e; negative control 7) | T003, T012, T015 |
+| FR-010 | T001 (AN1, AN6, AN7, AN8), T010 (AN6 to AN6d, AN7, AN8, AN10; negative controls 3 and 5), T014 (AN6e; negative control 7), review fix 81cfcc0 (AN6f; negative control 10) | T003, T012, T015, 81cfcc0 |
 | FR-011 | T010 (AN9, AN11, AN12, AN13; negative controls 1, 2, 4 and 6), T014 (AN9b, AN11b; negative controls 8 and 9) | T012, T015 |
 | README line 117 | T002 (W19, G7) | T004 |
+
+## Phase 7: Convergence
+
+Gap: the st-build shared rule has no pointer to the in-session subagent note in `skills/st/SKILL.md` (send back, user decision N2). Source-ref FR-006, gap-type missing.
+
+- [ ] T016 [US2] In `tests/test_worker_rules.sh`, first table, add row W33 (file `skills/st-build/SKILL.md`, phrase in `contracts/skill-lines.md` section 3, the `has` form) per FR-006 (missing). Red now: W33 prints `FAIL`, so the test chain stops at this first command, which is the proof. Owns: `tests/test_worker_rules.sh`. Test: bash tests/test_worker_rules.sh && bash tests/test_on_demand.sh && bash tests/test_advisor_rules.sh && bash tests/test_lane_steps.sh.
+- [ ] T017 [US2] In `skills/st-build/SKILL.md`, append to the W26 line (the 2-space indented line under the shared rule in `## Always`) so that it reads exactly: `  The Codex tab lists are under Advisor. The worker lists are in the st-worker skill, step 6. In-session subagents: see the note under this rule in `/stratum:st`.` per FR-006 (missing). Change no other line, and keep `skills/st-build/SKILL.md:98-100` unchanged. W26 stays a substring and stays green. Negative control: with the Edit tool, delete only the sentence `In-session subagents: see the note under this rule in `/stratum:st`.` once, run the test, see W33 `FAIL`, and put it back with the Edit tool. Runs after T016. Owns: `skills/st-build/SKILL.md`. Test: bash tests/test_worker_rules.sh && bash tests/test_on_demand.sh && bash tests/test_advisor_rules.sh && bash tests/test_lane_steps.sh.
+
+FR coverage (Convergence): FR-006 is covered by T016 (W33) and T017, and W26 (T005) stays green.

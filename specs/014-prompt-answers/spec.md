@@ -45,11 +45,11 @@ The st, st-build and st-worker skills each hold the same rule: "Watch each agent
 
 ### User Story 3 - A written note on in-session subagent prompts (Priority: P2)
 
-The orchestrator starts subagents in this session with the Agent tool. When such a subagent's tool call needs permission, the note says what the orchestrator can do and what it cannot do. Each fact in the note comes from the Claude Code docs or from a check in this repo, with its source.
+The orchestrator starts subagents in this session with the Agent tool. When such a subagent's tool call needs permission, the note says what the orchestrator can do and what it cannot do. Each fact in the note has a source, of a kind FR-008 accepts, in the research file.
 
 **Why this priority**: The issue asks to find out and write this down. It changes no behavior, so it comes after US1 and US2.
 
-**Independent Test**: The note exists in the st skill. A text-rule test checks its lines. Each fact in the research file has a source (a doc URL with a quote, or a file and line in this repo).
+**Independent Test**: The note exists in the st skill. A text-rule test checks its lines. Each fact in the research file has a source of a kind FR-008 accepts.
 
 **Acceptance Scenarios**:
 
@@ -76,7 +76,7 @@ The orchestrator starts subagents in this session with the Agent tool. When such
 - **FR-005**: The rule sentence "Watch each agent you summon. Answer its permission prompt when the answer keeps it in its brief. Bring every other prompt to the user with the exact text." MUST be in `skills/st/SKILL.md`, `skills/st-build/SKILL.md` and `skills/st-worker/SKILL.md`, word for word.
 - **FR-006**: `skills/st/SKILL.md` MUST say where each agent kind's lists are: the Codex tab in st-build, workers in st-worker, in-session subagents in the note (FR-007).
 - **FR-007**: `skills/st/SKILL.md` MUST hold a short note on in-session subagents: what the orchestrator can do and cannot do when a subagent's tool call needs permission, including that it never re-runs a denied action in place of the subagent.
-- **FR-008**: Each fact behind the note MUST be in the feature's research file with its source: a doc URL and quote, a file and line in this repo, or a Claude Code denial text quoted word for word with the date it was seen (D4). A fact with no source is written as "not documented".
+- **FR-008**: Each fact behind the note MUST be in the feature's research file with its source: a doc URL and quote, a file and line in this repo, or a Claude Code denial text quoted word for word with the date it was seen (D4), or a dated run in this session with the calls named (D5). A fact with no source is written as "not documented".
 - **FR-009**: The Codex tab allow and never lists in st-build MUST stay as 013 wrote them.
 - **FR-010**: `st-worker.sh answer --keys` MUST send a key on a permission dialog only when it is one option number and the option line for that key, below the dialog's head line ("Do you want to ..."), is exactly a one-time yes form: "Yes", "Yes, proceed" or "Yes, just this once", with an optional one-character key hint such as "(y)" (D7). Else it MUST send nothing and say why. `answer --text` MUST still refuse a permission dialog (D3).
 - **FR-011**: `wait` and `watch` MUST print a `screen` line with a 12-hex hash for a blocked worker whose pane shows a permission dialog. `answer` on a permission dialog MUST need `--screen <hash>` (`^[0-9a-f]{12}$`), and MUST send nothing and say why when it is missing or when the pane's hash differs now (D6). The hash MUST be of the same pane text that `wait` or `watch` prints for the orchestrator to judge (D9).
