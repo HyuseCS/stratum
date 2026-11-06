@@ -61,4 +61,4 @@ Text, built twice per review (before the prompt, after the prompt call returns).
 
 Rules:
 - Any line that differs makes the point BLOCKED, with each differing path (and `HEAD`) named once, in sorted order. The name is the text before the first tab of the line.
-- Covers tracked changes (staged and in the worktree), untracked files that are not ignored, file modes, symlink targets, and HEAD. Not ignored files, not files outside the folder, not `.stratum/state.json` (written by `hooks/st-phase.py`) and not Syncthing temp files (research R6).
+- Covers tracked changes (staged and in the worktree), untracked files that are not ignored, file modes, symlink targets, and HEAD. A status entry that is a nested git repo (a submodule or an embedded repo, its path has `.git`) is snapshotted the same way, with each line prefixed by `<path>/` and its HEAD as `<path>/HEAD`; a git failure inside it fails the snapshot (C16g, C16h, C16i). Not ignored files, not files outside the folder, not `.stratum/state.json` (written by `hooks/st-phase.py`) and not Syncthing temp files (research R6).

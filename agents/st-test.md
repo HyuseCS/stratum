@@ -46,6 +46,8 @@ Read:
 - A mock or fake must respect its inputs (filters, IDs, WHERE clauses). One that ignores them proves nothing.
 - No snapshot of a value you just wrote. No `expect(true)`.
 - Cover the error path when the FR names one.
+- A script that waits on an outside agent or process ends within 5 s once that agent is gone. Test it with a fake call that stays open while the agent goes away; a fake that returns at once proves nothing.
+- A change check gets one test per kind of change it claims to catch (content, file mode, symlink target, staged entry, nested repo), and each test fails when that kind is missed.
 
 ## Never
 

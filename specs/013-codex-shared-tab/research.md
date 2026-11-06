@@ -11,7 +11,7 @@ Checked against herdr 0.9.4 (`herdr agent --help`, `herdr agent get`, `herdr age
 
 ## R2. How the script reads the tab state (FR-006)
 
-- Decision: `herdr agent get <tab name>`, `.result.agent.agent_status`, read once, right after the first snapshot and right before the marker and the prompt (Inspect F9). `answer` and `watch` read the same field.
+- Decision: `herdr agent get <tab name>`, `.result.agent.agent_status`, read once, right after the first snapshot and right before the marker and the prompt (Inspect F9). The 2 s poll that ends a wait (R3) checks only for `agent_not_found`. `answer` and `watch` read the same field.
 - Rationale: `agent_status` is `idle`, `working`, `blocked`, `done` or `unknown` (checked live). `working` or `blocked` is in use. `idle`, `done` and `unknown` are free. Reading it last keeps the gap to the prompt as short as it can be: the snapshot hashes files, so it goes first.
 - Alternatives: the status in the `herdr agent list` output of step 1 (older by the time of the snapshot, Inspect F9); `herdr agent wait --until idle` before the prompt (rejected by D3, O6).
 - Limit: herdr cannot see unsent text in the tab, and the user can start a turn in the short gap between the check and the prompt. `herdr agent prompt` returns `agent_blocked` when the tab became blocked in that gap; the script treats that as in use. One `ponytail:` note covers both.
@@ -21,7 +21,7 @@ Checked against herdr 0.9.4 (`herdr agent --help`, `herdr agent get`, `herdr age
 - Decision (D11): send the review with `herdr agent prompt <tab> <text> --wait --until done --until idle`, with no `--timeout`. Drop `--until blocked`, the `blocked` exit and the `480 - SECONDS` budget (`scripts/st-codex-agent.sh:2,85,90`).
 - Rationale: without `--until blocked`, a blocked state does not end the wait. Without `--timeout`, the wait goes on until the turn ends. `herdr agent wait --help`: "Without --timeout, waits indefinitely."
 - Any failure of the prompt call except `agent_blocked` (rejected before any input) means the review text may already be in the tab. The point ends BLOCKED and never runs headless (D11): `the Codex tab ended during the review` when `herdr agent get` no longer finds the agent (the user closed the tab or Codex exited), else `the Codex tab failed during the review: <first line of the herdr error>`. `agent_prompt_stalled` (the 2026-11-04 failure) takes the second reason.
-- Unknown: whether `agent prompt --wait` returns at once when the agent goes away during the wait. The live run checks it (plan risk R6). If it does not, the point waits until the user stops it, as D11 allows ("The user stops a hung review with Esc in the tab or by telling the orchestrator").
+- Outcome: `agent prompt --wait` did not return when the Codex tab closed (live run, plan risk R6). `hw()` in `scripts/st-codex-agent.sh` now runs the call in the background and checks `herdr agent get` every 2 s. `agent_not_found` ends the call and the point is BLOCKED (commit 5c52e8e, C25 and C26).
 
 ## R4. How the orchestrator watches the tab (FR-011, US3 scenario 1)
 
@@ -37,12 +37,12 @@ Checked against herdr 0.9.4 (`herdr agent --help`, `herdr agent get`, `herdr age
 
 ## R6. Change check (FR-008, CHK002)
 
-- Decision: one snapshot before the prompt and one after the prompt call returns (any result). The snapshot is `git rev-parse -q --verify HEAD`, then one line per entry of `git --no-optional-locks status --porcelain=v1 -z --untracked-files=all --no-renames -- . ':(exclude).stratum/state.json' ':(exclude,glob)**/.syncthing.*.tmp' ':(exclude,glob)**/~syncthing~*.tmp'`: path, status letters, sha256 of the worktree file (empty when the file is gone). Any difference ends the point BLOCKED with the changed paths (and `HEAD` when HEAD moved). Nothing is reverted.
-- Covered: tracked files with changes, untracked files that are not ignored, the checked-out commit. Not covered: ignored files, files outside the project folder, other refs (tags, stash), and the three excluded paths. Tab path only: the headless call keeps `codex exec -s read-only`.
+- Decision: one snapshot before the prompt and one after the prompt call returns (any result). The snapshot is the `HEAD <sha>` line (`git rev-parse -q --verify HEAD`), then one line per staged change (`git --no-optional-locks diff --cached --raw --no-abbrev --no-renames -z`: the raw entry with modes, blob ids and status), then one line per entry of `git --no-optional-locks status --porcelain=v1 -z --untracked-files=all --no-renames -- . ':(exclude).stratum/state.json' ':(exclude,glob)**/.syncthing.*.tmp' ':(exclude,glob)**/~syncthing~*.tmp'`: path, status letters, the file mode (`stat -c %f`, symlinks not followed) and a sha256 (of the link target for a symlink, of the file content for a regular file; both empty when the file is gone). Full format: data-model.md "Review snapshot". Any difference ends the point BLOCKED with the changed paths (and `HEAD` when HEAD moved). Nothing is reverted.
+- Covered: tracked files with changes (staged and in the worktree), untracked files that are not ignored, file modes, symlink targets, staged entries and the checked-out commit. Not covered: ignored files, files outside the project folder, other refs (tags, stash), and the three excluded paths. Tab path only: the headless call keeps `codex exec -s read-only`.
 - Excluded (Inspect F12): `.stratum/state.json` is tracked and `hooks/st-phase.py:33,62` can write it on each user prompt and each skill the orchestrator starts, and both can happen while a point runs in the background. Syncthing writes `.syncthing.<name>.tmp` and `~syncthing~<name>.tmp` while it syncs this repo (`.stfolder` is in the repo root). Both would fail a clean review. Codex writing `.stratum/state.json` is not caught; that file holds only the phase, risk and feature folder. A file Syncthing finishes syncing during a review is a real change and still fails the point.
-- Rationale: `--no-optional-locks` keeps `git status` from writing the index while the user uses git. HEAD is in the snapshot because a commit by Codex leaves `git status` clean.
-- Limit: a path with a newline breaks the line format. `ponytail:` note.
-- A non-git folder gives two empty snapshots, so no check. Stratum projects are git repos (`st-lock.sh` already needs git).
+- Rationale: `--no-optional-locks` keeps `git status` from writing the index while the user uses git. HEAD is in the snapshot because a commit by Codex leaves `git status` clean. Staged entries are in it because a restage alone leaves the status letters and the worktree hash the same (C16b). Modes and symlink targets are in it because a `chmod` on a modified file, or a symlink retarget to the same bytes, leaves the status letters the same (C16e, C16f). A dirty nested repo shows as one parent entry, so it is snapshotted on its own too; a second Codex review of PR #82 found this gap (C16g, C16h).
+- Limit: a path with a newline breaks the line format. `ponytail:` note. The script uses GNU `stat -c` and `readlink`; both user machines are Linux.
+- A non-git folder: `git diff --cached` fails, so `snap()` fails. The point ends `ERROR: cannot read git status in <root>` with exit 1 before the prompt, or `BLOCKED: cannot read git status in <root>` with exit 4 when it fails after the prompt (C16c and C16d make git fail). Stratum projects are git repos (`st-lock.sh` already needs git).
 
 ## R7. Settings record (FR-005)
 
@@ -66,7 +66,7 @@ Checked against herdr 0.9.4 (`herdr agent --help`, `herdr agent get`, `herdr age
 - Decision: no time limit on the tab path. `st-advisor.sh` drops `timeout -k 10 540` around `st-lock.sh ... st-codex-agent.sh` (`:203`) and the `124|137` tab branch (`:205`). The tab script drops `SECONDS=0` and the `480 - SECONDS` timeouts. `herdr agent start --timeout 120000` stays: it is herdr's start-up wait, which returns `agent_not_ready`.
 - The headless call keeps its own budget: `left=$((540 - SECONDS))`, the 60 s floor and `timeout -k 10 $left codex exec ...` (`:208-211`). The tab path falls back only before the review text is sent (exit 1, 3, 5), so `left` is close to 540 there, unless a start-up screen waited long; then the 60 s floor gives `BLOCKED: timed out`, as today.
 - `watch` has no time limit either. It ends when a marker it saw is gone or dead, or when the orchestrator stops it after the point ends.
-- The orchestrator runs the point with `run_in_background`. Assumed: a background Bash call has no Bash timeout, so a long review is not cut. The live run checks it with a review that runs past 10 minutes only if one happens; it is not forced (plan risk R3).
+- The orchestrator runs the point with `run_in_background`. Assumed: a background Bash call has no Bash timeout, so a long review is not cut. Not observed in the live run (plan risk R3).
 
 ## R11. Screen text (CHK007)
 

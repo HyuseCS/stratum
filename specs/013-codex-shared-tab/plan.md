@@ -10,7 +10,7 @@
 
 The advisor tab starts Codex with the user's own Codex home and normal approvals, and the Stratum Codex home and its `codex-home` command go. One tab per herdr workspace, named `st-codex-<workspace label>`, shared by every feature. When that name is live in another workspace or folder, the point runs headless and says so. The scripts never close it. A tab that is working or blocked is not touched: the review runs headless with `codex: headless (Codex tab in use)`. A settings change prints one line and keeps the tab.
 
-Each review in the tab takes a snapshot of HEAD and the changed and untracked files before and after the turn. A difference ends the point BLOCKED with the files named. Nothing is reverted.
+Each review in the tab takes a snapshot of HEAD, the staged entries, and the changed and untracked files with their modes and hashes, before and after the turn. A difference ends the point BLOCKED with the files named. Nothing is reverted.
 
 The review waits on a Codex prompt instead of failing, with no time limit (D11). The orchestrator starts a new `st-advisor.sh watch` with the Monitor tool before it starts the point in the background. The watch reports a blocked tab only while a review drives it, with the screen text. The orchestrator answers a prompt on the allow list with a one-time yes through a new `st-advisor.sh answer --screen <hash> --keys <key>` and brings every other prompt to the user. The point ends early only when the tab ends (the user closes it or Codex exits): BLOCKED, and never headless once the review started in the tab.
 
@@ -28,7 +28,7 @@ The review waits on a Codex prompt instead of failing, with no time limit (D11).
 
 **Project Type**: Claude Code plugin (scripts, skills, README).
 
-**Performance Goals**: none new. One extra `git status` and a hash of each changed file, twice per review.
+**Performance Goals**: none new. One extra `git status`, one `git diff --cached` and a `stat` and a hash of each changed file, twice per review.
 
 **Constraints**: no time limit on the tab path (D11): the 480 s tab budget and the `timeout -k 10 540` around the tab run go. The headless call keeps its 540 s budget. Minimal code, no comments except `ponytail:` markers, surgical changes.
 
@@ -57,7 +57,7 @@ The headless call (`codex exec -s read-only --ignore-user-config`) does not chan
 | Item | Where settled |
 |------|---------------|
 | CHK001 | Contract K4 and K5: the exact allow list and never list. |
-| CHK002 | R6, data-model "Review snapshot": tracked changes, untracked files that are not ignored, HEAD. Not ignored files, not files outside the folder, not tags or stash. |
+| CHK002 | R6, data-model "Review snapshot": tracked changes, staged entries, untracked files that are not ignored, file modes, symlink targets, HEAD. Not ignored files, not files outside the folder, not tags or stash. |
 | CHK003 | R5: `watch` reports a blocked tab only while a review marker is live, and `answer` refuses without one. A prompt of the user's own turn never reaches the orchestrator. |
 | CHK004 | Contract section 2 step 2: `codex: the Codex tab runs with <old>, advisor.json asks for <new>. Close the tab to apply.` |
 | CHK005 | R12: a test or lint command is in only without a write flag. A cache it writes is ignored. Any other file it writes fails the change check. |
@@ -86,11 +86,12 @@ Tasks that touch these areas: T004, T005, T010, T011, T016, T017 (scripts), T006
 ## Risks
 
 - R1 A file changed by the orchestrator, a subagent or the user during a review fails the point (false BLOCKED). K1 tells the orchestrator to change no file in that folder until the point ends. `[P]` tasks run in their own worktrees. Two more writers are handled by leaving them out of the snapshot (research R6): `hooks/st-phase.py` writes the tracked `.stratum/state.json` on user prompts and skill starts, and Syncthing writes `.syncthing.*.tmp` and `~syncthing~*.tmp` files while it syncs the repo (`.stfolder` is in the repo root). A file Syncthing finishes syncing during a review is a real change and still fails the point.
-- R2 herdr may not report the Codex trust screen or a Codex approval as `blocked`. Then the watch stays quiet and the review waits with no limit until the user acts in the tab. The live run (T019) checks this.
-- R3 The Monitor tool must turn each `watch` output line into an event for the orchestrator, and a `run_in_background` Bash call must have no time limit. The live run checks the first; the second is assumed.
-- R4 A new tab whose `agent start` fails all 10 tries now stays open as an empty shell tab (FR-004). Today `quit()` closes it. The user closes it. The point runs headless as today.
-- R5 A linked worktree in the same workspace as its main checkout gets the same name. While the main checkout's tab lives, the worktree's points run headless with the clash line (D10). It gets its own tab only when it has its own workspace with its own label, as `st-worker` workspaces do. The spec edge case at spec.md:70 still says every linked worktree gets its own tab; D10 narrows it.
-- R6 Unknown: whether `herdr agent prompt --wait` returns when the agent goes away during the wait. If it does not, closing the tab does not end the point, and the user must tell the orchestrator to stop it. Quickstart step 7 checks it.
+- R2 herdr may not report the Codex trust screen or a Codex approval as `blocked`. Then the watch stays quiet and the review waits with no limit until the user acts in the tab. The live run (T019) checked this: a Codex approval prompt is reported as `blocked`, and `watch` printed it (M20 holds the screen). The trust screen did not appear: the linked worktree inherited trust from the main repo.
+- R3 The Monitor tool must turn each `watch` output line into an event for the orchestrator, and a `run_in_background` Bash call must have no time limit. The live run showed the Monitor printing each `watch` line. The second is assumed and was not observed in the live run.
+- R4 A new tab whose `agent start` fails all 10 tries now stays open as an empty shell tab (FR-004). Before this feature, `quit()` closed it. The user closes it. The point runs headless as today.
+- R5 A linked worktree in the same workspace as its main checkout gets the same name. While the main checkout's tab lives, the worktree's points run headless with the clash line (D10). It gets its own tab only when it has its own workspace with its own label, as `st-worker` workspaces do.
+- R6 Found live: `herdr agent prompt --wait` did not return when the Codex tab closed. Fixed in 5c52e8e: the call runs in the background and `herdr agent get` is checked every 2 s (C25, C26). The live run then ended the point BLOCKED (commit 09e12a0).
+- R7 Test flake: `(k5)` in `tests/test_advisor_matrix.sh` failed 2 of 9 runs in one reviewer's copies and 0 of 10 here. No code change; the cause is not known.
 
 ## Project Structure
 
@@ -115,9 +116,9 @@ skills/st-build/SKILL.md       # Advisor section lines 95-97, 116, new lines K1-
 skills/st-plan/SKILL.md        # step 4, lines 30-31
 skills/st-init/SKILL.md        # line 86 removed
 README.md                      # lines 203, 214-216
-tests/test_codex_agent.sh      # cases C1-C23
-tests/test_advisor_matrix.sh   # cases M1-M20; codex-home cases, k3, k6, k7 removed
-tests/test_advisor_rules.sh    # rows A14-A24 (K1, K2a, K3, K4, K5, K7, K8, K11), G3, G4
+tests/test_codex_agent.sh      # cases C1-C26
+tests/test_advisor_matrix.sh   # cases M1-M24; codex-home cases, k3, k6, k7 removed
+tests/test_advisor_rules.sh    # rows A14-A28 (K1, K2a, K3, K4, K5, K7, K8, K11), G3 to G5
 tests/test_risk_rules.sh       # R7, R17 replaced; R19, R20 moved to the gone list
 tests/test_on_demand.sh        # #18 FR-002 wait lines, FR-016 readme line
 ```

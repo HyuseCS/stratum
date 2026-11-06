@@ -18,10 +18,10 @@ Case ids are in [contracts/advisor-tab.md](contracts/advisor-tab.md) section 7. 
 
 ## Live run in herdr (manual, the user drives it, D9, D12)
 
-Prerequisites: inside herdr (`HERDR_ENV=1`), `codex` logged in, this repo trusted in `~/.codex/config.toml` (true today), `.stratum/advisor.json` mode `codex` or `auto`. Close any old `st-codex-<feature>` tab first. Do not change `~/.codex/config.toml`.
+Prerequisites: inside herdr (`HERDR_ENV=1`), `codex` logged in, this repo trusted in `~/.codex/config.toml` (true today; a linked worktree inherited the trust of its main repo, and no trust screen appeared in the live run), `.stratum/advisor.json` mode `codex` or `auto`. Close any old `st-codex-<feature>` tab first. Do not change `~/.codex/config.toml`.
 
 1. In Claude Code, run a Codex point, for example the plan point of this feature. The orchestrator starts the watch, then the point.
-   Expect: one new tab `Codex` in this workspace. The review runs there. The point's last line is `codex: tab st-codex-stratum` (this workspace's label is `stratum`).
+   Expect: one new tab `Codex` in this workspace. The review runs there. The point's last line is `codex: tab st-codex-<workspace label>`. In the live run the tab was `st-codex-13-codex-shared-tab`.
 2. In the Codex tab, type a request of your own (for example "what does scripts/st-lock.sh do?") and wait for the answer.
    Expect: Codex answers with your normal config. Nothing from Stratum types into the tab.
 3. Run a second point. Expect: the same tab, your conversation still there above the new review, no tab closed.

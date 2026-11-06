@@ -9,7 +9,7 @@ description: "Task list for the shared Codex advisor tab"
 
 **Prerequisites**: plan.md, spec.md, decisions.md, research.md, data-model.md, contracts/advisor-tab.md, quickstart.md
 
-**Tests**: Required (D9). Each FR gets a case that can fail, written before the task that builds it. Case ids C1 to C23, M1 to M20 and skill lines K1 to K11 are in `contracts/advisor-tab.md` sections 4, 5 and 7. FR coverage is at the end.
+**Tests**: Required (D9). Each FR gets a case that can fail, written before the task that builds it. Case ids C1 to C26, M1 to M24 and skill lines K1 to K11 are in `contracts/advisor-tab.md` sections 4, 5 and 7. FR coverage is at the end.
 
 **Tab name (D10)**: `st-codex-<workspace label>` by the rule in `contracts/advisor-tab.md` section 1. "The tab name" in a task means that rule's result.
 
@@ -105,7 +105,7 @@ None. US1 changes the interface that US2 and US3 grow.
 
 ## Phase 6: Polish
 
-- [X] T020 Check the whole diff of the feature: no added comment line other than the four `ponytail:` markers of T004, T010, T016 and T017 (`git diff main -- scripts tests | grep -E '^\+\s*#' | grep -v ponytail:`); no `codex-home`, `CODEX_HOME` or `tab close` left in `scripts/` (`grep -n 'codex-home\|CODEX_HOME\|tab close' scripts/st-codex-agent.sh scripts/st-advisor.sh` prints nothing); no `--timeout` on `agent prompt` or `agent wait` in `scripts/st-codex-agent.sh`; run each touched test file once, one after another. Test: bash tests/test_codex_agent.sh && bash tests/test_advisor_matrix.sh && bash tests/test_advisor.sh && bash tests/test_advisor_waive.sh && bash tests/test_advisor_rules.sh && bash tests/test_risk_rules.sh && bash tests/test_on_demand.sh.
+- [X] T020 Check the whole diff of the feature: no added comment line other than the five `ponytail:` markers of T004, T010, T016 and T017 and the 2 s poll in `hw()` (5c52e8e) (`git diff main -- scripts tests | grep -E '^\+\s*#' | grep -v ponytail:`); no `codex-home`, `CODEX_HOME` or `tab close` left in `scripts/` (`grep -n 'codex-home\|CODEX_HOME\|tab close' scripts/st-codex-agent.sh scripts/st-advisor.sh` prints nothing); no `--timeout` on `agent prompt` or `agent wait` in `scripts/st-codex-agent.sh`; run each touched test file once, one after another. Test: bash tests/test_codex_agent.sh && bash tests/test_advisor_matrix.sh && bash tests/test_advisor.sh && bash tests/test_advisor_waive.sh && bash tests/test_advisor_rules.sh && bash tests/test_risk_rules.sh && bash tests/test_on_demand.sh.
 
 ---
 
@@ -136,9 +136,9 @@ MVP is US1: the user can use the tab, and it is never closed or typed into while
 | FR-005 | T001 (C3, C3b), T002 (M5), T003 (R22) | T004, T005, T006 |
 | FR-006 | T001 (C4 to C7), T002 (M4) | T004, T005 |
 | FR-007 | T009 (A14); prompt line already pinned by `tests/test_advisor.sh` FR-013 and `tests/test_codex_agent.sh` g | T012 |
-| FR-008 | T007 (C10 to C16), T008 (M6), T009 (A15, A16) | T010, T011, T012 |
+| FR-008 | T007 (C10 to C16, C10b, C16b, C16e, C16f), T008 (M6), T009 (A15, A16) | T010, T011, T012 |
 | FR-009 | T013 (C17, C20, C22) | T016 |
 | FR-010 | T014 (M7 to M12) | T017 |
 | FR-011 | T014 (M13, M14), T015 (A17 to A20, A22, A23, G3, G4) | T017, T018 |
-| FR-012 | T013 (C17, C18, C19, C21, C23), T014 (M15, M18, M19), T015 (A21, A24) | T016, T017, T018 |
+| FR-012 | T013 (C17, C18, C19, C19b, C21, C23, C25, C26), T014 (M15, M18, M19), T015 (A21, A24) | T016, T017, T018 |
 | SC-003 | T019 (M20, not a guard) | T019 |

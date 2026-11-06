@@ -91,7 +91,7 @@ When the tab opens, the orchestrator starts watching it. If Codex stops on a per
 ### Key Entities
 
 - **Advisor tab**: the one `st-codex-<workspace label>` Codex agent in a workspace and folder. Attributes: the model and effort it started with.
-- **Review snapshot**: the list of changed and untracked files, with hashes, taken before and after one review turn.
+- **Review snapshot**: the list of changed and untracked files and staged entries, with modes and hashes, taken before and after one review turn.
 
 ## Success Criteria *(mandatory)*
 

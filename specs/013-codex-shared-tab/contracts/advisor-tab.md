@@ -26,11 +26,11 @@ Flow:
 
 1. `herdr agent list`. The tab is the entry with `name` = tab name, `workspace_id` = `$HERDR_WORKSPACE_ID`, `cwd` = `pwd -P`. An entry with the tab name and another `workspace_id` or `cwd` is a clash: print `codex: tab name <tab name> in use elsewhere`, exit 5. No tab is made, started, typed into or closed.
 2. Found: compare the settings record (data-model.md) with `<tab id>` and the options. On a difference print `codex: the Codex tab runs with <old>, advisor.json asks for <new>. Close the tab to apply.` `<old>` and `<new>` are the options joined by single spaces, `Codex defaults` when there are none, and `<old>` is `unknown settings` when there is no record for this tab id. The tab is reused.
-3. Not found: `herdr tab create --workspace <ws> --cwd <root> --label Codex --no-focus`, then `herdr agent start <tab name> --kind codex --pane <pane> --timeout 120000 -- --no-alt-screen [options]`, with today's 10 tries on `agent_pane_busy` (all 10 busy: `ERROR: <first line>`, exit 1). Write the settings record. On `agent_not_ready`: write the marker, then `herdr agent wait <tab name> --until idle --until done` (no `--timeout`); a failed wait ends as step 8 says.
+3. Not found: `herdr tab create --workspace <ws> --cwd <root> --label Codex --no-focus`, then `herdr agent start <tab name> --kind codex --pane <pane> --timeout 120000 -- --no-alt-screen [options]`, with today's 10 tries on `agent_pane_busy` (all 10 busy: `ERROR: <first line>`, exit 1). Write the settings record. On `agent_not_ready`: write the marker, then `herdr agent wait <tab name> --until idle --until done` (no `--timeout`), in the background with the 2 s `herdr agent get` check of step 7; a failed wait takes the last two rules of step 9.
 4. Snapshot (data-model.md).
 5. `herdr agent get <tab name>`: `agent_status` `working` or `blocked` prints `codex: tab in use`, exit 3. Nothing is typed. A reused tab has no marker yet.
 6. Write the marker `<state dir>/<tab name>.review` (its pid), removed by a trap on exit. Append today's three nonce lines to the prompt file.
-7. `herdr agent prompt <tab name> "Read the review request in <prompt file> and follow it. Change no file." --wait --until done --until idle`, with no `--timeout` (D11). Remove the marker as soon as it returns, whatever it returned. The trap stays for an earlier exit.
+7. `herdr agent prompt <tab name> "Read the review request in <prompt file> and follow it. Change no file." --wait --until done --until idle`, with no `--timeout` (D11). The call runs in the background. `herdr agent get <tab name>` is checked every 2 s; when it reports `agent_not_found`, the call is stopped and step 9 applies (commit 5c52e8e). Remove the marker as soon as the call returns, whatever it returned. The trap stays for an earlier exit.
 8. Snapshot again, whatever step 7 returned. A difference: print `BLOCKED: Codex changed files during the review: <path>, <path>` (sorted, each once, `HEAD` when HEAD moved), exit 4.
 9. Step 7 failed:
    - error code `agent_blocked`: print `codex: tab in use`, exit 3.
@@ -90,7 +90,7 @@ Each block is the exact text of one skill line. The rule tests pin each line wit
 K1, replaces line 95 (D6):
 
 ```text
-- Start `bash <plugin root>/scripts/st-advisor.sh watch` with the Monitor tool, then run `bash <plugin root>/scripts/st-advisor.sh <point> ...` with Bash `run_in_background`, both from the project root (a worktree's root for the test point of a `[P]` task). Change no file in that folder until the point ends. When it ends, stop the watch and handle the point's output.
+- Start `bash <plugin root>/scripts/st-advisor.sh watch` with the Monitor tool, then run `bash <plugin root>/scripts/st-advisor.sh <point> ...` with Bash `run_in_background`, both from the project root (a worktree's root for the test point of a `[P]` task). Change no file in that folder until the point ends. When it ends, stop the watch and handle the point's output. If the Monitor expires before the point ends, start the watch again.
 ```
 
 K2, replaces line 96 (FR-001, FR-003):
@@ -108,7 +108,7 @@ K2a, a new line right before K2 (FR-007, CHK010):
 K3 (FR-011):
 
 ```text
-- On a `codex tab waits:` line, read the screen lines after it. A prompt on the allow list: answer it with `bash <plugin root>/scripts/st-advisor.sh answer --screen <hash> --keys <key>`. Pass the hash from that `codex tab waits:` line, and the key of the one-time yes only ("Yes, proceed", "Yes, just this once"). Never pick an option that says "don't ask again", "allow ... for this session", "in the future" or "for these files", or one that names a host. Every other prompt: show the user the exact screen lines and leave the tab open.
+- On a `codex tab waits:` line, read the screen lines after it. A prompt on the allow list: answer it with `bash <plugin root>/scripts/st-advisor.sh answer --screen <hash> --keys <key>`. Pass the hash from that `codex tab waits:` line, and the key of the one-time yes only ("Yes, proceed", "Yes, just this once"). Never pick an option that says "don't ask again", "allow ... for this session", "in the future" or "for these files", or one that names a host. Every other prompt: show the user the exact screen lines and leave the tab open. On `the Codex tab shows another prompt`, send nothing more: the watch prints the new screen in its own block.
 ```
 
 K4, allow list (FR-011, CHK001, CHK005):
@@ -190,6 +190,7 @@ Printed only by `watch`, and read the same way by `answer`. The last 20 lines of
 | C8 | US1 | every case of the file (guard FR-004) | no `tab close` in the whole run's log |
 | C9 | US1 | the tab name live in another workspace, and in this workspace with another cwd (guard FR-003 clash) | exit 5, `codex: tab name st-codex-t1 in use elsewhere`; no tab create, agent start, prompt, send-keys or close |
 | C10 | US2 | Codex changes a tracked file (guard FR-008) | exit 4, `BLOCKED: Codex changed files during the review: a.txt`, new content kept |
+| C10b | US2 | Codex deletes a tracked file and adds one | exit 4, `BLOCKED: Codex changed files during the review: a.txt, b.txt` |
 | C11 | US2 | Codex adds an untracked file | names it |
 | C12 | US2 | Codex changes an untracked file that was there | names it |
 | C13 | US2 | Codex removes an untracked file | names it |
@@ -199,14 +200,19 @@ Printed only by `watch`, and read the same way by `answer`. The last 20 lines of
 | C16b | US2 | `a.txt` is `MM`, Codex stages other content, worktree and status stay the same | names `a.txt` |
 | C16e | US2 | `a.txt` dirty, Codex runs `chmod +x a.txt` | names `a.txt` |
 | C16f | US2 | untracked symlink `l` retargeted to a file with the same bytes | names `l` |
+| C16c | US2 | `GIT_DIR` set to a missing path, so git status fails before the prompt (the stub for a non-git folder) | exit 1, `ERROR: cannot read git status in <root>`, no prompt |
+| C16d | US2 | `.git` moved by the prompt, so git status fails after it | exit 4, `BLOCKED: cannot read git status in <root>` |
 | C17 | US3 | prompt argv (guard FR-009, D11) | ends `--wait --until done --until idle`; no `--until blocked`; no `--timeout` |
 | C18 | US3 | prompt fails, `agent get` says `agent_not_found` (guard FR-012) | exit 4, `BLOCKED: the Codex tab ended during the review`; no close; no `ERROR:` line |
 | C19 | US3 | prompt fails with `agent_prompt_stalled`, agent still there | exit 4, `BLOCKED: the Codex tab failed during the review: <first line>`; no close |
+| C19b | US3 | `agent read` fails after the prompt | exit 4, first line `BLOCKED: the Codex tab failed during the review: <herdr error>`; no `ERROR:` line; no answer file |
 | C20 | US3 | `agent_not_ready` at start | `agent wait <tab name> --until idle --until done` with no `--timeout`, before the prompt; prompt runs |
 | C21 | US3 | `agent_not_ready`, wait fails, agent gone | exit 4, `BLOCKED: the Codex tab ended during the review`; no prompt; no close |
 | C22 | US3 | marker | holds a live pid during the prompt; gone after exit; never written in C4; written before `agent wait` in C20 |
 | C23 | US3 | no marker pair in the answer (guard D11) | exit 4, `BLOCKED: no answer between the markers` |
 | C24 | US3 | marker after the prompt (guard: removed when step 7 returns) | `agent read` runs once and sees no marker |
+| C25 | US3 | prompt never returns, tab gone (guard: the 2 s check of step 7) | exit 4 within 5 s, `BLOCKED: the Codex tab ended during the review`; no answer file; no `agent read` |
+| C26 | US3 | `agent wait` never returns, tab gone (guard: the 2 s check of step 3) | exit 4 within 5 s, `BLOCKED: the Codex tab ended during the review`; no prompt |
 | M1 | US1 | `codex-home` (guard FR-002) | usage line, exit 2, no `codex-home` folder |
 | M2 | US1 | tab path | no `--env CODEX_HOME`; record under `codex-tabs`; last line `codex: tab <tab name>` |
 | M3 | US1 | two feature folders | the same tab name in both `agent start` lines |
