@@ -74,7 +74,7 @@ The orchestrator starts subagents in this session with the Agent tool. When such
 - **FR-003**: The worker allow and never lists MUST be written once in the st-worker skill and used for both normal and autonomous mode (D1). No new list is added.
 - **FR-004**: The st-worker skill MUST keep saying, for autonomous mode, when to use `approve`, when to use `pass`, and what never to approve.
 - **FR-005**: The rule sentence "Watch each agent you summon. Answer its permission prompt when the answer keeps it in its brief. Bring every other prompt to the user with the exact text." MUST be in `skills/st/SKILL.md`, `skills/st-build/SKILL.md` and `skills/st-worker/SKILL.md`, word for word.
-- **FR-006**: `skills/st/SKILL.md` MUST say where each agent kind's lists are: the Codex tab in st-build, workers in st-worker, in-session subagents in the note (FR-007).
+- **FR-006**: `skills/st/SKILL.md` MUST say where each agent kind's lists are: the Codex tab in st-build, workers in st-worker, in-session subagents in the note (FR-007). `skills/st-build/SKILL.md` MUST point to that note too (W33).
 - **FR-007**: `skills/st/SKILL.md` MUST hold a short note on in-session subagents: what the orchestrator can do and cannot do when a subagent's tool call needs permission, including that it never re-runs a denied action in place of the subagent.
 - **FR-008**: Each fact behind the note MUST be in the feature's research file with its source: a doc URL and quote, a file and line in this repo, or a Claude Code denial text quoted word for word with the date it was seen (D4), or a dated run in this session with the calls named (D5). A fact with no source is written as "not documented".
 - **FR-009**: The Codex tab allow and never lists in st-build MUST stay as 013 wrote them.

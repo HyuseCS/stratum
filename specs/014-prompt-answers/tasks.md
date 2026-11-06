@@ -152,7 +152,7 @@ MVP is US1: the gap the issue reports. US2 and US3 are text only and add no beha
 | FR-003 | T002 (O1, W1), existing W3, W5, W16 | T004 |
 | FR-004 | T002 (its run shows W3, W4, W5, W6, W16 green) | T004 |
 | FR-005 | T005 (W20, W21, W22) | T006 |
-| FR-006 | T005 (W23, W26, W27) | T006 |
+| FR-006 | T005 (W23, W26, W27), T016 (W33) | T006, T017 |
 | FR-007 | T007 (W24, W25, W30) | T008 |
 | FR-008 | T007 (S1 to S6, S1 and S4 negative controls) | Plan (`research.md` R4) |
 | FR-009 | T005 (A18 to A28 in `tests/test_advisor_rules.sh`) | T006 (no change to :98-100) |

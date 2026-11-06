@@ -26,7 +26,7 @@ Expected before T010 to T013 are built: AN5 to AN12, W1, W31, W32, G8 and G9 pri
 
 ## US2: the shared rule
 
-1. `bash tests/test_worker_rules.sh`: W20, W21, W22, W23, W26 and W27 print `ok`.
+1. `bash tests/test_worker_rules.sh`: W20, W21, W22, W23, W26, W27 and W33 print `ok`.
 2. `grep -cF 'Watch each agent you summon. Answer its permission prompt when the answer keeps it in its brief. Bring every other prompt to the user with the exact text.' skills/st/SKILL.md skills/st-build/SKILL.md skills/st-worker/SKILL.md` prints `:1` for each of the 3 files (SC-002).
 3. `bash tests/test_advisor_rules.sh`: A18 to A28 and G5 print `ok` (FR-009).
 

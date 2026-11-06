@@ -90,6 +90,7 @@ Every task MUST strictly follow this format:
 7. **Description**: Clear action with exact file path
 
 Every task ends with `Test:` and its exact test command. No task runs the full test suite.
+A task that edits a skill file names, in its `Test:` command, every test file that greps that skill.
 Write each `Owns:` path in backticks.
 
 **Examples**:

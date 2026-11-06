@@ -40,7 +40,7 @@ The orchestrator may now answer a normal-mode worker's permission dialog with th
 - **US1 rework, skill**: T013 replaces the W1 line (`contracts/skill-lines.md` section 1b). W1 now passes `--screen <hash>` from the `screen` line, and says that normal mode has no request id, so `approve` and `pass` are not used (the review's wording point).
 - **US1, skill (FR-001 to FR-004)**: `skills/st-worker/SKILL.md:26-27` become W1, W2 and W18 (`contracts/skill-lines.md` section 1). W1 points to the `approval` lists and says they hold in both modes, so no list is written twice (D1). W2 says how to check the commit rule from the dialog text, because a normal-mode dialog has no `branch` or `staged` line (research R2). W1 also holds W28 (the dialog must show the whole command or path, else the user gets it) and W29 (the Bash description of the `answer` call names the action, so the user's permission check sees what is approved).
 - **US1, README**: `README.md:117` says normal mode never approves. That becomes false, so it changes to W19. This is not named in the spec. It is the one user-facing line that states the old rule.
-- **US2 (FR-005, FR-006, FR-009)**: the rule sentence on one physical line in each of the three files, each with a pointer to its lists (`contracts/skill-lines.md` section 3).
+- **US2 (FR-005, FR-006, FR-009)**: the rule sentence on one physical line in each of the three files, each with a pointer to its lists (`contracts/skill-lines.md` section 3). The st-build line also points to the in-session subagent note (W33, Convergence T016 and T017).
 - **US3 (FR-007, FR-008)**: two note lines in `skills/st/SKILL.md` (W24, and W30 plus W25 on one line, D5) and source rows S1 to S6 on `research.md`.
 - **Old rows**: G1 in `tests/test_worker_rules.sh` and row 1 in `tests/test_lane_steps.sh` hold 010 FR-017. 013 D7 reversed it, so both rows go. W1 and W2 keep their ids with new text. New gone rows G5 to G9 keep the old lines out.
 
@@ -91,11 +91,11 @@ No `data-model.md`: the feature adds no data. The one key entity (agent kind) is
 ```text
 scripts/st-worker.sh            st(): screen line; answer: --screen, permission branch
 skills/st-worker/SKILL.md       :12 rule sentence, :28-30 normal-mode lines (W1 reworked)
-skills/st-build/SKILL.md        ## Always: rule sentence
+skills/st-build/SKILL.md        ## Always: rule sentence, pointer to the subagent note (W33)
 skills/st/SKILL.md              ## Always: rule sentence, pointer, subagent note
 README.md                       :117
 tests/test_st_worker.sh         AN1 to AN13, with AN5b, AN6b to AN6f, AN9b and AN11b
-tests/test_worker_rules.sh      W1, W2, W18 to W32, O1, S1 to S6, G5 to G9
+tests/test_worker_rules.sh      W1, W2, W18 to W33, O1, S1 to S6, G5 to G9
 tests/test_lane_steps.sh        row 1 removed
 ```
 
