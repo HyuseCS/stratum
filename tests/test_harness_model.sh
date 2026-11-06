@@ -121,6 +121,14 @@ HEADS = [r[1] for r in VIEWS]
 FEATURE = ["spec.md", "plan.md", "research.md", "data-model.md", "contracts", "quickstart.md", "tasks.md", "checklists", "changes", "decisions.md", "advisor.md", "gaps.md"]
 # ponytail: vendored list copied from data-model.md, edit both when a vendored skill changes
 VENDORED = ["st-ponytail", "st-ponytail-review", "st-ponytail-audit", "st-ponytail-debt", "st-ponytail-gain", "st-ponytail-help", "st-grill", "st-ui-ux", "st-impeccable", "st-graphify", "st-hallmark"]
+HARNESS = [
+    ("skills", lambda p: os.path.isdir(at(p)), False),
+    ("agents", lambda p: p.endswith(".md"), False),
+    ("hooks", lambda p: not p.endswith(".pyc"), True),
+    ("statusline", lambda p: True, True),
+    ("scripts", lambda p: p.endswith(".sh"), False),
+    ("procedures", lambda p: p.endswith(".md"), False),
+]
 
 
 def at(*p):
@@ -201,30 +209,6 @@ def cover(items, key):
         if i not in have:
             fail(f"{i} has no element")
     done(f"all {len(items)} have an element")
-
-
-def c_skills():
-    cover(listing("skills", lambda p: os.path.isdir(at(p))), "path")
-
-
-def c_agents():
-    cover(listing("agents", lambda p: p.endswith(".md")), "path")
-
-
-def c_hooks():
-    cover(listing("hooks", lambda p: not p.endswith(".pyc"), True), "path")
-
-
-def c_statusline():
-    cover(listing("statusline", recurse=True), "path")
-
-
-def c_scripts():
-    cover(listing("scripts", lambda p: p.endswith(".sh")), "path")
-
-
-def c_procedures():
-    cover(listing("procedures", lambda p: p.endswith(".md")), "path")
 
 
 def c_data():
@@ -412,23 +396,25 @@ def c_readme():
     if not os.path.isfile(p):
         return fail("README.md does not exist")
     t = open(p, encoding="utf-8").read()
+    atlas_link, page_link = f"]({DOCS}/atlas/atlas.html)", f"]({DOCS}/README.md)"
     need = [
-        f"]({DOCS}/README.md)",
+        page_link,
         f"npx -y likec4@{v} validate {DOCS}",
         f"npx -y likec4@{v} export markdown {DOCS}",
         "bash tests/test_harness_model.sh",
         f"claude mcp add --scope user likec4 -- npx -y @likec4/mcp@{v}",
         "22.22.3",
-        f"]({DOCS}/atlas/atlas.html)",
+        atlas_link,
         f"xdg-open {DOCS}/atlas/atlas.html",
         "~/.claude/skills/system-atlas",
+        't=$(mktemp -d) && cp ~/.claude/skills/system-atlas/assets/build.mjs ~/.claude/skills/system-atlas/assets/template.html docs/harness/atlas/data.mjs "$t" && node "$t/build.mjs" && cp "$t/atlas.html" "$t/SYSTEM.md" docs/harness/atlas/ && rm -rf "$t"',
     ]
     for s in need:
         if s not in t:
             fail(f'missing "{s}"')
-    a, l = t.find(need[-3]), t.find(need[0])
+    a, l = t.find(atlas_link), t.find(page_link)
     if a >= 0 and l >= 0 and a > l:
-        fail(f'"{need[-3]}" comes after "{need[0]}"')
+        fail(f'"{atlas_link}" comes after "{page_link}"')
     if "claude.ai" in t:
         fail('names "claude.ai"')
     done(f"{len(need)} links and commands found, atlas first")
@@ -440,6 +426,9 @@ def c_nomcp():
     pj = at(".claude-plugin", "plugin.json")
     if os.path.isfile(pj) and "likec4" in open(pj, encoding="utf-8").read():
         fail(".claude-plugin/plugin.json names likec4")
+    for f in ("data.mjs", "atlas.html", "SYSTEM.md"):
+        if not os.path.isfile(at(DOCS, "atlas", f)):
+            fail(f"{DOCS}/atlas/{f} does not exist")
     for dp, _, fn in os.walk(at(DOCS)):
         for f in fn:
             r = os.path.relpath(os.path.join(dp, f), at(DOCS)).replace(os.sep, "/")
@@ -468,18 +457,16 @@ def c_atlas():
             fail(f"{s['code']} has no LikeC4 id or LikeC4 views list")
         for i, m in enumerate(marks):
             end = marks[i + 1].start() if i + 1 < len(marks) else len(how)
-            for x in re.findall(r"<code>(.*?)</code>", how[m.end():end]):
+            xs = re.findall(r"<code>(.*?)</code>", how[m.end():end])
+            if not xs:
+                fail(f"{s['code']} has an empty LikeC4 {m[1]} list")
+            for x in xs:
                 if m[1] == "views":
                     if x not in views:
                         fail(f"{s['code']} names view {x}, not a view of the model")
                 elif x not in ids:
                     fail(f"{s['code']} names {x}, not an element of the model")
-    files = (listing("skills", lambda p: os.path.isdir(at(p)))
-             + listing("agents", lambda p: p.endswith(".md"))
-             + listing("hooks", lambda p: not p.endswith(".pyc"), True)
-             + listing("statusline", recurse=True)
-             + listing("scripts", lambda p: p.endswith(".sh"))
-             + listing("procedures", lambda p: p.endswith(".md")))
+    files = [p for d, keep, r in HARNESS for p in listing(d, keep, r)]
     for p in files:
         h = harness_id(p)
         n = sum(f"<code>{h}</code>" in s["how"] for s in nodes)
@@ -489,12 +476,7 @@ def c_atlas():
 
 
 CHECKS = {
-    "coverage-skills": c_skills,
-    "coverage-agents": c_agents,
-    "coverage-hooks": c_hooks,
-    "coverage-statusline": c_statusline,
-    "coverage-scripts": c_scripts,
-    "coverage-procedures": c_procedures,
+    **{f"coverage-{d}": (lambda d=d, keep=keep, r=r: cover(listing(d, keep, r), "path")) for d, keep, r in HARNESS},
     "coverage-data": c_data,
     "missing": c_missing,
     "summaries": c_summaries,

@@ -68,7 +68,7 @@ export const NODES = [
   { id: 'L', code: 'L', name: 'Lane skills', short: 'LANES', group: 'loop', gx: 8, gy: 4, w: 2, d: 2, h: 40, kind: 'box',
     one: 'The four ways a task can run: Full, Fast, Quick and Design.',
     what: 'Full is for a feature: five phases and four gates. Fast is for a small change: one short plan and one gate. Quick is for a one-file edit with no gate. Design builds a screen in one of three modes.',
-    how: '<code>skills/st-full</code> runs Define, Plan, Inspect, Build and Close without lane selection. <code>skills/st-fast</code> writes a change plan under <code>specs/&lt;feature&gt;/changes/</code> and asks at one gate. <code>skills/st-quick</code> has no gate. <code>skills/st-design</code> has the new look, autonomous and custom modes, and reads <code>DESIGN.md</code>, <code>.impeccable</code> and <code>package.json</code>. LikeC4 ids: <code>skills.st-full</code>, <code>skills.st-fast</code>, <code>skills.st-quick</code>, <code>skills.st-design</code>, and the data <code>project.design-md</code>, <code>project.impeccable</code>, <code>project.design</code>, <code>project.package-json</code>.',
+    how: '<code>skills/st-full</code> runs Define, Plan, Inspect, Build and Close without lane selection. <code>skills/st-fast</code> writes a change plan under <code>specs/&lt;feature&gt;/changes/</code> and asks at one gate. <code>skills/st-quick</code> has no gate. <code>skills/st-design</code> has the new look, autonomous and custom modes, reads <code>DESIGN.md</code>, <code>.impeccable</code> and <code>package.json</code>, checks its tools with <code>scripts/st-design-check.sh</code> and drives FigCraft with <code>scripts/st-figcraft.sh</code>. LikeC4 ids: <code>skills.st-full</code>, <code>skills.st-fast</code>, <code>skills.st-quick</code>, <code>skills.st-design</code>, <code>scripts.st-design-check-sh</code>, <code>scripts.st-figcraft-sh</code>, and the data <code>project.design-md</code>, <code>project.impeccable</code>, <code>project.design</code>, <code>project.package-json</code>.',
     steps: [['Full', 'Define, Plan, Inspect, Build, Close, with four gates.'], ['Fast', 'Change plan, gate, test first, review, commit, drift fix.'], ['Quick', 'One file, no gate, verify, commit.'], ['Design', 'Tool check, mode line, then new look, autonomous or custom.']] },
 
   { id: 'P', code: 'P', name: 'Phase skills', short: 'PHASES', group: 'loop', gx: 8, gy: 8, w: 3, d: 3, h: 44, kind: 'box',
@@ -121,7 +121,7 @@ export const NODES = [
   { id: 'B', code: 'B', name: 'Build agents', short: 'BUILD AGENTS', group: 'agents', gx: 12, gy: 8, w: 2, d: 2, h: 40, kind: 'box',
     one: 'Agents that write the failing test, make it pass, fix it, review it, or build a screen.',
     what: 'One agent writes a test that fails first. Another writes the code until it passes and never commits. A third finds the root cause when a test stays red after two tries. A reviewer reads the diff. The design agent builds a screen from the design file.',
-    how: '<code>agents/st-test.md</code>, <code>agents/st-build.md</code>, <code>agents/st-debug.md</code>, <code>agents/st-review.md</code>, <code>agents/st-design.md</code>. The Design lane checks its tools with <code>scripts/st-design-check.sh</code> and drives FigCraft with <code>scripts/st-figcraft.sh</code>. LikeC4 ids: <code>agents.st-test</code>, <code>agents.st-build</code>, <code>agents.st-debug</code>, <code>agents.st-review</code>, <code>agents.st-design</code>, <code>scripts.st-design-check-sh</code>, <code>scripts.st-figcraft-sh</code>.',
+    how: '<code>agents/st-test.md</code>, <code>agents/st-build.md</code>, <code>agents/st-debug.md</code>, <code>agents/st-review.md</code>, <code>agents/st-design.md</code>. LikeC4 ids: <code>agents.st-test</code>, <code>agents.st-build</code>, <code>agents.st-debug</code>, <code>agents.st-review</code>, <code>agents.st-design</code>.',
     steps: [['Test', 'st-test writes the task test and shows it fails.'], ['Build', 'st-build writes code until the test passes and ticks the task.'], ['Debug', 'st-debug finds the root cause after 2 red tries.'], ['Review', 'st-review reads the story diff and lists findings.']],
     cond: [
       '<b>Q-B1</b> The st-build agent gives the Fast-lane path as <code>changes/NNN-name.md</code> with no feature folder (<code>agents/st-build.md:20</code>), but /st-fast and the st-fast agent put it under <code>specs/&lt;feature&gt;/changes/</code> (<code>skills/st-fast/SKILL.md:14</code>, <code>agents/st-fast.md:40</code>). Which path is right?',
@@ -138,7 +138,7 @@ export const NODES = [
   { id: 'G', code: 'G', name: 'Gates', short: 'GATES', group: 'loop', gx: 4, gy: 12, w: 2, d: 2, h: 44, kind: 'gate',
     one: 'The steps where a lane stops and waits for your words.',
     what: 'A gate names what you must say before the work moves on, like "you agree the spec" or "push". The Full lane has four, Fast has one, Quick has none, and the Design lane has one in its new look and custom modes.',
-    how: 'Not one file: a gate is a lane-view step whose label has <code>gate:</code> after the step number (D8). View <code>full</code>: (6) you agree the spec, (8) you answer each open decision, (10) OK to build, (13) push. View <code>fast</code>: (9) OK on the change plan. View <code>design</code>: (6) commit the reference screen, (10) commit the screen and the saved design. Each gate step passes to <code>user</code>, from <code>skills/st-define</code>, <code>st-plan</code>, <code>st-inspect</code>, <code>st-close</code>, <code>st-fast</code> or <code>st-design</code>. LikeC4 views: <code>full</code>, <code>full-define</code>, <code>full-plan</code>, <code>full-inspect</code>, <code>full-close</code>, <code>fast</code>, <code>design</code>, <code>design-new-look</code>, <code>design-custom</code>.',
+    how: 'Not one file: a gate is a lane-view step whose label has <code>gate:</code> after the step number (D8). View <code>full</code>: (6) you agree the spec, (8) you answer each open decision, (10) OK to build, (13) push. View <code>fast</code>: (9) OK on the change plan. View <code>design</code>: (6) commit the reference screen, (10) commit the screen and the saved design. Each gate step is between <code>user</code> and the lane skill: <code>skills/st-define</code>, <code>st-plan</code>, <code>st-inspect</code>, <code>st-close</code> and <code>st-fast</code> pass the gate to you, and in the Design lane you pass your answer to <code>skills/st-design</code>. LikeC4 views: <code>full</code>, <code>full-define</code>, <code>full-plan</code>, <code>full-inspect</code>, <code>full-close</code>, <code>fast</code>, <code>design</code>, <code>design-new-look</code>, <code>design-custom</code>.',
     steps: [['Agree the spec', 'Full lane, end of Define.'], ['Answer each open decision', 'Full lane, Plan.'], ['OK to build', 'Full lane, end of Inspect.'], ['OK on the change plan', 'Fast lane, after the advisor verdict.'], ['Commit the screen', 'Design lane, new look and custom modes.'], ['Push', 'Full lane, end of Close.']],
     cond: [
       '<b>Q-G1</b> /st-full names a Plan gate where you answer the open decisions (<code>skills/st-full/SKILL.md:11</code>), but the Gate section of /st-plan names no user gate, only the next phase (<code>skills/st-plan/SKILL.md:36-38</code>). Is Plan a gate or not?',
@@ -167,7 +167,7 @@ export const NODES = [
 
   { id: 'E', code: 'E', name: 'Hook events', short: 'HOOK EVENTS', group: 'guard', gx: 4, gy: 16, w: 3, d: 2, h: 16, kind: 'slab',
     one: 'The moments Claude Code announces, and the list of which hook runs at each.',
-    what: 'Claude Code calls out moments like "a tool is about to run", "a session starts" or "you sent a prompt". Stratum lists which hook file runs at each one.',
+    what: 'Claude Code calls out moments like "a tool is about to run", "a session starts" or "you sent a prompt". Stratum lists which hook file runs at each one. Claude Code also runs the status line command named in its settings, with no hook event.',
     how: '<code>hooks/commands.json</code> binds each event and tool matcher to its hook commands. <code>hooks/hooks.json</code> lists the hook module <code>token-weather.mjs</code>. Events: PreToolUse, PermissionRequest, SessionStart, SubagentStart, UserPromptSubmit, SessionEnd, PreCompact. LikeC4 ids: <code>claude</code>, <code>events.pre-tool-use</code>, <code>events.permission-request</code>, <code>events.session-start</code>, <code>events.subagent-start</code>, <code>events.user-prompt-submit</code>, <code>events.session-end</code>, <code>events.pre-compact</code>, <code>hooks.commands-json</code>, <code>hooks.hooks-json</code>.',
     steps: [['SessionStart', 'Handoff, communication rules and ponytail rules.'], ['UserPromptSubmit', 'Ponytail mode and the reply label for the phase.'], ['PreToolUse', 'Git guard on Bash, model on Agent, phase on Skill, approve lock on file tools.'], ['PermissionRequest', 'The approve hook answers for a worker.'], ['SubagentStart', 'Ponytail rules for the subagent.'], ['SessionEnd and PreCompact', 'Save the handoff facts.']] },
 
@@ -221,8 +221,10 @@ export const FLOWS = [
     ['G', 'U', 'gate: you agree the spec', { gate: 'you agree the spec' }, 'yx'],
     ['P', 'A', 'Plan: feature dir', { agent: 'st-plan' }, 'xy'],
     ['A', 'F', 'plan, research, data model, tasks', { files: ['plan.md', 'tasks.md'] }, 'xy'],
+    ['G', 'U', 'gate: you answer each open decision', { gate: 'you answer each open decision' }, 'yx'],
     ['P', 'X', 'plan point', { point: 'plan' }, 'xy'],
     ['X', 'K', 'spec, plan and tasks, read-only', { sandbox: 'read-only' }, 'xy'],
+    ['P', 'A', 'Inspect: plan files to check', { agent: 'st-inspect' }, 'xy'],
     ['G', 'U', 'gate: OK to build', { gate: 'OK to build' }, 'yx'],
     ['P', 'B', 'test and build task ids', { tasks: ['T001'] }, 'xy'],
     ['B', 'F', 'ticked task', { task: 'T001', done: true }, 'xy'],
@@ -256,8 +258,7 @@ export const FLOWS = [
   ] },
   { id: 'design', name: 'Design lane', hops: [
     ['U', 'L', 'task in plain words', { skill: '/st-design', task: 'a landing page' }, 'xy'],
-    ['L', 'B', 'tool check', { script: 'st-design-check.sh' }, 'xy'],
-    ['L', 'U', 'mode line and grill questions', { mode: 'new look' }, 'yx'],
+    ['L', 'U', 'mode line and grill questions, after the tool check', { script: 'st-design-check.sh', mode: 'new look' }, 'yx'],
     ['L', 'T', 'deal: genre and brief', { skill: '/st-hallmark' }, 'xy'],
     ['L', 'B', 'task, mode, answers', { agent: 'st-design' }, 'xy'],
     ['B', 'L', 'report: files and screenshots', { screenshots: 2 }, 'yx'],
@@ -296,7 +297,7 @@ export const CH = [
   { id: 'gates', title: 'Gates: asking you first', reveal: ['G', 'V'],
     lede: `Some steps stop and wait for your words.`,
     story: `<p>A gate names what you must say, like "you agree the spec" or "push". Between gates, st-verify.sh re-runs each test and st-lock.sh keeps shared runs to one at a time. <mark>Nothing passes a gate without you.</mark></p>`,
-    flow: [['P', 'V', 'test command and touched files', { test: 'npm test settings' }], ['V', 'P', 'one PASS or FAIL line', { result: 'PASS' }], ['P', 'G', 'verdict and the OK to build question', { verdict: 'ready' }], ['G', 'U', 'gate: OK to build', { gate: 'OK to build' }], ['U', 'G', 'OK', { answer: 'OK' }]] },
+    flow: [['P', 'A', 'plan files to check', { agent: 'st-inspect' }], ['A', 'P', 'findings and verdict', { verdict: 'ready' }], ['P', 'G', 'the OK to build question', { gate: 'OK to build' }], ['G', 'U', 'gate: OK to build', { gate: 'OK to build' }], ['U', 'G', 'OK', { answer: 'OK' }], ['P', 'V', 'test command and touched files', { test: 'npm test settings' }], ['V', 'P', 'one PASS or FAIL line', { result: 'PASS' }]] },
   { id: 'advisor', title: 'Second opinion: Codex and /advisor', reveal: ['X', 'K', 'D'],
     lede: `At set points, a second model reviews the work before it moves on.`,
     story: `<p>st-advisor.sh sends the plan, the change, a red test or the diff to Codex in a read-only sandbox and records the verdict in advisor.md. The /advisor model you set in Claude Code gets the same input. <mark>Reviewers only review: they never build or fix.</mark></p>`,
@@ -304,11 +305,11 @@ export const CH = [
   { id: 'hooks', title: 'Guard rails: hooks', reveal: ['E', 'W', 'H'],
     lede: `Claude Code fires events, and hook files act on them before a tool runs.`,
     story: `<p>The git guard reads each shell command and asks or denies commits, pushes and destructive git. Other hooks set the phase, set the model of each agent, and answer permission requests for workers. <mark>Hooks hold the rules even when a prompt forgets them.</mark></p>`,
-    flow: [['O', 'E', 'Skill call: /st-plan', { tool: 'Skill' }], ['E', 'H', 'PreToolUse, matcher Skill', { event: 'PreToolUse' }], ['H', 'S', 'phase and lane', { phase: 'plan', lane: 'full' }], ['O', 'E', 'Bash: git push', { tool: 'Bash' }], ['E', 'W', 'PreToolUse, matcher Bash', { event: 'PreToolUse' }], ['W', 'E', 'ask or deny with the reason', { decision: 'deny' }]] },
+    flow: [['O', 'E', 'Skill call: /st-plan', { tool: 'Skill' }], ['E', 'H', 'PreToolUse, matcher Skill', { event: 'PreToolUse' }], ['H', 'S', 'phase and lane', { phase: 'plan', lane: 'full' }], ['O', 'E', 'Bash: git push', { tool: 'Bash' }], ['E', 'W', 'PreToolUse, matcher Bash', { event: 'PreToolUse' }], ['W', 'E', 'ask or deny with the reason', { decision: 'ask' }]] },
   { id: 'memory', title: 'Memory across sessions', reveal: ['M', 'N'],
     lede: `When a session ends, the next one starts where it stopped.`,
     story: `<p>A hook saves a facts block into .stratum/handoff.md at session end and before compaction, and /st-handoff adds the goal and the next step. At start, a hook prints the handoff back. <mark>The status line shows the state at a glance</mark>, with the ponytail level and the Token Weather line.</p>`,
-    flow: [['O', 'M', 'session end: /st-handoff', { next: 'run /st-inspect' }], ['E', 'M', 'SessionEnd: facts block', { phase: 'plan', tasks: '0/12' }], ['E', 'M', 'SessionStart', { matcher: 'startup' }], ['M', 'E', 'rules and the last handoff', { lines: 40 }], ['E', 'N', 'session JSON on stdin', { model: 'opus' }], ['N', 'E', 'status line text', { ponytail: 'full' }]] },
+    flow: [['O', 'M', 'session end: /st-handoff', { next: 'run /st-inspect' }], ['E', 'M', 'SessionEnd: facts block', { phase: 'plan', tasks: '0/12' }], ['E', 'M', 'SessionStart', { matcher: 'startup' }], ['M', 'E', 'rules and the last handoff', { lines: 40 }], ['E', 'N', 'status line command from settings: session JSON on stdin', { model: 'opus' }], ['N', 'E', 'status line text', { ponytail: 'full' }]] },
   { id: 'ship', title: 'Shipping', reveal: ['Z', 'I', 'GH'],
     lede: `Work leaves the session as commits and a pull request.`,
     story: `<p>Only the st-git agent commits, and only the exact paths it is given. /st-pr pushes the branch and opens a draft pull request after one gate. <mark>Nothing is pushed until you say so.</mark></p>`,
@@ -320,12 +321,4 @@ export const CH = [
 ];
 
 export const HOW_HTML = `<div class="eyebrow">Stratum harness</div><h1 class="t">How it's built</h1><div class="sub">a Claude Code plugin: skills, agents, hooks and scripts</div>
-<p>Each structure groups files of the LikeC4 model. Its "How it's built" tab ends with the LikeC4 element ids it stands for, so you can find the same parts in <code>docs/harness/README.md</code> and the LikeC4 preview.</p>
-<h3 class="sec">Filesystem</h3><pre>skills/           40 skill folders
-agents/           15 agent files
-hooks/            commands.json, hooks.json, 7 hook files
-hooks/ponytail/   8 ponytail hook files
-statusline/       3 files
-scripts/          15 shell scripts
-procedures/       9 step files
-templates/        7 templates</pre>`;
+<p>Each structure groups files of the LikeC4 model. Its "How it's built" tab ends with the LikeC4 element ids it stands for, so you can find the same parts in <code>docs/harness/README.md</code> and the LikeC4 preview.</p>`;

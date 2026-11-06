@@ -82,7 +82,7 @@ Stratum is a Claude Code plugin that runs a coding task through a lane. You give
 
 **What it does.** Full is for a feature: five phases and four gates. Fast is for a small change: one short plan and one gate. Quick is for a one-file edit with no gate. Design builds a screen in one of three modes.
 
-**How it's built.** `skills/st-full` runs Define, Plan, Inspect, Build and Close without lane selection. `skills/st-fast` writes a change plan under `specs/<feature>/changes/` and asks at one gate. `skills/st-quick` has no gate. `skills/st-design` has the new look, autonomous and custom modes, and reads `DESIGN.md`, `.impeccable` and `package.json`. LikeC4 ids: `skills.st-full`, `skills.st-fast`, `skills.st-quick`, `skills.st-design`, and the data `project.design-md`, `project.impeccable`, `project.design`, `project.package-json`.
+**How it's built.** `skills/st-full` runs Define, Plan, Inspect, Build and Close without lane selection. `skills/st-fast` writes a change plan under `specs/<feature>/changes/` and asks at one gate. `skills/st-quick` has no gate. `skills/st-design` has the new look, autonomous and custom modes, reads `DESIGN.md`, `.impeccable` and `package.json`, checks its tools with `scripts/st-design-check.sh` and drives FigCraft with `scripts/st-figcraft.sh`. LikeC4 ids: `skills.st-full`, `skills.st-fast`, `skills.st-quick`, `skills.st-design`, `scripts.st-design-check-sh`, `scripts.st-figcraft-sh`, and the data `project.design-md`, `project.impeccable`, `project.design`, `project.package-json`.
 
 **Steps in execution.**
 
@@ -128,7 +128,7 @@ Stratum is a Claude Code plugin that runs a coding task through a lane. You give
 
 **What it does.** A gate names what you must say before the work moves on, like "you agree the spec" or "push". The Full lane has four, Fast has one, Quick has none, and the Design lane has one in its new look and custom modes.
 
-**How it's built.** Not one file: a gate is a lane-view step whose label has `gate:` after the step number (D8). View `full`: (6) you agree the spec, (8) you answer each open decision, (10) OK to build, (13) push. View `fast`: (9) OK on the change plan. View `design`: (6) commit the reference screen, (10) commit the screen and the saved design. Each gate step passes to `user`, from `skills/st-define`, `st-plan`, `st-inspect`, `st-close`, `st-fast` or `st-design`. LikeC4 views: `full`, `full-define`, `full-plan`, `full-inspect`, `full-close`, `fast`, `design`, `design-new-look`, `design-custom`.
+**How it's built.** Not one file: a gate is a lane-view step whose label has `gate:` after the step number (D8). View `full`: (6) you agree the spec, (8) you answer each open decision, (10) OK to build, (13) push. View `fast`: (9) OK on the change plan. View `design`: (6) commit the reference screen, (10) commit the screen and the saved design. Each gate step is between `user` and the lane skill: `skills/st-define`, `st-plan`, `st-inspect`, `st-close` and `st-fast` pass the gate to you, and in the Design lane you pass your answer to `skills/st-design`. LikeC4 views: `full`, `full-define`, `full-plan`, `full-inspect`, `full-close`, `fast`, `design`, `design-new-look`, `design-custom`.
 
 **Steps in execution.**
 
@@ -212,7 +212,7 @@ Stratum is a Claude Code plugin that runs a coding task through a lane. You give
 
 **What it does.** One agent writes a test that fails first. Another writes the code until it passes and never commits. A third finds the root cause when a test stays red after two tries. A reviewer reads the diff. The design agent builds a screen from the design file.
 
-**How it's built.** `agents/st-test.md`, `agents/st-build.md`, `agents/st-debug.md`, `agents/st-review.md`, `agents/st-design.md`. The Design lane checks its tools with `scripts/st-design-check.sh` and drives FigCraft with `scripts/st-figcraft.sh`. LikeC4 ids: `agents.st-test`, `agents.st-build`, `agents.st-debug`, `agents.st-review`, `agents.st-design`, `scripts.st-design-check-sh`, `scripts.st-figcraft-sh`.
+**How it's built.** `agents/st-test.md`, `agents/st-build.md`, `agents/st-debug.md`, `agents/st-review.md`, `agents/st-design.md`. LikeC4 ids: `agents.st-test`, `agents.st-build`, `agents.st-debug`, `agents.st-review`, `agents.st-design`.
 
 **Steps in execution.**
 
@@ -284,7 +284,7 @@ Stratum is a Claude Code plugin that runs a coding task through a lane. You give
 
 **In one line.** The moments Claude Code announces, and the list of which hook runs at each.
 
-**What it does.** Claude Code calls out moments like "a tool is about to run", "a session starts" or "you sent a prompt". Stratum lists which hook file runs at each one.
+**What it does.** Claude Code calls out moments like "a tool is about to run", "a session starts" or "you sent a prompt". Stratum lists which hook file runs at each one. Claude Code also runs the status line command named in its settings, with no hook event.
 
 **How it's built.** `hooks/commands.json` binds each event and tool matcher to its hook commands. `hooks/hooks.json` lists the hook module `token-weather.mjs`. Events: PreToolUse, PermissionRequest, SessionStart, SubagentStart, UserPromptSubmit, SessionEnd, PreCompact. LikeC4 ids: `claude`, `events.pre-tool-use`, `events.permission-request`, `events.session-start`, `events.subagent-start`, `events.user-prompt-submit`, `events.session-end`, `events.pre-compact`, `hooks.commands-json`, `hooks.hooks-json`.
 
@@ -367,15 +367,17 @@ Payload shapes are what the design implies, not measured traffic.
 | 5 | G → U | gate: you agree the spec | `{"gate":"you agree the spec"}` |
 | 6 | P → A | Plan: feature dir | `{"agent":"st-plan"}` |
 | 7 | A → F | plan, research, data model, tasks | `{"files":["plan.md","tasks.md"]}` |
-| 8 | P → X | plan point | `{"point":"plan"}` |
-| 9 | X → K | spec, plan and tasks, read-only | `{"sandbox":"read-only"}` |
-| 10 | G → U | gate: OK to build | `{"gate":"OK to build"}` |
-| 11 | P → B | test and build task ids | `{"tasks":["T001"]}` |
-| 12 | B → F | ticked task | `{"task":"T001","done":true}` |
-| 13 | P → Z | task paths and tasks.md | `{"paths":["src/settings.tsx","tasks.md"]}` |
-| 14 | Z → I | task commit | `{"commit":"feat: dark mode switch"}` |
-| 15 | P → C | Close: feature dir | `{"agent":"st-close"}` |
-| 16 | G → U | gate: push | `{"gate":"push"}` |
+| 8 | G → U | gate: you answer each open decision | `{"gate":"you answer each open decision"}` |
+| 9 | P → X | plan point | `{"point":"plan"}` |
+| 10 | X → K | spec, plan and tasks, read-only | `{"sandbox":"read-only"}` |
+| 11 | P → A | Inspect: plan files to check | `{"agent":"st-inspect"}` |
+| 12 | G → U | gate: OK to build | `{"gate":"OK to build"}` |
+| 13 | P → B | test and build task ids | `{"tasks":["T001"]}` |
+| 14 | B → F | ticked task | `{"task":"T001","done":true}` |
+| 15 | P → Z | task paths and tasks.md | `{"paths":["src/settings.tsx","tasks.md"]}` |
+| 16 | Z → I | task commit | `{"commit":"feat: dark mode switch"}` |
+| 17 | P → C | Close: feature dir | `{"agent":"st-close"}` |
+| 18 | G → U | gate: push | `{"gate":"push"}` |
 
 ### Fast lane
 
@@ -411,15 +413,14 @@ Payload shapes are what the design implies, not measured traffic.
 | # | From → To | Packet | Representative payload |
 |---|---|---|---|
 | 1 | U → L | task in plain words | `{"skill":"/st-design","task":"a landing page"}` |
-| 2 | L → B | tool check | `{"script":"st-design-check.sh"}` |
-| 3 | L → U | mode line and grill questions | `{"mode":"new look"}` |
-| 4 | L → T | deal: genre and brief | `{"skill":"/st-hallmark"}` |
-| 5 | L → B | task, mode, answers | `{"agent":"st-design"}` |
-| 6 | B → L | report: files and screenshots | `{"screenshots":2}` |
-| 7 | L → T | audit and critique | `{"skill":"/st-impeccable"}` |
-| 8 | G → U | gate: commit the reference screen | `{"gate":"yes, commit the reference screen"}` |
-| 9 | L → Z | paths and DESIGN.md | `{"paths":["DESIGN.md",".impeccable/design.json"]}` |
-| 10 | Z → I | commit | `{"commit":"feat: landing page"}` |
+| 2 | L → U | mode line and grill questions, after the tool check | `{"script":"st-design-check.sh","mode":"new look"}` |
+| 3 | L → T | deal: genre and brief | `{"skill":"/st-hallmark"}` |
+| 4 | L → B | task, mode, answers | `{"agent":"st-design"}` |
+| 5 | B → L | report: files and screenshots | `{"screenshots":2}` |
+| 6 | L → T | audit and critique | `{"skill":"/st-impeccable"}` |
+| 7 | G → U | gate: commit the reference screen | `{"gate":"yes, commit the reference screen"}` |
+| 8 | L → Z | paths and DESIGN.md | `{"paths":["DESIGN.md",".impeccable/design.json"]}` |
+| 9 | Z → I | commit | `{"commit":"feat: landing page"}` |
 
 ### A commit
 
