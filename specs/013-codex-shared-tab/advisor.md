@@ -30,3 +30,6 @@ summary: The plan uses existing scripts and dependencies, keeps changes focused,
 
 ## plan | 2026-11-06T00:07:14Z | sha256 1a4962d0963f4e57bf174f53bd983030cffd4ee74d91f6f8b5b077ced734d423 | APPROVED
 summary: The implementation approach stays focused, reuses existing scripts and dependencies, and sequences shared-file changes clearly. No material simplification or task restructuring is warranted. Correctness, coverage and risks were outside this review. No files changed.
+
+## diff | 2026-11-06T00:11:21Z | /advisor
+summary: /advisor: snapshot mode/symlink/index-per-path fix, R6 hang fix with 2 s agent get poll, M20 from the live run; no change needed; contract step 6 and research R6 are drift for Close
