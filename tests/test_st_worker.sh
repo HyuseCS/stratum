@@ -1402,6 +1402,10 @@ mk; states blocked; printf '%s\n' 'Bash command' '  2. Yes' 'Do you want to proc
 run bash "$script" wait T004; h=$(shash); states blocked
 run bash "$script" answer T004 --screen "$h" --keys 2
 check "AN6d a command line 2. Yes above the dialog is not option 2: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 2 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+mk; states blocked; printf '%s\n' 'Bash command' '  3. Yes' 'Do you want to proceed?' '❯ 1. Yes' '  2. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
+run bash "$script" wait T004; h=$(shash); states blocked
+run bash "$script" answer T004 --screen "$h" --keys 3
+check "AN6e a command line 3. Yes above the dialog is not option 3: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 3 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
 for ka in '1 enter' 'enter' 'down'; do
   mk; states blocked; printf '%s\n' 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
   run bash "$script" wait T004; h=$(shash); states blocked
@@ -1418,6 +1422,9 @@ check "AN9 permission dialog: wait prints one screen line with a 12 hex hash, af
 mk; states blocked; printf '%s\n' 'Should the helper be named normalizeInput?' '❯ 1. Yes' '  2. No' > "$tmp/pane.txt"
 run bash "$script" wait T004
 check "AN9 question pane: wait prints the state line and no screen line" '[ $rc = 4 ] && hasline "state\tblocked\tworker-t004\t%s" "$(pane)" && ! grep -q "^screen" <<<"$out"'
+mk; states blocked; { seq -f 'line %g' 25; printf '%s\n' 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)'; } > "$tmp/pane.txt"
+run bash "$script" wait T004; txt=$(sed -n '/^pane text:$/,$p' <<<"$out" | tail -n +2)
+check "AN9b a 29-line dialog: the screen hash is the hash of the printed pane text, which holds line 5 (the 40-line read)" '[ $rc = 4 ] && [ "$(shash)" = "$(sha256sum <<<"$txt" | cut -c1-12)" ] && grep -qxF "line 5" <<<"$txt"'
 for p1 in '❯ 1. Yes' '  1. Yes' '│ 1. Yes' '❯ 1. Yes, proceed' '❯ 1. Yes, proceed (y)' '❯ 1. Yes, just this once'; do
   mk; states blocked; printf '%s\n' 'Do you want to proceed?' "$p1" "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
   run bash "$script" wait T004; h=$(shash); states blocked working
@@ -1430,6 +1437,12 @@ printf '%s\n' 'Bash command' '  git push' 'Do you want to proceed?' '❯ 1. Yes'
 states blocked
 run bash "$script" answer T004 --screen "$h" --keys 1
 check "AN11 the pane changed after wait: exit 1, the another-prompt line, nothing sent" '[ $rc = 1 ] && [ "$out" = "The pane shows another prompt. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+mk; states blocked; { seq -f 'line %g' 25; printf '%s\n' 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)'; } > "$tmp/pane.txt"
+run bash "$script" wait T004; h=$(shash)
+sed -i 's/^line 5$/line five/' "$tmp/pane.txt"
+states blocked
+run bash "$script" answer T004 --screen "$h" --keys 1
+check "AN11b line 5 changes, outside a 20-line read but inside the 40-line read: exit 1, the another-prompt line, nothing sent" '[ $rc = 1 ] && [ "$out" = "The pane shows another prompt. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
 mk; states blocked; printf '%s\n' 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
 run bash "$script" answer T004 --keys 1
 check "AN12 no --screen on a permission dialog: exit 1, the needs-screen line, nothing sent" '[ $rc = 1 ] && [ "$out" = "A permission prompt needs --screen <hash> from the screen line of wait or watch. Nothing sent." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'

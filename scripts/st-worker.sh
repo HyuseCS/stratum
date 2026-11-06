@@ -157,13 +157,15 @@ st() {
   case $1 in
     blocked)
       ! screen || ! perm || printf 'screen\t%s\n' "$SH"
-      panetext
+      echo 'pane text:'
+      [ -z "$SC" ] || printf '%s\n' "$SC"
       ;;
     stopped | unsent) panetext ;;
   esac
 }
-PERM='^([[:space:]]|│)*Do you want to (proceed|make this edit|create|allow|run)|don.t ask again|tell Claude what to do differently'
-screen() { SC=$("${H[@]}" agent read "$N" --source recent-unwrapped --lines 20 2>/dev/null | sed $'s/\e\\[[0-9;]*[A-Za-z]//g') || return; SH=$(sha256sum <<<"$SC"); SH=${SH:0:12}; }
+HEAD='^([[:space:]]|│)*Do you want to (proceed|make this edit|create|allow|run)'
+PERM="$HEAD|don.t ask again|tell Claude what to do differently"
+screen() { SC=$("${H[@]}" agent read "$N" --source recent-unwrapped --lines 40 2>/dev/null | sed $'s/\e\\[[0-9;]*[A-Za-z]//g') || return; SH=$(sha256sum <<<"$SC"); SH=${SH:0:12}; }
 perm() { tail -n 15 <<<"$SC" | grep -qaE "$PERM"; }
 readpane() { "${H[@]}" agent read "$N" --source visible >"$t" 2>/dev/null; }
 unsent() { readpane && grep -a '^❯' "$t" | tail -n 1 | grep -qaE '^❯.{0,2}/goal '; }
@@ -448,10 +450,12 @@ answer)
   if perm; then
     [ -n "${keys+x}" ] || fail "$p"
     [ -n "${scr+x}" ] || fail "A permission prompt needs --screen <hash> from the screen line of wait or watch. Nothing sent."
-    [ "$SH" = "$scr" ] || fail "The pane shows another prompt. Nothing sent. Tell the user the workspace, the tab and the prompt." # ponytail: the whole 20-line screen must match, add --expect <text> if a real worker pane redraws so its hash never matches
+    [ "$SH" = "$scr" ] || fail "The pane shows another prompt. Nothing sent. Tell the user the workspace, the tab and the prompt." # ponytail: the whole 40-line screen must match, add --expect <text> if a real worker pane redraws so its hash never matches
     [ ${#keys[@]} = 1 ] && [[ ${keys[0]} =~ ^[1-9]$ ]] || fail "A permission prompt takes one option number. Nothing sent."
     k=${keys[0]}
-    tail -n 15 <<<"$SC" | grep -aE "^([[:space:]]|│)*(❯[[:space:]]*)?$k\.[[:space:]]" | tail -n 1 | grep -qaE "^([[:space:]]|│)*(❯[[:space:]]*)?$k\. (Yes|Yes, proceed|Yes, just this once)( \([a-z0-9]\))?[[:space:]]*\$" || fail "Option $k is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt."
+    w=$(tail -n 15 <<<"$SC")
+    n=$(sed -nE "/$HEAD/=" <<<"$w" | tail -n 1)
+    [ -n "$n" ] && tail -n "+$((n + 1))" <<<"$w" | grep -aE "^([[:space:]]|│)*(❯[[:space:]]*)?$k\.[[:space:]]" | tail -n 1 | grep -qaE "^([[:space:]]|│)*(❯[[:space:]]*)?$k\. (Yes|Yes, proceed|Yes, just this once)( \([a-z0-9]\))?[[:space:]]*\$" || fail "Option $k is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt."
   fi
   if [ -n "${keys+x}" ]; then
     h agent send-keys "$N" "${keys[@]}"
