@@ -33,3 +33,7 @@ summary: The implementation approach stays focused, reuses existing scripts and 
 
 ## diff | 2026-11-06T00:11:21Z | /advisor
 summary: /advisor: snapshot mode/symlink/index-per-path fix, R6 hang fix with 2 s agent get poll, M20 from the live run; no change needed; contract step 6 and research R6 are drift for Close
+
+## plan | 2026-11-06T00:52:41Z | sha256 4c4a9c440a2b132e1f4801f7d6e094977dac1299f4decbf773015c78cb5902de | REVISE
+summary: The plan could reduce repeated editing by consolidating documentation work. Review limited to planning improvements; no files changed or tests run.
+- [LOW] specs/013-codex-shared-tab/tasks.md:55: Merge the three documentation implementation tasks into one final text pass, while retaining test-first rule checks. Evidence: T006, T012 and T018 repeatedly edit the same advisor section and README paragraph, assembling K11 a few lines at a time. A single task after the script interfaces settle would reduce editing and review overhead without changing the intended behavior.

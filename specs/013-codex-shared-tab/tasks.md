@@ -40,7 +40,7 @@ None. US1 changes the interface that US2 and US3 grow.
 
 **Goal**: one Codex tab per workspace, named from the workspace label, started with the user's own Codex setup, shared by every feature, never closed, never typed into while in use. The Stratum Codex home and `codex-home` are gone.
 
-**Independent Test**: `bash tests/test_codex_agent.sh` cases C1 to C9 and `bash tests/test_advisor_matrix.sh` cases M1 to M5, M16 and M17 pass. Rule rows for K2, K6, K11 (US1 lines) pass.
+**Independent Test**: `bash tests/test_codex_agent.sh` cases C1 to C9 and `bash tests/test_advisor_matrix.sh` cases M1 to M5, M16 and M17 pass. Rule rows for K2, K6, K11 (US1 lines) pass after T006.
 
 ### Tests for User Story 1
 
@@ -52,17 +52,15 @@ None. US1 changes the interface that US2 and US3 grow.
 
 - [X] T004 [US1] Change `scripts/st-codex-agent.sh` per contract section 2 steps 1 to 3 and the exit codes 0, 1, 2, 3 and 5: an entry with the tab name and another `workspace_id` or `cwd` prints `codex: tab name <tab name> in use elsewhere` and exits 5 before any `tab create`; usage line with the new arguments and the tab name check `^[a-z][a-z0-9_-]{0,31}$`; delete lines 7 to 9, 11 and 12 (name from the feature folder, Codex home checks) and keep `root=$(pwd -P)` (line 10); delete the ownership loop that closes tabs (:44-49), `quit()`, `screen()`, `nofolder`, the Folder access block (:64-75), the record write in `$home/agents` (:77) and the login link check (:91); `tab create` without `--env`; `agent start` with `-- --no-alt-screen "$@"`; write the settings record in `<state dir>/<tab name>` (umask 077, `mkdir -p`); on reuse print the FR-005 line on a difference; right before the prompt (contract step 5), `herdr agent get` `working` or `blocked`, or `agent_blocked` from the prompt, prints `codex: tab in use` and exits 3. Add `# ponytail: herdr cannot see text typed but not sent in the tab, a point may type after it; check the pane input if herdr exposes it` at the in-use check. Negative controls: put back a `herdr tab close` on a settings difference (C3 and C8 go red); drop the in-use exit (C4 goes red); drop the clash exit (C9 goes red). Test: bash tests/test_codex_agent.sh.
 - [X] T005 [US1] Change `scripts/st-advisor.sh` per contract section 3: drop `|codex-home` from the usage line (:4), delete :5 to :26 and :198-199; compute the tab name in one function per contract section 1 (`herdr workspace list`, `label` of the entry whose `workspace_id` is `$HERDR_WORKSPACE_ID`, read with `python3 -I`; lowercase, `[^a-z0-9_-]` to `-`, first 23 characters; no letter or digit, a failed list or no entry: the workspace id the same way) and `tabs=${XDG_STATE_HOME:-$HOME/.local/state}/stratum/codex-tabs`; call `st-codex-agent.sh "$name" "$tmp/prompt.tab" "$tmp/answer.json" "$tabs" "${opts[@]}"`; print each `codex: the Codex tab runs with ` line of `$tmp/tab`; rc 3 sets `via="codex: headless (Codex tab in use)"` and runs the headless call, and `[ $rc = 0 ] || via=...(Codex tab failed)` must not overwrite it. Negative controls: put back the `codex-home` branch (M1 goes red); map rc 3 to the failed line (M4 goes red); map rc 5 to the failed line (M17 goes red); skip the lowercase step (M16 `Stratum Main!` goes red); skip the id fallback (M16 `~` goes red). rc 5 sets `via="codex: headless (Codex tab name $name in use elsewhere)"` and runs the headless call. Test: bash tests/test_advisor_matrix.sh && bash tests/test_codex_agent.sh && bash tests/test_advisor.sh && bash tests/test_advisor_waive.sh.
-- [X] T006 [US1] Text. `skills/st-build/SKILL.md`: line 96 becomes K2, add K6 after the `WAIVED` line, delete line 97 and line 116. `skills/st-init/SKILL.md`: delete line 86. `README.md`: in line 203 change only "Codex runs in the read-only sandbox and only reviews: it never builds or fixes." to "Codex only reviews: it never builds or fixes."; lines 214-216 become K11 lines 1, 2, 5 and 6. Test: bash tests/test_risk_rules.sh && bash tests/test_on_demand.sh.
-
-**Checkpoint**: US1 works alone. A review in the tab still fails on a Codex prompt as today (h), still has the 480 s limit, and has no change check yet.
+**Checkpoint**: US1's scripts work alone. A review in the tab still fails on a Codex prompt as today (h), still has the 480 s limit, and has no change check yet. US1's skill and README text, and the T003 rule rows, pass only after T006 in the US3 phase.
 
 ---
 
 ## Phase 4: User Story 2 - A review never changes files (Priority: P1)
 
-**Goal**: a snapshot before and after each review turn in the tab. Any difference ends the point BLOCKED with the files named. Nothing is reverted. The skill says Codex only reviews.
+**Goal**: a snapshot before and after each review turn in the tab. Any difference ends the point BLOCKED with the files named. Nothing is reverted. The skill says Codex only reviews (text in T006).
 
-**Independent Test**: `bash tests/test_codex_agent.sh` cases C10 to C16, `bash tests/test_advisor_matrix.sh` case M6 and the K2a and K7 rule rows pass.
+**Independent Test**: `bash tests/test_codex_agent.sh` cases C10 to C16 and `bash tests/test_advisor_matrix.sh` case M6 pass. The K2a and K7 rule rows pass after T006.
 
 ### Tests for User Story 2
 
@@ -74,9 +72,7 @@ None. US1 changes the interface that US2 and US3 grow.
 
 - [X] T010 [US2] In `scripts/st-codex-agent.sh` add the snapshot (data-model.md "Review snapshot", research R6): one function with the pathspec excludes of research R6 (`.stratum/state.json`, Syncthing temp files); call it before the `herdr agent get` in-use check (contract step 4, so the check stays right before the prompt) and again right after the `agent prompt` call, before any other result handling; on a difference print `BLOCKED: Codex changed files during the review: <paths>` (sorted, each once, `HEAD` when HEAD moved) and exit 4. Add `# ponytail: a path with a newline breaks the snapshot lines, use -z through to the compare if one shows up`. Negative control: make the compare always pass (C10 goes red). Test: bash tests/test_codex_agent.sh.
 - [X] T011 [US2] In `scripts/st-advisor.sh`: rc 4 calls `block` with the reason from the first `BLOCKED: ` line of `$tmp/tab`, before any headless call. Negative control: let rc 4 fall through to the headless call (M6 goes red). Test: bash tests/test_advisor_matrix.sh && bash tests/test_advisor.sh && bash tests/test_advisor_waive.sh.
-- [X] T012 [US2] Text. `skills/st-build/SKILL.md`: add K2a right before K2, and K7 right before the generic `BLOCKED: <reason>` line. `README.md`: add K11 line 4 after K11 line 2. Test: bash tests/test_advisor_rules.sh && bash tests/test_risk_rules.sh && bash tests/test_on_demand.sh.
-
-**Checkpoint**: US1 and US2 work. A Codex prompt during a review still ends the tab run early (h).
+**Checkpoint**: US1 and US2 scripts work. A Codex prompt during a review still ends the tab run early (h). US2's skill and README text, and the T009 rule rows, pass only after T006 in the US3 phase.
 
 ---
 
@@ -96,10 +92,12 @@ None. US1 changes the interface that US2 and US3 grow.
 
 - [X] T016 [US3] In `scripts/st-codex-agent.sh` per contract section 2 steps 3, 6, 7, 9 and 10 (D11): drop `SECONDS=0` and every `(480 - SECONDS)` timeout; the marker `<state dir>/<tab name>.review` with `$$`, written right after the in-use check passes or right after a new tab starts, removed by `trap ... EXIT`; on `agent_not_ready` write the marker and run `herdr agent wait <tab name> --until idle --until done` with no `--timeout`; the prompt with `--wait --until done --until idle` and no `--timeout`; drop `--until blocked` and the `blocked` exit (:85, :90); a failed prompt or wait other than `agent_blocked`: `herdr agent get` fails -> `BLOCKED: the Codex tab ended during the review`, else `BLOCKED: the Codex tab failed during the review: <first line>`, exit 4; no marker pair -> `BLOCKED: no answer between the markers`, exit 4. Add `# ponytail: a pid reused after a kill looks like a live review, store the start time too if that bites`. Negative controls: put back `--timeout` on the prompt (C17 goes red); put back `--until blocked` (C17 goes red); map the gone agent to exit 1 (C18 goes red); map no marker pair to exit 1 (C23 goes red). Test: bash tests/test_codex_agent.sh.
 - [X] T017 [US3] In `scripts/st-advisor.sh`: the usage line gets `|answer|watch` (contract section 3); add `answer --keys <key>...` (each key `^[A-Za-z0-9+_][A-Za-z0-9+_-]{0,15}$`) and `watch`, handled before the feature folder parsing, with the tab name from the one place T005 made and the screen of contract section 6; `watch` polls every 2 s and ends only when a marker it saw is gone or dead; drop `timeout -k 10 540` around the tab run (:203) and the `124|137` tab branch (:205), keep the headless `left` budget, the 60 s floor and the headless `timeout` (:208-211). Add `# ponytail: watch polls every 2 s, switch to herdr agent wait if herdr gains a wait on a state change`. Negative controls: drop the marker check in `answer` (M7 goes red); drop the `blocked` check (M9 goes red); drop the marker check in `watch` (M14 goes red); put the `timeout -k 10 540` back (M18 goes red); let rc 4 run headless (M15 goes red). Test: bash tests/test_advisor_matrix.sh && bash tests/test_advisor.sh && bash tests/test_advisor_waive.sh.
-- [X] T018 [US3] Text. `skills/st-build/SKILL.md`: line 95 becomes K1; add K3 with K4 and K5 under it after K2, and K8 after K7. `skills/st-plan/SKILL.md`: lines 30-31 become K9. `README.md`: line 203's first sentence becomes the first sentence of K10; add K11 line 3 after K11 line 2. Test: bash tests/test_advisor_rules.sh && bash tests/test_on_demand.sh && bash tests/test_risk_rules.sh.
+- [X] T006 [US3] One text pass for all three stories, `contracts/advisor-tab.md` sections 4 and 5, as built. `skills/st-build/SKILL.md`: line 95 becomes K1; line 96 becomes K2, with K2a right before it; add K3 with K4 and K5 under it after K2; add K6 after the `WAIVED` line; add K7 and then K8 right before the generic `BLOCKED: <reason>` line; delete line 97 (`codex-home` on request) and line 116 (`BLOCKED: no Stratum Codex home`). `skills/st-init/SKILL.md`: delete line 86. `skills/st-plan/SKILL.md`: lines 30-31 become K9. `README.md`: line 203 becomes K10 (the first sentence names the watch and the background run; the second is "Codex only reviews: it never builds or fixes."), line 205 becomes "A failed, empty, malformed or late answer is `BLOCKED`, never approval. Late means 540 seconds, and only in the background (headless) run."; lines 214-216 become K11 lines 1 to 6. Test: bash tests/test_advisor_rules.sh && bash tests/test_risk_rules.sh && bash tests/test_on_demand.sh.
 - [X] T019 [US3] Live run in herdr, manual and driven by the user (D9, D12): quickstart.md "Live run" steps 1 to 8. The orchestrator gives the user the exact steps and watches; it changes no `~/.codex` file. It passes when one real prompt during a review, made by asking the review for something that needs approval (a command that needs the network), reaches the orchestrator through the watch and is handled by the rule: approved with a one-time yes when on the allow list, else brought to the user with the exact text. Save that real screen as M20 in `tests/test_advisor_matrix.sh` (the `agent read` fixture for a `watch` case; escape codes removed; ask the user before saving if the screen shows a path or value they want kept out). Record in the PR the prompt and how it was handled. When herdr does not report the prompt as `blocked` (plan risk R2), the Monitor shows no `watch` lines (R3), or closing the tab does not end the point (R6), stop and bring it to the user. Test: bash tests/test_advisor_matrix.sh.
 
 **Checkpoint**: all three stories work, stub and live.
+
+T006 merges the former T006, T012 and T018 (Codex plan review advice, applied after the build); commits ed708e3, 793abea and b5d85b0 name the old ids.
 
 ---
 
@@ -112,14 +110,14 @@ None. US1 changes the interface that US2 and US3 grow.
 ## Dependencies
 
 - US1 -> US2 -> US3. The three stories share `scripts/st-codex-agent.sh`, `scripts/st-advisor.sh`, `tests/test_codex_agent.sh`, `tests/test_advisor_matrix.sh`, `skills/st-build/SKILL.md` and `README.md`, so no two stories run at the same time.
-- Inside a phase: the `[P]` test tasks run at the same time. The script task for `st-codex-agent.sh` comes before the one for `st-advisor.sh` (T004 before T005, T010 before T011, T016 before T017): the matrix tests run the real tab script. The text task (T006, T012, T018) can run at the same time as the script tasks once its rule test exists.
-- T019 needs T016 to T018. T020 is last.
+- Inside a phase: the `[P]` test tasks run at the same time. The script task for `st-codex-agent.sh` comes before the one for `st-advisor.sh` (T004 before T005, T010 before T011, T016 before T017): the matrix tests run the real tab script. The one text task, T006, runs in the US3 phase after T017, once the rule rows of T003, T009 and T015 exist.
+- T019 needs T016, T017 and T006. T020 is last.
 
 ## Parallel examples
 
-- US1: T001, T002 and T003 together. Then T004 and T006 together, then T005.
-- US2: T007, T008 and T009 together. Then T010 and T012 together, then T011.
-- US3: T013, T014 and T015 together. Then T016 and T018 together, then T017, then T019.
+- US1: T001, T002 and T003 together. Then T004, then T005.
+- US2: T007, T008 and T009 together. Then T010, then T011.
+- US3: T013, T014 and T015 together. Then T016, then T017, then T006, then T019.
 
 ## Implementation strategy
 
@@ -135,10 +133,10 @@ MVP is US1: the user can use the tab, and it is never closed or typed into while
 | FR-004 | T001 (C3, C8), T013 (C18, C19, C21) | T004, T016 |
 | FR-005 | T001 (C3, C3b), T002 (M5), T003 (R22) | T004, T005, T006 |
 | FR-006 | T001 (C4 to C7), T002 (M4) | T004, T005 |
-| FR-007 | T009 (A14); prompt line already pinned by `tests/test_advisor.sh` FR-013 and `tests/test_codex_agent.sh` g | T012 |
-| FR-008 | T007 (C10 to C16, C10b, C16b, C16e, C16f), T008 (M6), T009 (A15, A16) | T010, T011, T012 |
+| FR-007 | T009 (A14); prompt line already pinned by `tests/test_advisor.sh` FR-013 and `tests/test_codex_agent.sh` g | T006 |
+| FR-008 | T007 (C10 to C16, C10b, C16b, C16e, C16f), T008 (M6), T009 (A15, A16) | T010, T011, T006 |
 | FR-009 | T013 (C17, C20, C22) | T016 |
 | FR-010 | T014 (M7 to M12) | T017 |
-| FR-011 | T014 (M13, M14), T015 (A17 to A20, A22, A23, G3, G4) | T017, T018 |
-| FR-012 | T013 (C17, C18, C19, C19b, C21, C23, C25, C26), T014 (M15, M18, M19), T015 (A21, A24) | T016, T017, T018 |
+| FR-011 | T014 (M13, M14), T015 (A17 to A20, A22, A23, G3, G4) | T017, T006 |
+| FR-012 | T013 (C17, C18, C19, C19b, C21, C23, C25, C26), T014 (M15, M18, M19), T015 (A21, A24) | T016, T017, T006 |
 | SC-003 | T019 (M20, not a guard) | T019 |

@@ -74,7 +74,7 @@ The headless call (`codex exec -s read-only --ignore-user-config`) does not chan
 
 ## Security notes
 
-Tasks that touch these areas: T004, T005, T010, T011, T016, T017 (scripts), T006, T012, T018 (skills and README).
+Tasks that touch these areas: T004, T005, T010, T011, T016, T017 (scripts), T006 (skills and README).
 
 - S1 Approval policy (access rules): the tab no longer runs read-only. With the user's normal settings, Codex can write files in a trusted folder without asking. The guard is detection, not prevention: the snapshot check (FR-008), the review-only prompt and skill text (FR-007), and git as the undo. Ignored files (for example `.env`, caches), files outside the folder, `.stratum/state.json` and Syncthing temp files are not checked. This is the trade D1 accepted. The orchestrator approves only a one-time yes (K3) to one command with no chain and no write or exec flag (K4), so an approval adds no lasting rule to the user's Codex config and no hidden write.
 - S2 Sign-in and secrets: the `auth.json` link in the Stratum Codex home goes. The tab uses the user's own login. The old folder stays on disk with its link; README tells the user they may delete it. No script reads or prints a token. The never list (K5) keeps `.env` files and secrets out of approvals. The `watch` screen text goes to the orchestrator and the user but is never written to `advisor.md` (a BLOCKED record holds only the one-line reason).
