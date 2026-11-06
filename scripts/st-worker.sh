@@ -431,7 +431,15 @@ answer)
   q=
   ! question || q=1
   [ -n "$q" ] || [ "$S" = blocked ] || fail "not blocked: $S"
-  "${H[@]}" agent read "$N" --source recent-unwrapped --lines 15 >"$t" 2>"$e" && ! grep -qE "$PERM" "$t" || fail "This is a permission prompt. Tell the user the workspace, the tab and the prompt; do not answer it."
+  p="This is a permission prompt. Tell the user the workspace, the tab and the prompt; do not answer it."
+  "${H[@]}" agent read "$N" --source recent-unwrapped --lines 15 >"$t" 2>"$e" || fail "$p"
+  if grep -qE "$PERM" "$t"; then
+    [ -n "${keys+x}" ] || fail "$p"
+    [ ${#keys[@]} = 1 ] && [[ ${keys[0]} =~ ^[1-9]$ ]] || fail "A permission prompt takes one option number. Nothing sent."
+    o=$(sed -nE "/^[^0-9]*${keys[0]}\.[[:space:]]/p" "$t" | tail -n 1)
+    [ -n "$o" ] || fail "The permission prompt has no option ${keys[0]}. Nothing sent."
+    ! grep -qiE 'ask again|this session|in the future' <<<"$o" || fail "Option ${keys[0]} lasts beyond this call. Nothing sent. Tell the user the workspace, the tab and the prompt."
+  fi
   if [ -n "${keys+x}" ]; then
     h agent send-keys "$N" "${keys[@]}"
   else

@@ -1361,7 +1361,7 @@ autoclr
 
 for pl in 'Do you want to proceed?' 'Do you want to make this edit to a.py?' 'Do you want to create b.py?' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)'; do
   mk; states blocked; printf '%s\n' "$pl" > "$tmp/pane.txt"
-  run bash "$script" answer T004 --keys 1
+  run bash "$script" answer T004 --text hi
   check "AN1 pane line '$pl': exit 1, the permission line, no key sent" '[ $rc = 1 ] && [ "$out" = "This is a permission prompt. Tell the user the workspace, the tab and the prompt; do not answer it." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
 done
 mk; states blocked
@@ -1375,6 +1375,25 @@ done
 mk; states blocked working; { printf '%s\n' ' Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)'; seq -f 'line %g' 15; printf '%s\n' 'Should the helper be named normalizeInput?' '❯ 1. Yes' '  2. No'; } > "$tmp/pane.txt"
 run bash "$script" answer T004 --keys 1
 check "AN4 permission dialog more than 15 lines up: exit 0, the key sent" '[ $rc = 0 ] && hascall "agent\tsend-keys\tworker-t004\t1"'
+mk; states blocked working; printf '%s\n' 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
+run bash "$script" answer T004 --keys 1
+check "AN5 permission dialog, option 1 is the one-time yes: exit 0, the key sent" '[ $rc = 0 ] && hascall "agent\tsend-keys\tworker-t004\t1"'
+mk; states blocked working; printf '%s\n' 'Do you want to make this edit to a.py?' '❯ 1. Yes' '  2. Yes, allow all edits during this session (shift+tab)' '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
+run bash "$script" answer T004 --keys 1
+check "AN5b edit dialog, option 1 is the one-time yes: exit 0, the key sent" '[ $rc = 0 ] && hascall "agent\tsend-keys\tworker-t004\t1"'
+for ao in "  2. Yes, and don't ask again for git commands" "  2. Yes, and don’t ask again for git commands" '  2. Yes, allow reads for this session' '  2. Yes, allow all edits during this session (shift+tab)' '  2. Yes, and allow this in the future'; do
+  mk; states blocked; printf '%s\n' 'Do you want to proceed?' '❯ 1. Yes' "$ao" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
+  run bash "$script" answer T004 --keys 2
+  check "AN6 option 2 '$ao' lasts beyond this call: exit 1, the lasting line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 2 lasts beyond this call. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+done
+for ka in '1 enter' 'enter' 'down'; do
+  mk; states blocked; printf '%s\n' 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
+  run bash "$script" answer T004 --keys $ka
+  check "AN7 --keys $ka: exit 1, the one-option line, nothing sent" '[ $rc = 1 ] && [ "$out" = "A permission prompt takes one option number. Nothing sent." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+done
+mk; states blocked; printf '%s\n' 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
+run bash "$script" answer T004 --keys 4
+check "AN8 --keys 4, the pane has no option 4: exit 1, the no-option line, nothing sent" '[ $rc = 1 ] && [ "$out" = "The permission prompt has no option 4. Nothing sent." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
 
 mk; states done; apd; printf '%s\n' "$sid" > "$lw/.stratum/approve/session"
 run bash "$script" close T004
