@@ -61,7 +61,7 @@ snap() {
     while IFS= read -r -d '' e; do
       f=$c${e:3}
       printf '%s\t%s\t%s %s\n' "${e:3}" "${e:0:2}" "$(stat -c %f -- "$f" 2>/dev/null)" "$(if [ -L "$f" ]; then readlink -- "$f" | sha256sum | cut -d' ' -f1; elif [ -f "$f" ]; then sha256sum < "$f" | cut -d' ' -f1; fi)"
-      [ -e "$f/.git" ] || continue
+      [ ! -L "${f%/}" ] && [ -e "$f/.git" ] || continue
       p=${e:3}
       (cd -- "$f" && snap) | while IFS= read -r l; do printf '%s/%s\n' "${p%/}" "${l/#HEAD /HEAD$'\t'}"; done || exit 1
     done

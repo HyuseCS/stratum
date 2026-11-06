@@ -203,6 +203,24 @@ check "C16h Codex commits in an already-dirty nested repo: exit 4, BLOCKED names
 new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; nested; go
 check "C16i nested repo dirty before and the same after: exit 0, no BLOCKED line" '[ $rc -eq 0 ] && ! outhas "BLOCKED:"'
 
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; ln -s . "$proj/self"; FUNCNEST=40 go
+check "C16j untracked symlink to . and no change: exit 0, prompt sent" '[ $rc -eq 0 ] && [ "$(cnt "^agent prompt")" = 1 ] && ! outhas "BLOCKED:"'
+
+ext() {
+  rm -rf "$tmp/ext" "$tmp/ext2"
+  git init -q "$tmp/ext"
+  printf 'old\n' > "$tmp/ext/a.txt"
+  git -C "$tmp/ext" add a.txt
+  git -C "$tmp/ext" -c user.name=t -c user.email=t@t commit -qm e
+  printf dirty > "$tmp/ext/a.txt"
+  ln -s "$tmp/ext" "$proj/external"
+}
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; ext; echo "printf again > '$tmp/ext/a.txt'" > "$S/on_prompt"; go
+check "C16k Codex changes a file in a dirty repo behind an untracked symlink outside the project: exit 0, no BLOCKED line" '[ $rc -eq 0 ] && ! outhas "BLOCKED:"'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; ext; mkdir -p "$tmp/ext2"; echo "ln -sfn '$tmp/ext2' external" > "$S/on_prompt"; go
+check "C16l Codex retargets that symlink: exit 4, BLOCKED names external" '[ $rc -eq 4 ] && outline "BLOCKED: Codex changed files during the review: external"'
+
 new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; GIT_DIR="$tmp/nowhere" go
 check "C16c git status fails before the prompt: ERROR, exit 1, no prompt" '[ $rc -eq 1 ] && outline "ERROR: cannot read git status in $pp" && [ "$(cnt "^agent prompt")" = 0 ]'
 
