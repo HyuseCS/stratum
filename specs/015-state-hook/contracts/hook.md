@@ -22,7 +22,7 @@ Every entry: `python3 "${CLAUDE_PLUGIN_ROOT}/hooks/st-phase.py"`, `"timeout": 10
 | `tool_name` | PreToolUse, PostToolUse | `Skill` gives a skill name; `Agent` reads markers |
 | `tool_input.skill` | PreToolUse Skill | phase skill name (unchanged) |
 | `tool_input.args` | PreToolUse Skill `st-define` | non-blank: set `define_before`; blank or missing: remove it |
-| `prompt_id` | PreToolUse, PostToolUse `Agent`, Stop | turn boundary: the transcript read stops at a `user` line whose `promptId` differs, and keeps only the reply text after the last `user` line with this `prompt_id` (research R10). Missing: the real-prompt rule alone |
+| `prompt_id` | PreToolUse, PostToolUse `Agent`, Stop | turn boundary: the transcript read stops at a `user` line whose `promptId` differs, and keeps only the reply text after the first `user` line with this `prompt_id` (research R10). Missing: the real-prompt rule alone |
 | `agent_id` | PreToolUse, PostToolUse | present: no transcript read |
 | `transcript_path` | PreToolUse, PostToolUse `Agent`, Stop | reply markers of the current turn |
 | `last_assistant_message` | Stop | appended after the transcript text |
