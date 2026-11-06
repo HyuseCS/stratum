@@ -7,7 +7,7 @@ tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 cov="coverage-skills coverage-agents coverage-hooks coverage-statusline coverage-scripts coverage-procedures coverage-data"
 vw="views-full views-fast views-quick views-design views-common"
-[ $# -gt 0 ] || set -- coverage missing summaries links kinds vendored views page readme nomcp validate rebuild
+[ $# -gt 0 ] || set -- coverage missing summaries links kinds vendored views page readme nomcp atlas validate rebuild
 
 gate() {
   command -v npx >/dev/null && command -v node >/dev/null || { echo "SKIP $1: npx not found"; return 1; }
@@ -52,9 +52,24 @@ rebuild() {
   fi
 }
 
+atlas() {
+  command -v node >/dev/null || { echo "SKIP atlas: node not found"; return 0; }
+  if ! node --input-type=module -e '
+    import { pathToFileURL } from "node:url";
+    const { NODES } = await import(pathToFileURL(process.argv[1]).href);
+    process.stdout.write(JSON.stringify(NODES.map((n) => ({ code: n.code, how: n.how }))));
+  ' "$root/docs/harness/atlas/data.mjs" > "$tmp/atlas.json" 2> "$tmp/atlas.err"; then
+    echo "FAIL atlas: node could not read docs/harness/atlas/data.mjs"
+    head -n 5 "$tmp/atlas.err"
+    fail=1
+    return 0
+  fi
+  py atlas "$tmp/atlas.json"
+}
+
 py() {
-  python3 - "$root" "$v" "$1" <<'PY' || fail=1
-import glob, os, re, sys
+  python3 - "$root" "$v" "$1" "${2:-}" <<'PY' || fail=1
+import glob, json, os, re, sys
 from itertools import zip_longest
 
 root, v, name = sys.argv[1], sys.argv[2], sys.argv[3]
@@ -425,6 +440,46 @@ def c_nomcp():
     done("no .mcp.json, plugin.json does not name likec4, docs/harness holds only model-format files and atlas/data.mjs, atlas/atlas.html, atlas/SYSTEM.md")
 
 
+def harness_id(p):
+    d, _, n = p.partition("/")
+    if d == "skills":
+        return f"skills.{n}"
+    if d == "agents":
+        return f"agents.{n[:-3]}"
+    return f"{d}." + re.sub(r"[^a-z0-9]+", "-", os.path.basename(p).lower()).strip("-")
+
+
+def c_atlas():
+    nodes = json.load(open(sys.argv[4], encoding="utf-8"))
+    ids = {e["id"] for e in parse()[0]}
+    views = declared_views()
+    for s in nodes:
+        how = s["how"]
+        marks = list(re.finditer(r"LikeC4 (ids?|views):", how))
+        if not marks:
+            fail(f"{s['code']} has no LikeC4 id or LikeC4 views list")
+        for i, m in enumerate(marks):
+            end = marks[i + 1].start() if i + 1 < len(marks) else len(how)
+            for x in re.findall(r"<code>(.*?)</code>", how[m.end():end]):
+                if m[1] == "views":
+                    if x not in views:
+                        fail(f"{s['code']} names view {x}, not a view of the model")
+                elif x not in ids:
+                    fail(f"{s['code']} names {x}, not an element of the model")
+    files = (listing("skills", lambda p: os.path.isdir(at(p)))
+             + listing("agents", lambda p: p.endswith(".md"))
+             + listing("hooks", lambda p: not p.endswith(".pyc"), True)
+             + listing("statusline", recurse=True)
+             + listing("scripts", lambda p: p.endswith(".sh"))
+             + listing("procedures", lambda p: p.endswith(".md")))
+    for p in files:
+        h = harness_id(p)
+        n = sum(f"<code>{h}</code>" in s["how"] for s in nodes)
+        if n != 1:
+            fail(f"{h} is in {n} structures, expected 1")
+    done(f"{len(nodes)} structures name only model elements and views, {len(files)} harness files are each in one structure")
+
+
 CHECKS = {
     "coverage-skills": c_skills,
     "coverage-agents": c_agents,
@@ -446,6 +501,7 @@ CHECKS = {
     "page": c_page,
     "readme": c_readme,
     "nomcp": c_nomcp,
+    "atlas": c_atlas,
 }
 if name not in CHECKS:
     print(f"FAIL unknown check {name}")
@@ -463,6 +519,7 @@ for c in "$@"; do
     views) for s in $vw; do py "$s"; done ;;
     validate) validate ;;
     rebuild) rebuild ;;
+    atlas) atlas ;;
     *) py "$c" ;;
   esac
 done
