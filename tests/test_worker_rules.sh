@@ -36,6 +36,15 @@ W22|skills/st-worker/SKILL.md|Watch each agent you summon. Answer its permission
 W23|skills/st/SKILL.md|The lists: the Codex tab in `/stratum:st-build` (Advisor), herdr workers in `/stratum:st-worker` (step 6), in-session subagents in the next lines.
 W26|skills/st-build/SKILL.md|The Codex tab lists are under Advisor. The worker lists are in `/stratum:st-worker`.
 W27|skills/st-worker/SKILL.md|The worker lists are in step 6, under `approval`.
+W24|skills/st/SKILL.md|An in-session subagent (the Agent tool) asks the user, not you: you cannot answer, approve or deny its permission prompt. Never run an action a subagent was denied in its place: bring the denial to the user.
+W30|skills/st/SKILL.md|First put the `model` and `effort` from `.stratum/models.json` in the Agent call yourself, so the hook changes nothing.
+W25|skills/st/SKILL.md|An Agent call denied because a hook changed its input after auto mode reviewed it: send it once more with exactly the input the denial quotes. Denied again: tell the user.
+S1|specs/014-prompt-answers/research.md|https://code.claude.com/docs/en/sub-agents.md
+S2|specs/014-prompt-answers/research.md|https://code.claude.com/docs/en/permission-modes.md
+S3|specs/014-prompt-answers/research.md|https://code.claude.com/docs/en/hooks.md
+S4|specs/014-prompt-answers/research.md|7. Not documented: any way for the parent model to answer, approve or deny a subagent's permission prompt.
+S5|specs/014-prompt-answers/research.md|`hooks/st-models.py:76` prints `updatedInput` with no `permissionDecision`
+S6|specs/014-prompt-answers/research.md|9. Passing `model` and `effort` yourself.
 TABLE
 if [ "$(grep -cF 'Never approve a push' "$root/skills/st-worker/SKILL.md")" = 1 ]; then echo "ok   O1 never list once"; else echo "FAIL O1 never list once"; fail=1; fi
 

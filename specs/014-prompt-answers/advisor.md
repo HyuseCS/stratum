@@ -9,3 +9,6 @@ summary: US1 decisions: 1,2,5-8 ok; 3 bends checklist append-only rule; 4 is big
 
 ## decisions | 2026-11-06T03:54:39Z | /advisor
 summary: US1 rework decisions: 1,2,5,6,7 ok; 3 add to drift list (answer.md s4 AN13, tasks.md T010 Red now); 4 accept as rule broken; check watch .seen dedupe for 2nd dialog; run full test sweep now
+
+## decisions | 2026-11-06T04:22:52Z | /advisor
+summary: US2 decisions: 1-3 fine; 760ae90 (T014/T015) had no st-review: review 9c1e04b..760ae90 now; read the R placement in st and st-build; drift list adds T012 20-line text, FR-008 vs fact 9, safety.md owner in PR body
