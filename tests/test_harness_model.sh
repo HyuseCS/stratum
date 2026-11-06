@@ -74,7 +74,7 @@ ARROW = re.compile(r"^\s*\S+\s+-(?:\[\w+\]-)?>\s+\S+\s+'((?:[^'\\]|\\.)*)'(?:\s*
 NUMBERED = re.compile(r"^\((\d+)\) (.*)$")
 STRATUM = re.compile(rb"\.stratum/[A-Za-z0-9_-]+(?:\.[a-z]+)?")
 PLACEHOLDER = re.compile(rb"\.stratum/(?:[A-Za-z0-9_-]|<[^>\s]+>)+(?:\.[a-z]+)?")
-ALLOWED = re.compile(r"^(likec4\.config\.json|README\.md|model/[^/]+\.c4|views/[^/]+\.c4|\.likec4/[^/]+\.likec4\.snap)$")
+ALLOWED = re.compile(r"^(likec4\.config\.json|README\.md|model/[^/]+\.c4|views/[^/]+\.c4|\.likec4/[^/]+\.likec4\.snap|atlas/(data\.mjs|atlas\.html|SYSTEM\.md))$")
 SPEC = {
     "element": {"group", "actor", "event", "skill", "agent", "hook", "statusline", "script", "procedure", "pluginfile", "datafile"},
     "relationship": {"starts", "reads", "writes", "runs", "passes"},
@@ -422,7 +422,7 @@ def c_nomcp():
             r = os.path.relpath(os.path.join(dp, f), at(DOCS)).replace(os.sep, "/")
             if not ALLOWED.match(r):
                 fail(f"{DOCS}/{r} is not a model-format file")
-    done("no .mcp.json, plugin.json does not name likec4, docs/harness holds only model-format files")
+    done("no .mcp.json, plugin.json does not name likec4, docs/harness holds only model-format files and atlas/data.mjs, atlas/atlas.html, atlas/SYSTEM.md")
 
 
 CHECKS = {
