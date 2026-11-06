@@ -266,9 +266,13 @@ class PhaseHookTest(unittest.TestCase):
     def test_hook_registered(self):
         with open(os.path.join(ROOT, "hooks", "commands.json")) as f:
             hooks = json.load(f)["hooks"]
-        skill = [e for e in hooks["PreToolUse"] if e.get("matcher") == "Skill"]
-        self.assertEqual(len(skill), 1)
-        self.assertIn(CMD, [h["command"] for h in skill[0]["hooks"]])
+        pre = [e for e in hooks["PreToolUse"] if e.get("matcher") == "Skill|Agent"]
+        self.assertEqual(len(pre), 1)
+        self.assertIn(CMD, [h["command"] for h in pre[0]["hooks"]])
+        post = [e for e in hooks.get("PostToolUse", []) if e.get("matcher") == "Bash|Write|Edit|MultiEdit|Agent"]
+        self.assertEqual(len(post), 1)
+        self.assertIn(CMD, [h["command"] for h in post[0]["hooks"]])
+        self.assertIn(CMD, [h["command"] for e in hooks.get("Stop", []) for h in e["hooks"]])
         self.assertIn(CMD, [h["command"] for e in hooks["UserPromptSubmit"] for h in e["hooks"]])
 
 

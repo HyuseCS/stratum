@@ -30,8 +30,8 @@ None. The hook and the tests use the Python stdlib and Bash only.
 
 **Purpose**: Wire `hooks/st-phase.py` to the new events.
 
-- [ ] T001 In `tests/test_phase_hook.py`, change `test_hook_registered` (line 266): exactly one PreToolUse entry has matcher `Skill|Agent` and holds `CMD`; one PostToolUse entry has matcher `Bash|Write|Edit|MultiEdit|Agent` and holds `CMD`; a Stop entry holds `CMD`; the UserPromptSubmit check stays. Run it and see it fail. Test: `python3 tests/test_phase_hook.py PhaseHookTest.test_hook_registered`.
-- [ ] T002 In `hooks/commands.json`, widen the PreToolUse `Skill` matcher to `Skill|Agent`, add a PostToolUse entry (matcher `Bash|Write|Edit|MultiEdit|Agent`) and a Stop entry, each `{ "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/st-phase.py\"", "timeout": 10 }`. Keep the separate `Agent` entry for `st-models.py` as is (contracts/hook.md "Wiring"). Test: `python3 tests/test_phase_hook.py PhaseHookTest.test_hook_registered && python3 tests/test_model_hook.py ModelHookTest.test_hook_registered`.
+- [x] T001 In `tests/test_phase_hook.py`, change `test_hook_registered` (line 266): exactly one PreToolUse entry has matcher `Skill|Agent` and holds `CMD`; one PostToolUse entry has matcher `Bash|Write|Edit|MultiEdit|Agent` and holds `CMD`; a Stop entry holds `CMD`; the UserPromptSubmit check stays. Run it and see it fail. Test: `python3 tests/test_phase_hook.py PhaseHookTest.test_hook_registered`.
+- [x] T002 In `hooks/commands.json`, widen the PreToolUse `Skill` matcher to `Skill|Agent`, add a PostToolUse entry (matcher `Bash|Write|Edit|MultiEdit|Agent`) and a Stop entry, each `{ "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/st-phase.py\"", "timeout": 10 }`. Keep the separate `Agent` entry for `st-models.py` as is (contracts/hook.md "Wiring"). Test: `python3 tests/test_phase_hook.py PhaseHookTest.test_hook_registered && python3 tests/test_model_hook.py ModelHookTest.test_hook_registered`.
 
 **Checkpoint**: wiring in place. The hook still returns early on the new events.
 
