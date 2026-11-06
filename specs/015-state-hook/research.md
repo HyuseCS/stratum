@@ -99,3 +99,13 @@ Method: grep of assistant `text` blocks in `~/.claude/projects/*/*.jsonl` for `L
 ## R9. Writes happen only on change
 
 - Decision: each of the four writes compares first and writes only when the value differs. Stop runs every turn, and a rewrite of an unchanged `state.json` would show as a git change and bump the file time for nothing.
+
+## R10. Turn boundary by promptId
+
+Question: what happens when the current turn's prompt line is not in the transcript yet?
+
+Method: live headless probe (Claude Code 2.1.316, session `e519b62f-10e2-4e50-9b37-3b52a1c5cd3e`).
+
+- Every hook input has `prompt_id`. Every transcript `user` line (prompts and `tool_result` lines) has `promptId` with the same value for the same turn. Assistant lines have no `promptId`.
+- Without a guard, a lagging prompt line lets the backward read run into the previous turn and apply its markers again.
+- Decision: the reader also stops at a `user` line whose `promptId` differs from the input's `prompt_id`, when both are present. With either one missing, the real-prompt rule (R4) alone sets the boundary.

@@ -12,6 +12,36 @@ HOOK = os.path.join(ROOT, "hooks", "st-phase.py")
 CMD = 'python3 "${CLAUDE_PLUGIN_ROOT}/hooks/st-phase.py"'
 
 
+def prompt_line(text, pid="p1"):
+    return {"type": "user", "promptId": pid, "message": {"role": "user", "content": text}}
+
+
+def result_line(text, pid="p1"):
+    return {"type": "user", "promptId": pid, "message": {"role": "user",
+            "content": [{"type": "tool_result", "tool_use_id": "t1", "content": text}]}}
+
+
+def meta_line(text, pid="p1"):
+    return {"type": "user", "promptId": pid, "isMeta": True,
+            "message": {"role": "user", "content": [{"type": "text", "text": text}]}}
+
+
+def reply_line(text):
+    return {"type": "assistant", "message": {"role": "assistant", "content": [{"type": "text", "text": text}]}}
+
+
+def sidechain_line(text):
+    return {**reply_line(text), "isSidechain": True}
+
+
+def blob_line(text):
+    return {"type": "api-request-blob", "message": {"content": [{"type": "text", "text": text}]}}
+
+
+def state_path(folder):
+    return os.path.join(folder, ".stratum", "state.json")
+
+
 class PhaseHookTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -37,7 +67,8 @@ class PhaseHookTest(unittest.TestCase):
     def run_hook(self, payload, cwd=None):
         if isinstance(payload, dict):
             payload = json.dumps({"cwd": cwd or self.proj, **payload})
-        r = subprocess.run([sys.executable, HOOK], input=payload, capture_output=True, text=True)
+        r = subprocess.run([sys.executable, HOOK], input=payload, capture_output=True, text=True,
+                           env={**os.environ, "GIT_CEILING_DIRECTORIES": os.path.dirname(self.proj)})
         self.assertEqual(r.returncode, 0, r.stderr)
         return r.stdout
 
@@ -54,6 +85,57 @@ class PhaseHookTest(unittest.TestCase):
         self.assertNotIn("permissionDecision", out)
         self.assertEqual(len(out["additionalContext"].splitlines()), 1)
         return out["additionalContext"]
+
+    def send(self, event, cwd=None, **fields):
+        return self.run_hook({"hook_event_name": event, "session_id": "s1", "prompt_id": "p1",
+                              **{k: v for k, v in fields.items() if v is not None}}, cwd)
+
+    def pre_skill(self, name, transcript=None, cwd=None):
+        return self.send("PreToolUse", cwd, tool_name="Skill", tool_input={"skill": name},
+                         transcript_path=transcript)
+
+    def pre_agent(self, transcript=None, cwd=None, agent_id=None):
+        return self.send("PreToolUse", cwd, tool_name="Agent", tool_input={"prompt": "p"},
+                         transcript_path=transcript, agent_id=agent_id)
+
+    def post_tool(self, tool, transcript=None, cwd=None, agent_id=None):
+        return self.send("PostToolUse", cwd, tool_name=tool, tool_input={"prompt": "p"},
+                         transcript_path=transcript, agent_id=agent_id)
+
+    def stop_event(self, transcript=None, cwd=None, last=None, agent_id=None):
+        return self.send("Stop", cwd, transcript_path=transcript, last_assistant_message=last, agent_id=agent_id)
+
+    def transcript(self, *lines):
+        path = os.path.join(self.proj, "transcript.jsonl")
+        with open(path, "w") as f:
+            f.writelines(json.dumps(line) + "\n" for line in lines)
+        return path
+
+    def put(self, path, **state):
+        with open(path, "w") as f:
+            json.dump(state, f, indent=2)
+
+    def read_text(self, path):
+        with open(path) as f:
+            return f.read()
+
+    def reset(self, risk="normal"):
+        self.write_state(feature_directory="specs/001-x", phase="build", lane="full", risk=risk)
+        return self.raw()
+
+    def make_worktree(self):
+        main = os.path.join(self.proj, "main")
+        linked = os.path.join(self.proj, "linked")
+        env = {**os.environ, "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
+        os.makedirs(main)
+        for args in (["init", "-q"],
+                     ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "x"],
+                     ["worktree", "add", "-q", "--detach", linked]):
+            subprocess.run(["git", "-C", main, *args], check=True, capture_output=True, env=env)
+        for folder in (main, linked):
+            os.makedirs(os.path.join(folder, ".stratum"))
+            self.put(state_path(folder), feature_directory="specs/001-x", phase="build", lane="full", risk="normal")
+        return main, linked
 
     def test_prompt_sets_phase_keeps_keys(self):
         self.write_state(feature_directory="specs/001-x", phase="define", lane="full")
@@ -274,6 +356,160 @@ class PhaseHookTest(unittest.TestCase):
         self.assertIn(CMD, [h["command"] for h in post[0]["hooks"]])
         self.assertIn(CMD, [h["command"] for e in hooks.get("Stop", []) for h in e["hooks"]])
         self.assertIn(CMD, [h["command"] for e in hooks["UserPromptSubmit"] for h in e["hooks"]])
+
+    def test_risk_from_reply(self):
+        line = reply_line("[Orchestrator]\n\nLane: full, risk high (data model: x). Say so.")
+        for name, fire in (
+            ("PreToolUse Skill", lambda t: self.pre_skill("stratum:st-status", t)),
+            ("PreToolUse Agent", lambda t: self.pre_agent(t)),
+            ("PostToolUse Agent", lambda t: self.post_tool("Agent", t)),
+            ("Stop", lambda t: self.stop_event(t)),
+        ):
+            with self.subTest(name):
+                self.reset()
+                self.assertEqual(fire(self.transcript(prompt_line("go"), line)), "")
+                self.assertEqual(self.read_state().get("risk"), "high")
+                self.assertEqual(os.listdir(os.path.dirname(self.state)), ["state.json"])
+        with self.subTest("two Lane lines, last wins"):
+            self.reset()
+            self.stop_event(self.transcript(prompt_line("go"), reply_line("Lane: full, risk high (a)"),
+                                            reply_line("Lane: full, risk low (b)")))
+            self.assertEqual(self.read_state().get("risk"), "low")
+        with self.subTest("lane word and level in any case"):
+            self.reset()
+            self.stop_event(self.transcript(prompt_line("go"), reply_line("Lane: Fast, risk Low (quick)")))
+            self.assertEqual(self.read_state().get("risk"), "low")
+        for level in ("high", "normal", "low", "none"):
+            with self.subTest(level):
+                self.reset("high" if level == "normal" else "normal")
+                self.stop_event(self.transcript(prompt_line("go"), reply_line(f"Lane: full, risk {level} (x)")))
+                self.assertEqual(self.read_state().get("risk"), level)
+
+    def test_risk_reads_past_one_block(self):
+        big = result_line("x" * (70 * 1024))
+        with self.subTest("reply line before more than 64 KiB of tool results"):
+            self.reset()
+            self.stop_event(self.transcript(prompt_line("go"), reply_line("Lane: full, risk high (x)"), big))
+            self.assertEqual(self.read_state().get("risk"), "high")
+        with self.subTest("prompt before more than 64 KiB of tool results stops the read"):
+            before = self.reset("high")
+            self.stop_event(self.transcript(prompt_line("first"), reply_line("Lane: full, risk low (x)"),
+                                            prompt_line("second"), big))
+            self.assertEqual(self.raw(), before)
+
+    def test_risk_ignores_out_of_turn(self):
+        with self.subTest("control: line in this turn sets risk"):
+            self.reset()
+            self.stop_event(self.transcript(prompt_line("go"), reply_line("Lane: full, risk high (x)")))
+            self.assertEqual(self.read_state().get("risk"), "high")
+        with self.subTest("line in an earlier turn, risk high prompt, reply ok"):
+            before = self.reset("high")
+            self.stop_event(self.transcript(prompt_line("first"), reply_line("Lane: full, risk low (x)"),
+                                            prompt_line("risk high"), reply_line("ok")))
+            self.assertEqual(self.raw(), before)
+        rows = {
+            "tool result": [prompt_line("go"), result_line("Lane: full, risk high (x)"), reply_line("ok")],
+            "meta line": [prompt_line("go"), meta_line("Lane: full, risk high (x)"), reply_line("ok")],
+            "sidechain reply": [prompt_line("go"), sidechain_line("Lane: full, risk high (x)"), reply_line("ok")],
+            "api-request-blob": [prompt_line("go"), blob_line("Lane: full, risk high (x)"), reply_line("ok")],
+            "inside a sentence": [prompt_line("go"), reply_line("I said Lane: full, risk high (x)")],
+            "risk extreme": [prompt_line("go"), reply_line("Lane: full, risk extreme (x)")],
+        }
+        for name, lines in rows.items():
+            with self.subTest(name):
+                before = self.reset()
+                self.stop_event(self.transcript(*lines))
+                self.assertEqual(self.raw(), before)
+        t = self.transcript(prompt_line("go"), reply_line("Lane: full, risk high (x)"))
+        for name, fire in (
+            ("PreToolUse Agent", lambda: self.pre_agent(t, agent_id="a1")),
+            ("PostToolUse Agent", lambda: self.post_tool("Agent", t, agent_id="a1")),
+            ("Stop", lambda: self.stop_event(t, agent_id="a1")),
+        ):
+            with self.subTest(name + " with agent_id"):
+                before = self.reset()
+                fire()
+                self.assertEqual(self.raw(), before)
+        with self.subTest("no transcript_path"):
+            before = self.reset()
+            self.stop_event()
+            self.assertEqual(self.raw(), before)
+        with self.subTest("missing file"):
+            before = self.reset()
+            self.stop_event(os.path.join(self.proj, "missing.jsonl"))
+            self.assertEqual(self.raw(), before)
+        with self.subTest("bad JSON line that carries the marker"):
+            before = self.reset()
+            path = os.path.join(self.proj, "bad.jsonl")
+            with open(path, "w") as f:
+                f.write(json.dumps(reply_line("Lane: full, risk high (x)"))[:-1] + "\n")
+            self.stop_event(path)
+            self.assertEqual(self.raw(), before)
+
+    def test_risk_at_stop_from_last_message(self):
+        t = self.transcript(prompt_line("go"), reply_line("ok"))
+        with self.subTest("last message has the line"):
+            self.reset()
+            self.stop_event(t, last="Lane: full, risk high (x)")
+            self.assertEqual(self.read_state().get("risk"), "high")
+        with self.subTest("last message without the line"):
+            before = self.reset()
+            self.stop_event(t, last="ok")
+            self.assertEqual(self.raw(), before)
+
+    def test_risk_goes_to_main_checkout(self):
+        main, linked = self.make_worktree()
+        main_state, linked_state = state_path(main), state_path(linked)
+        t = self.transcript(prompt_line("go"), reply_line("Lane: full, risk high (x)"))
+        with self.subTest("main file gets risk, worktree file untouched"):
+            linked_before = self.read_text(linked_state)
+            self.stop_event(t, cwd=linked)
+            self.assertEqual(json.loads(self.read_text(main_state)).get("risk"), "high")
+            self.assertEqual(self.read_text(linked_state), linked_before)
+        with self.subTest("main file missing: nothing created"):
+            os.remove(main_state)
+            linked_before = self.read_text(linked_state)
+            self.stop_event(t, cwd=linked)
+            self.assertFalse(os.path.exists(main_state))
+            self.assertEqual(self.read_text(linked_state), linked_before)
+        with self.subTest("main file bad: nothing changed"):
+            with open(main_state, "w") as f:
+                f.write("{bad")
+            linked_before = self.read_text(linked_state)
+            self.stop_event(t, cwd=linked)
+            self.assertEqual(self.read_text(main_state), "{bad")
+            self.assertEqual(self.read_text(linked_state), linked_before)
+
+    def test_turn_stops_at_other_prompt_id(self):
+        old_turn = [prompt_line("go", "p0"), reply_line("Lane: full, risk low (x)"), result_line("r", "p0")]
+        for name, event, tool in (("Stop", "Stop", None), ("PreToolUse Agent", "PreToolUse", "Agent")):
+            with self.subTest(name + ": new prompt line not written yet"):
+                before = self.reset()
+                self.send(event, tool_name=tool, transcript_path=self.transcript(*old_turn))
+                self.assertEqual(self.raw(), before)
+            with self.subTest(name + ": reply after a tool result of this prompt"):
+                self.reset()
+                self.send(event, tool_name=tool, transcript_path=self.transcript(
+                    *old_turn, result_line("r", "p1"), reply_line("Lane: full, risk high (x)")))
+                self.assertEqual(self.read_state().get("risk"), "high")
+
+    def test_lane_marker_forms(self):
+        for line in ("[Orchestrator] Lane: full, risk high (data model: x)",
+                     "- Lane: full, risk high (data model: x)",
+                     "[Orchestrator] - Lane: full, risk high (x)",
+                     "**Lane: full, risk high (x)**",
+                     "`Lane: full, risk high (x)`"):
+            with self.subTest(line):
+                self.reset()
+                self.stop_event(self.transcript(prompt_line("go"), reply_line(line)))
+                self.assertEqual(self.read_state().get("risk"), "high")
+        for line in ("I said Lane: full, risk low (x)",
+                     "[Orchestrator] Lane: full, risk extreme",
+                     "-- Lane: full, risk low (x)"):
+            with self.subTest(line):
+                before = self.reset()
+                self.stop_event(self.transcript(prompt_line("go"), reply_line(line)))
+                self.assertEqual(self.raw(), before)
 
 
 if __name__ == "__main__":
