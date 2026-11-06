@@ -68,7 +68,7 @@ class PhaseHookTest(unittest.TestCase):
     def run_hook(self, payload, cwd=None):
         if isinstance(payload, dict):
             payload = json.dumps({"cwd": cwd or self.proj, **payload})
-        r = subprocess.run([sys.executable, HOOK], input=payload, capture_output=True, text=True,
+        r = subprocess.run([sys.executable, HOOK], input=payload, capture_output=True, text=True, timeout=10,
                            env={**os.environ, "GIT_CEILING_DIRECTORIES": os.path.dirname(self.proj)})
         self.assertEqual(r.returncode, 0, r.stderr)
         return r.stdout
@@ -488,6 +488,31 @@ class PhaseHookTest(unittest.TestCase):
             self.stop_event(t, cwd=linked)
             self.assertEqual(self.read_text(main_state), "{bad")
             self.assertEqual(self.read_text(linked_state), linked_before)
+
+    def test_risk_reads_past_meta_line(self):
+        t = self.transcript(prompt_line("go"), reply_line("Lane: full, risk high (x)"), meta_line("skill text"),
+                            reply_line("ok"))
+        for name, fire in (("PreToolUse Agent", lambda: self.pre_agent(t)), ("Stop", lambda: self.stop_event(t))):
+            with self.subTest(name):
+                self.reset()
+                fire()
+                self.assertEqual(self.read_state().get("risk"), "high")
+
+    def test_risk_to_main_when_worktree_has_no_state(self):
+        main, linked = self.make_worktree()
+        os.remove(state_path(linked))
+        self.stop_event(self.transcript(prompt_line("go"), reply_line("Lane: full, risk high (x)")), cwd=linked)
+        self.assertEqual(json.loads(self.read_text(state_path(main))).get("risk"), "high")
+        self.assertEqual(os.listdir(os.path.join(linked, ".stratum")), [])
+
+    def test_plain_repo_without_state_reads_nothing(self):
+        plain = os.path.join(self.proj, "plain")
+        os.makedirs(os.path.join(plain, ".git"))
+        fifo = os.path.join(self.proj, "fifo")
+        os.mkfifo(fifo)
+        self.assertEqual(self.stop_event(fifo, cwd=plain, last="Lane: full, risk high (x)"), "")
+        self.assertEqual(os.listdir(plain), [".git"])
+        self.assertEqual(os.listdir(os.path.join(self.proj, ".stratum")), [])
 
     def test_turn_stops_at_other_prompt_id(self):
         old_turn = [prompt_line("go", "p0"), reply_line("Lane: full, risk low (x)"), result_line("r", "p0")]

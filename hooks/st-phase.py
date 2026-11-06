@@ -93,7 +93,9 @@ def main():
         old = state.get("phase")
         loaded = dict(state)
     except Exception:
-        return
+        if not os.path.isdir(os.path.join(d, ".stratum")) and not os.path.isfile(os.path.join(d, ".git")):
+            return
+        state = None
     text = ""
     if not data.get("agent_id") and (event == "Stop" or tool == "Agent" or (tool == "Skill" and event == "PreToolUse")):
         text = turn_text(data.get("transcript_path"), data.get("prompt_id"))
@@ -110,7 +112,7 @@ def main():
                 top = os.path.join(os.path.dirname(r.stdout.strip()), ".stratum", "state.json")
         except Exception:
             pass
-        if os.path.realpath(top) == os.path.realpath(path):
+        if state is not None and os.path.realpath(top) == os.path.realpath(path):
             state["risk"] = risk
         else:
             try:
@@ -121,6 +123,8 @@ def main():
             if stale:
                 other["risk"] = risk
                 save(top, other)
+    if state is None:
+        return
     if DONE.search(text):
         state["phase"] = "done"
     if CLEAR.search(text):
