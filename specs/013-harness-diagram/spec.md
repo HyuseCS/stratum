@@ -120,7 +120,11 @@ Remove the folder. The test passes.
 The developer opens a system atlas of the same harness: an interactive isometric page that shows
 the harness a few structures at a time, chapter by chapter, with a generated text twin
 (`SYSTEM.md`). The developer compares it with the LikeC4 views to see which form helps more to
-improve the workflows (D14). The atlas is a trial: one data file, no drift test (D15).
+improve the workflows (D14). After the comparison the user found the atlas nicer and simpler to
+look at (D19). So both stay, with clear roles: the atlas is the picture for people, and the main
+`README.md` points to it first, opened locally from `docs/harness/atlas/atlas.html`. The LikeC4
+model stays the detailed, checked source for the LLM. The atlas gets a drift check: every LikeC4 id
+it names exists in the model, and every harness file id sits in exactly one atlas structure.
 
 **Why this priority**: The LikeC4 views (US1 to US4) are the deliverable. The atlas is a second
 form to compare, so it comes last.
@@ -145,6 +149,13 @@ the last chapter. Open the questions tab and find the 13 gaps of `gaps.md`.
    **When** the developer runs the build line of FR-015, **Then** it runs with no error and writes
    `atlas.html` and `SYSTEM.md` into `docs/harness/atlas/`. `SYSTEM.md` has the decisions table, the question index and the "how this file is
    maintained" footer.
+6. **Given** the main `README.md`, **When** the developer reads its Harness diagram section,
+   **Then** it shows the atlas first (what it is, how to open it locally, how to rebuild it and
+   that the rebuild needs the system-atlas skill), then the LikeC4 views as the detailed model for
+   the LLM (D19).
+7. **Given** an atlas structure that names a LikeC4 id the model does not have, or a harness file
+   (skill, agent, hook, statusline file, script or procedure) that no atlas structure or two
+   structures name, **When** the test runs, **Then** the `atlas` check fails and names it.
 
 ### Edge Cases
 
@@ -226,7 +237,17 @@ the last chapter. Open the questions tab and find the 13 gaps of `gaps.md`.
   (`META.artifactUrl` is empty): it lives in the session handoff and project memory (D18). The
   page MUST also open from a static server (`python3 -m http.server`).
 - **FR-021**: The atlas MUST NOT break the existing tests. The `nomcp` check allows exactly the 3
-  atlas files. The atlas gets no drift test while it is a trial (D15).
+  atlas files.
+- **FR-022**: `tests/test_harness_model.sh` MUST have an `atlas` check (D19, replacing the "no drift
+  test" of D15): every LikeC4 element id and view id that a structure's `how` names in its
+  "LikeC4 id(s):" or "LikeC4 views:" list exists in the model, and every skill, agent, hook,
+  statusline, script and procedure file of the repo is named in exactly one structure. It prints
+  SKIP when `node` is missing.
+- **FR-023**: The Harness diagram section of the main `README.md` MUST point to the atlas first:
+  what it is, how to open it locally (`xdg-open docs/harness/atlas/atlas.html` or a static server),
+  how to rebuild it with the build line of FR-015, and that the rebuild needs the system-atlas
+  skill. Then it MUST point to the LikeC4 views as the detailed model for the LLM (D19). FR-010
+  still holds for the LikeC4 part.
 
 ### Key Entities
 
@@ -254,7 +275,8 @@ the last chapter. Open the questions tab and find the 13 gaps of `gaps.md`.
 - **SC-005**: A skill added with no model change makes the test fail on its first run.
 - **SC-006**: All 15 views draw on GitHub with no error.
 - **SC-007**: The developer compares the atlas and the LikeC4 views on the same question (for
-  example "where does the Full lane ask me first?") and says which form helps more.
+  example "where does the Full lane ask me first?") and says which form helps more. Result
+  (T032, 2026-11-06): the user prefers the atlas to look at, "nicer and simpler" (D19).
 
 ## Assumptions
 
@@ -270,7 +292,7 @@ the last chapter. Open the questions tab and find the 13 gaps of `gaps.md`.
 - The project has no constitution.
 - #51 will change the lanes later. This feature draws the lanes as they are now.
 - The atlas has no ADRs and no `CONTEXT.md`: `decisions.md` is the decision record, and a
-  glossary is not needed for a trial (YAGNI).
+  glossary is not needed for the atlas (YAGNI).
 - The atlas page loads the IBM Plex Mono font from Google Fonts when it opens.
 - Rebuilding the atlas needs the system-atlas skill installed at `~/.claude/skills/system-atlas`
   on that machine (the user's PC and laptop). Reading the atlas does not: the 3 committed files

@@ -283,7 +283,7 @@ source file names it.
 - Summaries (FR-003), links (FR-004), vendored tags (FR-008), kinds (FR-007), lane steps and gates
   (FR-005), views and page (FR-006, FR-009).
 
-## Atlas (US5, D14 to D18)
+## Atlas (US5, D14 to D19)
 
 The repo holds 3 atlas files in `docs/harness/atlas/`: `data.mjs` (edited) and the built
 `atlas.html` and `SYSTEM.md`. The skill's `build.mjs` and `template.html` are not committed (D17).
@@ -306,15 +306,26 @@ project memory).
 | `kind` | `box`, `tall`, `store`, `cards`, `slab`, `screen`, `gate` or `job` (design-language "Shapes by role"). |
 | `one` | One sentence. |
 | `what` | For a reader who does not know the code. |
-| `how` | Names files with `<code>`, and ends with the LikeC4 element ids the structure stands for, for example `<code>skills.st-plan</code>`. |
+| `how` | Names files with `<code>`, and ends with the LikeC4 ids the structure stands for: a `LikeC4 id:` or `LikeC4 ids:` list of element ids, or (for a structure that is not files, like G) a `LikeC4 views:` list of view ids. Each item is `<code><id></code>`, for example `<code>skills.st-plan</code>`. Every structure has at least one of the two lists. |
 | `steps` | Optional `[[name, desc], ...]` for the "go inside" view. |
 | `cond` | Questions: the gaps of `gaps.md` (D16) as plain strings (open). No other questions now. |
 | `gx`, `gy`, `w`, `d`, `h` | Layout on the grid. No two footprints overlap. |
 
 Every skill, agent, hook, script, statusline and procedure element of the LikeC4 model is named in
-the `how` of exactly one structure, written in full as `<code><id></code>` (no `*` shorthand;
-quickstart.md section 9 step 3 checks it). Data files are named where they belong (`.stratum` files in
-S, M or N, feature files in F). This is the link between the two forms.
+the `how` of exactly one structure, written in full as `<code><id></code>` (no `*` shorthand).
+Data files are named where they belong (`.stratum` files in S, M or N, feature files in F). This
+is the link between the two forms.
+
+Atlas check (D19, FR-022, the `atlas` check of test-contract.md):
+
+- Every `<code>` item in a `LikeC4 id(s):` list is an element id declared in `model/*.c4`, and
+  every `<code>` item in a `LikeC4 views:` list is a view id declared in `views/*.c4`.
+- Every harness file id is in the `how` of exactly one structure (as `<code><id></code>`
+  anywhere in `how`). Harness file ids come from the repo files by the id rule above:
+  `skills/*/`, `agents/*.md`, every file under `hooks/` (not `__pycache__`, not `*.pyc`), every
+  file under `statusline/`, `scripts/*.sh`, `procedures/*.md` (99 today). Reading the repo, not
+  the model, makes a new skill folder fail this check too, not only `coverage`.
+- Every structure has a `LikeC4 id(s):` or `LikeC4 views:` list.
 
 ### Chapters and structures
 
@@ -362,5 +373,5 @@ Each question keeps the `file:line` cites of its gap. Ids follow from order on t
 
 ### Decisions
 
-`DECISIONS` has one row per decision of `decisions.md` (D1 to D18 now): `axis` = the question in
+`DECISIONS` has one row per decision of `decisions.md` (D1 to D19 now): `axis` = the question in
 a few words, `decision` = the chosen option in one line, `adr` = `decisions.md Dn` (no ADRs).

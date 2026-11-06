@@ -5,9 +5,10 @@
 **Input**: Feature specification from `specs/013-harness-diagram/spec.md`, decisions D1 to D18 in
 [decisions.md](decisions.md).
 
-**Status**: Phase 0 and Phase 1 done. Plan decisions D8 to D18 are in decisions.md. D13 (split
+**Status**: Phase 0 and Phase 1 done. Plan decisions D8 to D19 are in decisions.md. D13 (split
 the Full and Design lane views with click-through) came after Build and adds T024 to T028. D14 to
-D18 (the system atlas, US5) add T029 to T032. No open decisions.
+D18 (the system atlas, US5) add T029 to T032. D19 (keep both, atlas first in the README, atlas
+drift check) adds T033 to T035. No open decisions.
 
 ## Summary
 
@@ -164,6 +165,10 @@ Decisions taken in this plan:
 - D17: the skill's `build.mjs` and `template.html` are not committed (no license, public repo).
   The build runs them from the installed skill in a temp folder. D18: the atlas URL stays out of
   the repo (`artifactUrl: ''`), in the handoff and project memory.
+- D19: after T032 the user prefers the atlas to look at. Both stay: the atlas is the picture for
+  people and comes first in the main README, the LikeC4 model is the detailed source for the LLM.
+  The atlas gets a drift check (FR-022). spec.md has US5 scenarios 6 and 7, FR-022, FR-023 and the
+  SC-007 result.
 
 Small calls made here (no user decision needed):
 
@@ -192,16 +197,24 @@ Small calls made here (no user decision needed):
   the 3 atlas files (FR-021). The atlas folder has no `.c4` file, so `likec4 validate` and
   `export markdown` ignore it, and the `rebuild` check still diffs only `docs/harness/README.md`.
 - **No ADRs and no `CONTEXT.md`.** The skill pairs the atlas with a glossary and ADRs.
-  `decisions.md` is already the decision record (D1 to D18), and a trial needs no glossary
+  `decisions.md` is already the decision record (D1 to D19), and the atlas needs no glossary
   (YAGNI). `DECISIONS` in `data.mjs` cites `decisions.md Dn` in the ADR column. No atlas
   `README.md` either: `SYSTEM.md` has the maintenance footer, and `docs/harness/README.md` is the
   generated LikeC4 page.
-- **No drift test** (D15). Acceptance is the build, a script syntax check, two one-time `node`
-  checks in quickstart.md section 9 (chapter rule, fields, 13 questions, every LikeC4 skill, agent,
-  hook, statusline, script and procedure id in exactly one structure), and the checks by hand.
+- **Drift check** (D19 replaces the "no drift test" of D15). The `atlas` check in
+  `tests/test_harness_model.sh` (FR-022, test-contract.md) reads `data.mjs` with `node` and fails
+  when a structure names a LikeC4 element or view id the model does not have, or a harness file
+  (skill, agent, hook, statusline file, script, procedure) is in no structure or in two. It
+  prints SKIP when `node` is missing, as `validate` does for `npx`. It does not rebuild the atlas,
+  because the build needs the unlicensed skill (D17). The one-time checks of quickstart.md section 9
+  (chapter rule, fields, 13 questions) stay as checks by hand.
 - **Questions** (D16): the 13 gaps of `gaps.md` go in `cond` of the structure each touches
   (data-model.md "Gap questions"). The LikeC4 model does not change.
-- **Main `README.md`** does not change: the atlas is a trial at a private URL.
+- **Main `README.md`** (D19, FR-023): the Harness diagram section points to the atlas first, opened
+  locally from `docs/harness/atlas/atlas.html`, with the build line and the skill it needs. Then
+  it points to the LikeC4 page as the detailed, checked model for the LLM (650 links, drift test,
+  MCP). The `readme` check gets the atlas lines. The private claude.ai URL stays out of the README
+  (D18).
 - **Security.** The atlas page loads IBM Plex Mono from Google Fonts when it opens (the font
   request reaches Google). The artifact is private on claude.ai, and the orchestrator publishes it
   (FR-020). Its URL stays out of the public repo: `META.artifactUrl` is `''`, and the URL lives in
@@ -220,7 +233,12 @@ use the checks that read one file at a time (`summaries`, `links`, `missing`, `v
 
 US5 work (T029 to T032): T029 (the `nomcp` allow list, test first), then T030 writes `data.mjs`
 and builds with the D17 build line. T031 is the orchestrator's publish step, not a subagent's.
-T032 is the check by hand with the user.
+T032 is the check by hand with the user. D19 work: T033 (test first: the `atlas` check, red by a
+control in a temp copy, green on the repo). Then at the same time: T034 (test first: the atlas
+lines of the `readme` check, then the README section, atlas first; owns `README.md` and the test)
+and T035 (the D19 row in `data.mjs`, rebuild, the orchestrator republishes; owns the 3 atlas
+files). T035 is not in the D19 request but follows from it: the atlas's decisions table would
+otherwise still say "no drift test while it is a trial".
 
 D13 work (T024 to T028): the test changes first and fails on the unsplit files. Then the Full
 split (T025, owns `views/1-full.c4`, test `views-full`) and the Design split (T026, owns

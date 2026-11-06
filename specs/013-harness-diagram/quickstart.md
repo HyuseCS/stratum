@@ -163,11 +163,19 @@ console.log(bad.length ? bad.map(([i, c]) => `${i} is in ${c} structures, expect
 process.exit(bad.length ? 1 : 0);'
 ```
 
-Expected: `all 99 ids in exactly one structure`.
+Expected: `all 99 ids in exactly one structure`. Since D19 the `atlas` check of the test does this
+and also checks that every named LikeC4 id exists in the model:
+
+```bash
+bash tests/test_harness_model.sh atlas
+```
+
+Expected: `ok   atlas: ...`. With no `node` on PATH: `SKIP atlas: node not found`.
 
 4. Open it from a static server (the user, or the orchestrator with a browser):
    `python3 -m http.server 8765 -d docs/harness/atlas`, then open
-   `http://localhost:8765/atlas.html` at about 1280×800. Not from `file://`. Expected: chapter 1
+   `http://localhost:8765/atlas.html` at about 1280×800. Use the server for this check: some
+   in-app browsers show a `file://` page as a still picture. Expected: chapter 1
    shows 2 structures and one moving flow, `Next ▸` adds at most 3 structures per chapter, chapter
    10 shows all with a flow picker (Full, Fast, Quick, Design lanes, a commit, All flows). The
    Open questions tab lists 13 ids `Q-<code><n>`, and no question is drawn on the map. Check the
@@ -176,4 +184,11 @@ Expected: `all 99 ids in exactly one structure`.
    project memory, not in the repo, D18). Expected: the same atlas.
 6. Compare (SC-007), check by hand: answer "where does the Full lane ask me first?" and "which
    parts write `.stratum/state.json`?" once with the atlas and once with the LikeC4 views
-   (`docs/harness/README.md`, VS Code preview). Say which form helped more and why.
+   (`docs/harness/README.md`, VS Code preview). Say which form helped more and why. Done in T032:
+   the user prefers the atlas to look at (D19).
+7. README first (D19, FR-023): open `README.md`. Expected: the Harness diagram section names the
+   atlas first, with `xdg-open docs/harness/atlas/atlas.html`, the build line and the system-atlas
+   skill it needs, then the LikeC4 page. Run `xdg-open docs/harness/atlas/atlas.html` in a normal
+   desktop browser. Expected: the atlas opens and runs (the font loads from Google Fonts). Then
+   `bash tests/test_harness_model.sh readme atlas nomcp && bash tests/test_inspect.sh`. Expected:
+   all `ok`.
