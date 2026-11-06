@@ -291,7 +291,9 @@ case "$1 $2" in
       echo "ST-ADVISOR-END-$nonce"
     else
       r=$(( $(cat "$d/hread.n" 2>/dev/null || echo 0) + 1 )); echo "$r" > "$d/hread.n"
-      if [ -e "$d/hscreen2" ] && [ "$r" -ge 2 ]; then
+      if [ -e "$d/hfixture" ]; then
+        cat "$d/hfixture"
+      elif [ -e "$d/hscreen2" ] && [ "$r" -ge 2 ]; then
         printf 'Do you want to run this command?\n> 1. Yes, proceed\n  2. No, and rm -rf x\n'
       else
         printf 'Do you want to run this command?\n> 1. Yes, proceed\n  2. No, tell Codex what to do differently\n'
@@ -421,6 +423,30 @@ wrun 20
 unmark
 exp=$(printf 'codex tab waits: st-codex-demo %s\n%s\ncodex tab waits: end' "$sh1" "$scr1")
 check "(M13) watch, live marker, tab blocked: the screen once between the waits lines, the header names the screen hash, exit 0 after the marker goes" '[ $rc = 0 ] && [ "$out" = "$exp" ]'
+scr20=$(cat <<'SCREEN'
+• Ran git ls-remote origin
+└ fatal: unable to access 'https://github.com/HyuseCS/stratum.git/': Could not resolve host: github.com
+• Running git ls-remote origin
+Would you like to run the following command?
+Environment: local
+Reason: May I run the plan’s required read-only remote-branch query with network access?
+$ git ls-remote origin
+› 1. Yes, proceed (y)
+2. Yes, and don't ask again for commands that start with `git ls-remote origin` (p)
+3. No, and tell Codex what to do differently (esc)
+Press enter to confirm or esc to cancel
+SCREEN
+)
+printf '%s\n' "$scr20" > "$tmp/hfixture"
+sh20=$(sha256sum <<<"$scr20" | cut -c1-12)
+printf blocked > "$tmp/hstatus"
+mark
+wrun 20
+unmark
+rm -f "$tmp/hfixture"
+exp=$(printf 'codex tab waits: st-codex-demo %s\n%s\ncodex tab waits: end' "$sh20" "$scr20")
+check "(M20) watch, live marker, tab blocked, the saved real screen: the screen between the waits lines, exit 0 after the marker goes" '[ $rc = 0 ] && [ "$out" = "$exp" ]'
+check "(M20) watch: the header hash is the first 12 hex of sha256 of the printed screen" '[ "$(head -n1 <<<"$out")" = "codex tab waits: st-codex-demo $sh20" ]'
 touch "$tmp/hscreen2"
 mark
 wrun 20
