@@ -4,12 +4,14 @@ root="${ST_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
 tmp=$(mktemp -d) || exit 1
 trap 'rm -rf "$tmp"' EXIT
 fail=0
+left=0
 check() { if eval "$2"; then echo "ok   $1"; else echo "FAIL $1"; fail=1; fi; }
 export GIT_CONFIG_GLOBAL=/dev/null XDG_CONFIG_HOME="$tmp" XDG_STATE_HOME="$tmp/state"
 
 export REAL_SLEEP
 REAL_SLEEP=$(command -v sleep)
 export S="$tmp/s"
+export ALLLOG="$tmp/alllog"
 mkdir -p "$tmp/bin"
 cat > "$tmp/bin/sleep" <<'FAKE'
 #!/bin/sh
@@ -17,8 +19,9 @@ exit 0
 FAKE
 cat > "$tmp/bin/herdr" <<'FAKE'
 #!/usr/bin/env bash
-{ printf '%s' "$1"; for a in "${@:2}"; do printf '\t%s' "$a"; done; echo; } >> "$S/log"
+{ printf '%s' "$1"; for a in "${@:2}"; do printf '\t%s' "$a"; done; echo; } | tee -a "$S/log" | tr '\t' ' ' >> "$ALLLOG"
 err() { printf '{"error":{"code":"%s","message":"%s"}}\n' "$1" "$2"; exit 1; }
+[ -e "$tabs/st-codex-t1.review" ] && touch "$S/marker_at_$2"
 case "$1 $2" in
   "agent list")
     printf '{"id":"x%s","result":{"agents":%s}}\n' "$RANDOM" "$(cat "$S/agents")" ;;
@@ -34,25 +37,34 @@ case "$1 $2" in
     n=$(cat "$S/startcount" 2>/dev/null || echo 0); n=$((n + 1)); echo "$n" > "$S/startcount"
     [ "$n" -le "$(cat "$S/start_busy" 2>/dev/null || echo 0)" ] && err agent_pane_busy "pane is busy"
     [ -f "$S/notready" ] && err agent_not_ready "agent did not become ready"
-    [ -f "$S/dup" ] && err agent_exists "name taken"
     pane=
     while [ $# -gt 0 ]; do [ "$1" = --pane ] && pane=$2; shift; done
     [ "$pane" = "$(cat "$S/pane" 2>/dev/null)" ] || err pane_not_found "no such pane"
     printf '{"id":"x%s","result":{"agent":{"name":"ok"}}}\n' "$RANDOM" ;;
+  "agent get")
+    [ -f "$S/gone" ] && err agent_not_found "no such agent"
+    [ "$3" = st-codex-t1 ] || err agent_not_found "no such agent"
+    printf '{"id":"x%s","result":{"agent":{"agent_status":"%s"}}}\n' "$RANDOM" "$(cat "$S/status" 2>/dev/null || echo idle)" ;;
+  "agent wait")
+    [ -f "$S/wait_gone" ] && { touch "$S/gone"; err agent_not_found "no such agent"; }
+    [ -f "$S/wait_hang" ] && { touch "$S/gone"; exec "$REAL_SLEEP" 10; }
+    printf '{"id":"x","result":{}}\n' ;;
   "agent read")
+    [ -f "$S/read_err" ] && err agent_read_failed "read failed"
     cat "$S/screen" ;;
   "agent send-keys")
-    [ -f "$S/screen_after" ] && cp "$S/screen_after" "$S/screen"
     printf '{"id":"x","result":{}}\n' ;;
   "agent prompt")
-    if [ -f "$S/replace_auth" ]; then rm -f "$(cat "$S/replace_auth")/auth.json"; echo x > "$(cat "$S/replace_auth")/auth.json"; fi
+    [ -f "$S/on_prompt" ] && (cd "$PROJ" && bash "$S/on_prompt")
+    [ -f "$tabs/st-codex-t1.review" ] && { cp "$tabs/st-codex-t1.review" "$S/marker_seen"; kill -0 "$(cat "$S/marker_seen")" 2>/dev/null && touch "$S/marker_live"; }
     if [ -f "$S/screen_prompt" ]; then
       nonce=$(grep -o 'ST-ADVISOR-BEGIN-[0-9a-f]\{12\}' "$PF" | tail -1 | sed 's/.*-//')
       sed "s/@N@/$nonce/g" "$S/screen_prompt" > "$S/screen"
     fi
-    [ -f "$S/prompt_timeout" ] && err timeout "timed out"
-    if [ -f "$S/prompt_blocked" ]; then st=blocked; else st=done; fi
-    printf '{"id":"x","result":{"state":"%s"}}\n' "$st" ;;
+    [ -f "$S/prompt_hang" ] && { touch "$S/gone"; exec "$REAL_SLEEP" 10; }
+    [ -f "$S/prompt_gone" ] && touch "$S/gone"
+    [ -f "$S/prompt_err" ] && err "$(cat "$S/prompt_err")" "prompt failed"
+    printf '{"id":"x","result":{"state":"done"}}\n' ;;
   *) err unknown "unknown command" ;;
 esac
 FAKE
@@ -61,141 +73,187 @@ export PATH="$tmp/bin:$PATH"
 export HERDR_ENV=1
 
 proj="$tmp/proj"
-mkdir -p "$proj/specs/010-demo" "$proj/specs/demo"
+tabs="$tmp/state/stratum/codex-tabs"
+export tabs
+mkdir -p "$proj"
 pp=$(cd "$proj" && pwd -P)
-home="$tmp/home"
 pf="$tmp/prompt.txt"
 af="$tmp/answer.json"
 export PF="$pf"
-printf '{}' > "$tmp/user-auth.json"
+export PROJ="$proj"
 
-fa=$'\033[1mFolder access\033[0m\n\nCodex can read files here.\n\n\033[36m› 1. Open restricted\033[0m\n  2. Back to Agent Command Center\n'
 chat='› Ask Codex to do anything'
 ans=$'• ST-ADVISOR-BEGIN-@N@\n• {"verdict":"APPROVED","summary":"fine","findings":[]}\n• ST-ADVISOR-END-@N@\n'
-feat=specs/010-demo
 
 new() {
   export HERDR_WORKSPACE_ID="ws$RANDOM$RANDOM"
-  rm -rf "$S" "$home" "$pf" "$af"
-  mkdir -p "$S" "$home"
+  rm -rf "$S" "$tabs" "$pf" "$af"
+  mkdir -p "$S"
   : > "$S/log"
-  ln -s "$tmp/user-auth.json" "$home/auth.json"
-  printf '[projects."%s"]\ntrust_level = "untrusted"\n' "$pp" > "$home/config.toml"
   printf '[]' > "$S/agents"
   printf '%s\n' "$chat" > "$S/screen"
   printf '%s' "$ans" > "$S/screen_prompt"
   printf 'REQUEST BODY\n' > "$pf"
-  feat=specs/010-demo
+  repo
 }
 go() {
-  out=$(cd "$proj" && bash "$root/scripts/st-codex-agent.sh" "$feat" "$pf" "$af" "$home" "$@" 2>&1)
+  out=$(cd "$proj" && bash "$root/scripts/st-codex-agent.sh" st-codex-t1 "$pf" "$af" "$tabs" "$@" 2>&1)
   rc=$?
   tr '\t' ' ' < "$S/log" > "$S/log.txt"
+  if [ -e "$tabs/st-codex-t1.review" ]; then left=1; fi
 }
 cnt() { grep -c -- "$1" "$S/log.txt"; }
-lineno() { grep -n -m1 -- "$1" "$S/log.txt" | cut -d: -f1; }
 outhas() { printf '%s\n' "$out" | grep -qF -- "$1"; }
+outline() { printf '%s\n' "$out" | grep -qxF -- "$1"; }
 agent_json() { printf '[{"name":"%s","workspace_id":"%s","tab_id":"%s:t3","pane_id":"p9","cwd":"%s"}]' "$1" "$2" "$2" "${3:-$pp}" > "$S/agents"; }
-closed() { [ "$(cnt "^tab close $(cat "$S/tab")\$")" = 1 ]; }
-own() { mkdir -p "$home/agents"; printf '%s\n' "$1" "$pp" "${@:2}" > "$home/agents/$HERDR_WORKSPACE_ID:t3"; }
-nofolder='ERROR: Codex stopped at start on a screen Stratum does not know, so the Codex tab is closed. Run the point again, or check Codex.'
+settings() { mkdir -p "$tabs" && printf '%s\n' "$HERDR_WORKSPACE_ID:t3" "$@" > "$tabs/st-codex-t1"; }
+repo() {
+  rm -rf "$proj"
+  mkdir -p "$proj/specs/010-demo"
+  git -C "$proj" init -q
+  printf 'old\n' > "$proj/a.txt"
+  git -C "$proj" add a.txt
+  git -C "$proj" -c user.name=t -c user.email=t@t commit -qm init
+}
+nested() {
+  git init -q "$proj/sub"
+  printf 'old\n' > "$proj/sub/a.txt"
+  git -C "$proj/sub" add a.txt
+  git -C "$proj/sub" -c user.name=t -c user.email=t@t commit -qm s
+  git -C "$proj" add --no-warn-embedded-repo sub
+  git -C "$proj" -c user.name=t -c user.email=t@t commit -qm sub
+  printf dirty > "$proj/sub/a.txt"
+}
 
-new; rm "$home/auth.json"; go
-check "a0 no auth link: error, exit 2, no herdr call" '[ $rc -eq 2 ] && outhas "ERROR: no Stratum Codex home" && [ ! -s "$S/log" ]'
-new; rm "$home/auth.json"; echo x > "$home/auth.json"; go
-check "a0 auth.json a regular file: exit 2, no herdr call" '[ $rc -eq 2 ] && outhas "ERROR: no Stratum Codex home" && [ ! -s "$S/log" ]'
-new; printf '[projects."/elsewhere"]\ntrust_level = "untrusted"\n' > "$home/config.toml"; go
-check "a0b no entry for this root: exit 2, no herdr call" '[ $rc -eq 2 ] && [ "$out" = "ERROR: no Stratum Codex home entry for $pp: run st-advisor.sh codex-home" ] && [ ! -s "$S/log" ]'
-new; printf '[projects."%s"]\n' "$pp" > "$home/config.toml"; go
-check "a0b entry without trust_level: exit 2, no herdr call" '[ $rc -eq 2 ] && [ "$out" = "ERROR: no Stratum Codex home entry for $pp: run st-advisor.sh codex-home" ] && [ ! -s "$S/log" ]'
-
-new; printf '%s' "$fa" > "$S/screen"; printf '%s\n' "$chat" > "$S/screen_after"
-go -m m1 -c 'model_reasoning_effort="high"'
+new; go -m m1 -c 'model_reasoning_effort="high"'
 pane=$(cat "$S/pane" 2>/dev/null)
-check "a rc 0 and answer written" '[ $rc -eq 0 ] && [ -s "$af" ]'
-check "a tab create line" '[ "$(cnt "^tab create --workspace $HERDR_WORKSPACE_ID --cwd $pp --label Codex --env CODEX_HOME=$home --no-focus\$")" = 1 ]'
-check "a agent start line with -m -c after --no-alt-screen" '[ "$(cnt "^agent start st-codex-010-demo --kind codex --pane $pane --timeout 120000 -- -s read-only -a never --no-alt-screen -m m1 -c model_reasoning_effort=\"high\"\$")" = 1 ]'
-check "a tab create comes before agent start" '[ "$(lineno "^tab create")" -lt "$(lineno "^agent start")" ]'
-rec="$home/agents/$(cat "$S/tab")"
-check "a ownership record: name, root, launch options, mode 600" '[ "$(cat "$rec")" = "$(printf "%s\n" st-codex-010-demo "$pp" -m m1 -c "model_reasoning_effort=\"high\"")" ] && [ "$(stat -c %a "$rec")" = 600 ]'
+check "C1 no tab: tab create without --env, agent start with -- --no-alt-screen and the options, exit 0" '[ $rc -eq 0 ] && [ "$(cnt "^tab create --workspace $HERDR_WORKSPACE_ID --cwd $pp --label Codex --no-focus\$")" = 1 ] && [ "$(cnt "^agent start st-codex-t1 --kind codex --pane $pane --timeout 120000 -- --no-alt-screen -m m1 -c model_reasoning_effort=\"high\"\$")" = 1 ]'
+check "C1 settings record: tab id and options, folder 700, file 600" '[ "$(cat "$tabs/st-codex-t1")" = "$(printf "%s\n" "$(cat "$S/tab")" -m m1 -c "model_reasoning_effort=\"high\"")" ] && [ "$(stat -c %a "$tabs")" = 700 ] && [ "$(stat -c %a "$tabs/st-codex-t1")" = 600 ]'
 
-new; agent_json st-codex-010-demo "$HERDR_WORKSPACE_ID"; own st-codex-010-demo; go
-check "b existing agent with a matching record reused: no tab create, no agent start" '[ $rc -eq 0 ] && [ "$(cnt "^tab create")" = 0 ] && [ "$(cnt "^agent start")" = 0 ] && [ "$(cnt "^agent prompt st-codex-010-demo")" = 1 ]'
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; go
+check "C2 tab idle, record matches: no create, start or close, one prompt, no settings line" '[ $rc -eq 0 ] && [ "$(cnt "^tab create")" = 0 ] && [ "$(cnt "^agent start")" = 0 ] && [ "$(cnt "^tab close")" = 0 ] && [ "$(cnt "^agent prompt st-codex-t1 ")" = 1 ] && ! outhas "codex: the Codex tab runs with"'
 
-new; agent_json st-codex-010-demo "$HERDR_WORKSPACE_ID"; go
-check "b1 same-name agent with no record is foreign: not reused, not closed, own tab started" '[ $rc -eq 0 ] && [ "$(cnt "^tab create")" = 1 ] && [ "$(cnt "^agent start st-codex-010-demo")" = 1 ] && [ "$(cnt "^tab close")" = 0 ]'
-new; agent_json st-codex-010-demo "$HERDR_WORKSPACE_ID"; own st-codex-010-demo -m m1; go -m m2
-check "b2 changed model: our old tab closed, new agent started with -m m2" '[ $rc -eq 0 ] && [ "$(cnt "^tab close $HERDR_WORKSPACE_ID:t3\$")" = 1 ] && [ "$(lineno "^tab close")" -lt "$(lineno "^tab create")" ] && [ "$(cnt " --no-alt-screen -m m2\$")" = 1 ] && [ ! -e "$home/agents/$HERDR_WORKSPACE_ID:t3" ] && [ -f "$home/agents/$(cat "$S/tab")" ]'
-new; agent_json st-codex-010-demo "$HERDR_WORKSPACE_ID"; own st-codex-010-demo; printf '%s\n' st-codex-010-demo /other > "$home/agents/$HERDR_WORKSPACE_ID:t3"; go
-check "b3 record for another root is foreign: not reused, not closed" '[ "$(cnt "^tab create")" = 1 ] && [ "$(cnt "^tab close $HERDR_WORKSPACE_ID:t3\$")" = 0 ]'
-new; agent_json st-codex-010-demo "$HERDR_WORKSPACE_ID"; touch "$S/dup"; go
-check "b4 foreign agent and herdr refuses the name: error, exit 1, our tab closed, foreign tab kept, no prompt" '[ $rc -eq 1 ] && outhas "ERROR:" && closed && [ "$(cnt "^tab close $HERDR_WORKSPACE_ID:t3\$")" = 0 ] && [ "$(cnt "^agent prompt")" = 0 ]'
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings -m m1; go -m m2
+check "C3 record -m m1, run -m m2: no close, create or start, prompt sent, exact settings line, exit 0" '[ $rc -eq 0 ] && [ "$(cnt "^tab close")" = 0 ] && [ "$(cnt "^tab create")" = 0 ] && [ "$(cnt "^agent start")" = 0 ] && [ "$(cnt "^agent prompt st-codex-t1 ")" = 1 ] && outline "codex: the Codex tab runs with -m m1, advisor.json asks for -m m2. Close the tab to apply."'
 
-new; agent_json st-codex-009 "$HERDR_WORKSPACE_ID"; own st-codex-009; go
-check "c other st-codex agent of ours: its tab closed before the new start" '[ $rc -eq 0 ] && [ "$(cnt "^tab close $HERDR_WORKSPACE_ID:t3\$")" = 1 ] && [ "$(lineno "^tab close")" -lt "$(lineno "^agent start")" ]'
-new; agent_json st-codex-009 "$HERDR_WORKSPACE_ID"; go
-check "c1 other st-codex agent with no record: not closed" '[ $rc -eq 0 ] && [ "$(cnt "^tab close")" = 0 ]'
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; go -m m1
+check "C3b tab with no record: settings line says unknown settings" '[ $rc -eq 0 ] && outline "codex: the Codex tab runs with unknown settings, advisor.json asks for -m m1. Close the tab to apply."'
 
-new; agent_json st-codex-010-demo "wsOTHER$RANDOM"; go
-check "d agent in another workspace ignored: new start, no tab close" '[ $rc -eq 0 ] && [ "$(cnt "^tab create")" = 1 ] && [ "$(cnt "^agent start st-codex-010-demo")" = 1 ] && [ "$(cnt "^tab close")" = 0 ]'
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; echo working > "$S/status"; go
+check "C4 tab working: exit 3, codex: tab in use, no prompt, no send-keys, no marker" '[ $rc -eq 3 ] && outline "codex: tab in use" && [ "$(cnt "^agent prompt")" = 0 ] && [ "$(cnt "^agent send-keys")" = 0 ] && [ ! -e "$tabs/st-codex-t1.review" ]'
+check "C22 C4 marker not written before the in-use check" '[ ! -e "$S/marker_at_get" ]'
 
-new; agent_json st-codex-010-demo "$HERDR_WORKSPACE_ID" /elsewhere; go
-check "d2 same name, cwd not this root: not reused, not closed" '[ "$(cnt "^tab create")" = 1 ] && [ "$(cnt "^tab close $HERDR_WORKSPACE_ID:t3\$")" = 0 ]'
-new; agent_json st-codex-009 "$HERDR_WORKSPACE_ID" /elsewhere; go
-check "d3 other st-codex agent, cwd not this root: not closed" '[ $rc -eq 0 ] && [ "$(cnt "^tab close")" = 0 ]'
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; echo blocked > "$S/status"; go
+check "C5 tab blocked: exit 3, codex: tab in use, no prompt, no send-keys, no marker" '[ $rc -eq 3 ] && outline "codex: tab in use" && [ "$(cnt "^agent prompt")" = 0 ] && [ "$(cnt "^agent send-keys")" = 0 ] && [ ! -e "$tabs/st-codex-t1.review" ]'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; echo done > "$S/status"; go
+check "C6 tab done: prompt sent, exit 0" '[ $rc -eq 0 ] && [ "$(cnt "^agent prompt st-codex-t1 ")" = 1 ]'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; echo unknown > "$S/status"; go
+check "C6 tab unknown: prompt sent, exit 0" '[ $rc -eq 0 ] && [ "$(cnt "^agent prompt st-codex-t1 ")" = 1 ]'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; echo agent_blocked > "$S/prompt_err"; go
+check "C7 prompt returns agent_blocked: exit 3, codex: tab in use" '[ $rc -eq 3 ] && outline "codex: tab in use"'
+
+new; agent_json st-codex-t1 "wsOTHER$RANDOM"; go
+check "C9 name live in another workspace: exit 5, in use elsewhere, no create, start, prompt, send-keys or close" '[ $rc -eq 5 ] && outline "codex: tab name st-codex-t1 in use elsewhere" && [ "$(cnt "^tab create")" = 0 ] && [ "$(cnt "^agent start")" = 0 ] && [ "$(cnt "^agent prompt")" = 0 ] && [ "$(cnt "^agent send-keys")" = 0 ] && [ "$(cnt "^tab close")" = 0 ]'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID" /elsewhere; go
+check "C9 name live in this workspace with another cwd: exit 5, in use elsewhere, no create, start, prompt, send-keys or close" '[ $rc -eq 5 ] && outline "codex: tab name st-codex-t1 in use elsewhere" && [ "$(cnt "^tab create")" = 0 ] && [ "$(cnt "^agent start")" = 0 ] && [ "$(cnt "^agent prompt")" = 0 ] && [ "$(cnt "^agent send-keys")" = 0 ] && [ "$(cnt "^tab close")" = 0 ]'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; echo 'printf changed > a.txt' > "$S/on_prompt"; go
+check "C10 Codex changes a tracked file: exit 4, BLOCKED names it, new content kept" '[ $rc -eq 4 ] && outline "BLOCKED: Codex changed files during the review: a.txt" && [ "$(cat "$proj/a.txt")" = changed ]'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; echo 'printf x > b.txt' > "$S/on_prompt"; go
+check "C11 Codex adds an untracked file: exit 4, BLOCKED names it" '[ $rc -eq 4 ] && outline "BLOCKED: Codex changed files during the review: b.txt"'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; printf old > "$proj/u.txt"; echo 'printf new > u.txt' > "$S/on_prompt"; go
+check "C12 Codex changes an untracked file that was there: exit 4, BLOCKED names it" '[ $rc -eq 4 ] && outline "BLOCKED: Codex changed files during the review: u.txt"'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; printf old > "$proj/u.txt"; echo 'rm u.txt' > "$S/on_prompt"; go
+check "C13 Codex removes an untracked file: exit 4, BLOCKED names it" '[ $rc -eq 4 ] && outline "BLOCKED: Codex changed files during the review: u.txt"'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; echo 'printf x > c.txt; git add c.txt; git -c user.name=t -c user.email=t@t commit -qm c' > "$S/on_prompt"; go
+check "C14 Codex commits: exit 4, BLOCKED names HEAD" '[ $rc -eq 4 ] && outline "BLOCKED: Codex changed files during the review: HEAD"'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; go
+check "C15 no change: exit 0, answer written, no BLOCKED line" '[ $rc -eq 0 ] && [ -s "$af" ] && ! outhas "BLOCKED:"'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; printf dirty > "$proj/a.txt"; go
+check "C16 tree dirty before and the same after: exit 0, no BLOCKED line" '[ $rc -eq 0 ] && ! outhas "BLOCKED:"'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; echo 'rm a.txt; printf x > b.txt' > "$S/on_prompt"; go
+check "C10b Codex deletes a tracked file and adds one: exit 4, BLOCKED names both" '[ $rc -eq 4 ] && outline "BLOCKED: Codex changed files during the review: a.txt, b.txt"'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; (cd "$proj" && printf X > a.txt && git add a.txt && printf Y > a.txt); echo 'printf Z > a.txt; git add a.txt; printf Y > a.txt' > "$S/on_prompt"; go
+check "C16b Codex restages a file that was MM: exit 4, BLOCKED names it" '[ $rc -eq 4 ] && outline "BLOCKED: Codex changed files during the review: a.txt"'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; printf dirty > "$proj/a.txt"; echo 'chmod +x a.txt' > "$S/on_prompt"; go
+check "C16e Codex sets the x bit on a dirty tracked file: exit 4, BLOCKED names it" '[ $rc -eq 4 ] && outline "BLOCKED: Codex changed files during the review: a.txt"'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; (cd "$proj" && printf same > x.txt && printf same > y.txt && ln -s x.txt l); echo 'ln -sfn y.txt l' > "$S/on_prompt"; go
+check "C16f Codex retargets an untracked symlink to a file with the same bytes: exit 4, BLOCKED names it" '[ $rc -eq 4 ] && outline "BLOCKED: Codex changed files during the review: l"'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; nested; echo 'printf again > sub/a.txt' > "$S/on_prompt"; go
+check "C16g Codex changes a file in an already-dirty nested repo: exit 4, BLOCKED names sub/a.txt" '[ $rc -eq 4 ] && outline "BLOCKED: Codex changed files during the review: sub/a.txt"'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; nested; echo 'printf x > sub/c.txt; git -C sub add c.txt; git -C sub -c user.name=t -c user.email=t@t commit -qm c' > "$S/on_prompt"; go
+check "C16h Codex commits in an already-dirty nested repo: exit 4, BLOCKED names sub/HEAD" '[ $rc -eq 4 ] && outline "BLOCKED: Codex changed files during the review: sub/HEAD"'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; nested; go
+check "C16i nested repo dirty before and the same after: exit 0, no BLOCKED line" '[ $rc -eq 0 ] && ! outhas "BLOCKED:"'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; ln -s . "$proj/self"; FUNCNEST=40 go
+check "C16j untracked symlink to . and no change: exit 0, prompt sent" '[ $rc -eq 0 ] && [ "$(cnt "^agent prompt")" = 1 ] && ! outhas "BLOCKED:"'
+
+ext() {
+  rm -rf "$tmp/ext" "$tmp/ext2"
+  git init -q "$tmp/ext"
+  printf 'old\n' > "$tmp/ext/a.txt"
+  git -C "$tmp/ext" add a.txt
+  git -C "$tmp/ext" -c user.name=t -c user.email=t@t commit -qm e
+  printf dirty > "$tmp/ext/a.txt"
+  ln -s "$tmp/ext" "$proj/external"
+}
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; ext; echo "printf again > '$tmp/ext/a.txt'" > "$S/on_prompt"; go
+check "C16k Codex changes a file in a dirty repo behind an untracked symlink outside the project: exit 0, no BLOCKED line" '[ $rc -eq 0 ] && ! outhas "BLOCKED:"'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; ext; mkdir -p "$tmp/ext2"; echo "ln -sfn '$tmp/ext2' external" > "$S/on_prompt"; go
+check "C16l Codex retargets that symlink: exit 4, BLOCKED names external" '[ $rc -eq 4 ] && outline "BLOCKED: Codex changed files during the review: external"'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; GIT_DIR="$tmp/nowhere" go
+check "C16c git status fails before the prompt: ERROR, exit 1, no prompt" '[ $rc -eq 1 ] && outline "ERROR: cannot read git status in $pp" && [ "$(cnt "^agent prompt")" = 0 ]'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; echo 'mv .git .git.x' > "$S/on_prompt"; go
+check "C16d git status fails after the prompt: exit 4, BLOCKED cannot read git status" '[ $rc -eq 4 ] && outline "BLOCKED: cannot read git status in $pp"'
 
 new; echo 2 > "$S/start_busy"; go
 check "e busy twice then ok: 3 start calls" '[ $rc -eq 0 ] && [ "$(cnt "^agent start")" = 3 ]'
 new; echo 999 > "$S/start_busy"; go
 check "e busy always: 10 start calls, ERROR, exit 1" '[ $rc -eq 1 ] && [ "$(cnt "^agent start")" = 10 ] && outhas "ERROR:" && [ "$(cnt "^agent prompt")" = 0 ]'
 
-new; printf '%s' "$fa" > "$S/screen"; printf '%s\n' "$chat" > "$S/screen_after"; go
-check "f exactly one enter" '[ $rc -eq 0 ] && [ "$(cnt "^agent send-keys")" = 1 ] && [ "$(cnt "^agent send-keys st-codex-010-demo enter\$")" = 1 ]'
-check "f enter after start, before prompt" '[ "$(lineno "^agent start")" -lt "$(lineno "^agent send-keys")" ] && [ "$(lineno "^agent send-keys")" -lt "$(lineno "^agent prompt")" ]'
-
-new; go
-check "f1 no Folder access: no send-keys, prompt runs" '[ $rc -eq 0 ] && [ "$(cnt "^agent send-keys")" = 0 ] && [ "$(cnt "^agent prompt st-codex-010-demo")" = 1 ]'
-check "f1 start line ends at --no-alt-screen without -m/-c" '[ "$(cnt " -- -s read-only -a never --no-alt-screen\$")" = 1 ]'
-
-new; touch "$S/notready"; printf '%s' "$fa" > "$S/screen"; printf '%s\n' "$chat" > "$S/screen_after"; go
-check "f2 not_ready with Folder access: one enter, then prompt" '[ $rc -eq 0 ] && [ "$(cnt "^agent send-keys st-codex-010-demo enter\$")" = 1 ] && [ "$(cnt "^agent prompt")" = 1 ] && [ "$(lineno "^agent send-keys")" -lt "$(lineno "^agent prompt")" ]'
-
-new; touch "$S/notready"; printf 'Trust this folder?\n1. Trust and continue\n2. Do not trust\n' > "$S/screen"; go
-check "f3 not_ready with other screen: no key, error, exit 1, no prompt" '[ $rc -eq 1 ] && [ "$(cnt "^agent send-keys")" = 0 ] && outhas "$nofolder" && [ "$(cnt "^agent prompt")" = 0 ]'
-check "f3 the tab this run made is closed" 'closed'
-
-new; printf '%s' "$fa" > "$S/screen"; go
-check "f4 Folder access never clears: one enter, error, exit 1, no prompt" '[ $rc -eq 1 ] && [ "$(cnt "^agent send-keys")" = 1 ] && outhas "$nofolder" && [ "$(cnt "^agent prompt")" = 0 ]'
-check "f4 the tab this run made is closed" 'closed'
-
-new; printf '\033[1mFolder access\033[0m\n\n\033[36m› 1. Trust and continue\033[0m\n  2. Open restricted\n' > "$S/screen"; printf '%s\n' "$chat" > "$S/screen_after"; go
-check "f6 Folder access, option 1 not Open restricted: no key, error, exit 1, no prompt" '[ $rc -eq 1 ] && [ "$(cnt "^agent send-keys")" = 0 ] && outhas "$nofolder" && [ "$(cnt "^agent prompt")" = 0 ]'
-new; printf '\033[1mFolder access\033[0m\n\n  1. Open restricted\n\033[36m› 2. Back to Agent Command Center\033[0m\n' > "$S/screen"; printf '%s\n' "$chat" > "$S/screen_after"; go
-check "f7 mark on option 2: no key, error, exit 1, tab closed" '[ $rc -eq 1 ] && [ "$(cnt "^agent send-keys")" = 0 ] && outhas "$nofolder" && [ "$(cnt "^agent prompt")" = 0 ] && closed'
-new; printf '\033[1mFolder access\033[0m\n\n\033[36m› 1. Open restricted\033[0m\n  2. Trust and continue\n' > "$S/screen"; printf '%s\n' "$chat" > "$S/screen_after"; go
-check "f8 option 2 text different: no key, error, exit 1, tab closed" '[ $rc -eq 1 ] && [ "$(cnt "^agent send-keys")" = 0 ] && outhas "$nofolder" && [ "$(cnt "^agent prompt")" = 0 ] && closed'
-new; printf '%s\n' '~/Desktop/stratum-worker-codex-tab                                                                                    11:39:36 PM' '❯ codex -s read-only -a never --no-alt-screen' '  Folder access' '  /home/hyuse/Desktop/stratum-worker-codex-tab' '  Config, hooks, and exec policies from untrusted folders stay disabled. Trusted project folders can still contribute settings.' '  Skills still load, and tools follow your permission settings. Opening will not change saved trust.' '› 1. Open restricted' '  2. Back to Agent Command Center' '  enter continue · esc back' > "$S/screen"; printf '%s\n' "$chat" > "$S/screen_after"; go
-check "f9 real screen from the live run: one enter, then prompt" '[ $rc -eq 0 ] && [ "$(cnt "^agent send-keys st-codex-010-demo enter\$")" = 1 ] && [ "$(cnt "^agent prompt")" = 1 ]'
-
-new; echo "$home" > "$S/replace_auth"; go
-check "f5 login link replaced: error, exit 1, no answer file" '[ $rc -eq 1 ] && outhas "ERROR: Codex replaced the login link in $home;" && [ ! -e "$af" ]'
-
 new; echo 2 > "$S/start_sleep"; go
-ms=$(tail -1 "$S/log.txt" | grep '^agent prompt' | awk '{print $NF}')
-[ -z "$ms" ] && ms=$(grep '^agent prompt' "$S/log.txt" | awk '{print $NF}')
 check "g prompt file ends with the three step-4 lines" '[ "$(tail -3 "$pf" | head -1)" = "The project root is $pp. Read every path above relative to it." ] && tail -1 "$pf" | grep -Eq "^Print the line ST-ADVISOR-BEGIN-([0-9a-f]{12}) alone, then the JSON object on one line, then the line ST-ADVISOR-END-\1 alone\. Print nothing after the end line\.\$"'
-check "g prompt argv ends with wait/until flags and timeout <= 478000 after 2 s start" 'p=$(grep "^agent prompt" "$S/log.txt"); case "$p" in *" --wait --until done --until idle --until blocked --timeout "*) ;; *) false;; esac && [ "$ms" -le 478000 ] && [ "$ms" -ge 400000 ]'
+check "C17 prompt argv ends --wait --until done --until idle, no --until blocked, no --timeout" '[[ $(grep "^agent prompt" "$S/log.txt") == *" --wait --until done --until idle" ]] && [[ $(grep "^agent prompt" "$S/log.txt") != *"--until blocked"* ]] && [[ $(grep "^agent prompt" "$S/log.txt") != *"--timeout"* ]]'
 new; go
-ms=$(grep '^agent prompt' "$S/log.txt" | awk '{print $NF}')
-check "g timeout at most 480000" '[ "$ms" -le 480000 ] && [ "$ms" -ge 400000 ]'
-check "g prompt names the request file" 'grep "^agent prompt st-codex-010-demo " "$S/log.txt" | grep -qF "Read the review request in $pf and follow it. Change no file."'
+check "C17 plain run: prompt argv ends --wait --until done --until idle, no --until blocked, no --timeout" '[[ $(grep "^agent prompt" "$S/log.txt") == *" --wait --until done --until idle" ]] && [[ $(grep "^agent prompt" "$S/log.txt") != *"--until blocked"* ]] && [[ $(grep "^agent prompt" "$S/log.txt") != *"--timeout"* ]]'
+check "g prompt names the request file" 'grep "^agent prompt st-codex-t1 " "$S/log.txt" | grep -qF "Read the review request in $pf and follow it. Change no file."'
 
-new; touch "$S/prompt_blocked"; go
-check "h blocked: error, exit 1" '[ $rc -eq 1 ] && outhas "ERROR: Codex waits for an answer in its Codex tab."'
-new; touch "$S/prompt_timeout"; go
-check "h2 prompt timeout: error, exit 1, the tab this run made is closed" '[ $rc -eq 1 ] && outhas "ERROR:" && closed'
-new; agent_json st-codex-010-demo "$HERDR_WORKSPACE_ID"; own st-codex-010-demo; touch "$S/prompt_timeout"; go
-check "h3 prompt timeout on a reused tab: no tab close" '[ $rc -eq 1 ] && [ "$(cnt "^tab close")" = 0 ]'
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; touch "$S/prompt_gone"; echo agent_not_found > "$S/prompt_err"; go
+check "C18 prompt fails, agent get says agent_not_found: exit 4, the tab ended, no close, no ERROR line" '[ $rc -eq 4 ] && outline "BLOCKED: the Codex tab ended during the review" && [ "$(cnt "^tab close")" = 0 ] && ! outhas "ERROR:"'
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; echo agent_prompt_stalled > "$S/prompt_err"; go
+check "C19 prompt fails, agent still there: exit 4, the tab failed, no close" '[ $rc -eq 4 ] && outhas "BLOCKED: the Codex tab failed during the review: " && [ "$(cnt "^tab close")" = 0 ]'
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; touch "$S/read_err"; go
+check "C19b agent read fails after the prompt: exit 4, first line the tab failed, no ERROR line, no answer file" '[ $rc -eq 4 ] && [ "$(printf "%s\n" "$out" | grep -m1 "^BLOCKED: ")" = "BLOCKED: the Codex tab failed during the review: {\"error\":{\"code\":\"agent_read_failed\",\"message\":\"read failed\"}}" ] && ! outhas "ERROR:" && [ ! -s "$af" ]'
+new; touch "$S/notready"; go
+check "C20 agent_not_ready at start: agent wait with no --timeout before the prompt, prompt runs, exit 0" '[ $rc -eq 0 ] && grep -qxF "agent wait st-codex-t1 --until idle --until done" "$S/log.txt" && [ "$(cnt "^agent prompt st-codex-t1 ")" = 1 ] && [ "$(grep -n "^agent wait" "$S/log.txt" | cut -d: -f1)" -lt "$(grep -n "^agent prompt" "$S/log.txt" | cut -d: -f1)" ]'
+check "C22 marker exists when agent wait runs in C20" '[ -e "$S/marker_at_wait" ]'
+new; touch "$S/notready" "$S/wait_gone"; go
+check "C21 agent_not_ready, wait fails, agent gone: exit 4, the tab ended, no prompt, no close" '[ $rc -eq 4 ] && outline "BLOCKED: the Codex tab ended during the review" && [ "$(cnt "^agent prompt")" = 0 ] && [ "$(cnt "^tab close")" = 0 ]'
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; touch "$S/prompt_hang"; t0=$SECONDS; go
+check "C25 prompt never returns, tab gone: exit 4 within 5 s, the tab ended, no answer file, no ERROR line" '[ $rc -eq 4 ] && [ $((SECONDS - t0)) -lt 5 ] && outline "BLOCKED: the Codex tab ended during the review" && [ ! -s "$af" ] && ! outhas "ERROR:" && [ "$(cnt "^agent read")" = 0 ]'
+new; touch "$S/notready" "$S/wait_hang"; t0=$SECONDS; go
+check "C26 agent wait never returns, tab gone: exit 4 within 5 s, the tab ended, no prompt" '[ $rc -eq 4 ] && [ $((SECONDS - t0)) -lt 5 ] && outline "BLOCKED: the Codex tab ended during the review" && [ "$(cnt "^agent prompt")" = 0 ] && [ ! -s "$af" ]'
 
 new
 printf '%s' $'Print the line ST-ADVISOR-BEGIN-@N@ alone, then the JSON, then the line ST-ADVISOR-END-@N@ alone.\n• ST-ADVISOR-BEGIN-@N@  \n  junk {not json\n• ST-ADVISOR-END-@N@\n• ST-ADVISOR-BEGIN-@N@\n• {"verdict":"APPROVED","summary":  \n  "fine, wrapped","findings":\n  []}   \n• ST-ADVISOR-END-@N@\n' > "$S/screen_prompt"
@@ -205,11 +263,13 @@ new; go
 check "i plain answer parses" '[ $rc -eq 0 ] && python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$af"'
 
 new; printf 'no markers here\nPrint the line ST-ADVISOR-BEGIN-@N@ alone then ST-ADVISOR-END-@N@ alone\n' > "$S/screen_prompt"; go
-check "j no pair: error, exit 1, no answer file" '[ $rc -eq 1 ] && outhas "ERROR: no answer between the markers" && [ ! -s "$af" ]'
+check "C23 no marker pair: exit 4, BLOCKED no answer between the markers, no answer file" '[ $rc -eq 4 ] && outline "BLOCKED: no answer between the markers" && [ ! -s "$af" ]'
 
-new; feat=specs/demo; go
-check "k feature dir without digits: tab named from the folder" '[ $rc -eq 0 ] && [ "$(cnt "^agent start st-codex-demo --kind codex")" = 1 ]'
-new; feat="specs/parasat_free installation-2462"; go
-check "k1 long folder name: other characters become -, cut to 20" '[ $rc -eq 0 ] && [ "$(cnt "^agent start st-codex-parasat-free-install --kind codex")" = 1 ]'
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; go
+check "C22 marker holds a live pid during the prompt and is gone after exit" '[ -e "$S/marker_live" ] && [ ! -e "$tabs/st-codex-t1.review" ]'
+check "C24 marker gone right after the prompt returns: agent read sees no marker" '[ "$(cnt "^agent read st-codex-t1 ")" = 1 ] && [ ! -e "$S/marker_at_read" ]'
+
+check "C8 no tab close in any case of this file" 'grep -q "^agent prompt" "$ALLLOG" && ! grep -q "^tab close" "$ALLLOG"'
+check "C22 marker gone after every case of this file" '[ "$left" = 0 ]'
 
 exit $fail
