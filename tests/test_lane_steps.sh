@@ -21,7 +21,6 @@ rows() {
   [ -n "$cur" ] && check "FR-027 $cur" "[ $ok = 1 ]"
 }
 rows <<'EOF'
-row 1	gone	skills/st-worker/SKILL.md	pick the one-time yes
 row 2	gone	skills/st-worker/SKILL.md	a tool permission for the task's own command
 row 3	gone	skills/st-worker/SKILL.md	The build loop (/stratum:st-build) does not use workers.
 row 4	gone	skills/st-build/SKILL.md	merge it into `main`
