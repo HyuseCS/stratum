@@ -16,12 +16,12 @@ graph LR
   SkillsSt_close@{ shape: rectangle, label: "/st-close" }
   User@{ shape: rectangle, label: "User" }
   SkillsSt@{ shape: rectangle, label: "/st" }
-  ScriptsSt_state_sh@{ shape: rectangle, label: "st-state.sh" }
+  HooksSt_phase_py@{ shape: rectangle, label: "st-phase.py" }
   StratumState_json@{ shape: rectangle, label: ".stratum/state.json" }
   User -. "`(1) task in plain words`" .-> SkillsSt
   SkillsSt -. "`(2) lane and risk line`" .-> User
-  SkillsSt -. "`(3) risk level`" .-> ScriptsSt_state_sh
-  ScriptsSt_state_sh -. "`(4) risk level`" .-> StratumState_json
+  SkillsSt -. "`(3) Lane line with the risk level`" .-> HooksSt_phase_py
+  HooksSt_phase_py -. "`(4) risk level`" .-> StratumState_json
   SkillsSt -. "`(5) feature description`" .-> SkillsSt_define
   SkillsSt_define -. "`(6) gate: you agree the spec`" .-> User
   SkillsSt -. "`(7) feature dir`" .-> SkillsSt_plan
@@ -47,7 +47,8 @@ graph LR
   ProceduresSpecify_md@{ shape: rectangle, label: "procedures/specify.md" }
   FeatureSpec_md@{ shape: rectangle, label: "specs/NNN-feature/spec.md" }
   FeatureChecklists@{ shape: rectangle, label: "specs/NNN-feature/checklists" }
-  ScriptsSt_state_sh@{ shape: rectangle, label: "st-state.sh" }
+  HooksSt_phase_py@{ shape: rectangle, label: "st-phase.py" }
+  StratumState_json@{ shape: rectangle, label: ".stratum/state.json" }
   ProceduresClarify_md@{ shape: rectangle, label: "procedures/clarify.md" }
   ProceduresChecklist_md@{ shape: rectangle, label: "procedures/checklist.md" }
   AgentsSt_git@{ shape: rectangle, label: "st-git agent" }
@@ -61,7 +62,7 @@ privacy and done-criteria`" .-> SkillsSt_grill
   SkillsSt_define -. "`(5) description and grilling summary`" .-> ProceduresSpecify_md
   ProceduresSpecify_md -. "`(6) spec from the spec template`" .-> FeatureSpec_md
   ProceduresSpecify_md -. "`(7) requirements checklist`" .-> FeatureChecklists
-  ProceduresSpecify_md -. "`(8) feature dir and phase define`" .-> ScriptsSt_state_sh
+  HooksSt_phase_py -. "`(8) feature dir from the new spec folder`" .-> StratumState_json
   SkillsSt_define -. "`(9) spec with open markers, only if gaps 
 remain`" .-> ProceduresClarify_md
   ProceduresClarify_md -. "`(10) clarified spec`" .-> FeatureSpec_md
@@ -203,7 +204,7 @@ graph LR
   SkillsSt_graphify@{ shape: rectangle, label: "/st-graphify" }
   AgentsSt_git@{ shape: rectangle, label: "st-git agent" }
   Git@{ shape: rectangle, label: "git repository" }
-  ScriptsSt_state_sh@{ shape: rectangle, label: "st-state.sh" }
+  HooksSt_phase_py@{ shape: rectangle, label: "st-phase.py" }
   SkillsSt -. "`(1) feature dir`" .-> SkillsSt_close
   SkillsSt_close -. "`(2) feature dir, gap report choice, 
 shortcut base`" .-> AgentsSt_close
@@ -219,7 +220,7 @@ shortcut rows`" .-> SkillsSt_close
   SkillsSt_close -. "`(11) docs graph update`" .-> SkillsSt_graphify
   SkillsSt_close -. "`(12) changed doc paths`" .-> AgentsSt_git
   AgentsSt_git -. "`(13) close commit`" .-> Git
-  SkillsSt_close -. "`(14) phase done`" .-> ScriptsSt_state_sh
+  SkillsSt_close -. "`(14) Phase: done line`" .-> HooksSt_phase_py
   SkillsSt_close -. "`(15) gate: push`" .-> User
 ```
 
@@ -246,7 +247,7 @@ graph LR
   AgentsSt_git@{ shape: rectangle, label: "st-git agent" }
   Git@{ shape: rectangle, label: "git repository" }
   AgentsSt_close@{ shape: rectangle, label: "st-close agent" }
-  ScriptsSt_state_sh@{ shape: rectangle, label: "st-state.sh" }
+  HooksSt_phase_py@{ shape: rectangle, label: "st-phase.py" }
   StratumState_json@{ shape: rectangle, label: ".stratum/state.json" }
   User -. "`(1) change in plain words`" .-> SkillsSt_fast
   SkillsSt_fast -. "`(2) plugin root, project root, feature 
@@ -284,8 +285,8 @@ small decisions and findings`" .-> User
   SkillsSt_fast -. "`(27) docs st-close changed, kept lesson 
 files, gitignore`" .-> AgentsSt_git
   AgentsSt_git -. "`(28) docs commit`" .-> Git
-  SkillsSt_fast -. "`(29) state.json path, phase done`" .-> ScriptsSt_state_sh
-  ScriptsSt_state_sh -. "`(30) phase done`" .-> StratumState_json
+  SkillsSt_fast -. "`(29) Phase: done line`" .-> HooksSt_phase_py
+  HooksSt_phase_py -. "`(30) phase done`" .-> StratumState_json
 ```
 
 ### Quick lane
@@ -297,7 +298,7 @@ title: "Quick lane"
 graph LR
   User@{ shape: rectangle, label: "User" }
   SkillsSt@{ shape: rectangle, label: "/st" }
-  ScriptsSt_state_sh@{ shape: rectangle, label: "st-state.sh" }
+  HooksSt_phase_py@{ shape: rectangle, label: "st-phase.py" }
   SkillsSt_quick@{ shape: rectangle, label: "/st-quick" }
   AgentsSt_quick@{ shape: rectangle, label: "st-quick agent" }
   StratumState_json@{ shape: rectangle, label: ".stratum/state.json" }
@@ -308,7 +309,7 @@ graph LR
   SkillsSt_fast@{ shape: rectangle, label: "/st-fast" }
   User -. "`(1) task in plain words`" .-> SkillsSt
   SkillsSt -. "`(2) lane and risk line`" .-> User
-  SkillsSt -. "`(3) risk none`" .-> ScriptsSt_state_sh
+  SkillsSt -. "`(3) Lane line with risk none`" .-> HooksSt_phase_py
   SkillsSt -. "`(4) one file: the edit`" .-> SkillsSt_quick
   SkillsSt_quick -. "`(5) plugin root, project root, the edit`" .-> AgentsSt_quick
   AgentsSt_quick -. "`(6) phase done`" .-> StratumState_json
@@ -651,6 +652,8 @@ graph TB
     Events.Session_start@{ shape: rectangle, label: "SessionStart" }
     Events.Subagent_start@{ shape: rectangle, label: "SubagentStart" }
     Events.User_prompt_submit@{ shape: rectangle, label: "UserPromptSubmit" }
+    Events.Post_tool_use@{ shape: rectangle, label: "PostToolUse" }
+    Events.Stop@{ shape: rectangle, label: "Stop" }
     Events.Session_end@{ shape: rectangle, label: "SessionEnd" }
     Events.Pre_compact@{ shape: rectangle, label: "PreCompact" }
   end
@@ -693,13 +696,15 @@ graph TB
 Bash|Edit|Write|MultiEdit|NotebookEdit|Read|Grep|Glob`" .-> Hooks.St_approve_py
   Events.Pre_tool_use -. "`matcher Bash`" .-> Hooks.St_git_guard_py
   Events.Pre_tool_use -. "`matcher Agent`" .-> Hooks.St_models_py
-  Events.Pre_tool_use -. "`matcher Skill`" .-> Hooks.St_phase_py
+  Events.Pre_tool_use -. "`matcher Skill|Agent`" .-> Hooks.St_phase_py
   Events.Permission_request -. "`no matcher, every permission request`" .-> Hooks.St_approve_py
   Events.Session_start -. "`matcher startup|resume|clear|compact`" .-> Hooks.St_session_start_sh
   Events.Session_start -. "`matcher startup|resume|clear|compact`" .-> Hooks.Ponytail_activate_js
   Events.Subagent_start -. "`no matcher, every subagent`" .-> Hooks.Ponytail_subagent_js
   Events.User_prompt_submit -. "`no matcher, every prompt`" .-> Hooks.St_phase_py
   Events.User_prompt_submit -. "`no matcher, every prompt`" .-> Hooks.Ponytail_mode_tracker_js
+  Events.Post_tool_use -. "`matcher Bash|Write|Edit|MultiEdit|Agent`" .-> Hooks.St_phase_py
+  Events.Stop -. "`no matcher, end of each reply`" .-> Hooks.St_phase_py
   Events.Session_end -. "`no matcher, session end`" .-> Hooks.St_handoff_facts_sh
   Events.Pre_compact -. "`no matcher, before compaction`" .-> Hooks.St_handoff_facts_sh
   Hooks.Ponytail_activate_js -. "`module: default mode and Claude config 
@@ -814,7 +819,6 @@ graph TB
   ScriptsCheck_prerequisites_sh@{ shape: rectangle, label: "check-prerequisites.sh" }
   ScriptsResolve_template_sh@{ shape: rectangle, label: "resolve-template.sh" }
   ScriptsSt_advisor_sh@{ shape: rectangle, label: "st-advisor.sh" }
-  ScriptsSt_state_sh@{ shape: rectangle, label: "st-state.sh" }
   ScriptsSt_update_sh@{ shape: rectangle, label: "st-update.sh" }
   ScriptsSt_worker_sh@{ shape: rectangle, label: "st-worker.sh" }
   ScriptsSt_figcraft_sh@{ shape: rectangle, label: "st-figcraft.sh" }
@@ -832,7 +836,6 @@ graph TB
   StatuslineSt_statusline_sh@{ shape: rectangle, label: "st-statusline.sh" }
   StratumApp_constitution_md@{ shape: rectangle, label: ".stratum/APP-constitution.md" }
   ProjectApps_app_claude_md@{ shape: rectangle, label: "apps/APP/CLAUDE.md" }
-  ProjectSpecs@{ shape: rectangle, label: "specs" }
   StratumDecisions_md@{ shape: rectangle, label: ".stratum/decisions.md" }
   FeatureDecisions_md@{ shape: rectangle, label: "specs/NNN-feature/decisions.md" }
   ProjectPackage_json@{ shape: rectangle, label: "package.json" }
@@ -844,6 +847,7 @@ graph TB
   ProjectApps_app_ordinance_md@{ shape: rectangle, label: "apps/APP/ORDINANCE.md" }
   ProjectDesign_md@{ shape: rectangle, label: "DESIGN.md" }
   ProjectGraphify_out_graph_report_md@{ shape: rectangle, label: "graphify-out/GRAPH_REPORT.md" }
+  ProjectSpecs@{ shape: rectangle, label: "specs" }
   StratumHandoff_md@{ shape: rectangle, label: ".stratum/handoff.md" }
   StratumLessons_md@{ shape: rectangle, label: ".stratum/lessons.md" }
   FeatureChanges@{ shape: rectangle, label: "specs/NNN-feature/changes" }
@@ -1048,12 +1052,13 @@ folder`" .-> StratumTemplates
   HooksToken_weather_mjs -. "`compaction threshold and mean token 
 growth`" .-> StratumWeather_json
   HooksSt_handoff_facts_sh -. "`task checkboxes for the done count`" .-> FeatureTasks_md
+  HooksSt_phase_py -. "`spec folder names before and after a 
+Define`" .-> ProjectSpecs
   ScriptsCheck_prerequisites_sh -. "`feature_directory`" .-> StratumState_json
   ScriptsResolve_template_sh -. "`project override template NAME.md`" .-> StratumTemplates
   ScriptsSt_advisor_sh -. "`mode, model and effort, from the 
 worktree or the main checkout`" .-> StratumAdvisor_json
   ScriptsSt_advisor_sh -. "`risk level of the main checkout`" .-> StratumState_json
-  ScriptsSt_state_sh -. "`[...]`" .-> StratumState_json
   ScriptsSt_update_sh -. "`exists check`" .-> StratumAdvisor_json
   ScriptsSt_update_sh -. "`old file deleted`" .-> StratumCommit_mode
   ScriptsSt_update_sh -. "`exists check`" .-> StratumConstitution_md
@@ -1104,8 +1109,7 @@ later rounds`" .-> ProjectBrief_md
   ProceduresPlan_md -. "`constitution check`" .-> StratumConstitution_md
   ProceduresPlan_md -. "`project plan template, if set`" .-> StratumTemplates
   ProceduresSpecify_md -. "`project principles`" .-> StratumConstitution_md
-  ProceduresSpecify_md -. "`feature_directory, phase define, lane 
-full when no lane is set`" .-> StratumState_json
+  ProceduresSpecify_md -. "`[...]`" .-> StratumState_json
   ProceduresSpecify_md -. "`project spec template, if set`" .-> StratumTemplates
   ProceduresTasks_md -. "`project principles`" .-> StratumConstitution_md
   ProceduresTasks_md -. "`project tasks template, if set`" .-> StratumTemplates

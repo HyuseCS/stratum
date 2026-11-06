@@ -43,7 +43,7 @@ model {
       }
     }
     specify-md = procedure 'procedures/specify.md' {
-      summary 'Makes the feature folder, writes spec.md from the spec template and checks it with a quality checklist. Sets the feature in state.json.'
+      summary 'Makes the feature folder, writes spec.md from the spec template and checks it with a quality checklist. Makes an empty state.json when none exists.'
       metadata {
         path 'procedures/specify.md'
       }
@@ -111,7 +111,7 @@ model {
   procedures.plan-md -[writes]-> feature.quickstart-md 'validation scenarios'
 
   procedures.specify-md -[runs]-> scripts.resolve-template-sh 'spec'
-  procedures.specify-md -[runs]-> scripts.st-state-sh '.stratum/state.json feature_directory, phase define, lane full'
+  procedures.specify-md -[writes]-> stratum.state-json 'empty file when none exists'
   procedures.specify-md -[reads]-> plugin.templates-spec-md 'spec structure'
   procedures.specify-md -[reads]-> stratum.templates 'project spec template, if set'
   procedures.specify-md -[reads]-> stratum.constitution-md 'project principles'

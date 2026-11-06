@@ -73,7 +73,7 @@ model {
       }
     }
     state-json = datafile '.stratum/state.json' {
-      summary 'The current feature, phase, lane and risk level of this checkout. st-phase.py and st-state.sh write it.'
+      summary 'The current feature, phase, lane and risk level of this checkout. st-phase.py writes it, specify.md makes it empty and the st-quick agent sets phase done.'
       metadata {
         data '.stratum/state.json'
       }

@@ -146,7 +146,7 @@ model {
   skills.st-worker -[passes]-> github 'merge of the worker PR after the user tested it'
   skills.st-worker -[writes]-> feature.tasks-md 'task tick after the merge'
   skills.st-worker -[starts]-> agents.st-git 'task tick or headless changes to commit'
-  skills.st-worker -[runs]-> scripts.st-state-sh 'state file, key skill and an empty value'
+  skills.st-worker -[passes]-> hooks.st-phase-py 'Build done. line'
   skills.st-worker -[passes]-> user 'big decisions, permission prompts, answers given and the approvals file'
 
   skills.st-herdr-workspace -[runs]-> scripts.st-herdr-workspace-sh 'folder, label, machine, template and agent'

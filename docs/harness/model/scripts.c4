@@ -60,12 +60,6 @@ model {
         path 'scripts/st-shortcuts.sh'
       }
     }
-    st-state-sh = script 'st-state.sh' {
-      summary 'Sets keys in the state file and replaces the file in one atomic step.'
-      metadata {
-        path 'scripts/st-state.sh'
-      }
-    }
     st-update-sh = script 'st-update.sh' {
       summary 'Audits each checkout of a project against the installed Stratum version and fixes one item at a time: install, statusline, ignore lines, pointers, settings and old files.'
       metadata {
@@ -145,9 +139,6 @@ model {
 
   scripts.st-lock-sh -[writes]-> project.git-stratum-name-lock 'lock folder with the pid and the start time'
   scripts.st-lock-sh -[reads]-> project.git-stratum-name-lock 'pid of the lock owner'
-
-  scripts.st-state-sh -[reads]-> stratum.state-json 'current keys'
-  scripts.st-state-sh -[writes]-> stratum.state-json 'keys and values from the arguments'
 
   scripts.st-update-sh -[reads]-> outside.claude-plugins-installed-plugins-json 'Stratum install records'
   scripts.st-update-sh -[reads]-> outside.claude-plugins-known-marketplaces-json 'Stratum marketplace location'

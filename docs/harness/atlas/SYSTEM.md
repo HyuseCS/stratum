@@ -66,7 +66,7 @@ Stratum is a Claude Code plugin that runs a coding task through a lane. You give
 
 **What it does.** You tell /st what you want. It reads where the work stands, picks how much process the task needs, tells you in one line, and then runs that lane. It routes and checks. Other parts do the work.
 
-**How it's built.** `skills/st/SKILL.md`. It reads `.stratum/state.json`, `.stratum/handoff.md` and `graphify-out/GRAPH_REPORT.md`, sets the risk level with `scripts/st-state.sh`, and starts the phase and lane skills, the st-build and st-git agents, /st-worker, /st-pr and /st-handoff. It re-runs tests with `scripts/st-verify.sh`. LikeC4 id: `skills.st`.
+**How it's built.** `skills/st/SKILL.md`. It reads `.stratum/state.json`, `.stratum/handoff.md` and `graphify-out/GRAPH_REPORT.md`, says the risk level in its Lane line for the phase hook to save, and starts the phase and lane skills, the st-build and st-git agents, /st-worker, /st-pr and /st-handoff. It re-runs tests with `scripts/st-verify.sh`. LikeC4 id: `skills.st`.
 
 **Steps in execution.**
 
@@ -164,11 +164,11 @@ Stratum is a Claude Code plugin that runs a coding task through a lane. You give
 
 **What it does.** One small file says which feature, phase, lane and risk level this checkout is on. Beside it sit the project rules, the model choice per agent, and the flags a parallel worker run needs.
 
-**How it's built.** `.stratum/state.json` holds feature, phase, lane and risk. `scripts/st-state.sh` sets keys and replaces the file in one atomic step, and the phase hook writes it too. Also `constitution.md`, `APP-constitution.md`, `decisions.md`, `models.json`, `approve/`, `autonomous`, `commit-mode` and `worker-setup.sh`. LikeC4 ids: `scripts.st-state-sh`, `stratum.state-json`, `stratum.constitution-md`, `stratum.app-constitution-md`, `stratum.decisions-md`, `stratum.models-json`, `stratum.approve`, `stratum.autonomous`, `stratum.commit-mode`, `stratum.worker-setup-sh`.
+**How it's built.** `.stratum/state.json` holds feature, phase, lane and risk. The phase hook `hooks/st-phase.py` writes it and replaces the file in one atomic step. Also `constitution.md`, `APP-constitution.md`, `decisions.md`, `models.json`, `approve/`, `autonomous`, `commit-mode` and `worker-setup.sh`. LikeC4 ids: `stratum.state-json`, `stratum.constitution-md`, `stratum.app-constitution-md`, `stratum.decisions-md`, `stratum.models-json`, `stratum.approve`, `stratum.autonomous`, `stratum.commit-mode`, `stratum.worker-setup-sh`.
 
 **Questions.**
 
-- **Q-S1** **Q-S1** The st-quick agent sets phase in state.json with no script (`agents/st-quick.md:48`, its tools include Edit, `:4`). Other writers use st-state.sh (`skills/st-close/SKILL.md:58`, `skills/st-fast/SKILL.md:41`). Should it use st-state.sh?
+- **Q-S1** **Q-S1** The st-quick agent sets phase in state.json with no script (`agents/st-quick.md:48`, its tools include Edit, `:4`). Other skills say a `Phase: done` line and the phase hook writes it (`skills/st-close/SKILL.md:58`, `skills/st-fast/SKILL.md:41`). Should it say that line too?
 
 #### R · Procedures and templates
 
@@ -312,7 +312,7 @@ Stratum is a Claude Code plugin that runs a coding task through a lane. You give
 
 **What it does.** When a phase skill starts, one hook writes the phase down and warns if it is out of order. Another sets the model and effort of each agent from the project settings. A third stops workers from touching files they do not own and, in an autonomous run, lets the orchestrator answer their permission requests.
 
-**How it's built.** `hooks/st-phase.py` (PreToolUse matcher Skill, and every prompt) writes `.stratum/state.json`. `hooks/st-models.py` (matcher Agent) reads `.stratum/models.json`. `hooks/st-approve.py` (file tools and every PermissionRequest) reads `.stratum/approve` and `.stratum/autonomous`. LikeC4 ids: `hooks.st-phase-py`, `hooks.st-models-py`, `hooks.st-approve-py`.
+**How it's built.** `hooks/st-phase.py` (PreToolUse matcher Skill|Agent, PostToolUse matcher Bash|Write|Edit|MultiEdit|Agent, Stop, and every prompt) writes `.stratum/state.json`: phase, lane and skill, risk, the new feature folder, phase done and the label clear. `hooks/st-models.py` (matcher Agent) reads `.stratum/models.json`. `hooks/st-approve.py` (file tools and every PermissionRequest) reads `.stratum/approve` and `.stratum/autonomous`. LikeC4 ids: `hooks.st-phase-py`, `hooks.st-models-py`, `hooks.st-approve-py`.
 
 #### N · Statusline and ponytail
 
@@ -444,7 +444,7 @@ Reference by ID. ✓ resolved (with date) · otherwise open.
 - **Q-T4** (T) **Q-T4** /st-ponytail-help tells you to update and read the upstream ponytail plugin, not Stratum (`skills/st-ponytail-help/SKILL.md:64,70`). Should it point at Stratum?
 - **Q-G1** (G) **Q-G1** /st-full names a Plan gate where you answer the open decisions (`skills/st-full/SKILL.md:11`), but the Gate section of /st-plan names no user gate, only the next phase (`skills/st-plan/SKILL.md:36-38`). Is Plan a gate or not?
 - **Q-F1** (F) **Q-F1** The model declares `specs/NNN-feature/gaps.md` (`docs/harness/model/data.c4:168`), but no skill, agent, procedure, script, hook or template names it. The gap report comes back as findings instead (`procedures/converge.md:29`, `agents/st-close.md:47`). Should a harness file write gaps.md?
-- **Q-S1** (S) **Q-S1** The st-quick agent sets phase in state.json with no script (`agents/st-quick.md:48`, its tools include Edit, `:4`). Other writers use st-state.sh (`skills/st-close/SKILL.md:58`, `skills/st-fast/SKILL.md:41`). Should it use st-state.sh?
+- **Q-S1** (S) **Q-S1** The st-quick agent sets phase in state.json with no script (`agents/st-quick.md:48`, its tools include Edit, `:4`). Other skills say a `Phase: done` line and the phase hook writes it (`skills/st-close/SKILL.md:58`, `skills/st-fast/SKILL.md:41`). Should it say that line too?
 - **Q-R1** (R) **Q-R1** The tasks steps say tests are optional (`procedures/tasks.md:67`), but every task ends with `Test:` (`procedures/tasks.md:92`) and the st-build agent needs a red test before each build (`agents/st-build.md:40`). Which rule wins?
 - **Q-R2** (R) **Q-R2** The specify steps use "the checklist template structure" with no path and no resolve-template.sh call (`procedures/specify.md:80`). Only the spec template is resolved (`procedures/specify.md:38`), though `templates/checklist.md` exists. Should it resolve the checklist template too?
 - **Q-B1** (B) **Q-B1** The st-build agent gives the Fast-lane path as `changes/NNN-name.md` with no feature folder (`agents/st-build.md:20`), but /st-fast and the st-fast agent put it under `specs/<feature>/changes/` (`skills/st-fast/SKILL.md:14`, `agents/st-fast.md:40`). Which path is right?
