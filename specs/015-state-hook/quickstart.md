@@ -42,6 +42,8 @@ with the Edit tool (never `git checkout`):
 | line start / whole line | `re.search` without `^`/`$` anchors | `test_phase_done_marker` |
 | prefix is only a label and a bullet (D1) | replace the `PRE` group with `^.*` | `test_lane_marker_forms`, `test_done_marker_forms` |
 | whole line after the prefix (D1) | drop the `[ \t]*$` end on `Phase: done` and `Build done` | `test_done_marker_forms` |
+| reply text of another prompt | at the `promptId` stop, return all collected text, not only the text after the last line of this `prompt_id` | `test_turn_stops_at_other_prompt_id` |
+| this prompt's reply after its tool result | never move the mark at a `user` line of this `prompt_id` | `test_turn_stops_at_other_prompt_id` |
 | subagent skip | drop the `agent_id` check | `test_risk_ignores_out_of_turn` |
 | sidechain filter | drop the `isSidechain` check on assistant lines | `test_risk_ignores_out_of_turn` |
 | line type filter | read `message.content` text of any line type (`api-request-blob` too) | `test_risk_ignores_out_of_turn` |

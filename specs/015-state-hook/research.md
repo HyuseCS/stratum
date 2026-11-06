@@ -123,3 +123,4 @@ Method: live headless probe (Claude Code 2.1.316, session `e519b62f-10e2-4e50-9b
 - Every hook input has `prompt_id`. Every transcript `user` line (prompts and `tool_result` lines) has `promptId` with the same value for the same turn. Assistant lines have no `promptId`.
 - Without a guard, a lagging prompt line lets the backward read run into the previous turn and apply its markers again.
 - Decision: the reader also stops at a `user` line whose `promptId` differs from the input's `prompt_id`, when both are present. With either one missing, the real-prompt rule (R4) alone sets the boundary.
+- PR #87 review: the previous turn can end with an assistant reply, and the read collects it before it reaches that turn's `user` line. So at that stop, the reader keeps only the reply text after the last `user` line of the current `prompt_id`, and drops the rest. At Stop, `last_assistant_message` still adds the current reply.

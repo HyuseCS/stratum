@@ -71,9 +71,11 @@ The JSONL file at `transcript_path` (main session file, research R2).
 - **Current turn**: the lines after the last real user prompt.
 - **Turn boundary by `promptId`** (research R10): the backward read also stops at a `user` line whose
   `promptId` differs from the input's `prompt_id`, when both are present. This covers a prompt line
-  that is not in the file yet, so the read never runs into the previous turn. With either value
-  missing, the real-prompt rule alone sets the boundary. Assistant lines have no `promptId` and never
-  stop the read.
+  that is not in the file yet, so the read never runs into the previous turn. At that stop, only the
+  reply text after the last `user` line with the input's `prompt_id` counts. Reply text before it, or
+  all reply text when no such line was read, is dropped: it can be the previous turn's last reply.
+  With either value missing, the real-prompt rule alone sets the boundary. Assistant lines have no
+  `promptId` and never stop the read.
 - **Reply text**: the `text` of each `text` block in `message.content` of lines with
   `type == "assistant"` and no `isSidechain: true`, in file order. Every other line type is skipped,
   `api-request-blob` and `attachment` included.

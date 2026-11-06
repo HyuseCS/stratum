@@ -539,6 +539,13 @@ class PhaseHookTest(unittest.TestCase):
                 self.send(event, tool_name=tool, transcript_path=self.transcript(
                     *old_turn, result_line("r", "p1"), reply_line("Lane: full, risk high (x)")))
                 self.assertEqual(self.read_state().get("risk"), "high")
+            with self.subTest(name + ": old turn ends with a reply, new prompt line not written yet"):
+                self.write_state(feature_directory="specs/001-x", phase="build", lane="full", risk="high",
+                                 skill="st-build", skill_session="s1")
+                before = self.raw()
+                self.send(event, tool_name=tool, transcript_path=self.transcript(
+                    prompt_line("old task", "p0"), reply_line("Lane: fast, risk low (x)\nPhase: done\nBuild done.")))
+                self.assertEqual(self.raw(), before)
 
     def test_lane_marker_forms(self):
         for line in ("[Orchestrator] Lane: full, risk high (data model: x)",

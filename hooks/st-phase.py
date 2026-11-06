@@ -23,6 +23,7 @@ SPEC = re.compile(r"[A-Za-z0-9._-]+")
 
 def turn_text(path, pid):
     texts = []
+    mine = 0
     try:
         with open(path, "rb") as f:
             pos = end = f.seek(0, 2)
@@ -42,8 +43,10 @@ def turn_text(path, pid):
                         continue
                     if line.get("isSidechain") is True:
                         continue
+                    if kind == "user" and pid and line.get("promptId") == pid:
+                        mine = len(texts)
                     if kind == "user" and pid and line.get("promptId") and line["promptId"] != pid:
-                        return "\n".join(reversed(texts))
+                        return "\n".join(reversed(texts[:mine]))
                     if kind == "user" and line.get("isMeta") is not True and (isinstance(content, str) or (
                             isinstance(content, list) and any(not isinstance(b, dict) or b.get("type") != "tool_result"
                                                               for b in content))):
