@@ -419,11 +419,19 @@ def c_readme():
         "bash tests/test_harness_model.sh",
         f"claude mcp add --scope user likec4 -- npx -y @likec4/mcp@{v}",
         "22.22.3",
+        f"]({DOCS}/atlas/atlas.html)",
+        f"xdg-open {DOCS}/atlas/atlas.html",
+        "~/.claude/skills/system-atlas",
     ]
     for s in need:
         if s not in t:
             fail(f'missing "{s}"')
-    done(f"{len(need)} links and commands found")
+    a, l = t.find(need[-3]), t.find(need[0])
+    if a >= 0 and l >= 0 and a > l:
+        fail(f'"{need[-3]}" comes after "{need[0]}"')
+    if "claude.ai" in t:
+        fail('names "claude.ai"')
+    done(f"{len(need)} links and commands found, atlas first")
 
 
 def c_nomcp():

@@ -199,6 +199,23 @@ copy for that project only. `scripts/st-lock.sh` runs tests marked `[lock]` one 
 
 ## Harness diagram
 
+[docs/harness/atlas/atlas.html](docs/harness/atlas/atlas.html) is the system atlas: one page that
+shows the harness a few parts at a time. Hover a part to read it, click to pin it, and go inside
+for its steps. It is for people. To open it on your machine, run
+`xdg-open docs/harness/atlas/atlas.html`, or run
+`python3 -m http.server 8765 -d docs/harness/atlas` and open `http://localhost:8765/atlas.html`.
+`docs/harness/atlas/SYSTEM.md` is the same content as text.
+
+To change the atlas, edit `docs/harness/atlas/data.mjs` and rebuild from the repo root:
+
+```bash
+t=$(mktemp -d) && cp ~/.claude/skills/system-atlas/assets/build.mjs ~/.claude/skills/system-atlas/assets/template.html docs/harness/atlas/data.mjs "$t" && node "$t/build.mjs" && cp "$t/atlas.html" "$t/SYSTEM.md" docs/harness/atlas/ && rm -rf "$t"
+```
+
+The rebuild needs the system-atlas skill at `~/.claude/skills/system-atlas`. To read the atlas,
+you do not need the skill.
+
+The LikeC4 model is the detailed, checked model for the LLM.
 [docs/harness/README.md](docs/harness/README.md) shows the harness in 15 views: the Full, Fast,
 Quick and Design lanes step by step with their gates, the agents, the harness (hooks by event,
 statusline, advisors), and the data flow between files. The Full and Design lanes each have an
