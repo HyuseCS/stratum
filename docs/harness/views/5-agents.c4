@@ -1,0 +1,6 @@
+views {
+  view agents {
+    title 'Agents'
+    include agents.*, skills.* -> agents.*, agents.* -> skills.*, agents.* -> agents.*, agents.* -> user
+  }
+}

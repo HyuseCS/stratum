@@ -1,0 +1,325 @@
+export const META = {
+  title: 'Stratum harness',
+  outDir: '.',
+  artifactUrl: '',
+  sourcePath: 'docs/harness/atlas/data.mjs',
+  buildCmd: 't=$(mktemp -d) && cp ~/.claude/skills/system-atlas/assets/build.mjs ~/.claude/skills/system-atlas/assets/template.html docs/harness/atlas/data.mjs "$t" && node "$t/build.mjs" && cp "$t/atlas.html" "$t/SYSTEM.md" docs/harness/atlas/ && rm -rf "$t"',
+  stats: [{ k: 'System', v: 'Stratum harness' }, { k: 'Plugin files mapped', v: '99' }, { k: 'Lanes', v: '4' }],
+  intro: `_**This file is generated from \`docs/harness/atlas/data.mjs\`.** The interactive atlas is built from the same data. The facts come from the LikeC4 model in \`docs/harness/model/\` and \`docs/harness/views/\`._`,
+  onePara: `Stratum is a Claude Code plugin that runs a coding task through a lane. You give /st a task in plain words. It picks the Full, Fast, Quick or Design lane, runs skills that start agents, writes the work to files under \`specs/\` and \`.stratum/\`, and asks you at each gate. Codex and /advisor give a second opinion at set points, one agent makes every commit, and hooks guard git and track the phase. This atlas groups the 99 skill, agent, hook, statusline, script and procedure files of the LikeC4 model into 24 structures. Its 13 open questions are gaps between harness files.`,
+  costModel: [],
+  deepDive: '',
+  platformGives: 'Claude Code loads the plugin and gives skills (slash commands), subagents, hook events, the status line command and /advisor.',
+  weOwn: 'The 40 skills, 15 agents, 17 hook files, 3 statusline files, 15 scripts, 9 procedures and the templates. The lanes, gates and advisor points live in those files.',
+  filesystem: `skills/           40 skill folders, one SKILL.md each
+agents/           15 agent files
+hooks/            commands.json, hooks.json and 7 hook files
+hooks/ponytail/   8 ponytail hook files
+statusline/       st-statusline.sh, powerline.json, themes.json
+scripts/          15 shell scripts
+procedures/       9 step files
+templates/        spec, plan, tasks, checklist, constitution, pr, models.json
+docs/harness/     the LikeC4 model and views, and this atlas`,
+};
+
+export const DECISIONS = [
+  { axis: 'Diagram tool', decision: 'LikeC4: one text model gives many views, keeps the dragged layout and has an MCP server the LLM can query.', adr: 'decisions.md D1' },
+  { axis: 'Page on GitHub', decision: '`likec4 export markdown` writes `docs/harness/README.md` with one Mermaid block per view.', adr: 'decisions.md D2' },
+  { axis: 'Detail', decision: 'Complete: every skill, agent, hook, script and data file, with every link.', adr: 'decisions.md D3' },
+  { axis: 'Test', decision: '`tests/test_harness_model.sh` checks coverage, `likec4 validate` and a rebuild with no diff.', adr: 'decisions.md D4' },
+  { axis: 'Gaps in the model', decision: 'The model shows only what exists. Gaps go in the side note `gaps.md`.', adr: 'decisions.md D5' },
+  { axis: 'MCP server', decision: 'No `.mcp.json` in the repo. Add the LikeC4 MCP server once per machine with `claude mcp add`.', adr: 'decisions.md D6' },
+  { axis: 'Steps', decision: 'One element per file. Steps inside a skill stay in its summary. Lane views list their steps by hand.', adr: 'decisions.md D7' },
+  { axis: 'Step numbers', decision: 'Each lane-view step label starts with `(n)`. A gate has `gate:` after the number.', adr: 'decisions.md D8' },
+  { axis: 'Node version', decision: 'Keep `likec4@1.60.0` with Node 22.22.3 or later. The checks print SKIP below it.', adr: 'decisions.md D9' },
+  { axis: 'Extra files', decision: 'A file outside the coverage list that a link needs gets one element.', adr: 'decisions.md D10' },
+  { axis: 'Pinning', decision: 'Pin only the top package `likec4@1.60.0`.', adr: 'decisions.md D11' },
+  { axis: 'Lane tags', decision: 'Links carry no lane tags. The lane views are the one source for lane steps.', adr: 'decisions.md D12' },
+  { axis: 'Big lane views', decision: 'Full and Design lanes have an overview view that clicks through to one view per phase or mode.', adr: 'decisions.md D13' },
+  { axis: 'Atlas', decision: 'Add this atlas as a fifth user story, to compare with the LikeC4 views.', adr: 'decisions.md D14' },
+  { axis: 'Atlas home', decision: 'In-tree at `docs/harness/atlas/` and published at one private URL. D19 added its drift check.', adr: 'decisions.md D15' },
+  { axis: 'Atlas questions', decision: 'The 13 gaps of `gaps.md` are the open questions, each on the structure it touches, not drawn on the map.', adr: 'decisions.md D16' },
+  { axis: 'Atlas files', decision: 'Only `data.mjs` and the built `atlas.html` and `SYSTEM.md` are committed. `build.mjs` and `template.html` come from the installed skill.', adr: 'decisions.md D17' },
+  { axis: 'Atlas URL', decision: 'The private URL stays out of the repo, in the session handoff and project memory.', adr: 'decisions.md D18' },
+  { axis: 'Atlas role', decision: 'Keep both: the atlas is the picture for people and gets a drift check against the model, and the LikeC4 model stays the checked source for the LLM.', adr: 'decisions.md D19' },
+  { axis: 'Atlas license', decision: 'The atlas template is MIT (NousResearch/hermes-agent system-atlas skill); its notice is in THIRD_PARTY_NOTICES.md and licenses/system-atlas.MIT.txt.', adr: 'decisions.md D20' },
+];
+
+export const GROUPS = [
+  { id: 'loop', title: 'You and the lanes' },
+  { id: 'mem', title: 'Files on disk' },
+  { id: 'agents', title: 'Agents' },
+  { id: 'check', title: 'Checks and second opinions' },
+  { id: 'guard', title: 'Hooks and status line' },
+  { id: 'ship', title: 'Shipping' },
+];
+
+export const NODES = [
+  { id: 'U', code: 'U', name: 'You', short: 'YOU', group: 'loop', gx: 0, gy: 8, w: 2, d: 2, h: 36, kind: 'screen',
+    one: 'The person who gives the task and agrees at each gate.',
+    what: 'You type a task in plain words, answer questions one at a time, and say yes or no at each gate. Nothing is pushed until you say push.',
+    how: 'You start <code>/st</code> in Claude Code. The lane views show every step that passes data to you, and each gate step names what you must say. LikeC4 id: <code>user</code>.' },
+
+  { id: 'O', code: 'O', name: 'Orchestrator /st', short: '/ST', group: 'loop', gx: 4, gy: 8, w: 3, d: 3, h: 64, kind: 'tall',
+    one: 'The main entry: it picks the lane and risk level, runs the lane and checks what comes back.',
+    what: 'You tell /st what you want. It reads where the work stands, picks how much process the task needs, tells you in one line, and then runs that lane. It routes and checks. Other parts do the work.',
+    how: '<code>skills/st/SKILL.md</code>. It reads <code>.stratum/state.json</code>, <code>.stratum/handoff.md</code> and <code>graphify-out/GRAPH_REPORT.md</code>, sets the risk level with <code>scripts/st-state.sh</code>, and starts the phase and lane skills, the st-build and st-git agents, /st-worker, /st-pr and /st-handoff. It re-runs tests with <code>scripts/st-verify.sh</code>. LikeC4 id: <code>skills.st</code>.',
+    steps: [['Read', 'Feature, phase and lane from .stratum/state.json, and the last handoff.'], ['Pick', 'Lane and risk level from the impact areas of the task.'], ['Say', 'One line to you: the lane and the risk.'], ['Run', 'Start the phase skills or the lane skill.'], ['Check', 'Re-run what the agents report with st-verify.sh.'], ['Commit', 'Hand the exact files to the st-git agent.']] },
+
+  { id: 'L', code: 'L', name: 'Lane skills', short: 'LANES', group: 'loop', gx: 8, gy: 4, w: 2, d: 2, h: 40, kind: 'box',
+    one: 'The four ways a task can run: Full, Fast, Quick and Design.',
+    what: 'Full is for a feature: five phases and four gates. Fast is for a small change: one short plan and one gate. Quick is for a one-file edit with no gate. Design builds a screen in one of three modes.',
+    how: '<code>skills/st-full</code> runs Define, Plan, Inspect, Build and Close without lane selection. <code>skills/st-fast</code> writes a change plan under <code>specs/&lt;feature&gt;/changes/</code> and asks at one gate. <code>skills/st-quick</code> has no gate. <code>skills/st-design</code> has the new look, autonomous and custom modes, reads <code>DESIGN.md</code>, <code>.impeccable</code> and <code>package.json</code>, checks its tools with <code>scripts/st-design-check.sh</code> and drives FigCraft with <code>scripts/st-figcraft.sh</code>. LikeC4 ids: <code>skills.st-full</code>, <code>skills.st-fast</code>, <code>skills.st-quick</code>, <code>skills.st-design</code>, <code>scripts.st-design-check-sh</code>, <code>scripts.st-figcraft-sh</code>, and the data <code>project.design-md</code>, <code>project.impeccable</code>, <code>project.design</code>, <code>project.package-json</code>.',
+    steps: [['Full', 'Define, Plan, Inspect, Build, Close, with four gates.'], ['Fast', 'Change plan, gate, test first, review, commit, drift fix.'], ['Quick', 'One file, no gate, verify, commit.'], ['Design', 'Tool check, mode line, then new look, autonomous or custom.']] },
+
+  { id: 'P', code: 'P', name: 'Phase skills', short: 'PHASES', group: 'loop', gx: 8, gy: 8, w: 3, d: 3, h: 44, kind: 'box',
+    one: 'The five steps of the Full lane: Define, Plan, Inspect, Build and Close.',
+    what: 'Define turns your idea into a spec you agree. Plan writes the plan and the tasks. Inspect checks they fit. Build runs each task test first. Close fixes drift between the docs and the code, and asks before a push.',
+    how: '<code>skills/st-define</code>, <code>skills/st-plan</code>, <code>skills/st-inspect</code>, <code>skills/st-build</code>, <code>skills/st-close</code>. Each phase starts its agent, and the Full-lane view opens one phase view per phase (<code>full-define</code> to <code>full-close</code>). LikeC4 ids: <code>skills.st-define</code>, <code>skills.st-plan</code>, <code>skills.st-inspect</code>, <code>skills.st-build</code>, <code>skills.st-close</code>.',
+    steps: [['Define', 'Grill, write the spec, clarify, checklist. Gate: you agree the spec.'], ['Plan', 'st-plan agent writes plan and tasks. Gate: you answer each open decision.'], ['Inspect', 'st-inspect agent checks spec, plan and tasks. Gate: OK to build.'], ['Build', 'Per task: failing test, build, verify, commit. Review each story.'], ['Close', 'Drift fixes, gaps, lessons, shortcuts. Gate: push.']] },
+
+  { id: 'T', code: 'T', name: 'Tool skills', short: 'TOOLS', group: 'loop', gx: 8, gy: 12, w: 2, d: 2, h: 30, kind: 'cards',
+    one: 'Slash commands any lane, or you, can call for one job.',
+    what: 'Some check work (review, test, debug, triage). Some set up or tune the project (init, update, status, theme). Some run parallel workers. Eleven come from outside projects: the grill, design helpers, a code graph and the ponytail family that keeps changes small.',
+    how: 'Checks: <code>skills/st-review</code>, <code>st-test</code>, <code>st-debug</code>, <code>st-triage</code>. Workers: <code>skills/st-worker</code> with <code>scripts/st-worker.sh</code> and <code>scripts/st-worktree.sh</code>, and <code>skills/st-herdr-workspace</code> with its script. Setup: <code>st-init</code>, <code>st-update</code> with <code>scripts/st-update.sh</code>, <code>st-status</code>, <code>st-sync</code>, <code>st-template</code>, <code>st-constitution</code>, <code>st-model</code>, <code>st-shape</code>, <code>st-theme</code>. Vendored: <code>st-grill</code>, <code>st-ui-ux</code>, <code>st-impeccable</code>, <code>st-graphify</code>, <code>st-hallmark</code> and six <code>st-ponytail</code> skills. LikeC4 ids: <code>skills.st-review</code>, <code>skills.st-test</code>, <code>skills.st-debug</code>, <code>skills.st-triage</code>, <code>skills.st-worker</code>, <code>skills.st-herdr-workspace</code>, <code>skills.st-init</code>, <code>skills.st-update</code>, <code>skills.st-status</code>, <code>skills.st-sync</code>, <code>skills.st-template</code>, <code>skills.st-constitution</code>, <code>skills.st-model</code>, <code>skills.st-shape</code>, <code>skills.st-theme</code>, <code>skills.st-grill</code>, <code>skills.st-ui-ux</code>, <code>skills.st-impeccable</code>, <code>skills.st-graphify</code>, <code>skills.st-hallmark</code>, <code>skills.st-ponytail</code>, <code>skills.st-ponytail-review</code>, <code>skills.st-ponytail-audit</code>, <code>skills.st-ponytail-debt</code>, <code>skills.st-ponytail-gain</code>, <code>skills.st-ponytail-help</code>, <code>scripts.st-worker-sh</code>, <code>scripts.st-worktree-sh</code>, <code>scripts.st-herdr-workspace-sh</code>, <code>scripts.st-update-sh</code>, and the data <code>project.graphify-out</code>, <code>project.graphify-out-graph-report-md</code>, <code>project.design-system</code>, <code>project.product-md</code>, <code>project.hallmark</code>.',
+    cond: [
+      { q: '<b>Q-T1</b> /st-model lists st-worker as an agent (<code>skills/st-model/SKILL.md:11</code>), but <code>agents/st-worker.md</code> does not exist and /st-status says it has no agents file (<code>skills/st-status/SKILL.md:36</code>). Should /st-model drop it?' },
+      { q: '<b>Q-T2</b> /st-hallmark calls its command /hallmark (<code>skills/st-hallmark/SKILL.md:3,57</code>), but the skill name is st-hallmark (<code>:2</code>). Should the text say /st-hallmark?' },
+      { q: '<b>Q-T3</b> /st-impeccable names <code>.claude/skills/st-impeccable/scripts</code> (<code>skills/st-impeccable/SKILL.md:19,82</code>), which is not this plugin\'s layout, and calls /impeccable, not /st-impeccable (<code>:84,86</code>). Should the paths and the command name change?' },
+      { q: '<b>Q-T4</b> /st-ponytail-help tells you to update and read the upstream ponytail plugin, not Stratum (<code>skills/st-ponytail-help/SKILL.md:64,70</code>). Should it point at Stratum?' },
+    ] },
+
+  { id: 'F', code: 'F', name: 'Feature files', short: 'FEATURE FILES', group: 'mem', gx: 16, gy: 8, w: 3, d: 3, h: 28, kind: 'store',
+    one: 'The folder of one feature: spec, plan, tasks and the other design files.',
+    what: 'Each feature gets its own folder. The spec says what to build, the plan says how, and the tasks list the work with a test for each. The next phase, and the next session, read these files instead of remembering.',
+    how: '<code>specs/NNN-feature/</code>: <code>spec.md</code>, <code>plan.md</code>, <code>research.md</code>, <code>data-model.md</code>, <code>contracts/</code>, <code>quickstart.md</code>, <code>tasks.md</code>, <code>checklists/</code>, <code>changes/</code> (Fast-lane plans), <code>decisions.md</code> (grill answers), <code>advisor.md</code> (advisor records) and <code>gaps.md</code>. LikeC4 ids: <code>project.specs</code>, <code>feature.spec-md</code>, <code>feature.plan-md</code>, <code>feature.research-md</code>, <code>feature.data-model-md</code>, <code>feature.contracts</code>, <code>feature.quickstart-md</code>, <code>feature.tasks-md</code>, <code>feature.checklists</code>, <code>feature.changes</code>, <code>feature.decisions-md</code>, <code>feature.advisor-md</code>, <code>feature.gaps-md</code>.',
+    cond: [
+      { q: '<b>Q-F1</b> The model declares <code>specs/NNN-feature/gaps.md</code> (<code>docs/harness/model/data.c4:168</code>), but no skill, agent, procedure, script, hook or template names it. The gap report comes back as findings instead (<code>procedures/converge.md:29</code>, <code>agents/st-close.md:47</code>). Should a harness file write gaps.md?' },
+    ] },
+
+  { id: 'S', code: 'S', name: 'State files', short: 'STATE FILES', group: 'mem', gx: 4, gy: 4, w: 2, d: 2, h: 28, kind: 'store',
+    one: 'The .stratum folder: where the work stands, the project rules and the local settings.',
+    what: 'One small file says which feature, phase, lane and risk level this checkout is on. Beside it sit the project rules, the model choice per agent, and the flags a parallel worker run needs.',
+    how: '<code>.stratum/state.json</code> holds feature, phase, lane and risk. <code>scripts/st-state.sh</code> sets keys and replaces the file in one atomic step, and the phase hook writes it too. Also <code>constitution.md</code>, <code>APP-constitution.md</code>, <code>decisions.md</code>, <code>models.json</code>, <code>approve/</code>, <code>autonomous</code>, <code>commit-mode</code> and <code>worker-setup.sh</code>. LikeC4 ids: <code>scripts.st-state-sh</code>, <code>stratum.state-json</code>, <code>stratum.constitution-md</code>, <code>stratum.app-constitution-md</code>, <code>stratum.decisions-md</code>, <code>stratum.models-json</code>, <code>stratum.approve</code>, <code>stratum.autonomous</code>, <code>stratum.commit-mode</code>, <code>stratum.worker-setup-sh</code>.',
+    cond: [
+      { q: '<b>Q-S1</b> The st-quick agent sets phase in state.json with no script (<code>agents/st-quick.md:48</code>, its tools include Edit, <code>:4</code>). Other writers use st-state.sh (<code>skills/st-close/SKILL.md:58</code>, <code>skills/st-fast/SKILL.md:41</code>). Should it use st-state.sh?' },
+    ] },
+
+  { id: 'R', code: 'R', name: 'Procedures and templates', short: 'PROCEDURES', group: 'mem', gx: 16, gy: 12, w: 2, d: 2, h: 30, kind: 'cards',
+    one: 'The step files and templates that skills and agents follow to write the feature files.',
+    what: 'A procedure is a recipe: how to write a spec, a plan, the tasks, a checklist or a gap report. Templates give each file its shape. A project can keep its own copy of a template, and that copy wins.',
+    how: '<code>procedures/</code>: <code>specify.md</code>, <code>clarify.md</code>, <code>checklist.md</code>, <code>plan.md</code>, <code>tasks.md</code>, <code>analyze.md</code>, <code>converge.md</code>, <code>constitution.md</code>, <code>issues.md</code>. <code>templates/</code> with project overrides in <code>.stratum/templates</code>, found by <code>scripts/resolve-template.sh</code>. <code>scripts/check-prerequisites.sh</code> finds the feature folder. <code>scripts/common.sh</code> holds shared shell functions. LikeC4 ids: <code>procedures.specify-md</code>, <code>procedures.clarify-md</code>, <code>procedures.checklist-md</code>, <code>procedures.plan-md</code>, <code>procedures.tasks-md</code>, <code>procedures.analyze-md</code>, <code>procedures.converge-md</code>, <code>procedures.constitution-md</code>, <code>procedures.issues-md</code>, <code>scripts.resolve-template-sh</code>, <code>scripts.check-prerequisites-sh</code>, <code>scripts.common-sh</code>, and the data <code>plugin.templates</code>, <code>plugin.templates-spec-md</code>, <code>plugin.templates-plan-md</code>, <code>plugin.templates-tasks-md</code>, <code>plugin.templates-checklist-md</code>, <code>plugin.templates-constitution-md</code>, <code>plugin.templates-models-json</code>, <code>stratum.templates</code>.',
+    cond: [
+      { q: '<b>Q-R1</b> The tasks steps say tests are optional (<code>procedures/tasks.md:67</code>), but every task ends with <code>Test:</code> (<code>procedures/tasks.md:92</code>) and the st-build agent needs a red test before each build (<code>agents/st-build.md:40</code>). Which rule wins?' },
+      { q: '<b>Q-R2</b> The specify steps use "the checklist template structure" with no path and no resolve-template.sh call (<code>procedures/specify.md:80</code>). Only the spec template is resolved (<code>procedures/specify.md:38</code>), though <code>templates/checklist.md</code> exists. Should it resolve the checklist template too?' },
+    ] },
+
+  { id: 'A', code: 'A', name: 'Plan and check agents', short: 'PLAN AGENTS', group: 'agents', gx: 12, gy: 4, w: 2, d: 2, h: 40, kind: 'box',
+    one: 'Agents that write the plan, check it, or check an issue, and report back.',
+    what: 'The plan agent writes the plan and the tasks, and stops with the decisions it cannot settle. The inspect agent checks that spec, plan and tasks agree. The triage agent checks a GitHub issue against the code.',
+    how: '<code>agents/st-plan.md</code> follows <code>procedures/plan.md</code> and <code>procedures/tasks.md</code>. <code>agents/st-inspect.md</code> follows <code>procedures/analyze.md</code> and writes only the Validate section of <code>plan.md</code>. <code>agents/st-triage.md</code> reads the issue with <code>gh issue view</code>. LikeC4 ids: <code>agents.st-plan</code>, <code>agents.st-inspect</code>, <code>agents.st-triage</code>.' },
+
+  { id: 'B', code: 'B', name: 'Build agents', short: 'BUILD AGENTS', group: 'agents', gx: 12, gy: 8, w: 2, d: 2, h: 40, kind: 'box',
+    one: 'Agents that write the failing test, make it pass, fix it, review it, or build a screen.',
+    what: 'One agent writes a test that fails first. Another writes the code until it passes and never commits. A third finds the root cause when a test stays red after two tries. A reviewer reads the diff. The design agent builds a screen from the design file.',
+    how: '<code>agents/st-test.md</code>, <code>agents/st-build.md</code>, <code>agents/st-debug.md</code>, <code>agents/st-review.md</code>, <code>agents/st-design.md</code>. LikeC4 ids: <code>agents.st-test</code>, <code>agents.st-build</code>, <code>agents.st-debug</code>, <code>agents.st-review</code>, <code>agents.st-design</code>.',
+    steps: [['Test', 'st-test writes the task test and shows it fails.'], ['Build', 'st-build writes code until the test passes and ticks the task.'], ['Debug', 'st-debug finds the root cause after 2 red tries.'], ['Review', 'st-review reads the story diff and lists findings.']],
+    cond: [
+      { q: '<b>Q-B1</b> The st-build agent gives the Fast-lane path as <code>changes/NNN-name.md</code> with no feature folder (<code>agents/st-build.md:20</code>), but /st-fast and the st-fast agent put it under <code>specs/&lt;feature&gt;/changes/</code> (<code>skills/st-fast/SKILL.md:14</code>, <code>agents/st-fast.md:40</code>). Which path is right?' },
+    ] },
+
+  { id: 'C', code: 'C', name: 'Lane and close agents', short: 'LANE AGENTS', group: 'agents', gx: 12, gy: 12, w: 2, d: 2, h: 40, kind: 'box',
+    one: 'Agents that write a Fast-lane plan, make a Quick edit, close a feature, or audit in the background.',
+    what: 'The fast agent writes one short change plan. The quick agent makes one small edit. The close agent makes the docs match the code, gives the gap report when asked, and proposes lessons. Three more run audits in the background and change no file.',
+    how: '<code>agents/st-fast.md</code>, <code>agents/st-quick.md</code>, <code>agents/st-close.md</code> (which runs <code>scripts/st-shortcuts.sh</code> for the shortcut list), <code>agents/st-impeccable.md</code>, <code>agents/st-ponytail-audit.md</code>, <code>agents/st-ponytail-debt.md</code>. LikeC4 ids: <code>agents.st-fast</code>, <code>agents.st-quick</code>, <code>agents.st-close</code>, <code>agents.st-impeccable</code>, <code>agents.st-ponytail-audit</code>, <code>agents.st-ponytail-debt</code>, <code>scripts.st-shortcuts-sh</code>.',
+    cond: [
+      { q: '<b>Q-C1</b> /st-close says it records defer and drop in spec.md (<code>skills/st-close/SKILL.md:32</code>), but the st-close agent only returns the list and has no record step (<code>agents/st-close.md:47-48</code>). Who writes the record?' },
+    ] },
+
+  { id: 'G', code: 'G', name: 'Gates', short: 'GATES', group: 'loop', gx: 4, gy: 12, w: 2, d: 2, h: 44, kind: 'gate',
+    one: 'The steps where a lane stops and waits for your words.',
+    what: 'A gate names what you must say before the work moves on, like "you agree the spec" or "push". The Full lane has four, Fast has one, Quick has none, and the Design lane has one in its new look and custom modes.',
+    how: 'Not one file: a gate is a lane-view step whose label has <code>gate:</code> after the step number (D8). View <code>full</code>: (6) you agree the spec, (8) you answer each open decision, (10) OK to build, (13) push. View <code>fast</code>: (9) OK on the change plan. View <code>design</code>: (6) commit the reference screen, (10) commit the screen and the saved design. Each gate step is between <code>user</code> and the lane skill: <code>skills/st-define</code>, <code>st-plan</code>, <code>st-inspect</code>, <code>st-close</code> and <code>st-fast</code> pass the gate to you, and in the Design lane you pass your answer to <code>skills/st-design</code>. LikeC4 views: <code>full</code>, <code>full-define</code>, <code>full-plan</code>, <code>full-inspect</code>, <code>full-close</code>, <code>fast</code>, <code>design</code>, <code>design-new-look</code>, <code>design-custom</code>.',
+    steps: [['Agree the spec', 'Full lane, end of Define.'], ['Answer each open decision', 'Full lane, Plan.'], ['OK to build', 'Full lane, end of Inspect.'], ['OK on the change plan', 'Fast lane, after the advisor verdict.'], ['Commit the screen', 'Design lane, new look and custom modes.'], ['Push', 'Full lane, end of Close.']],
+    cond: [
+      { q: '<b>Q-G1</b> /st-full names a Plan gate where you answer the open decisions (<code>skills/st-full/SKILL.md:11</code>), but the Gate section of /st-plan names no user gate, only the next phase (<code>skills/st-plan/SKILL.md:36-38</code>). Is Plan a gate or not?' },
+    ] },
+
+  { id: 'V', code: 'V', name: 'Verify and lock', short: 'VERIFY', group: 'check', gx: 16, gy: 4, w: 2, d: 2, h: 34, kind: 'job',
+    one: 'Re-runs a test after an agent says it passed, and keeps shared runs to one at a time.',
+    what: 'An agent can say "green" and be wrong. The verify script runs the test again and also fails when new code has explanation comments. The lock makes a second test run wait while the first one uses the shared test or Codex tab.',
+    how: '<code>scripts/st-verify.sh</code> prints one PASS or FAIL line. <code>scripts/st-lock.sh</code> makes a lock folder <code>.git/stratum-NAME.lock</code> in the git common folder. LikeC4 ids: <code>scripts.st-verify-sh</code>, <code>scripts.st-lock-sh</code>, and the data <code>project.git-stratum-name-lock</code>.' },
+
+  { id: 'X', code: 'X', name: 'Advisor script', short: 'ADVISOR POINT', group: 'check', gx: 12, gy: 0, w: 2, d: 2, h: 40, kind: 'box',
+    one: 'Runs one advisor point: picks the reviewers, sends the review and records the verdict.',
+    what: 'At set points (the plan, a Fast-lane change, a test still red after two tries, the small decisions, the final diff) the work goes out for review. The advisor mode decides who reviews: auto, Codex, both or off.',
+    how: '<code>scripts/st-advisor.sh</code> reads the mode in <code>.stratum/advisor.json</code> and the risk level, sends the prompt to Codex headless with <code>codex exec</code> read-only, or through <code>scripts/st-codex-agent.sh</code> in a herdr Codex tab under the lock, and appends each verdict to <code>specs/NNN-feature/advisor.md</code>. LikeC4 ids: <code>scripts.st-advisor-sh</code>, <code>scripts.st-codex-agent-sh</code>, <code>stratum.advisor-json</code>.',
+    steps: [['Pick', 'Advisors from the mode and the risk level.'], ['Send', 'Review prompt and answer schema to Codex, read-only.'], ['Read', 'Answer JSON: verdict, summary and findings.'], ['Record', 'Point, time, input hash and verdict in advisor.md.']] },
+
+  { id: 'K', code: 'K', name: 'Codex', short: 'CODEX', group: 'check', gx: 16, gy: 0, w: 2, d: 2, h: 40, kind: 'box',
+    one: 'A second model from OpenAI that reviews the work and never changes it.',
+    what: 'Codex reads what it is sent and answers with a verdict and findings. It runs in a read-only sandbox, so it cannot build or fix anything.',
+    how: 'The <code>codex</code> CLI, run with its own home <code>~/.local/state/stratum/codex-home</code> that links your Codex login and marks each project untrusted. LikeC4 ids: <code>codex</code>, <code>outside.local-state-stratum-codex-home</code>, <code>outside.codex-auth-json</code>.' },
+
+  { id: 'D', code: 'D', name: '/advisor', short: '/ADVISOR', group: 'check', gx: 8, gy: 0, w: 2, d: 2, h: 40, kind: 'box',
+    one: 'The reviewer model you set in Claude Code, asked at the same points as Codex.',
+    what: 'If you set a reviewer with /advisor, the Build phase and the Fast lane give it the same input they give Codex: a red test, the diff, the list of small decisions.',
+    how: 'Set by you with <code>/advisor</code> in Claude Code, not a plugin file. <code>skills/st-build</code> and <code>skills/st-fast</code> pass it the same input as Codex at each advisor point. LikeC4 id: <code>advisor</code>.' },
+
+  { id: 'E', code: 'E', name: 'Hook events', short: 'HOOK EVENTS', group: 'guard', gx: 4, gy: 16, w: 3, d: 2, h: 16, kind: 'slab',
+    one: 'The moments Claude Code announces, and the list of which hook runs at each.',
+    what: 'Claude Code calls out moments like "a tool is about to run", "a session starts" or "you sent a prompt". Stratum lists which hook file runs at each one. Claude Code also runs the status line command named in its settings, with no hook event.',
+    how: '<code>hooks/commands.json</code> binds each event and tool matcher to its hook commands. <code>hooks/hooks.json</code> lists the hook module <code>token-weather.mjs</code>. Events: PreToolUse, PermissionRequest, SessionStart, SubagentStart, UserPromptSubmit, SessionEnd, PreCompact. LikeC4 ids: <code>claude</code>, <code>events.pre-tool-use</code>, <code>events.permission-request</code>, <code>events.session-start</code>, <code>events.subagent-start</code>, <code>events.user-prompt-submit</code>, <code>events.session-end</code>, <code>events.pre-compact</code>, <code>hooks.commands-json</code>, <code>hooks.hooks-json</code>.',
+    steps: [['SessionStart', 'Handoff, communication rules and ponytail rules.'], ['UserPromptSubmit', 'Ponytail mode and the reply label for the phase.'], ['PreToolUse', 'Git guard on Bash, model on Agent, phase on Skill, approve lock on file tools.'], ['PermissionRequest', 'The approve hook answers for a worker.'], ['SubagentStart', 'Ponytail rules for the subagent.'], ['SessionEnd and PreCompact', 'Save the handoff facts.']] },
+
+  { id: 'W', code: 'W', name: 'Git guard', short: 'GIT GUARD', group: 'guard', gx: 8, gy: 16, w: 2, d: 2, h: 44, kind: 'gate',
+    one: 'Reads each shell command and asks or denies commits, pushes and destructive git.',
+    what: 'Before any shell command runs, the guard looks for git words. Depending on the project setting it asks you, or refuses, so a commit or a push never happens by surprise.',
+    how: '<code>hooks/st-git-guard.py</code> runs on PreToolUse with matcher Bash and reads the commit mode, destructive git modes and guarded branch from <code>.stratum/git-guard.json</code>. LikeC4 ids: <code>hooks.st-git-guard-py</code>, <code>stratum.git-guard-json</code>.' },
+
+  { id: 'H', code: 'H', name: 'Approve, phase and model hooks', short: 'RULE HOOKS', group: 'guard', gx: 12, gy: 16, w: 2, d: 2, h: 44, kind: 'gate',
+    one: 'Hooks that track the phase, set each agent\'s model, and answer permissions for workers.',
+    what: 'When a phase skill starts, one hook writes the phase down and warns if it is out of order. Another sets the model and effort of each agent from the project settings. A third stops workers from touching files they do not own and, in an autonomous run, lets the orchestrator answer their permission requests.',
+    how: '<code>hooks/st-phase.py</code> (PreToolUse matcher Skill, and every prompt) writes <code>.stratum/state.json</code>. <code>hooks/st-models.py</code> (matcher Agent) reads <code>.stratum/models.json</code>. <code>hooks/st-approve.py</code> (file tools and every PermissionRequest) reads <code>.stratum/approve</code> and <code>.stratum/autonomous</code>. LikeC4 ids: <code>hooks.st-phase-py</code>, <code>hooks.st-models-py</code>, <code>hooks.st-approve-py</code>.' },
+
+  { id: 'M', code: 'M', name: 'Handoff', short: 'HANDOFF', group: 'mem', gx: 0, gy: 4, w: 2, d: 2, h: 28, kind: 'store',
+    one: 'The note that lets the next session start where this one stopped.',
+    what: 'At the end of a session, and before Claude Code shrinks its memory, a hook saves the facts: phase, lane, tasks done, branch and recent commits. /st-handoff adds the goal, the decisions and the next step. The next session prints it back at start.',
+    how: '<code>skills/st-handoff</code> and <code>hooks/st-handoff-facts.sh</code> (SessionEnd, PreCompact) write <code>.stratum/handoff.md</code>. <code>hooks/st-session-start.sh</code> prints it with the rules of <code>sr-opus-5.md</code>, and in a worktree links the shared .stratum files. Close lessons wait in <code>.stratum/lessons.md</code>. LikeC4 ids: <code>skills.st-handoff</code>, <code>hooks.st-handoff-facts-sh</code>, <code>hooks.st-session-start-sh</code>, <code>stratum.handoff-md</code>, <code>stratum.lessons-md</code>, <code>plugin.sr-opus-5-md</code>.',
+    steps: [['Save facts', 'SessionEnd or PreCompact: phase, lane, tasks, branch, commits.'], ['Write', '/st-handoff: goal, where we are, decisions, next step.'], ['Print back', 'SessionStart: rules and the last handoff.']] },
+
+  { id: 'N', code: 'N', name: 'Statusline and ponytail', short: 'STATUSLINE', group: 'guard', gx: 0, gy: 16, w: 2, d: 2, h: 36, kind: 'screen',
+    one: 'The status bar under the prompt, and the ponytail rules that keep changes small.',
+    what: 'The status line shows the model, git, commit mode, ponytail level, the autonomous flag and the Token Weather line about how full the context is. Ponytail hooks give every session and subagent the "smallest change that works" rules and track the level you set.',
+    how: '<code>statusline/st-statusline.sh</code> merges <code>statusline/powerline.json</code>, <code>statusline/themes.json</code> and <code>.stratum/powerline.json</code>. <code>hooks/token-weather.mjs</code> writes <code>.stratum/weather.json</code>. <code>hooks/ponytail/</code> holds eight files that set, track and pass on the live mode. LikeC4 ids: <code>statusline.st-statusline-sh</code>, <code>statusline.powerline-json</code>, <code>statusline.themes-json</code>, <code>hooks.token-weather-mjs</code>, <code>hooks.ponytail-activate-js</code>, <code>hooks.ponytail-config-js</code>, <code>hooks.ponytail-instructions-js</code>, <code>hooks.ponytail-map-js</code>, <code>hooks.ponytail-mode-tracker-js</code>, <code>hooks.ponytail-runtime-js</code>, <code>hooks.ponytail-statusline-sh</code>, <code>hooks.ponytail-subagent-js</code>, and the data <code>stratum.powerline-json</code>, <code>stratum.weather-json</code>, <code>outside.claude-ponytail-active</code>, <code>outside.claude-ponytail-modes</code>, <code>outside.config-ponytail-config-json</code>.',
+    cond: [
+      { q: '<b>Q-N1</b> ponytail-activate.js copies <code>ponytail-statusline.ps1</code> on Windows (<code>hooks/ponytail/ponytail-activate.js:106</code>), but <code>hooks/ponytail/</code> has no such file, and the catch at <code>:165</code> swallows the copy error. Add the file or drop the copy?' },
+      { q: '<b>Q-N2</b> <code>ponytail-statusline.sh</code> is only copied (<code>hooks/ponytail/ponytail-activate.js:125</code>). Nothing in the repo runs it, and <code>statusline/st-statusline.sh:43</code> reads <code>.ponytail-active</code> itself. Keep it or remove it?' },
+    ] },
+
+  { id: 'Z', code: 'Z', name: 'st-git agent', short: 'ST-GIT', group: 'ship', gx: 20, gy: 8, w: 2, d: 2, h: 34, kind: 'job',
+    one: 'The only agent that commits, and only the exact files it is given.',
+    what: 'Every phase and lane hands its finished files to this one agent. It stages exactly those paths, writes a plain commit message and never pushes. /st-git lets you commit on demand and pick the files.',
+    how: '<code>agents/st-git.md</code>, started by /st, the phase and lane skills, /st-worker and <code>skills/st-git</code>. It returns the commit hash and files. LikeC4 ids: <code>agents.st-git</code>, <code>skills.st-git</code>.' },
+
+  { id: 'I', code: 'I', name: 'git repository', short: 'GIT REPO', group: 'ship', gx: 24, gy: 8, w: 2, d: 2, h: 28, kind: 'store',
+    one: 'The project\'s branches, worktrees and commits.',
+    what: 'Commits land here. Reviewers and the close agent read its diff and log, and parallel workers each get their own worktree.',
+    how: 'The local git repository. Writers: the st-git agent (commits), /st-build (merges of worker branches), /st-pr (push of the branch). LikeC4 id: <code>git</code>.' },
+
+  { id: 'GH', code: 'GH', name: 'GitHub PR', short: 'GITHUB PR', group: 'ship', gx: 24, gy: 12, w: 2, d: 2, h: 36, kind: 'screen',
+    one: 'Issues and pull requests on GitHub, reached through the gh CLI.',
+    what: '/st-pr opens a draft pull request from the git facts and the spec after one gate, and marks it ready when the checks pass. /st-issues turns the tasks into issues and skips ones that already exist.',
+    how: '<code>skills/st-pr</code> runs <code>workflows/pr.js</code> with the body from <code>templates/pr.md</code> or the project copy. <code>skills/st-issues</code> follows <code>procedures/issues.md</code>. LikeC4 ids: <code>github</code>, <code>skills.st-pr</code>, <code>skills.st-issues</code>, <code>plugin.workflows-pr-js</code>, <code>plugin.templates-pr-md</code>.' },
+];
+
+export const FLOWS = [
+  { id: 'turn', name: 'Full lane', hops: [
+    ['U', 'O', 'task in plain words', { task: 'add a dark mode switch to settings' }, 'xy'],
+    ['O', 'S', 'risk level', { risk: 'medium' }, 'yx'],
+    ['O', 'P', 'Define: feature description', { skill: '/st-define' }, 'xy'],
+    ['P', 'F', 'spec and checklists', { files: ['spec.md', 'checklists/requirements.md'] }, 'xy'],
+    ['G', 'U', 'gate: you agree the spec', { gate: 'you agree the spec' }, 'yx'],
+    ['P', 'A', 'Plan: feature dir', { agent: 'st-plan' }, 'xy'],
+    ['A', 'F', 'plan, research, data model, tasks', { files: ['plan.md', 'tasks.md'] }, 'xy'],
+    ['G', 'U', 'gate: you answer each open decision', { gate: 'you answer each open decision' }, 'yx'],
+    ['P', 'X', 'plan point', { point: 'plan' }, 'xy'],
+    ['X', 'K', 'spec, plan and tasks, read-only', { sandbox: 'read-only' }, 'xy'],
+    ['P', 'A', 'Inspect: plan files to check', { agent: 'st-inspect' }, 'xy'],
+    ['G', 'U', 'gate: OK to build', { gate: 'OK to build' }, 'yx'],
+    ['P', 'B', 'test and build task ids', { tasks: ['T001'] }, 'xy'],
+    ['B', 'F', 'ticked task', { task: 'T001', done: true }, 'xy'],
+    ['P', 'Z', 'task paths and tasks.md', { paths: ['src/settings.tsx', 'tasks.md'] }, 'xy'],
+    ['Z', 'I', 'task commit', { commit: 'feat: dark mode switch' }, 'xy'],
+    ['P', 'C', 'Close: feature dir', { agent: 'st-close' }, 'yx'],
+    ['G', 'U', 'gate: push', { gate: 'push' }, 'yx'],
+  ] },
+  { id: 'fast', name: 'Fast lane', hops: [
+    ['U', 'L', 'change in plain words', { skill: '/st-fast', change: 'rename the export button' }, 'xy'],
+    ['L', 'C', 'change', { agent: 'st-fast' }, 'xy'],
+    ['C', 'F', 'change plan NNN-name.md', { file: 'changes/004-rename-export.md' }, 'xy'],
+    ['L', 'X', 'change point', { point: 'change' }, 'yx'],
+    ['X', 'K', 'change plan to review', { sandbox: 'read-only' }, 'xy'],
+    ['G', 'U', 'gate: OK on the change plan', { gate: 'OK on the change plan' }, 'yx'],
+    ['L', 'B', 'test, then build', { agents: ['st-test', 'st-build'] }, 'xy'],
+    ['L', 'V', 'test command and files touched', { result: 'PASS' }, 'yx'],
+    ['L', 'Z', 'exact paths of the change', { paths: ['src/export.tsx'] }, 'xy'],
+    ['Z', 'I', 'change commit', { commit: 'fix: rename export button' }, 'xy'],
+    ['L', 'S', 'phase done', { phase: 'done' }, 'yx'],
+  ] },
+  { id: 'quick', name: 'Quick lane', hops: [
+    ['U', 'O', 'task in plain words', { task: 'fix a typo in the footer' }, 'xy'],
+    ['O', 'L', 'one file: the edit', { skill: '/st-quick' }, 'xy'],
+    ['L', 'C', 'the edit', { agent: 'st-quick' }, 'xy'],
+    ['C', 'S', 'phase done', { phase: 'done' }, 'yx'],
+    ['L', 'V', 'tests and the one file', { result: 'PASS' }, 'yx'],
+    ['L', 'Z', 'the one file', { paths: ['src/footer.tsx'] }, 'xy'],
+    ['Z', 'I', 'commit', { commit: 'fix: footer typo' }, 'xy'],
+    ['L', 'U', 'what changed in one line', { summary: 'footer typo fixed' }, 'yx'],
+  ] },
+  { id: 'design', name: 'Design lane', hops: [
+    ['U', 'L', 'task in plain words', { skill: '/st-design', task: 'a landing page' }, 'xy'],
+    ['L', 'U', 'mode line and grill questions, after the tool check', { script: 'st-design-check.sh', mode: 'new look' }, 'yx'],
+    ['L', 'T', 'deal: genre and brief', { skill: '/st-hallmark' }, 'xy'],
+    ['L', 'B', 'task, mode, answers', { agent: 'st-design' }, 'xy'],
+    ['B', 'L', 'report: files and screenshots', { screenshots: 2 }, 'yx'],
+    ['L', 'T', 'audit and critique', { skill: '/st-impeccable' }, 'xy'],
+    ['G', 'U', 'gate: commit the reference screen', { gate: 'yes, commit the reference screen' }, 'yx'],
+    ['L', 'Z', 'paths and DESIGN.md', { paths: ['DESIGN.md', '.impeccable/design.json'] }, 'xy'],
+    ['Z', 'I', 'commit', { commit: 'feat: landing page' }, 'xy'],
+  ] },
+  { id: 'commit', name: 'A commit', hops: [
+    ['P', 'Z', 'task paths', { paths: ['src/settings.tsx', 'tasks.md'] }, 'xy'],
+    ['Z', 'E', 'Bash: git commit', { tool: 'Bash', command: 'git commit' }, 'yx'],
+    ['E', 'W', 'PreToolUse, matcher Bash', { event: 'PreToolUse' }, 'xy'],
+    ['W', 'E', 'ask or deny with the reason', { decision: 'ask' }, 'yx'],
+    ['Z', 'I', 'staged paths and commit message', { commit: 'feat: dark mode switch' }, 'xy'],
+    ['Z', 'P', 'commit hash and files', { hash: 'a1b2c3d' }, 'yx'],
+  ] },
+];
+
+export const CH = [
+  { id: 'you', title: 'You and /st', reveal: ['U', 'O'],
+    lede: `Strip everything away and this is Stratum: you say a task in plain words, and /st runs it.`,
+    story: `<p>/st is the orchestrator. It reads where the work stands, picks a lane and a risk level, and tells you both in one line. <mark>It routes and checks, and other parts do the work.</mark></p>`,
+    flow: [['U', 'O', 'task in plain words', { task: 'add a dark mode switch to settings' }], ['O', 'U', 'lane and risk line', { lane: 'Full', risk: 'medium' }]] },
+  { id: 'lanes', title: 'The four lanes', reveal: ['L', 'P', 'T'],
+    lede: `The lane sets how much process a task gets.`,
+    story: `<p>Full runs five phases with four gates, Fast has one gate on a short change plan, Quick has none, and Design builds screens. <mark>The phase skills are the steps of the Full lane.</mark> Tool skills do one job any lane can call, like the grill.</p>`,
+    flow: [['U', 'O', 'task in plain words', { task: 'add a dark mode switch to settings' }], ['O', 'P', 'feature description', { skill: '/st-define' }], ['P', 'T', 'feature description', { skill: '/st-grill' }], ['T', 'U', 'one question at a time', { question: 'Who uses this setting?' }], ['U', 'T', 'answers', { answer: 'every signed-in user' }]] },
+  { id: 'disk', title: 'The spec on disk', reveal: ['F', 'S', 'R'],
+    lede: `Every step writes to files, so the next step and the next session can read them.`,
+    story: `<p>A feature lives in its own folder under specs: spec, plan, tasks and the rest. The phase follows procedure files and templates, and the current feature and phase sit in .stratum/state.json. <mark>The files are the memory between steps.</mark></p>`,
+    flow: [['O', 'S', 'risk level', { risk: 'medium' }], ['P', 'R', 'description and grilling summary', { procedure: 'specify.md' }], ['R', 'F', 'spec from the spec template', { file: 'spec.md' }], ['R', 'S', 'feature dir and phase define', { phase: 'define' }]] },
+  { id: 'agents', title: 'The agents that do the work', reveal: ['A', 'B', 'C'],
+    lede: `Skills plan the work, and agents do it in a fresh context.`,
+    story: `<p>The st-plan agent writes the plan and tasks, st-test writes a failing test, st-build makes it pass, and st-close fixes drift at the end. <mark>An agent returns a report, and the skill checks it.</mark></p>`,
+    flow: [['P', 'A', 'feature dir', { agent: 'st-plan' }], ['A', 'F', 'plan and tasks', { files: ['plan.md', 'tasks.md'] }], ['A', 'P', 'plan report and open decisions', { open: 2 }], ['P', 'B', 'task ids and absolute paths', { tasks: ['T001'] }], ['B', 'F', 'ticked task', { task: 'T001', done: true }], ['P', 'C', 'feature dir and gap report choice', { agent: 'st-close' }], ['C', 'P', 'drift fixes, lessons and shortcut rows', { lessons: 1 }]] },
+  { id: 'gates', title: 'Gates: asking you first', reveal: ['G', 'V'],
+    lede: `Some steps stop and wait for your words.`,
+    story: `<p>A gate names what you must say, like "you agree the spec" or "push". Between gates, st-verify.sh re-runs each test and st-lock.sh keeps shared runs to one at a time. <mark>Nothing passes a gate without you.</mark></p>`,
+    flow: [['P', 'A', 'plan files to check', { agent: 'st-inspect' }], ['A', 'P', 'findings and verdict', { verdict: 'ready' }], ['P', 'G', 'the OK to build question', { gate: 'OK to build' }], ['G', 'U', 'gate: OK to build', { gate: 'OK to build' }], ['U', 'G', 'OK', { answer: 'OK' }], ['P', 'V', 'test command and touched files', { test: 'npm test settings' }], ['V', 'P', 'one PASS or FAIL line', { result: 'PASS' }]] },
+  { id: 'advisor', title: 'Second opinion: Codex and /advisor', reveal: ['X', 'K', 'D'],
+    lede: `At set points, a second model reviews the work before it moves on.`,
+    story: `<p>st-advisor.sh sends the plan, the change, a red test or the diff to Codex in a read-only sandbox and records the verdict in advisor.md. The /advisor model you set in Claude Code gets the same input. <mark>Reviewers only review: they never build or fix.</mark></p>`,
+    flow: [['P', 'X', 'test point after 2 red tries', { point: 'test', task: 'T004' }], ['X', 'K', 'review prompt, read-only', { sandbox: 'read-only' }], ['K', 'X', 'verdict and findings', { verdict: 'root cause', findings: 1 }], ['X', 'F', 'test point record', { file: 'advisor.md' }], ['P', 'D', 'same input as Codex', { point: 'test' }], ['P', 'B', 'task, test, failures and advisor answer', { agent: 'st-debug' }]] },
+  { id: 'hooks', title: 'Guard rails: hooks', reveal: ['E', 'W', 'H'],
+    lede: `Claude Code fires events, and hook files act on them before a tool runs.`,
+    story: `<p>The git guard reads each shell command and asks or denies commits, pushes and destructive git. Other hooks set the phase, set the model of each agent, and answer permission requests for workers. <mark>Hooks hold the rules even when a prompt forgets them.</mark></p>`,
+    flow: [['O', 'E', 'Skill call: /st-plan', { tool: 'Skill' }], ['E', 'H', 'PreToolUse, matcher Skill', { event: 'PreToolUse' }], ['H', 'S', 'phase and lane', { phase: 'plan', lane: 'full' }], ['O', 'E', 'Bash: git push', { tool: 'Bash' }], ['E', 'W', 'PreToolUse, matcher Bash', { event: 'PreToolUse' }], ['W', 'E', 'ask or deny with the reason', { decision: 'ask' }]] },
+  { id: 'memory', title: 'Memory across sessions', reveal: ['M', 'N'],
+    lede: `When a session ends, the next one starts where it stopped.`,
+    story: `<p>A hook saves a facts block into .stratum/handoff.md at session end and before compaction, and /st-handoff adds the goal and the next step. At start, a hook prints the handoff back. <mark>The status line shows the state at a glance</mark>, with the ponytail level and the Token Weather line.</p>`,
+    flow: [['O', 'M', 'session end: /st-handoff', { next: 'run /st-inspect' }], ['E', 'M', 'SessionEnd: facts block', { phase: 'plan', tasks: '0/12' }], ['E', 'M', 'SessionStart', { matcher: 'startup' }], ['M', 'E', 'rules and the last handoff', { lines: 40 }], ['E', 'N', 'status line command from settings: session JSON on stdin', { model: 'opus' }], ['N', 'E', 'status line text', { ponytail: 'full' }]] },
+  { id: 'ship', title: 'Shipping', reveal: ['Z', 'I', 'GH'],
+    lede: `Work leaves the session as commits and a pull request.`,
+    story: `<p>Only the st-git agent commits, and only the exact paths it is given. /st-pr pushes the branch and opens a draft pull request after one gate. <mark>Nothing is pushed until you say so.</mark></p>`,
+    flow: [['P', 'Z', 'task paths and tasks.md', { paths: ['src/settings.tsx', 'tasks.md'] }], ['Z', 'I', 'staged paths and commit message', { commit: 'feat: dark mode switch' }], ['Z', 'P', 'commit hash and files', { hash: 'a1b2c3d' }], ['O', 'GH', 'branch to open a PR for', { skill: '/st-pr' }], ['GH', 'I', 'push of the branch', { branch: '014-dark-mode' }], ['GH', 'U', 'PR URL, draft or ready', { state: 'draft' }]] },
+  { id: 'all', title: 'The whole system', reveal: [],
+    lede: `Everything at once, with a flow picker.`,
+    story: `<p>Pick a flow at the bottom left: the Full, Fast, Quick or Design lane, or a commit. Hover to read, click to pin, and → goes inside. The <mark>Open questions</mark> tab lists the 13 gaps by ID.</p>`,
+    flow: null },
+];
+
+export const HOW_HTML = `<div class="eyebrow">Stratum harness</div><h1 class="t">How it's built</h1><div class="sub">a Claude Code plugin: skills, agents, hooks and scripts</div>
+<p>Each structure groups files of the LikeC4 model. Its "How it's built" tab ends with the LikeC4 element ids it stands for, so you can find the same parts in <code>docs/harness/README.md</code> and the LikeC4 preview.</p>`;

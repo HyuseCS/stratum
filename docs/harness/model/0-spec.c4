@@ -1,0 +1,77 @@
+specification {
+  element group
+  element actor
+  element event
+  element skill
+  element agent
+  element hook
+  element statusline
+  element script
+  element procedure
+  element pluginfile
+  element datafile
+  relationship starts
+  relationship reads
+  relationship writes
+  relationship runs
+  relationship passes
+  tag vendored
+}
+
+model {
+  skills = group 'Skills' {
+    summary 'The skill folders under skills. The user or another skill starts a skill by its slash name.'
+  }
+  agents = group 'Agents' {
+    summary 'The agent files under agents. A skill starts an agent, and the agent passes a report back.'
+  }
+  events = group 'Hook events' {
+    summary 'The Claude Code events that hooks/commands.json and hooks/hooks.json bind to hook files.'
+  }
+  hooks = group 'Hooks' {
+    summary 'The hook files and hook config files under hooks and hooks/ponytail.'
+  }
+  statusline = group 'Statusline' {
+    summary 'The files under statusline that draw the Claude Code status line.'
+  }
+  scripts = group 'Scripts' {
+    summary 'The shell scripts under scripts that skills, agents, procedures and hooks run.'
+  }
+  procedures = group 'Procedures' {
+    summary 'The step files under procedures that skills and agents follow to write feature files.'
+  }
+  stratum = group '.stratum files' {
+    summary 'The data files in the .stratum folder of the project: state, settings, rules and notes.'
+  }
+  feature = group 'Feature files' {
+    summary 'The files of one feature in specs/NNN-feature: spec, plan, tasks and the other design files.'
+  }
+  project = group 'Project files' {
+    summary 'Other project files that the harness reads or writes, outside .stratum and specs.'
+  }
+  plugin = group 'Other plugin files' {
+    summary 'Plugin files outside the skill, agent, hook, statusline, script and procedure folders.'
+  }
+  outside = group 'Machine files' {
+    summary 'Files on the machine outside the project folder.'
+  }
+
+  user = actor 'User' {
+    summary 'The person who gives the task, answers questions and agrees at each gate.'
+  }
+  codex = actor 'Codex' {
+    summary 'The OpenAI codex CLI. It reviews at the advisor points in the read-only sandbox and never builds or fixes.'
+  }
+  advisor = actor '/advisor' {
+    summary 'The reviewer model the user sets in Claude Code with /advisor. It reviews at the advisor points.'
+  }
+  github = actor 'GitHub' {
+    summary 'The GitHub host of the repository: issues and pull requests, reached through the gh CLI.'
+  }
+  git = actor 'git repository' {
+    summary 'The local git repository of the project: branches, worktrees and commits.'
+  }
+  claude = actor 'Claude Code' {
+    summary 'The Claude Code app. It loads the plugin, fires the hook events and draws the status line.'
+  }
+}

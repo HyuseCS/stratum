@@ -1,0 +1,192 @@
+model {
+  extend scripts {
+    check-prerequisites-sh = script 'check-prerequisites.sh' {
+      summary 'Finds the feature folder from the state file and checks that the spec, plan or tasks exist. Prints the feature paths, the docs found and the template path as JSON.'
+      metadata {
+        path 'scripts/check-prerequisites.sh'
+      }
+    }
+    common-sh = script 'common.sh' {
+      summary 'Shared shell functions that other scripts source: the plugin root, the project root (the first folder up with a .stratum folder) and JSON string escape.'
+      metadata {
+        path 'scripts/common.sh'
+      }
+    }
+    resolve-template-sh = script 'resolve-template.sh' {
+      summary 'Prints the path of a named template: the project override in the .stratum templates folder first, else the plugin template.'
+      metadata {
+        path 'scripts/resolve-template.sh'
+      }
+    }
+    st-advisor-sh = script 'st-advisor.sh' {
+      summary 'Runs one advisor point: picks the advisors from the mode and risk, sends the review prompt to Codex and records the verdict in the feature advisor file.'
+      metadata {
+        path 'scripts/st-advisor.sh'
+      }
+    }
+    st-codex-agent-sh = script 'st-codex-agent.sh' {
+      summary 'Inside herdr, runs Codex as a read-only agent in a Codex tab, sends it the review request and reads the answer JSON back from the tab.'
+      metadata {
+        path 'scripts/st-codex-agent.sh'
+      }
+    }
+    st-design-check-sh = script 'st-design-check.sh' {
+      summary 'Checks the design tools: Node 18 or later, puppeteer-core and Chrome or Chromium. With the custom flag it also checks FigCraft.'
+      metadata {
+        path 'scripts/st-design-check.sh'
+      }
+    }
+    st-figcraft-sh = script 'st-figcraft.sh' {
+      summary 'Checks, starts and talks to the FigCraft design tool on port 7979, and runs its CLI and MCP server for the custom design mode.'
+      metadata {
+        path 'scripts/st-figcraft.sh'
+      }
+    }
+    st-herdr-workspace-sh = script 'st-herdr-workspace.sh' {
+      summary 'Opens a project folder as a new herdr workspace with the full or basic layout, here or on a saved machine, and reports the tabs and panes.'
+      metadata {
+        path 'scripts/st-herdr-workspace.sh'
+      }
+    }
+    st-lock-sh = script 'st-lock.sh' {
+      summary 'Runs a command under a named lock folder in the git common folder, so only one run at a time uses the shared test or Codex tab.'
+      metadata {
+        path 'scripts/st-lock.sh'
+      }
+    }
+    st-shortcuts-sh = script 'st-shortcuts.sh' {
+      summary 'Lists the ponytail marker lines added since the base branch, with file and line, for the shortcut list at the end of a lane.'
+      metadata {
+        path 'scripts/st-shortcuts.sh'
+      }
+    }
+    st-state-sh = script 'st-state.sh' {
+      summary 'Sets keys in the state file and replaces the file in one atomic step.'
+      metadata {
+        path 'scripts/st-state.sh'
+      }
+    }
+    st-update-sh = script 'st-update.sh' {
+      summary 'Audits each checkout of a project against the installed Stratum version and fixes one item at a time: install, statusline, ignore lines, pointers, settings and old files.'
+      metadata {
+        path 'scripts/st-update.sh'
+      }
+    }
+    st-verify-sh = script 'st-verify.sh' {
+      summary 'Runs a test command and fails when it fails or when the changed files have new comment lines that are not ponytail markers.'
+      metadata {
+        path 'scripts/st-verify.sh'
+      }
+    }
+    st-worker-sh = script 'st-worker.sh' {
+      summary 'Starts and drives worker sessions: a Claude Code agent in its own herdr worktree, or a headless run. Writes the brief, waits, answers, approves and closes.'
+      metadata {
+        path 'scripts/st-worker.sh'
+      }
+    }
+    st-worktree-sh = script 'st-worktree.sh' {
+      summary 'Makes a sibling git worktree for a branch and links the local Claude settings and the Claude memory folder of the main checkout into it.'
+      metadata {
+        path 'scripts/st-worktree.sh'
+      }
+    }
+  }
+
+  scripts.check-prerequisites-sh -[runs]-> scripts.common-sh 'sourced for project_root and json_escape'
+  scripts.check-prerequisites-sh -[runs]-> scripts.resolve-template-sh 'template name from --template'
+  scripts.check-prerequisites-sh -[reads]-> stratum.state-json 'feature_directory'
+  scripts.check-prerequisites-sh -[reads]-> feature.spec-md 'exists check for --require-spec'
+  scripts.check-prerequisites-sh -[reads]-> feature.plan-md 'exists and not empty check for --require-plan'
+  scripts.check-prerequisites-sh -[reads]-> feature.tasks-md 'exists check for --require-tasks and --include-tasks'
+  scripts.check-prerequisites-sh -[reads]-> feature.research-md 'exists check for the docs list'
+  scripts.check-prerequisites-sh -[reads]-> feature.data-model-md 'exists check for the docs list'
+  scripts.check-prerequisites-sh -[reads]-> feature.contracts 'not empty check for the docs list'
+  scripts.check-prerequisites-sh -[reads]-> feature.quickstart-md 'exists check for the docs list'
+
+  scripts.resolve-template-sh -[runs]-> scripts.common-sh 'sourced for project_root and the plugin root'
+  scripts.resolve-template-sh -[reads]-> stratum.templates 'project override template NAME.md'
+  scripts.resolve-template-sh -[reads]-> plugin.templates-spec-md 'spec template path when no override'
+  scripts.resolve-template-sh -[reads]-> plugin.templates-plan-md 'plan template path when no override'
+  scripts.resolve-template-sh -[reads]-> plugin.templates-tasks-md 'tasks template path when no override'
+  scripts.resolve-template-sh -[reads]-> plugin.templates-checklist-md 'checklist template path when no override'
+  scripts.resolve-template-sh -[reads]-> plugin.templates-constitution-md 'constitution template path when no override'
+
+  scripts.st-advisor-sh -[reads]-> stratum.advisor-json 'mode, model and effort, from the worktree or the main checkout'
+  scripts.st-advisor-sh -[reads]-> stratum.state-json 'risk level of the main checkout'
+  scripts.st-advisor-sh -[reads]-> feature.spec-md 'spec, hashed for the plan point'
+  scripts.st-advisor-sh -[reads]-> feature.plan-md 'plan without the Validate section, hashed for the plan point'
+  scripts.st-advisor-sh -[reads]-> feature.tasks-md 'tasks, hashed for the plan point'
+  scripts.st-advisor-sh -[reads]-> feature.changes 'change plan, hashed for the change point'
+  scripts.st-advisor-sh -[reads]-> feature.advisor-md 'last record for check, continued, waive and count'
+  scripts.st-advisor-sh -[writes]-> feature.advisor-md 'point, time, sha256, verdict and findings, or a waive, note, talk or continued record'
+  scripts.st-advisor-sh -[reads]-> outside.codex-auth-json 'Codex login to link'
+  scripts.st-advisor-sh -[writes]-> outside.local-state-stratum-codex-home 'auth.json link and the untrusted project entry in config.toml'
+  scripts.st-advisor-sh -[runs]-> scripts.st-lock-sh 'lock codex-WORKSPACE, timeout 50 s, around st-codex-agent.sh'
+  scripts.st-advisor-sh -[runs]-> scripts.st-codex-agent-sh 'feature dir, prompt file, answer file, Codex home, model and effort'
+  scripts.st-advisor-sh -[passes]-> codex 'review prompt for the point and the answer schema, headless with codex exec read-only'
+  codex -[passes]-> scripts.st-advisor-sh 'answer JSON: verdict, summary and findings'
+  scripts.st-advisor-sh -[passes]-> skills.st-plan 'plan point verdict, findings and where Codex ran'
+  scripts.st-advisor-sh -[passes]-> skills.st-build 'test, decisions, diff and round verdicts, the advisors to use, and the call count'
+  scripts.st-advisor-sh -[passes]-> skills.st-fast 'change point verdict and findings'
+  scripts.st-advisor-sh -[passes]-> skills.st-inspect 'plan approval check, stale or current, and the waive record'
+  scripts.st-advisor-sh -[passes]-> skills.st-init 'Codex home path or the login error'
+
+  scripts.st-codex-agent-sh -[reads]-> outside.local-state-stratum-codex-home 'login link, untrusted project entry and Codex tab records'
+  scripts.st-codex-agent-sh -[writes]-> outside.local-state-stratum-codex-home 'Codex tab record in the agents folder'
+  scripts.st-codex-agent-sh -[passes]-> codex 'review request file, answer keys and the nonce markers'
+  codex -[passes]-> scripts.st-codex-agent-sh 'answer JSON between the nonce markers in the Codex tab'
+  scripts.st-codex-agent-sh -[passes]-> scripts.st-advisor-sh 'answer JSON in the answer file and the Codex tab line'
+
+  scripts.st-design-check-sh -[runs]-> scripts.st-figcraft-sh 'check, with --custom'
+
+  scripts.st-figcraft-sh -[writes]-> project.design 'design folder that FigCraft may write in'
+  scripts.st-figcraft-sh -[writes]-> outside.xdg-runtime-dir-st-figcraft-port 'FigCraft pid and project folder, and its start log'
+  scripts.st-figcraft-sh -[reads]-> outside.xdg-runtime-dir-st-figcraft-port 'pid and project folder of the running FigCraft'
+
+  scripts.st-lock-sh -[writes]-> project.git-stratum-name-lock 'lock folder with the pid and the start time'
+  scripts.st-lock-sh -[reads]-> project.git-stratum-name-lock 'pid of the lock owner'
+
+  scripts.st-state-sh -[reads]-> stratum.state-json 'current keys'
+  scripts.st-state-sh -[writes]-> stratum.state-json 'keys and values from the arguments'
+
+  scripts.st-update-sh -[reads]-> outside.claude-plugins-installed-plugins-json 'Stratum install records'
+  scripts.st-update-sh -[reads]-> outside.claude-plugins-known-marketplaces-json 'Stratum marketplace location'
+  scripts.st-update-sh -[reads]-> outside.claude-settings-json 'enabledPlugins that are on'
+  scripts.st-update-sh -[reads]-> plugin.claude-plugin-plugin-json 'marketplace version and mcpServers'
+  scripts.st-update-sh -[reads]-> skills.st-design 'FigCraft tool names in design-tool.md'
+  scripts.st-update-sh -[reads]-> project.gitignore 'Stratum ignore lines'
+  scripts.st-update-sh -[writes]-> project.gitignore 'missing ignore lines'
+  scripts.st-update-sh -[reads]-> project.agents-md 'exists check for the AGENTS.md pointer'
+  scripts.st-update-sh -[reads]-> project.claude-md 'AGENTS.md and constitution pointers'
+  scripts.st-update-sh -[writes]-> project.claude-md 'missing pointer lines'
+  scripts.st-update-sh -[reads]-> project.claude-local-md 'constitution pointer'
+  scripts.st-update-sh -[reads]-> project.claude-settings-json 'enabledPlugins and permissions.allow'
+  scripts.st-update-sh -[writes]-> project.claude-settings-json 'plugins off, FigCraft allow entries, dead allow entries removed'
+  scripts.st-update-sh -[reads]-> project.claude-settings-local-json 'statusLine command and permissions.allow'
+  scripts.st-update-sh -[writes]-> project.claude-settings-local-json 'statusLine command, dead allow entries removed'
+  scripts.st-update-sh -[reads]-> stratum.models-json 'agent keys'
+  scripts.st-update-sh -[writes]-> stratum.models-json 'keys of agents that are gone removed'
+  scripts.st-update-sh -[reads]-> stratum.state-json 'exists check'
+  scripts.st-update-sh -[writes]-> stratum.state-json 'new file with feature_directory, phase and lane null'
+  scripts.st-update-sh -[reads]-> stratum.git-guard-json 'exists check'
+  scripts.st-update-sh -[reads]-> stratum.powerline-json 'exists check'
+  scripts.st-update-sh -[reads]-> stratum.advisor-json 'exists check'
+  scripts.st-update-sh -[reads]-> stratum.constitution-md 'exists check'
+  scripts.st-update-sh -[writes]-> stratum.commit-mode 'old file deleted'
+
+  scripts.st-worker-sh -[reads]-> stratum.models-json 'st-worker model'
+  scripts.st-worker-sh -[reads]-> stratum.autonomous 'session id of the autonomous run'
+  scripts.st-worker-sh -[writes]-> stratum.autonomous 'session id on a saved machine, deleted at autonomous-off'
+  scripts.st-worker-sh -[reads]-> stratum.git-guard-json 'commit modes of the main checkout'
+  scripts.st-worker-sh -[writes]-> stratum.git-guard-json 'worker copy with commit auto and the worker branch, deleted at close'
+  scripts.st-worker-sh -[reads]-> stratum.approve 'request files and the session id'
+  scripts.st-worker-sh -[writes]-> stratum.approve 'owns and session files, ok and user answer files, deleted at close'
+  scripts.st-worker-sh -[runs]-> stratum.worker-setup-sh 'main checkout path, in the new worktree'
+  scripts.st-worker-sh -[runs]-> hooks.st-approve-py '--render request file'
+  scripts.st-worker-sh -[writes]-> project.brief-md 'task, facts, roster, team rules and later rounds'
+  scripts.st-worker-sh -[reads]-> project.result-md 'worker result'
+  scripts.st-worker-sh -[writes]-> project.result-md 'renamed to result-roundN.md at followup'
+
+  scripts.st-worktree-sh -[writes]-> project.claude-settings-local-json 'link to the main checkout file'
+  scripts.st-worktree-sh -[writes]-> outside.claude-projects-project-memory 'link to the Claude memory folder of the main checkout'
+}
