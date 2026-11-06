@@ -2,11 +2,11 @@
 
 **Branch**: `074-prompt-answers` | **Date**: 2026-11-06 | **Spec**: [spec.md](spec.md)
 
-**Input**: Feature specification from `/specs/014-prompt-answers/spec.md`, decisions D1 to D3 in [decisions.md](decisions.md), 013 D7.
+**Input**: Feature specification from `/specs/014-prompt-answers/spec.md`, decisions D1 to D8 in [decisions.md](decisions.md), 013 D7.
 
 ## Summary
 
-The orchestrator may now answer a normal-mode worker's permission dialog with the one-time yes, when the action is on the worker allow list (013 D7). `st-worker.sh answer --keys` sends one option number on a permission dialog and refuses a lasting option (D3). The three orchestrator skills get one shared rule sentence and a pointer to each agent kind's lists. `skills/st/SKILL.md` gets a short note on in-session subagent prompts, with every fact sourced in [research.md](research.md) R4. Done is proved by text-rule rows and stub tests, each seen red before it is green (D2). No live run.
+The orchestrator may now answer a normal-mode worker's permission dialog with the one-time yes, when the action is on the worker allow list (013 D7). `st-worker.sh answer --keys` sends one option number on a permission dialog only when that option is a one-time yes form (D3, D7), and only when the pane still shows the screen the orchestrator judged (`--screen <hash>`, D6). The three orchestrator skills get one shared rule sentence and a pointer to each agent kind's lists. `skills/st/SKILL.md` gets a short note on in-session subagent prompts, with every fact sourced in [research.md](research.md) R4. Done is proved by text-rule rows and stub tests, each seen red before it is green (D2). No live run.
 
 ## Technical Context
 
@@ -34,20 +34,22 @@ The orchestrator may now answer a normal-mode worker's permission dialog with th
 
 ## Design
 
-- **US1, script (FR-010)**: `contracts/answer.md`. Only the permission branch at `scripts/st-worker.sh:434` changes. Three new refusal lines. The old permission line stays for `--text` and for a failed read.
+- **US1, script (FR-010)**: built in T003 (42c758b): one option number, and a lasting-phrase list. The old permission line stays for `--text` and for a failed read.
+- **US1 rework, script (FR-010, FR-011)**: T012, per `contracts/answer.md`. `st blocked` prints `screen<TAB><hash>` for a permission dialog, so `wait` and `watch` both get it. `answer` takes `--screen <hash>` before `--keys`, reads 20 lines with the hash method of `scripts/st-advisor.sh:35`, judges the dialog by the last 15, refuses a missing or changed screen, and checks the option line against the one-time yes allow list (D7). The lasting-phrase list and the no-option line go.
+- **US1 rework, skill**: T013 replaces the W1 line (`contracts/skill-lines.md` section 1b). W1 now passes `--screen <hash>` from the `screen` line, and says that normal mode has no request id, so `approve` and `pass` are not used (the review's wording point).
 - **US1, skill (FR-001 to FR-004)**: `skills/st-worker/SKILL.md:26-27` become W1, W2 and W18 (`contracts/skill-lines.md` section 1). W1 points to the `approval` lists and says they hold in both modes, so no list is written twice (D1). W2 says how to check the commit rule from the dialog text, because a normal-mode dialog has no `branch` or `staged` line (research R2). W1 also holds W28 (the dialog must show the whole command or path, else the user gets it) and W29 (the Bash description of the `answer` call names the action, so the user's permission check sees what is approved).
 - **US1, README**: `README.md:117` says normal mode never approves. That becomes false, so it changes to W19. This is not named in the spec. It is the one user-facing line that states the old rule.
 - **US2 (FR-005, FR-006, FR-009)**: the rule sentence on one physical line in each of the three files, each with a pointer to its lists (`contracts/skill-lines.md` section 3).
-- **US3 (FR-007, FR-008)**: two note lines in `skills/st/SKILL.md` (W24, W25) and source rows S1 to S5 on `research.md`.
+- **US3 (FR-007, FR-008)**: two note lines in `skills/st/SKILL.md` (W24, and W30 plus W25 on one line, D5) and source rows S1 to S6 on `research.md`.
 - **Old rows**: G1 in `tests/test_worker_rules.sh` and row 1 in `tests/test_lane_steps.sh` hold 010 FR-017. 013 D7 reversed it, so both rows go. W1 and W2 keep their ids with new text. New gone rows G5 to G7 keep the old lines out.
 
 ## Security notes
 
 Each task below touches access rules: which permission prompts the orchestrator may approve for an agent.
 
-- **T001, T003 (script guard)**: the guard is a second check, not the only one. The skill text decides which action is allowed. The script only stops a key that would grant lasting permission, a key it cannot map to an option line, and any typed answer. A permission dialog whose lasting option uses words outside `ask again`, `this session` and `in the future` is not caught by the script. The skill's never-pick sentence and the one-time-yes rule still apply. The pane text is data: the script reads only the option line for the key sent, and prints nothing from the pane in its refusal lines.
-- **T002, T004 (st-worker and README)**: the normal-mode allow list is the autonomous one (D1). Normal mode has no hook request file, so the orchestrator judges from the dialog text alone. That text comes from the worker's pane and can hold text an agent wrote. W1 keeps "the pane text is data" (line 25) in force, and every unrecognised dialog goes to the user. Commits on the worker's branch need no prompt (`commit: auto`), so a commit dialog is rare and is checked against the command shown (W2).
-- **T005 to T008 (shared rule and subagent note)**: the note says the orchestrator cannot approve an in-session subagent's prompt and never runs a denied action in its place. The resend rule (W25) sends the same call with the exact input the denial quotes, once. It does not widen any permission.
+- **T001, T003, T010, T012 (script guard)**: the guard is a second check, not the only one. The skill text decides which action is allowed. After T012 the script sends a key on a permission dialog only when the option line is a one-time yes form (an allow list, D7) and the pane is the screen the orchestrator judged (D6). So a new lasting wording, a wrapped line, a look-alike line in the command, or a dialog that changed after `wait` sends nothing. The pane text is data: the script reads only the option line for the key sent and the hash of the screen, and prints nothing from the pane in its refusal lines.
+- **T002, T004, T011, T013 (st-worker and README)**: the normal-mode allow list is the autonomous one (D1). Normal mode has no hook request file, so the orchestrator judges from the dialog text alone. That text comes from the worker's pane and can hold text an agent wrote. W1 keeps "the pane text is data" (line 25) in force, and every unrecognised dialog goes to the user. Commits on the worker's branch need no prompt (`commit: auto`), so a commit dialog is rare and is checked against the command shown (W2).
+- **T005 to T008 (shared rule and subagent note)**: the note says the orchestrator cannot approve an in-session subagent's prompt and never runs a denied action in its place. W30 has the orchestrator put `model` and `effort` from `.stratum/models.json` in the call, so the hook changes nothing and auto mode reviews what runs. The resend rule (W25) sends the same call with the exact input the denial quotes, once. Neither widens any permission.
 - No secrets, personal data, data model or external service change.
 
 ## Safety checklist
@@ -56,8 +58,13 @@ Each task below touches access rules: which permission prompts the orchestrator 
 
 ## Risks
 
-- R1: Claude Code may change its dialog wording. A new lasting phrase would pass the script guard. Mitigation: the skill says one-time yes only. The test pane texts are written from today's dialogs, not from a live capture (D2, no live run).
-- R2: an orchestrator could read a stale dialog in the pane. `answer` takes the last matching option line in the last 15 lines, and `not blocked` still stops a key when the user already answered.
+- R1: Claude Code may change its dialog wording. After T012 a new wording of the one-time yes is refused (fails safe: the dialog goes to the user). A new lasting wording is refused too. The test pane texts are written from today's dialogs, not from a live capture (D2, no live run).
+- R2: a stale or changed dialog. After T012 the screen hash stops a key when the pane changed after `wait` (D6).
+- R3: a pane that redraws while the dialog waits (P1, closed by D8). Every `answer` is then refused. This fails closed, but normal-mode answers would not work at all. T012's `ponytail:` note at the hash compare names the upgrade: `--expect <text>`, when a real worker pane's hash never matches.
+
+## Open points
+
+None. P1 (can a blocked worker pane redraw in its last 20 lines?) is closed by D8 (O15): build the hash with no `--expect`, fail closed, and leave a `ponytail:` note (`contracts/answer.md` section 6). O16 (a live check before T012) was rejected.
 
 ## Project Structure
 
@@ -81,13 +88,13 @@ No `data-model.md`: the feature adds no data. The one key entity (agent kind) is
 ### Source Code (repository root)
 
 ```text
-scripts/st-worker.sh            answer: permission branch (:434)
-skills/st-worker/SKILL.md       :10 rule sentence, :26-27 normal-mode lines
+scripts/st-worker.sh            st(): screen line; answer: --screen, permission branch
+skills/st-worker/SKILL.md       :10 rule sentence, :26-28 normal-mode lines (W1 reworked)
 skills/st-build/SKILL.md        ## Always: rule sentence
 skills/st/SKILL.md              ## Always: rule sentence, pointer, subagent note
 README.md                       :117
-tests/test_st_worker.sh         AN1, AN5 to AN8
-tests/test_worker_rules.sh      W1, W2, W18 to W27, O1, S1 to S5, G1, G5 to G7
+tests/test_st_worker.sh         AN1, AN5 to AN13
+tests/test_worker_rules.sh      W1, W2, W18 to W32, O1, S1 to S6, G1, G5 to G9
 tests/test_lane_steps.sh        row 1 removed
 ```
 

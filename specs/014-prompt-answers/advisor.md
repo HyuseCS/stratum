@@ -3,3 +3,6 @@ summary: The plan keeps the implementation narrow, reuses existing permission li
 
 ## plan | 2026-11-06T02:36:55Z | sha256 9f9277aaaa5a6edcd42852040e258ab63f7a6075fff9ca286289d527fa95723e | WAIVED
 reason: Inspect fixes only (D4, F2-F13): wording, rows W28 W29, negative controls, citations; no task added or removed, no new file
+
+## decisions | 2026-11-06T02:53:37Z | /advisor
+summary: US1 decisions: 1,2,5-8 ok; 3 bends checklist append-only rule; 4 is big (changes US3 note) -> user; raise F-race (answer has no same-dialog check, unlike 013 --screen) to user if st-review misses it

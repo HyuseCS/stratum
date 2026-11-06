@@ -78,7 +78,8 @@ The orchestrator starts subagents in this session with the Agent tool. When such
 - **FR-007**: `skills/st/SKILL.md` MUST hold a short note on in-session subagents: what the orchestrator can do and cannot do when a subagent's tool call needs permission, including that it never re-runs a denied action in place of the subagent.
 - **FR-008**: Each fact behind the note MUST be in the feature's research file with its source: a doc URL and quote, a file and line in this repo, or a Claude Code denial text quoted word for word with the date it was seen (D4). A fact with no source is written as "not documented".
 - **FR-009**: The Codex tab allow and never lists in st-build MUST stay as 013 wrote them.
-- **FR-010**: `st-worker.sh answer --keys` MUST send a key on a permission dialog only when the option line for that key does not say "don't ask again", "this session" or "in the future"; else it MUST send nothing and say why. `answer --text` MUST still refuse a permission dialog (D3).
+- **FR-010**: `st-worker.sh answer --keys` MUST send a key on a permission dialog only when it is one option number and the option line for that key is exactly a one-time yes form: "Yes", "Yes, proceed" or "Yes, just this once", with an optional one-character key hint such as "(y)" (D7). Else it MUST send nothing and say why. `answer --text` MUST still refuse a permission dialog (D3).
+- **FR-011**: `wait` and `watch` MUST print a `screen` line with a 12-hex hash for a blocked worker whose pane shows a permission dialog. `answer` on a permission dialog MUST need `--screen <hash>` (`^[0-9a-f]{12}$`), and MUST send nothing and say why when it is missing or when the pane's hash differs now (D6).
 
 ### Key Entities
 
@@ -92,7 +93,7 @@ The orchestrator starts subagents in this session with the Agent tool. When such
 - **SC-002**: The rule sentence is found word for word in 3 of 3 skill files.
 - **SC-003**: 100% of the facts in the subagent note have a source in the research file, of a kind FR-008 accepts (D4).
 - **SC-004**: The existing worker, advisor and lane tests stay green, except the rows that hold 010 FR-017, which 013 D7 reversed.
-- **SC-005**: The `answer` script guard has a stub test that sends the one-time yes and a negative control for each lasting option text, where no key is sent.
+- **SC-005**: The `answer` script guard has stub tests that send each one-time yes form, and refuse with no key sent: each lasting option text, an "always allow" option, a wrapped second line, a command line that looks like an option, a missing `--screen` and a changed screen. Each guard has a negative control that turns its test red.
 
 ## Assumptions
 

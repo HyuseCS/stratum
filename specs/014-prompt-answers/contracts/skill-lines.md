@@ -20,6 +20,25 @@ The W1 phrase, written out as it goes in the file:
 A permission dialog in normal mode (the pane asks "Do you want to proceed?" or to allow a tool): judge it with the `approval` lists below, which hold in both modes. The dialog must show the whole command or path. Else send no key and tell the user. An action on the allow list: send the key of the one-time yes only, `bash <plugin root>/scripts/st-worker.sh answer <id> --keys <key> [--machine <m>]`, with the key from the dialog text. Name the dialog's action in short in the Bash description of that call: the tool and the command or path, so the permission check sees what you approve. Never pick an option that says "don't ask again", "this session" or "in the future". No one-time yes, an action on the never list, one the worker's own classifier blocked, or one you do not recognise: send no key, and tell the user the worker's workspace, the tab and the exact dialog text.
 ```
 
+### 1b. W1 rework (T011, T013; D6 and the review's `pass` wording)
+
+T013 replaces the built W1 line in `skills/st-worker/SKILL.md` with this line, same 5-space indent:
+
+```text
+A permission dialog in normal mode (the pane asks "Do you want to proceed?" or to allow a tool): judge it with the allow list and the never list of `approval` below. Normal mode has no request id, so `approve` and `pass` are not used. The dialog must show the whole command or path. Else send no key and tell the user. An action on the allow list: send the key of the one-time yes only, `bash <plugin root>/scripts/st-worker.sh answer <id> --screen <hash> --keys <key> [--machine <m>]`, with the key from the dialog text and the hash from the `screen` line that `wait` or `watch` printed with that dialog. Name the dialog's action in short in the Bash description of that call: the tool and the command or path, so the permission check sees what you approve. Never pick an option that says "don't ask again", "this session" or "in the future". No one-time yes, an action on the never list, one the worker's own classifier blocked, or one you do not recognise: send no key, and tell the user the worker's workspace, the tab and the exact dialog text.
+```
+
+| Row | Change | Phrase |
+|-----|--------|--------|
+| W1 | new text: the whole line above | |
+| W28, W29 | unchanged, still inside W1 | |
+| W31 | new | ``judge it with the allow list and the never list of `approval` below. Normal mode has no request id, so `approve` and `pass` are not used.`` |
+| W32 | new | ``answer <id> --screen <hash> --keys <key> [--machine <m>]`, with the key from the dialog text and the hash from the `screen` line that `wait` or `watch` printed with that dialog.`` |
+| G8 | new gone row | `which hold in both modes` |
+| G9 | new gone row | ``answer <id> --keys <key> [--machine <m>]`, with the key from the dialog text.`` |
+
+G9 does not match line 25 (`answer <id> --keys <key>... [--machine <m>]` has `...`) or W32 (which has `--screen <hash>` between `<id>` and `--keys`).
+
 Lines 28 to 32 before any task runs (the `approval` lists, rows W3, W4, W5, W6, W16) do not change (FR-003, FR-004).
 
 One more check line after the first table, for FR-003 (the never list is written once), in the house form of the F2 line:
@@ -58,9 +77,16 @@ In `skills/st/SKILL.md`, right after the W23 line, 2-space indent, one line each
 | Row | Phrase |
 |-----|--------|
 | W24 | `An in-session subagent (the Agent tool) asks the user, not you: you cannot answer, approve or deny its permission prompt. Never run an action a subagent was denied in its place: bring the denial to the user.` |
+| W30 | ``First put the `model` and `effort` from `.stratum/models.json` in the Agent call yourself, so the hook changes nothing.`` (D5: at the start of the W25 line, on the same physical line) |
 | W25 | `An Agent call denied because a hook changed its input after auto mode reviewed it: send it once more with exactly the input the denial quotes. Denied again: tell the user.` |
 
-Each claim maps to `research.md` R4: W24 to facts 1, 2 and 8. W25 to facts 5 and 6. Neither line points to `research.md`.
+The W30 and W25 line as it goes in the file:
+
+```text
+First put the `model` and `effort` from `.stratum/models.json` in the Agent call yourself, so the hook changes nothing. An Agent call denied because a hook changed its input after auto mode reviewed it: send it once more with exactly the input the denial quotes. Denied again: tell the user.
+```
+
+Each claim maps to `research.md` R4: W24 to facts 1, 2 and 8. W30 to facts 5 and 9. W25 to facts 5 and 6. No line points to `research.md`.
 
 Source rows for FR-008, in the first table, word for word:
 
@@ -70,6 +96,7 @@ S2|specs/014-prompt-answers/research.md|https://code.claude.com/docs/en/permissi
 S3|specs/014-prompt-answers/research.md|https://code.claude.com/docs/en/hooks.md
 S4|specs/014-prompt-answers/research.md|7. Not documented: any way for the parent model to answer, approve or deny a subagent's permission prompt.
 S5|specs/014-prompt-answers/research.md|`hooks/st-models.py:76` prints `updatedInput` with no `permissionDecision`
+S6|specs/014-prompt-answers/research.md|9. Passing `model` and `effort` yourself.
 ```
 
 ## 5. Gone rows
