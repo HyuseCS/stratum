@@ -12,17 +12,17 @@ bash tests/test_worker_rules.sh; bash tests/test_lane_steps.sh; bash tests/test_
 
 ## US1: a worker's permission dialog in normal mode
 
-1. `bash tests/test_st_worker.sh`: AN1 to AN13 print `ok`. The cases are in `contracts/answer.md` section 4.
-   - AN9: `wait` prints a `screen` line for a permission dialog, and none for a question.
+1. `bash tests/test_st_worker.sh`: AN1 to AN13, with AN6e, AN9b and AN11b, print `ok`. The cases are in `contracts/answer.md` section 4.
+   - AN9: `wait` prints a `screen` line for a permission dialog, and none for a question. AN9b: the hash is of the printed pane text, 40 lines.
    - AN5, AN5b and AN10: with the hash from that line, key 1 is sent for each one-time yes form.
-   - AN6 to AN6d and AN8: no key is sent for an option that is not a one-time yes form, a wrapped line, or a look-alike line.
-   - AN11: no key is sent when the pane changed after `wait`. AN12: none without `--screen`. AN13: a bad hash is a usage error.
+   - AN6 to AN6e and AN8: no key is sent for an option that is not a one-time yes form, a wrapped line, or a look-alike line above the dialog head.
+   - AN11 and AN11b: no key is sent when the pane changed after `wait`, a change 25 lines up included. AN12: none without `--screen`. AN13: a bad hash is a usage error.
    - AN7: no key is sent for a key that is not one option number. AN1: `--text` on a permission dialog sends nothing.
 2. Script negative controls, from `contracts/answer.md` section 5: break the guard with the Edit tool, run the test, see the named case `FAIL`, then undo the break with the Edit tool.
 3. `bash tests/test_worker_rules.sh`: W1, W2, W18, W19, W28, W29, W31, W32, O1 and G5 to G9 print `ok`, and no G1 row is left.
 4. `bash tests/test_lane_steps.sh` and `bash tests/test_on_demand.sh`: all `ok`.
 
-Expected before T010 to T013 are built: AN5 to AN13, W1, W31, W32, G8 and G9 print `FAIL`.
+Expected before T010 to T013 are built: AN5 to AN12, W1, W31, W32, G8 and G9 print `FAIL` (AN13 was already green). Expected before T015 is built: AN6e, AN9b and AN11b print `FAIL`.
 
 ## US2: the shared rule
 

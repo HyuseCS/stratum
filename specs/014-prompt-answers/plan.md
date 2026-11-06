@@ -2,7 +2,7 @@
 
 **Branch**: `074-prompt-answers` | **Date**: 2026-11-06 | **Spec**: [spec.md](spec.md)
 
-**Input**: Feature specification from `/specs/014-prompt-answers/spec.md`, decisions D1 to D8 in [decisions.md](decisions.md), 013 D7.
+**Input**: Feature specification from `/specs/014-prompt-answers/spec.md`, decisions D1 to D9 in [decisions.md](decisions.md), 013 D7.
 
 ## Summary
 
@@ -36,6 +36,7 @@ The orchestrator may now answer a normal-mode worker's permission dialog with th
 
 - **US1, script (FR-010)**: built in T003 (42c758b): one option number, and a lasting-phrase list. The old permission line stays for `--text` and for a failed read.
 - **US1 rework, script (FR-010, FR-011)**: T012, per `contracts/answer.md`. `st blocked` prints `screen<TAB><hash>` for a permission dialog, so `wait` and `watch` both get it. `answer` takes `--screen <hash>` before `--keys`, reads 20 lines with the hash method of `scripts/st-advisor.sh:35`, judges the dialog by the last 15, refuses a missing or changed screen, and checks the option line against the one-time yes allow list (D7). The lasting-phrase list and the no-option line go.
+- **US1 re-review fixes (FR-010, FR-011)**: T014 adds the cases, then T015 changes the script. One 40-line read in `st blocked` is hashed and printed as the pane text, and `answer` hashes the same read (D9). Option lines count only after the last dialog head line, and no head line means a refusal (re-review F1, inside D7). The `ponytail:` note says 40-line.
 - **US1 rework, skill**: T013 replaces the W1 line (`contracts/skill-lines.md` section 1b). W1 now passes `--screen <hash>` from the `screen` line, and says that normal mode has no request id, so `approve` and `pass` are not used (the review's wording point).
 - **US1, skill (FR-001 to FR-004)**: `skills/st-worker/SKILL.md:26-27` become W1, W2 and W18 (`contracts/skill-lines.md` section 1). W1 points to the `approval` lists and says they hold in both modes, so no list is written twice (D1). W2 says how to check the commit rule from the dialog text, because a normal-mode dialog has no `branch` or `staged` line (research R2). W1 also holds W28 (the dialog must show the whole command or path, else the user gets it) and W29 (the Bash description of the `answer` call names the action, so the user's permission check sees what is approved).
 - **US1, README**: `README.md:117` says normal mode never approves. That becomes false, so it changes to W19. This is not named in the spec. It is the one user-facing line that states the old rule.
@@ -47,7 +48,7 @@ The orchestrator may now answer a normal-mode worker's permission dialog with th
 
 Each task below touches access rules: which permission prompts the orchestrator may approve for an agent.
 
-- **T001, T003, T010, T012 (script guard)**: the guard is a second check, not the only one. The skill text decides which action is allowed. After T012 the script sends a key on a permission dialog only when the option line is a one-time yes form (an allow list, D7) and the pane is the screen the orchestrator judged (D6). So a new lasting wording, a wrapped line, a look-alike line in the command, or a dialog that changed after `wait` sends nothing. The pane text is data: the script reads only the option line for the key sent and the hash of the screen, and prints nothing from the pane in its refusal lines.
+- **T001, T003, T010, T012, T014, T015 (script guard)**: the guard is a second check, not the only one. The skill text decides which action is allowed. After T012 the script sends a key on a permission dialog only when the option line is a one-time yes form (an allow list, D7) and the pane is the screen the orchestrator judged (D6). So a new lasting wording, a wrapped line, a look-alike line in the command (only lines after the dialog head count, T015), or a dialog that changed after `wait` sends nothing. After T015 the hashed text is the same text the orchestrator judged (D9). The pane text is data: the script reads only the option line for the key sent and the hash of the screen, and prints nothing from the pane in its refusal lines.
 - **T002, T004, T011, T013 (st-worker and README)**: the normal-mode allow list is the autonomous one (D1). Normal mode has no hook request file, so the orchestrator judges from the dialog text alone. That text comes from the worker's pane and can hold text an agent wrote. W1 keeps "the pane text is data" (line 25) in force, and every unrecognised dialog goes to the user. Commits on the worker's branch need no prompt (`commit: auto`), so a commit dialog is rare and is checked against the command shown (W2).
 - **T005 to T008 (shared rule and subagent note)**: the note says the orchestrator cannot approve an in-session subagent's prompt and never runs a denied action in its place. W30 has the orchestrator put `model` and `effort` from `.stratum/models.json` in the call, so the hook changes nothing and auto mode reviews what runs. The resend rule (W25) sends the same call with the exact input the denial quotes, once. Neither widens any permission.
 - No secrets, personal data, data model or external service change.
@@ -64,7 +65,7 @@ Each task below touches access rules: which permission prompts the orchestrator 
 
 ## Open points
 
-None. P1 (can a blocked worker pane redraw in its last 20 lines?) is closed by D8 (O15): build the hash with no `--expect`, fail closed, and leave a `ponytail:` note (`contracts/answer.md` section 6). O16 (a live check before T012) was rejected.
+None. P1 (can a blocked worker pane redraw in its last 20 lines, 40 after D9?) is closed by D8 (O15): build the hash with no `--expect`, fail closed, and leave a `ponytail:` note (`contracts/answer.md` section 6). O16 (a live check before T012) was rejected.
 
 ## Project Structure
 

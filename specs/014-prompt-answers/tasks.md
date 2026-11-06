@@ -38,7 +38,7 @@ None.
 
 **Goal**: in normal mode the orchestrator sends the one-time yes on a worker dialog for an action on the worker allow list. `answer --keys` refuses a lasting option. Every other dialog goes to the user with the workspace, the tab and the exact text.
 
-**Independent Test**: `bash tests/test_st_worker.sh` (AN1 to AN13) and `bash tests/test_worker_rules.sh` (W1, W2, W18, W19, W28, W29, W31, W32, O1, G5 to G9) pass.
+**Independent Test**: `bash tests/test_st_worker.sh` (AN1 to AN13, AN6e, AN9b, AN11b) and `bash tests/test_worker_rules.sh` (W1, W2, W18, W19, W28, W29, W31, W32, O1, G5 to G9) pass.
 
 ### Tests for User Story 1
 
@@ -54,7 +54,7 @@ None.
 
 T001 to T004 are built (b2e19c4, 42c758b). T010 to T013 change them. They run before T005.
 
-- [X] T010 [P] [US1] In `tests/test_st_worker.sh`, change and add the stub cases of `contracts/answer.md` section 4. AN5, AN5b, AN6, AN7 and AN8 now get `--screen <the hash>` before `--keys`, and AN6 and AN8 expect `Option <key> is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt.`. AN6 also gets the option text `  2. Yes, and always allow access to other/ from this project`. Add AN6b, AN6c, AN6d, AN9, AN10, AN11, AN12 and AN13 with the panes, calls and expected lines in that table. "The hash" is the hash on the `screen` line of a `wait T004` run on the same pane: run `wait` with `states blocked`, read the line, then set `states blocked working` (for a send) or `states blocked` (for a refusal) and run `answer`. AN11 writes the `git push` pane to `$tmp/pane.txt` after `wait` and before `answer`. Keep AN1 to AN4 as they are. Use the file's `mk`, `states`, `run`, `cnt` and `hascall` helpers, and add no comment lines. Red now: AN5, AN5b, AN6 to AN6d, AN7, AN8 and AN9 to AN13 print `FAIL`, and AN1 to AN4 print `ok`. Owns: `tests/test_st_worker.sh`. Test: bash tests/test_st_worker.sh.
+- [X] T010 [P] [US1] In `tests/test_st_worker.sh`, change and add the stub cases of `contracts/answer.md` section 4. AN5, AN5b, AN6, AN7 and AN8 now get `--screen <the hash>` before `--keys`, and AN6 and AN8 expect `Option <key> is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt.`. AN6 also gets the option text `  2. Yes, and always allow access to other/ from this project`. Add AN6b, AN6c, AN6d, AN9, AN10, AN11, AN12 and AN13 with the panes, calls and expected lines in that table. "The hash" is the hash on the `screen` line of a `wait T004` run on the same pane: run `wait` with `states blocked`, read the line, then set `states blocked working` (for a send) or `states blocked` (for a refusal) and run `answer`. AN11 writes the `git push` pane to `$tmp/pane.txt` after `wait` and before `answer`. Keep AN1 to AN4 as they are. Use the file's `mk`, `states`, `run`, `cnt` and `hascall` helpers, and add no comment lines. Red now: AN5, AN5b, AN6 to AN6d, AN7, AN8 and AN9 to AN12 print `FAIL`, and AN1 to AN4 and AN13 print `ok` (an unknown `--screen` already gives the usage line; T012's negative control 6 shows AN13 can fail). Owns: `tests/test_st_worker.sh`. Test: bash tests/test_st_worker.sh.
 - [X] T011 [P] [US1] In `tests/test_worker_rules.sh`, first table: set W1 to the whole line of `contracts/skill-lines.md` section 1b, and add W31 and W32 (file `skills/st-worker/SKILL.md`). Second table: add G8 and G9. Phrases word for word from section 1b. Red now: W1, W31, W32, G8 and G9 print `FAIL`, and W28, W29, W2, W18 and O1 print `ok`. Owns: `tests/test_worker_rules.sh`. Test: bash tests/test_worker_rules.sh.
 - [X] T012 [US1] In `scripts/st-worker.sh`, build `contracts/answer.md` sections 1 to 3:
   - In `st()`, for `blocked`, print `screen<TAB><hash>` after the `state` line and before `pane text:` when the pane shows a permission dialog.
@@ -64,11 +64,24 @@ T001 to T004 are built (b2e19c4, 42c758b). T010 to T013 change them. They run be
   - Remove T003's no-option line and its lasting-phrase `grep`. Keep the permission line for `--text` and for a failed read.
   - Use one helper for the read and hash, shared by `st()` and `answer`, so both read the same way.
   - On the line of the hash compare, add this note word for word (D8, `contracts/answer.md` section 6): `# ponytail: the whole 20-line screen must match, add --expect <text> if a real worker pane redraws so its hash never matches`. Add no other comment lines.
-  - Then run the 5 negative controls of section 5, one at a time with the Edit tool, and see AN11, AN12, AN6, AN9 and AN10, and AN6d go `FAIL`, each undone with the Edit tool.
+  - Then run negative controls 1 to 6 of section 5, one at a time with the Edit tool, and see AN11, AN12, AN6, AN9 and AN10, AN6d, and AN13 go `FAIL`, each undone with the Edit tool.
   Test: bash tests/test_st_worker.sh.
 - [X] T013 [US1] In `skills/st-worker/SKILL.md`, replace the W1 line (the line that starts `A permission dialog in normal mode`) with the line of `contracts/skill-lines.md` section 1b, keeping its 5-space indent. Change no other line. Then, one at a time with the Edit tool: delete only the W31 text, run the test, see W31 `FAIL`, put it back; delete only `--screen <hash> ` in the command, run the test, see W32 `FAIL`, put it back. Test: bash tests/test_worker_rules.sh && bash tests/test_lane_steps.sh && bash tests/test_on_demand.sh.
 
-**Checkpoint**: US1 works alone. A normal-mode dialog for an allowed action gets the one-time yes. The script refuses anything that is not a one-time yes form, and any dialog that changed after `wait`.
+### US1 re-review fixes: one shared read, options after the head (D9, re-review F1)
+
+T010 to T013 are built (90113d2, 9c1e04b). T014 and T015 change them. They run before T005.
+
+- [ ] T014 [US1] In `tests/test_st_worker.sh`, add AN6e after AN6d, AN9b after the AN9 cases, and AN11b after AN11, with the panes, calls and expected lines in the `contracts/answer.md` section 4 table. Use the file's `mk`, `states`, `run`, `cnt`, `hascall` and `shash` helpers, and add no comment lines. AN9b computes `txt=$(sed -n '/^pane text:$/,$p' <<<"$out" | tail -n +2)` and checks that the `screen` hash is `$(sha256sum <<<"$txt" | cut -c1-12)`, and that `txt` holds `line 5`. AN11b runs `wait` on the AN9b pane, then changes only `line 5` to `line five` in `$tmp/pane.txt`, sets `states blocked`, and runs `answer T004 --screen "$h" --keys 1`. No existing case changes: the others use panes under 20 lines and take the hash from `wait`. Red now: AN6e, AN9b and AN11b print `FAIL`, and every other case prints `ok`. Test: bash tests/test_st_worker.sh.
+- [ ] T015 [US1] In `scripts/st-worker.sh`, build `contracts/answer.md` as T015 changes it:
+  - The `screen` helper reads `--lines 40` (D9).
+  - `st blocked` prints the `screen` line from that one read, then `pane text:` and the same text, with no second read. `stopped`, `unsent` and `approval` keep `panetext`.
+  - In `answer`, step 3.5 searches option lines only after the last head line in the last 15 lines, and refuses with the not-one-time-yes line when there is no head line.
+  - Change the `ponytail:` note at the hash compare to the section 6 text word for word: `# ponytail: the whole 40-line screen must match, add --expect <text> if a real worker pane redraws so its hash never matches`. Add no other comment lines.
+  - Then run negative controls 7, 8 and 9 of section 5, one at a time with the Edit tool. See AN6e go `FAIL` (control 7), AN9b go `FAIL` (control 8), and AN11b and AN9b go `FAIL` (control 9). Undo each with the Edit tool.
+  Test: bash tests/test_st_worker.sh.
+
+**Checkpoint**: US1 works alone. A normal-mode dialog for an allowed action gets the one-time yes. The script refuses anything that is not a one-time yes form after the dialog head, and any dialog whose 40-line screen changed after `wait`.
 
 ---
 
@@ -115,14 +128,14 @@ T001 to T004 are built (b2e19c4, 42c758b). T010 to T013 change them. They run be
 ## Dependencies
 
 - US1 -> US2 -> US3. US1 and US2 share `skills/st-worker/SKILL.md` and `tests/test_worker_rules.sh`. US2 and US3 share `skills/st/SKILL.md` and `tests/test_worker_rules.sh`. No two stories run at the same time.
-- Order: T001 to T004 (built), then T010 to T013, then T005. IDs T005 to T009 are kept, so T010 to T013 run before them.
+- Order: T001 to T004 (built), then T010 to T013 (built), then T014, then T015, then T005. T015 needs T014. They share no file, but T015's red-to-green proof needs T014's cases. IDs T005 to T009 are kept, so T010 to T013 run before them.
 - Inside the US1 rework: T010 and T011 run at the same time. T012 needs T010. T013 needs T011. T012 and T013 share no file.
 - Inside US1: T001 and T002 run at the same time. T003 needs T001. T004 needs T002. T003 and T004 share no file, so they may run one after the other in either order.
 - T009 is last.
 
 ## Parallel examples
 
-- US1: T001 and T002 together. Then T003 and T004. Then T010 and T011 together. Then T012 and T013.
+- US1: T001 and T002 together. Then T003 and T004. Then T010 and T011 together. Then T012 and T013. Then T014, then T015.
 - US2: T005, then T006.
 - US3: T007, then T008.
 
@@ -143,6 +156,6 @@ MVP is US1: the gap the issue reports. US2 and US3 are text only and add no beha
 | FR-007 | T007 (W24, W25, W30) | T008 |
 | FR-008 | T007 (S1 to S6, S1 and S4 negative controls) | Plan (`research.md` R4) |
 | FR-009 | T005 (A18 to A28 in `tests/test_advisor_rules.sh`) | T006 (no change to :98-100) |
-| FR-010 | T001 (AN1, AN6, AN7, AN8), T010 (AN6 to AN6d, AN7, AN8, AN10; negative controls 3 and 5) | T003, T012 |
-| FR-011 | T010 (AN9, AN11, AN12, AN13; negative controls 1, 2 and 4) | T012 |
+| FR-010 | T001 (AN1, AN6, AN7, AN8), T010 (AN6 to AN6d, AN7, AN8, AN10; negative controls 3 and 5), T014 (AN6e; negative control 7) | T003, T012, T015 |
+| FR-011 | T010 (AN9, AN11, AN12, AN13; negative controls 1, 2, 4 and 6), T014 (AN9b, AN11b; negative controls 8 and 9) | T012, T015 |
 | README line 117 | T002 (W19, G7) | T004 |

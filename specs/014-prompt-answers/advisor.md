@@ -6,3 +6,6 @@ reason: Inspect fixes only (D4, F2-F13): wording, rows W28 W29, negative control
 
 ## decisions | 2026-11-06T02:53:37Z | /advisor
 summary: US1 decisions: 1,2,5-8 ok; 3 bends checklist append-only rule; 4 is big (changes US3 note) -> user; raise F-race (answer has no same-dialog check, unlike 013 --screen) to user if st-review misses it
+
+## decisions | 2026-11-06T03:54:39Z | /advisor
+summary: US1 rework decisions: 1,2,5,6,7 ok; 3 add to drift list (answer.md s4 AN13, tasks.md T010 Red now); 4 accept as rule broken; check watch .seen dedupe for 2nd dialog; run full test sweep now
