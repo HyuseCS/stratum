@@ -128,3 +128,5 @@ The other Fast-lane points use `/advisor`. The Quick lane has no advisor.
 
 - Never skip the commit guard. If a commit is blocked, tell the user; do not work around it.
 - Push only when the user says "push".
+- Watch each agent you summon. Answer its permission prompt when the answer keeps it in its brief. Bring every other prompt to the user with the exact text.
+  The Codex tab lists are under Advisor. The worker lists are in the st-worker skill, step 6. In-session subagents: see the note under this rule in `/stratum:st`.

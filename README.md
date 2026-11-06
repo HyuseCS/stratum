@@ -114,7 +114,7 @@ In the Full lane, a task that makes a new screen goes to the Design lane (`st-de
 **Build with workers:** say `build with workers`, or name a machine ("US2 on the laptop"). Build sends each phase's `[P]` tasks to `st-worker`, one worker per task.
 
 **Autonomous mode:** say `autonomous mode` to turn on autonomous build mode for this run only, and `stop autonomous` to turn it off. The statusline shows `autonomous` while it is on.
-In normal mode the orchestrator never approves a worker's permission prompt: it tells you the worker's workspace, tab and what the prompt asks.
+In normal mode the orchestrator answers a worker's permission prompt only for an action on the worker allow list, with the one-time yes. Every other prompt goes to you with the worker's workspace, tab and the exact prompt text.
 
 **Test scope:** agents run the tests of the changed files and of the files that import them. The full suite runs only when you ask.
 When a change touches shared config, test setup, a schema or migration, middleware, or a file more than 20 files import, the orchestrator asks you first: a named list of tests or the full suite.
