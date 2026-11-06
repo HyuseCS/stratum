@@ -78,6 +78,7 @@ The orchestrator starts subagents in this session with the Agent tool. When such
 - **FR-007**: `skills/st/SKILL.md` MUST hold a short note on in-session subagents: what the orchestrator can do and cannot do when a subagent's tool call needs permission, including that it never re-runs a denied action in place of the subagent.
 - **FR-008**: Each fact behind the note MUST be in the feature's research file with its source: a doc URL and quote, or a file and line in this repo. A fact with no source is written as "not documented".
 - **FR-009**: The Codex tab allow and never lists in st-build MUST stay as 013 wrote them.
+- **FR-010**: `st-worker.sh answer --keys` MUST send a key on a permission dialog only when the option line for that key does not say "don't ask again", "for this session" or "in the future"; else it MUST send nothing and say why. `answer --text` MUST still refuse a permission dialog (D3).
 
 ### Key Entities
 
@@ -90,11 +91,12 @@ The orchestrator starts subagents in this session with the Agent tool. When such
 - **SC-001**: Each new or changed rule line in the three skill files has a text-rule test row, and each row is shown red once with its line removed (D2).
 - **SC-002**: The rule sentence is found word for word in 3 of 3 skill files.
 - **SC-003**: 100% of the facts in the subagent note have a source in the research file.
-- **SC-004**: The existing worker, advisor and lane tests stay green.
+- **SC-004**: The existing worker, advisor and lane tests stay green, except the rows that hold 010 FR-017, which 013 D7 reversed.
+- **SC-005**: The `answer` script guard has a stub test that sends the one-time yes and a negative control for each lasting option text, where no key is sent.
 
 ## Assumptions
 
-- `st-worker.sh answer --keys` already sends a dialog option to a worker pane. No script change is needed.
+- `st-worker.sh answer` refuses every permission dialog today (`scripts/st-worker.sh:434`, from 010 FR-017). FR-010 changes that for `--keys` only.
 - `wait` and `watch` already report a normal-mode permission dialog as `blocked` with the pane text.
 - The one-time yes option of a Claude Code permission dialog can be told apart from a lasting one by its text.
 - The user's permission settings and `settings.json` are out of scope.

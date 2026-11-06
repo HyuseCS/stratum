@@ -31,5 +31,5 @@
 
 ## Dependencies & Assumptions
 
-- [ ] CHK012 - Is the assumption that `answer --keys` needs no script change stated? [Assumption, Spec §Assumptions]
+- [ ] CHK012 - Is the `answer --keys` guard on lasting options stated, with what it sends and refuses? [Completeness, Spec §FR-010]
 - [ ] CHK013 - Is the boundary to `settings.json` and `hooks/st-models.py` stated as out of scope? [Assumption, Spec §Assumptions]
