@@ -123,7 +123,7 @@ T010 to T013 are built (90113d2, 9c1e04b). T014 and T015 change them. They run b
 
 ## Phase 6: Polish
 
-- [ ] T009 Run the end check of `quickstart.md`. Fix nothing outside this feature's files. No `st-verify.sh` run here: it reads only uncommitted changes (`git diff` against the index) and takes no base, so after the commits it would check nothing. The comment grep runs per task in the build loop, before each commit. Test: bash tests/test_worker_rules.sh && bash tests/test_lane_steps.sh && bash tests/test_advisor_rules.sh && bash tests/test_on_demand.sh && bash tests/test_st_worker.sh && bash tests/test_risk_rules.sh && bash tests/test_state.sh && python3 tests/test_model_hook.py.
+- [X] T009 Run the end check of `quickstart.md`. Fix nothing outside this feature's files. No `st-verify.sh` run here: it reads only uncommitted changes (`git diff` against the index) and takes no base, so after the commits it would check nothing. The comment grep runs per task in the build loop, before each commit. Test: bash tests/test_worker_rules.sh && bash tests/test_lane_steps.sh && bash tests/test_advisor_rules.sh && bash tests/test_on_demand.sh && bash tests/test_st_worker.sh && bash tests/test_risk_rules.sh && bash tests/test_state.sh && python3 tests/test_model_hook.py.
 
 ## Dependencies
 

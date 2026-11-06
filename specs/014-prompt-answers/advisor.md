@@ -12,3 +12,6 @@ summary: US1 rework decisions: 1,2,5,6,7 ok; 3 add to drift list (answer.md s4 A
 
 ## decisions | 2026-11-06T04:22:52Z | /advisor
 summary: US2 decisions: 1-3 fine; 760ae90 (T014/T015) had no st-review: review 9c1e04b..760ae90 now; read the R placement in st and st-build; drift list adds T012 20-line text, FR-008 vs fact 9, safety.md owner in PR body
+
+## decisions | 2026-11-06T04:31:23Z | /advisor
+summary: US3 decisions: 1,2 fine; 3 drop is right but reason is wrong (st-build can run without st loaded): drop as outside the agreed contract, put N2 in st-close gap report; FR-008 vs fact 9 is a close drift fix
