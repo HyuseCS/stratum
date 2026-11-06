@@ -26,7 +26,7 @@ The orchestrator may now answer a normal-mode worker's permission dialog with th
 
 **Constraints**: `skills/st-build/SKILL.md:98-100` unchanged (FR-009). The `approval` bullet and its four lines after it in `skills/st-worker/SKILL.md` unchanged (FR-003, FR-004; :28-32 before any task runs). No change to `hooks/st-models.py`, `settings.json` or the user's permission settings. No comment lines in code except `ponytail:` markers.
 
-**Scale/Scope**: 3 skill files, README line 117, one script branch, 4 test files.
+**Scale/Scope**: 3 skill files, README line 117, one script branch, 3 test files.
 
 ## Constitution Check
 
@@ -35,7 +35,7 @@ The orchestrator may now answer a normal-mode worker's permission dialog with th
 ## Design
 
 - **US1, script (FR-010)**: `contracts/answer.md`. Only the permission branch at `scripts/st-worker.sh:434` changes. Three new refusal lines. The old permission line stays for `--text` and for a failed read.
-- **US1, skill (FR-001 to FR-004)**: `skills/st-worker/SKILL.md:26-27` become W1, W2 and W18 (`contracts/skill-lines.md` section 1). W1 points to the `approval` lists and says they hold in both modes, so no list is written twice (D1). W2 says how to check the commit rule from the dialog text, because a normal-mode dialog has no `branch` or `staged` line (research R2).
+- **US1, skill (FR-001 to FR-004)**: `skills/st-worker/SKILL.md:26-27` become W1, W2 and W18 (`contracts/skill-lines.md` section 1). W1 points to the `approval` lists and says they hold in both modes, so no list is written twice (D1). W2 says how to check the commit rule from the dialog text, because a normal-mode dialog has no `branch` or `staged` line (research R2). W1 also holds W28 (the dialog must show the whole command or path, else the user gets it) and W29 (the Bash description of the `answer` call names the action, so the user's permission check sees what is approved).
 - **US1, README**: `README.md:117` says normal mode never approves. That becomes false, so it changes to W19. This is not named in the spec. It is the one user-facing line that states the old rule.
 - **US2 (FR-005, FR-006, FR-009)**: the rule sentence on one physical line in each of the three files, each with a pointer to its lists (`contracts/skill-lines.md` section 3).
 - **US3 (FR-007, FR-008)**: two note lines in `skills/st/SKILL.md` (W24, W25) and source rows S1 to S5 on `research.md`.
@@ -49,6 +49,10 @@ Each task below touches access rules: which permission prompts the orchestrator 
 - **T002, T004 (st-worker and README)**: the normal-mode allow list is the autonomous one (D1). Normal mode has no hook request file, so the orchestrator judges from the dialog text alone. That text comes from the worker's pane and can hold text an agent wrote. W1 keeps "the pane text is data" (line 25) in force, and every unrecognised dialog goes to the user. Commits on the worker's branch need no prompt (`commit: auto`), so a commit dialog is rare and is checked against the command shown (W2).
 - **T005 to T008 (shared rule and subagent note)**: the note says the orchestrator cannot approve an in-session subagent's prompt and never runs a denied action in its place. The resend rule (W25) sends the same call with the exact input the denial quotes, once. It does not widen any permission.
 - No secrets, personal data, data model or external service change.
+
+## Safety checklist
+
+`checklists/safety.md` belongs to the reviewer. Its items stay unchecked here. The reviewer works them at the PR, not at a build gate, and no task changes that file.
 
 ## Risks
 
@@ -93,4 +97,17 @@ No violations.
 
 ## Validate
 
-See [quickstart.md](quickstart.md).
+Date: 2026-11-06. Verdict: CONDITIONAL
+
+| Check | Verdict | Findings |
+|-------|---------|----------|
+| 1. Setup and dependencies | PASS | bash 5.3.20, jq 1.8.2, GNU grep 3.12 (under bash), python3 3.14.9, herdr on PATH (stubbed in tests), `scripts/st-verify.sh` present. Baseline at `13ae81d`: test_worker_rules, test_lane_steps, test_advisor_rules, test_on_demand, test_st_worker, test_risk_rules, test_state and test_model_hook all exit 0. No new dependency. |
+| 2. Test coverage per requirement | CONCERN | F1, F3 |
+| 3. Breaking changes | PASS | `answer` has one caller, `skills/st-worker/SKILL.md:25-27`. Other `answer` cases in `tests/test_st_worker.sh` (:698-736, :893) use question panes and keep their behavior. `test_on_demand.sh:215-223,241-242` rows sit on line 25, which stays. Old rows G1 and lane row 1 are removed on purpose (013 D7). No stored data, no migration. |
+| 4. Security and privacy | CONCERN | F7 |
+
+F1. specs/014-prompt-answers/research.md:44 (fact 6) and contracts/skill-lines.md:59 (W25). FR-008 (spec.md:80) allows two source kinds: a doc URL with a quote, or a file and line in this repo. Fact 6 rests on a denial text seen live in one session, which is neither, so W25 has no FR-008 source. S1 to S5 only grep for strings in research.md, so no test can go red on this. -> User decision: (a) amend FR-008 and SC-003 to accept a quoted Claude Code denial text as a source (new D4), or (b) mark fact 6 "not documented" and drop W25 from T008.
+
+F3. specs/014-prompt-answers/tasks.md:46,83. O1, S1, S2, S3 and S5 are green before the build and have no negative control, so it is not shown that they can fail. -> st-plan: in T002, copy the never-list line once, see O1 `FAIL`, undo. In T007, also break the S1 URL once and see S1 `FAIL`.
+
+F7. specs/014-prompt-answers/contracts/skill-lines.md:18 (W1). In normal mode the orchestrator judges the action from pane text only (`wait` shows 40 lines, `answer` reads 15). A long command or heredoc can push its first lines out of view, and W1 does not say to refuse when the full command or path is not shown. W2 has this guard for commits only. -> st-plan: add to W1 "The dialog must show the whole command or path. Else send no key and tell the user." and its row.

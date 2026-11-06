@@ -8,17 +8,19 @@ Every row lives in `tests/test_worker_rules.sh`. A `has` row goes in the first t
 
 | Row | Phrase |
 |-----|--------|
-| W1 | the text block below |
+| W1 | the whole text block below |
+| W28 | `The dialog must show the whole command or path. Else send no key and tell the user.` (inside W1, inspect F7) |
+| W29 | `Name the dialog's action in short in the Bash description of that call: the tool and the command or path, so the permission check sees what you approve.` (inside W1, inspect F12) |
 | W2 | ``A normal-mode dialog has no `branch` or `staged` line: check the commit rule against the command the dialog shows, take the staged paths from its `git add`, and send the dialog to the user when it does not show a part of the rule.`` |
 | W18 | ``If `answer` refuses the key, or a permission check or the classifier blocks the `answer` call, try no other way: tell the user the workspace, the tab and the exact dialog text.`` |
 
 The W1 phrase, written out as it goes in the file:
 
 ```text
-A permission dialog in normal mode (the pane asks "Do you want to proceed?" or to allow a tool): judge it with the `approval` lists below, which hold in both modes. An action on the allow list: send the key of the one-time yes only, `bash <plugin root>/scripts/st-worker.sh answer <id> --keys <key> [--machine <m>]`, with the key from the dialog text. Never pick an option that says "don't ask again", "this session" or "in the future". No one-time yes, an action on the never list, one the worker's own classifier blocked, or one you do not recognise: send no key, and tell the user the worker's workspace, the tab and the exact dialog text.
+A permission dialog in normal mode (the pane asks "Do you want to proceed?" or to allow a tool): judge it with the `approval` lists below, which hold in both modes. The dialog must show the whole command or path. Else send no key and tell the user. An action on the allow list: send the key of the one-time yes only, `bash <plugin root>/scripts/st-worker.sh answer <id> --keys <key> [--machine <m>]`, with the key from the dialog text. Name the dialog's action in short in the Bash description of that call: the tool and the command or path, so the permission check sees what you approve. Never pick an option that says "don't ask again", "this session" or "in the future". No one-time yes, an action on the never list, one the worker's own classifier blocked, or one you do not recognise: send no key, and tell the user the worker's workspace, the tab and the exact dialog text.
 ```
 
-Lines 28 to 32 (the `approval` lists, rows W3, W4, W5, W6, W16) do not change (FR-003, FR-004).
+Lines 28 to 32 before any task runs (the `approval` lists, rows W3, W4, W5, W6, W16) do not change (FR-003, FR-004).
 
 One more check line after the first table, for FR-003 (the never list is written once), in the house form of the F2 line:
 
@@ -58,7 +60,7 @@ In `skills/st/SKILL.md`, right after the W23 line, 2-space indent, one line each
 | W24 | `An in-session subagent (the Agent tool) asks the user, not you: you cannot answer, approve or deny its permission prompt. Never run an action a subagent was denied in its place: bring the denial to the user.` |
 | W25 | `An Agent call denied because a hook changed its input after auto mode reviewed it: send it once more with exactly the input the denial quotes. Denied again: tell the user.` |
 
-Each claim maps to `research.md` R4: W24 to facts 1, 7 and 8. W25 to facts 5 and 6.
+Each claim maps to `research.md` R4: W24 to facts 1, 2 and 8. W25 to facts 5 and 6. Neither line points to `research.md`.
 
 Source rows for FR-008, in the first table, word for word:
 

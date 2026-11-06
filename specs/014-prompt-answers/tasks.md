@@ -43,12 +43,12 @@ None.
 ### Tests for User Story 1
 
 - [ ] T001 [P] [US1] In `tests/test_st_worker.sh`, change the AN1 loop (:1362-1366) to call `answer T004 --text hi` and keep its expected line, and add AN5, AN5b, AN6 (one case per option text: the straight-apostrophe "don't ask again", the curly "don’t ask again", "for this session", "during this session (shift+tab)", "in the future"), AN7 (`--keys 1 enter`, `--keys enter`, `--keys down`) and AN8 (`--keys 4`) after AN4 (:1377), with the panes, `states` and expected lines in the `contracts/answer.md` table. Keep AN2, AN3 and AN4 as they are. Use the file's `mk`, `states`, `run`, `cnt` and `hascall` helpers. Red now: AN5, AN5b, AN6, AN7 and AN8 print `FAIL`. Owns: `tests/test_st_worker.sh`. Test: bash tests/test_st_worker.sh.
-- [ ] T002 [P] [US1] In `tests/test_worker_rules.sh`, first table: replace the text of W1 and W2 (:10-11) with the W1 and W2 phrases, and add W18 and W19 (file `README.md`). After the first table, add the O1 check line. Second table: delete G1 (:32) and add G5, G6 and G7. In `tests/test_lane_steps.sh`, delete `row 1` (:24). Both deletions cite 013 D7 in the commit message, not in the file. Every phrase comes from `contracts/skill-lines.md` sections 1, 2 and 5. Red now: W1, W2, W18, W19, G5, G6 and G7 print `FAIL`, and O1 prints `ok`. Owns: `tests/test_worker_rules.sh`, `tests/test_lane_steps.sh`. Test: bash tests/test_worker_rules.sh; bash tests/test_lane_steps.sh.
+- [ ] T002 [P] [US1] In `tests/test_worker_rules.sh`, first table: replace the text of W1 and W2 (:10-11) with the W1 and W2 phrases, and add W18, W28, W29 (file `skills/st-worker/SKILL.md`) and W19 (file `README.md`). After the first table, add the O1 check line, then show it can fail: copy the `Never approve a push` line of `skills/st-worker/SKILL.md` once with the Edit tool, run the test, see O1 `FAIL`, and delete the copy with the Edit tool. Second table: delete G1 (:32) and add G5, G6 and G7. In `tests/test_lane_steps.sh`, delete `row 1` (:24). Both deletions cite 013 D7 in the commit message, not in the file. Every phrase comes from `contracts/skill-lines.md` sections 1, 2 and 5. Red now: W1, W2, W18, W19, W28, W29, G5, G6 and G7 print `FAIL`, and O1 prints `ok`. Owns: `tests/test_worker_rules.sh`, `tests/test_lane_steps.sh`. Test: bash tests/test_worker_rules.sh; bash tests/test_lane_steps.sh.
 
 ### Implementation for User Story 1
 
 - [ ] T003 [US1] In `scripts/st-worker.sh`, change the permission check of `answer` (:434) as `contracts/answer.md` steps 1 to 4 say. The refusal lines are word for word: `A permission prompt takes one option number. Nothing sent.`, `The permission prompt has no option <key>. Nothing sent.`, `Option <key> lasts beyond this call. Nothing sent. Tell the user the workspace, the tab and the prompt.` Keep the permission line for `--text` and for a failed read. The lasting match is `ask again|this session|in the future`, case-insensitive, on the option line only. The key must match `^[1-9]$`. Then run the three negative controls of `contracts/answer.md` and see AN6, AN7 and AN1 go `FAIL` one at a time. Test: bash tests/test_st_worker.sh.
-- [ ] T004 [US1] In `skills/st-worker/SKILL.md`, replace lines 26 and 27 with the W1, W2 and W18 lines, 5-space indent, in that order. Do not touch line 25 or lines 28 to 32. In `README.md`, replace line 117 with the W19 line. Then delete the W1 line once with the Edit tool, run the test, see W1 `FAIL`, and put the line back with the Edit tool. Test: bash tests/test_worker_rules.sh && bash tests/test_lane_steps.sh && bash tests/test_on_demand.sh.
+- [ ] T004 [US1] In `skills/st-worker/SKILL.md`, replace lines 26 and 27 with the W1, W2 and W18 lines, 5-space indent, in that order. Do not touch line 25 or lines 28 to 32. In `README.md`, replace line 117 with the W19 line. Then, one at a time with the Edit tool: delete the W1 line, run the test, see W1 `FAIL`, put it back; delete only the sentence `The dialog must show the whole command or path. Else send no key and tell the user.`, run the test, see W28 `FAIL`, put it back. Test: bash tests/test_worker_rules.sh && bash tests/test_lane_steps.sh && bash tests/test_on_demand.sh.
 
 **Checkpoint**: US1 works alone. A normal-mode dialog for an allowed action gets the one-time yes, and the script refuses a lasting option.
 
@@ -80,11 +80,11 @@ None.
 
 ### Tests for User Story 3
 
-- [ ] T007 [US3] In `tests/test_worker_rules.sh`, first table, add W24 and W25 (`contracts/skill-lines.md` section 4) and the source rows S1 to S5 word for word. Red now: W24 and W25 print `FAIL`. S1 to S5 print `ok`, because `research.md` was written at Plan. Show that S4 can fail: delete fact 7 from `specs/014-prompt-answers/research.md` once with the Edit tool, run the test, see S4 `FAIL`, and put it back with the Edit tool. Test: bash tests/test_worker_rules.sh.
+- [ ] T007 [US3] In `tests/test_worker_rules.sh`, first table, add W24 and W25 (`contracts/skill-lines.md` section 4) and the source rows S1 to S5 word for word. Red now: W24 and W25 print `FAIL`. S1 to S5 print `ok`, because `research.md` was written at Plan. Show that the S rows can fail, one at a time with the Edit tool in `specs/014-prompt-answers/research.md`: change `https://code.claude.com/docs/en/sub-agents.md` to `https://code.claude.com/docs/en/sub-agent.md` at every place it appears, run the test, see S1 `FAIL`, undo; delete fact 7, run the test, see S4 `FAIL`, put it back. Test: bash tests/test_worker_rules.sh.
 
 ### Implementation for User Story 3
 
-- [ ] T008 [US3] In `skills/st/SKILL.md`, add the W24 and W25 lines right after the W23 line, 2-space indent, one line each. Each claim must map to `research.md` R4: W24 to facts 1, 7 and 8, and W25 to facts 5 and 6. Add no other claim. Then delete the W25 line once with the Edit tool, run the test, see W25 `FAIL`, and put it back with the Edit tool. Test: bash tests/test_worker_rules.sh && bash tests/test_risk_rules.sh && bash tests/test_state.sh.
+- [ ] T008 [US3] In `skills/st/SKILL.md`, add the W24 and W25 lines right after the W23 line, 2-space indent, one line each. Each claim must map to `research.md` R4: W24 to facts 1, 2 and 8, and W25 to facts 5 and 6. Neither line points to `research.md`. Add no other claim. Then delete the W25 line once with the Edit tool, run the test, see W25 `FAIL`, and put it back with the Edit tool. Test: bash tests/test_worker_rules.sh && bash tests/test_risk_rules.sh && bash tests/test_state.sh.
 
 **Checkpoint**: all three stories work. The `quickstart.md` steps pass.
 
@@ -92,7 +92,7 @@ None.
 
 ## Phase 6: Polish
 
-- [ ] T009 Run the end check of `quickstart.md`, and `bash <plugin root>/scripts/st-verify.sh '<that command>' scripts/st-worker.sh tests/test_st_worker.sh tests/test_worker_rules.sh tests/test_lane_steps.sh` for the comment grep. Fix nothing outside this feature's files. Test: bash tests/test_worker_rules.sh && bash tests/test_lane_steps.sh && bash tests/test_advisor_rules.sh && bash tests/test_on_demand.sh && bash tests/test_st_worker.sh && bash tests/test_risk_rules.sh && bash tests/test_state.sh && python3 tests/test_model_hook.py.
+- [ ] T009 Run the end check of `quickstart.md`. Fix nothing outside this feature's files. No `st-verify.sh` run here: it reads only uncommitted changes (`git diff` against the index) and takes no base, so after the commits it would check nothing. The comment grep runs per task in the build loop, before each commit. Test: bash tests/test_worker_rules.sh && bash tests/test_lane_steps.sh && bash tests/test_advisor_rules.sh && bash tests/test_on_demand.sh && bash tests/test_st_worker.sh && bash tests/test_risk_rules.sh && bash tests/test_state.sh && python3 tests/test_model_hook.py.
 
 ## Dependencies
 
@@ -114,14 +114,14 @@ MVP is US1: the gap the issue reports. US2 and US3 are text only and add no beha
 
 | FR | Test task (rows or cases) | Build task |
 |----|---------------------------|------------|
-| FR-001 | T002 (W1, W2, G5, G6), T001 (AN5, AN5b) | T004, T003 |
+| FR-001 | T002 (W1, W2, W28, W29, G5, G6), T001 (AN5, AN5b) | T004, T003 |
 | FR-002 | T002 (W1, W18) | T004 |
 | FR-003 | T002 (O1, W1), existing W3, W5, W16 | T004 |
 | FR-004 | T002 (its run shows W3, W4, W5, W6, W16 green) | T004 |
 | FR-005 | T005 (W20, W21, W22) | T006 |
 | FR-006 | T005 (W23, W26, W27) | T006 |
 | FR-007 | T007 (W24, W25) | T008 |
-| FR-008 | T007 (S1 to S5, S4 negative control) | Plan (`research.md` R4) |
+| FR-008 | T007 (S1 to S5, S1 and S4 negative controls) | Plan (`research.md` R4) |
 | FR-009 | T005 (A18 to A28 in `tests/test_advisor_rules.sh`) | T006 (no change to :98-100) |
 | FR-010 | T001 (AN1, AN6, AN7, AN8) | T003 |
 | README line 117 | T002 (W19, G7) | T004 |

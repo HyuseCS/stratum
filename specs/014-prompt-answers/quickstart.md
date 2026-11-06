@@ -18,10 +18,10 @@ bash tests/test_worker_rules.sh; bash tests/test_lane_steps.sh; bash tests/test_
    - AN7 and AN8: no key is sent for a key that is not one option number on the dialog.
    - AN1: `--text` on a permission dialog sends nothing.
 2. Script negative controls, from `contracts/answer.md`: break the guard with the Edit tool, run the test, see the named case `FAIL`, then undo the break with the Edit tool.
-3. `bash tests/test_worker_rules.sh`: W1, W2, W18, W19, O1, G5, G6 and G7 print `ok`, and no G1 row is left.
+3. `bash tests/test_worker_rules.sh`: W1, W2, W18, W19, W28, W29, O1, G5, G6 and G7 print `ok`, and no G1 row is left.
 4. `bash tests/test_lane_steps.sh` and `bash tests/test_on_demand.sh`: all `ok`.
 
-Expected before the build: AN5 to AN8, W1, W2, W18, W19, G5, G6 and G7 print `FAIL`.
+Expected before the build: AN5 to AN8, W1, W2, W18, W19, W28, W29, G5, G6 and G7 print `FAIL`.
 
 ## US2: the shared rule
 
