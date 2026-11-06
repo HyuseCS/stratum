@@ -115,6 +115,15 @@ repo() {
   git -C "$proj" add a.txt
   git -C "$proj" -c user.name=t -c user.email=t@t commit -qm init
 }
+nested() {
+  git init -q "$proj/sub"
+  printf 'old\n' > "$proj/sub/a.txt"
+  git -C "$proj/sub" add a.txt
+  git -C "$proj/sub" -c user.name=t -c user.email=t@t commit -qm s
+  git -C "$proj" add --no-warn-embedded-repo sub
+  git -C "$proj" -c user.name=t -c user.email=t@t commit -qm sub
+  printf dirty > "$proj/sub/a.txt"
+}
 
 new; go -m m1 -c 'model_reasoning_effort="high"'
 pane=$(cat "$S/pane" 2>/dev/null)
@@ -184,6 +193,15 @@ check "C16e Codex sets the x bit on a dirty tracked file: exit 4, BLOCKED names 
 
 new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; (cd "$proj" && printf same > x.txt && printf same > y.txt && ln -s x.txt l); echo 'ln -sfn y.txt l' > "$S/on_prompt"; go
 check "C16f Codex retargets an untracked symlink to a file with the same bytes: exit 4, BLOCKED names it" '[ $rc -eq 4 ] && outline "BLOCKED: Codex changed files during the review: l"'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; nested; echo 'printf again > sub/a.txt' > "$S/on_prompt"; go
+check "C16g Codex changes a file in an already-dirty nested repo: exit 4, BLOCKED names sub/a.txt" '[ $rc -eq 4 ] && outline "BLOCKED: Codex changed files during the review: sub/a.txt"'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; nested; echo 'printf x > sub/c.txt; git -C sub add c.txt; git -C sub -c user.name=t -c user.email=t@t commit -qm c' > "$S/on_prompt"; go
+check "C16h Codex commits in an already-dirty nested repo: exit 4, BLOCKED names sub/HEAD" '[ $rc -eq 4 ] && outline "BLOCKED: Codex changed files during the review: sub/HEAD"'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; nested; go
+check "C16i nested repo dirty before and the same after: exit 0, no BLOCKED line" '[ $rc -eq 0 ] && ! outhas "BLOCKED:"'
 
 new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; repo; GIT_DIR="$tmp/nowhere" go
 check "C16c git status fails before the prompt: ERROR, exit 1, no prompt" '[ $rc -eq 1 ] && outline "ERROR: cannot read git status in $pp" && [ "$(cnt "^agent prompt")" = 0 ]'
