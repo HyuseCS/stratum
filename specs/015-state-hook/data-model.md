@@ -7,12 +7,12 @@ A JSON object. The hook keeps every key it does not write.
 | Key | Values | Writer after this feature | File |
 |-----|--------|---------------------------|------|
 | `risk` | `high`, `normal`, `low`, `none` | hook: `Lane:` marker, `risk <level>` prompt | main checkout: `dirname(git rev-parse --path-format=absolute --git-common-dir)/.stratum/state.json`; fallback: cwd-walked file only when `git` fails. When `git` works and the main file is missing or bad: no write, nothing created |
-| `feature_directory` | `specs/NNN-<name>` | hook: `specs/` scan while `phase` is `define`; unchanged otherwise | cwd-walked file |
+| `feature_directory` | `specs/<name>` (any name matching `[A-Za-z0-9._-]+`, no number needed) | hook: new-folder scan while `phase` is `define` and `define_before` is a list; unchanged otherwise | cwd-walked file |
 | `phase` | `define` ... `close`, `fast`, `quick`, `done`, null | hook (existing); new: `done` from the `Phase: done` marker; `st-quick` agent (unchanged) | cwd-walked file |
 | `lane` | `full`, `fast`, `quick`, `none` | hook (existing, unchanged) | cwd-walked file |
 | `skill` | `st-build`, `st-worker`, `""` | hook (existing set); new: `""` from the `Build done.` marker | cwd-walked file |
 | `skill_session` | session id | hook (existing, unchanged) | cwd-walked file |
-| `define_floor` | integer, 0 or more | hook only (new key, read only by the hook): set when Define starts with a description, removed when Define starts with none | cwd-walked file |
+| `define_before` | sorted list of folder names (strings), may be empty | hook only (new key, read only by the hook): set when Define starts with a description; removed when Define starts with none, and when the hook finds the new folder | cwd-walked file |
 
 The cwd-walked file is the one the hook finds today: walk up from the input `cwd` to the first
 folder that has `.stratum/` or `.git` (`hooks/st-phase.py:29-33`).
@@ -31,29 +31,33 @@ At Define start (UserPromptSubmit `/stratum:st-define <text>` or PreToolUse Skil
 the same write that sets `phase` to `define`:
 
 - Description given (the prompt has non-blank text after the command, or `tool_input.args` is
-  non-blank): `define_floor` = the highest `NNN` of the folders in `<root>/specs/` whose name starts
-  with `^\d{3}-`, or 0 when there is none or `specs/` is missing.
-- No description (a redo of the current feature): remove `define_floor`.
+  non-blank): `define_before` = the sorted list of all folder names in `<root>/specs/` (no name
+  filter), or `[]` when there is none or `specs/` is missing.
+- No description (a redo of the current feature): remove `define_before`.
 
 Only on PostToolUse, only while `phase == "define"`:
 
-1. No `define_floor` (or not an integer): stop, no write.
-2. List `<root>/specs/`. Candidates: folders whose name matches `^\d{3}-[a-z0-9-]+$` and that hold a
-   file `spec.md`. Any other name (such as `999-x$(y)`) is ignored.
-3. Pick the highest number. On a tie, pick the name that sorts last. Current number: the `NNN` of
-   `specs/NNN-` in `feature_directory`, or none when the key is missing, empty or does not match.
-4. Write `specs/<folder>` only when the picked number is higher than `define_floor` and the current
-   number is none or lower than the picked number.
+1. `define_before` missing or not a list: stop, no write.
+2. List `<root>/specs/`. New folders: folders whose name is not in `define_before`, fully matches
+   `[A-Za-z0-9._-]+`, and that hold a file `spec.md`. Any other name (such as `x$(y)`) is ignored.
+3. No new folder: stop, no write (the list stays for the next tool call).
+4. One or more: set `feature_directory` = `specs/<name>` for the name that sorts last, and remove
+   `define_before`, in one write.
 
-`<root>` is the folder that holds the cwd-walked `.stratum/`.
+`<root>` is the folder that holds the cwd-walked `.stratum/`. No folder name needs a number:
+`apps-own-lockfiles`, `2420-parasat-area-step`, `1000-fix-x` and `012126_max-qty-per-package` all
+work, and two folders may share a number.
 
 Examples (scenarios 4 and 5, and the redo):
 
 | Start | On disk | Result |
 |-------|---------|--------|
-| redo of `specs/013-x` (no description, floor removed) | `013-x`, `015-y` with `spec.md` | stays `specs/013-x` |
-| new Define, floor 15 | `013-x`, `015-y`, then `016-z/spec.md` written | `specs/016-z` |
-| new Define, floor 15, `feature_directory` `specs/016-z` | `013-x/spec.md` edited | stays `specs/016-z` |
+| redo of `specs/013-x` (no description, `define_before` removed) | `013-x`, `015-y` with `spec.md` | stays `specs/013-x` |
+| new Define, `define_before` `["013-x", "015-y"]` | `016-z/spec.md` written | `specs/016-z`, `define_before` removed |
+| after that, `feature_directory` `specs/016-z`, no `define_before` | `013-x/spec.md` edited | stays `specs/016-z` |
+| new Define, `define_before` `["013-x"]` | `014-a/` made, no `spec.md` yet | no change, list stays |
+| new Define, `define_before` `[]` | `apps-own-lockfiles/spec.md` written | `specs/apps-own-lockfiles` |
+| new Define, `define_before` `["013-x"]` | `x$(y)/spec.md` written | no change (name rule) |
 
 ## Transcript turn
 
@@ -63,11 +67,16 @@ The JSONL file at `transcript_path` (main session file, research R2).
   `message.content` that is a string, or a list with at least one block whose `type` is not
   `tool_result` (research R4).
 - **Current turn**: the lines after the last real user prompt.
+- **Turn boundary by `promptId`** (research R10): the backward read also stops at a `user` line whose
+  `promptId` differs from the input's `prompt_id`, when both are present. This covers a prompt line
+  that is not in the file yet, so the read never runs into the previous turn. With either value
+  missing, the real-prompt rule alone sets the boundary. Assistant lines have no `promptId` and never
+  stop the read.
 - **Reply text**: the `text` of each `text` block in `message.content` of lines with
   `type == "assistant"` and no `isSidechain: true`, in file order. Every other line type is skipped,
   `api-request-blob` and `attachment` included.
-- **Read bound**: read backward from the end in 64 KiB blocks; stop at the first real user prompt or
-  after 16 MiB (research R3). No file, a bad line or a read error: that line or the whole read gives
+- **Read bound**: read backward from the end in 64 KiB blocks; stop at the first real user prompt, at
+  the first `user` line of another `promptId`, or after 16 MiB (research R3). No file, a bad line or a read error: that line or the whole read gives
   no text.
 - **Stop**: append the input's `last_assistant_message` (a string) after the transcript text, since
   the transcript can lag (research R1).

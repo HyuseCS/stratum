@@ -4,3 +4,6 @@ summary: Simplify the implementation sequence by building the final marker gramm
 
 ## plan | 2026-11-06T02:52:27Z | sha256 9f430057e9caaa603ba3c8b06d42edfb9e079be496c975e5796979fae136bcac | APPROVED
 summary: The revised plan builds the final marker grammar once, addressing the previous finding. No further simplification warrants revision within this plan-only review.
+
+## decisions | 2026-11-06T03:58:23Z | /advisor
+summary: /advisor: all 11 US1 small decisions fine, none CRITICAL/HIGH; R8 mechanism note for Close (async Agent: Stop while waiting covers FR-003)

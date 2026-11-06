@@ -18,7 +18,7 @@ RISK = re.compile(PRE + r"Lane: [A-Za-z]+, risk ((?i:high|normal|low|none))\b", 
 ASK = re.compile(r"\s*risk (high|normal|low|none)\s*", re.I)
 DONE = re.compile(PRE + r"Phase: done\.?(?:\*\*|`)?[ \t]*$", re.M)
 CLEAR = re.compile(PRE + r"Build done\.?(?:\*\*|`)?[ \t]*$", re.M)
-SPEC = re.compile(r"\d{3}-[a-z0-9-]+")
+SPEC = re.compile(r"[A-Za-z0-9._-]+")
 
 
 def turn_text(path, pid):
@@ -130,15 +130,13 @@ def main():
     if CLEAR.search(text):
         state["skill"] = ""
     old = state.get("phase")
-    floor = state.get("define_floor")
-    if event == "PostToolUse" and old == "define" and isinstance(floor, int):
-        found = [(int(n[:3]), n) for n in folders(d)
-                 if SPEC.fullmatch(n) and os.path.isfile(os.path.join(d, "specs", n, "spec.md"))]
+    seen = state.get("define_before")
+    if event == "PostToolUse" and old == "define" and isinstance(seen, list):
+        found = [n for n in folders(d) if n not in seen and SPEC.fullmatch(n)
+                 and os.path.isfile(os.path.join(d, "specs", n, "spec.md"))]
         if found:
-            num, pick = max(found)
-            cur = re.match(r"specs/(\d{3})-", str(state.get("feature_directory") or ""))
-            if num > floor and (not cur or int(cur.group(1)) < num):
-                state["feature_directory"] = "specs/" + pick
+            state["feature_directory"] = "specs/" + max(found)
+            del state["define_before"]
     notes = []
     sid = data.get("session_id")
     name = m and m.group(1)
@@ -153,9 +151,9 @@ def main():
         if phase == "define":
             desc = data["prompt"].lstrip()[m.end():] if prompt else (data.get("tool_input") or {}).get("args")
             if isinstance(desc, str) and desc.strip():
-                state["define_floor"] = max((int(n[:3]) for n in folders(d) if re.match(r"\d{3}-", n)), default=0)
+                state["define_before"] = sorted(folders(d))
             else:
-                state.pop("define_floor", None)
+                state.pop("define_before", None)
         if phase in ("fast", "quick"):
             state["lane"] = phase
         elif phase in ("define", "full") or state.get("lane") in (None, "", "none"):

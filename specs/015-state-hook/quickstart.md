@@ -45,9 +45,11 @@ with the Edit tool (never `git checkout`):
 | line type filter | read `message.content` text of any line type (`api-request-blob` too) | `test_risk_ignores_out_of_turn` |
 | Stop append | do not append `last_assistant_message` | `test_risk_at_stop_from_last_message`, `test_phase_done_marker` |
 | `phase == define` | drop the phase check | `test_feature_directory_on_define` |
-| higher number only | drop the compare with the current number | `test_feature_directory_on_define` |
-| `define_floor` | drop the floor check (switch with no floor or at or below it) | `test_feature_directory_on_define` |
-| folder name | loosen `^\d{3}-[a-z0-9-]+$` to `^\d{3}-` | `test_feature_directory_on_define` |
+| list needed | scan when `define_before` is missing (the redo row) | `test_feature_directory_on_define` |
+| not in the list | drop the `not in define_before` check (an old folder counts as new) | `test_feature_directory_on_define` |
+| name rule | drop the `[A-Za-z0-9._-]+` full match (an `x$(y)` folder counts) | `test_feature_directory_on_define` |
+| `spec.md` needed | count a new folder with no `spec.md` | `test_feature_directory_on_define` |
+| list removal | keep `define_before` after the switch (a later folder switches again) | `test_feature_directory_on_define` |
 | whole-prompt match | `re.search` on the prompt | `test_risk_prompt` |
 | main checkout path | write risk to the cwd file | `test_risk_goes_to_main_checkout` |
 | missing main file | write the main file even when it is missing | `test_risk_goes_to_main_checkout` |

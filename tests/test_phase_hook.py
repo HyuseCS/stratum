@@ -304,7 +304,7 @@ class PhaseHookTest(unittest.TestCase):
         self.write_state(feature_directory="specs/001-x", phase="fast", lane="fast")
         self.skill("stratum:st-define")
         self.assertEqual(self.read_state(), {"feature_directory": "specs/001-x", "phase": "define", "lane": "full",
-                                             "define_floor": 0})
+                                             "define_before": []})
 
     def test_agents_write_done(self):
         for name in ("st", "st-fast", "st-quick", "st-full", "st-close"):
@@ -582,94 +582,97 @@ class PhaseHookTest(unittest.TestCase):
             self.spec_folder(name)
         self.write_state(**state)
 
-    def test_define_floor(self):
+    def test_define_before(self):
         with self.subTest("no specs folder"):
             self.write_state(feature_directory="specs/001-x", phase="build", lane="full")
-            self.prompt("/stratum:st-define new thing")
-            self.assertEqual(self.read_state()["define_floor"], 0)
+            self.prompt("/stratum:st-define x")
+            self.assertEqual(self.read_state()["define_before"], [])
             self.write_state(feature_directory="specs/001-x", phase="build", lane="full")
-            self.skill("stratum:st-define", args="new thing")
-            self.assertEqual(self.read_state()["define_floor"], 0)
-        self.spec_folder("013-x")
-        self.spec_folder("015-y")
-        with self.subTest("prompt sets the floor"):
+            self.skill("stratum:st-define", args="x")
+            self.assertEqual(self.read_state()["define_before"], [])
+        for name in ("015-y", "apps-own-lockfiles", "013-x"):
+            self.spec_folder(name)
+        self.spec_folder("2420-parasat-area-step", spec=False)
+        open(os.path.join(self.proj, "specs", "README.md"), "w").close()
+        listed = ["013-x", "015-y", "2420-parasat-area-step", "apps-own-lockfiles"]
+        with self.subTest("prompt sets the list"):
             self.write_state(feature_directory="specs/001-x", phase="build", lane="full")
-            self.prompt("/stratum:st-define new thing")
-            self.assertEqual(self.read_state()["define_floor"], 15)
-        with self.subTest("skill sets the floor"):
+            self.prompt("/stratum:st-define x")
+            self.assertEqual(self.read_state()["define_before"], listed)
+        with self.subTest("skill sets the list"):
             self.write_state(feature_directory="specs/001-x", phase="build", lane="full")
-            self.skill("stratum:st-define", args="new thing")
-            self.assertEqual(self.read_state()["define_floor"], 15)
-        with self.subTest("redo removes the floor"):
-            self.write_state(feature_directory="specs/013-x", phase="done", lane="full", define_floor=15)
+            self.skill("stratum:st-define", args="x")
+            self.assertEqual(self.read_state()["define_before"], listed)
+        for args in ("", "  ", None):
+            with self.subTest("redo removes the list", args=args):
+                self.write_state(feature_directory="specs/013-x", phase="done", lane="full", define_before=listed)
+                self.skill("stratum:st-define", args=args)
+                self.assertNotIn("define_before", self.read_state())
+        with self.subTest("redo prompt removes the list"):
+            self.write_state(feature_directory="specs/013-x", phase="done", lane="full", define_before=listed)
             self.prompt("/stratum:st-define")
-            self.assertNotIn("define_floor", self.read_state())
-            self.write_state(feature_directory="specs/013-x", phase="done", lane="full", define_floor=15)
-            self.skill("stratum:st-define", args="")
-            self.assertNotIn("define_floor", self.read_state())
-        with self.subTest("other skills keep the floor"):
-            self.write_state(feature_directory="specs/001-x", phase="define", lane="full", define_floor=15)
+            self.assertNotIn("define_before", self.read_state())
+        with self.subTest("other skills keep the list"):
+            self.write_state(feature_directory="specs/001-x", phase="define", lane="full", define_before=listed)
             self.prompt("/stratum:st-plan")
-            self.assertEqual(self.read_state()["define_floor"], 15)
-            self.write_state(feature_directory="specs/001-x", phase="define", lane="full", define_floor=15)
+            self.assertEqual(self.read_state()["define_before"], listed)
+            self.write_state(feature_directory="specs/001-x", phase="define", lane="full", define_before=listed)
             self.skill("stratum:st-plan")
-            self.assertEqual(self.read_state()["define_floor"], 15)
+            self.assertEqual(self.read_state()["define_before"], listed)
 
     def test_feature_directory_on_define(self):
-        with self.subTest("redo keeps the feature, no floor"):
-            self.spec_folders_reset(("013-x", "015-y"), phase="define", feature_directory="specs/013-x")
+        old = ["013-x", "015-y"]
+        with self.subTest("redo keeps the feature, no list"):
+            self.spec_folders_reset(old, phase="define", feature_directory="specs/013-x")
+            self.spec_folder("apps-own-lockfiles")
             before = self.raw()
             self.assertEqual(self.post_tool("Write"), "")
             self.assertEqual(self.raw(), before)
-        for tool in ("Write", "Bash", "Agent"):
-            with self.subTest("new define moves to 016-z on " + tool):
-                self.spec_folders_reset(("013-x", "015-y"), phase="define", define_floor=15,
-                                        feature_directory="specs/013-x")
-                self.spec_folder("016-z")
-                self.assertEqual(self.post_tool(tool), "")
-                self.assertEqual(self.read_state()["feature_directory"], "specs/016-z")
-        with self.subTest("edit in the old folder keeps the new feature"):
-            self.spec_folders_reset(("013-x", "016-z"), phase="define", define_floor=15,
-                                    feature_directory="specs/016-z")
+        for name in ("apps-own-lockfiles", "2420-parasat-area-step", "012126_max-qty-per-package"):
+            for tool in ("Write", "Bash", "Agent"):
+                with self.subTest("new define records " + name, tool=tool):
+                    self.spec_folders_reset(old, phase="define", define_before=old, feature_directory="specs/013-x")
+                    self.spec_folder(name)
+                    self.assertEqual(self.post_tool(tool), "")
+                    state = self.read_state()
+                    self.assertEqual(state["feature_directory"], "specs/" + name)
+                    self.assertNotIn("define_before", state)
+        with self.subTest("a later new folder does not move the recorded feature"):
+            self.spec_folders_reset(old, phase="define", define_before=old)
+            self.spec_folder("apps-own-lockfiles")
+            self.post_tool("Write")
+            self.spec_folder("zzz")
+            before = self.raw()
+            self.assertEqual(self.post_tool("Write"), "")
+            self.assertEqual(self.raw(), before)
+            self.assertEqual(self.read_state()["feature_directory"], "specs/apps-own-lockfiles")
+        with self.subTest("edit to an older spec changes nothing"):
+            self.spec_folders_reset(old, phase="define", define_before=old, feature_directory="specs/013-x")
             before = self.raw()
             self.assertEqual(self.post_tool("Edit"), "")
             self.assertEqual(self.raw(), before)
-        with self.subTest("no feature set, floor 15"):
-            self.spec_folders_reset(("016-z",), phase="define", define_floor=15)
+        with self.subTest("two new folders, the name that sorts last wins"):
+            self.spec_folders_reset(old + ["016-a", "016-z"], phase="define", define_before=old)
             self.assertEqual(self.post_tool("Write"), "")
             self.assertEqual(self.read_state().get("feature_directory"), "specs/016-z")
-        with self.subTest("tie goes to the name that sorts last"):
-            self.spec_folders_reset(("016-a", "016-z"), phase="define", define_floor=15)
-            self.assertEqual(self.post_tool("Write"), "")
-            self.assertEqual(self.read_state().get("feature_directory"), "specs/016-z")
-        with self.subTest("lower folder does not replace the current feature"):
-            self.spec_folders_reset(("015-y",), phase="define", define_floor=13, feature_directory="specs/016-z")
-            before = self.raw()
-            self.assertEqual(self.post_tool("Write"), "")
-            self.assertEqual(self.raw(), before)
-        with self.subTest("floor 16 blocks 016-z"):
-            self.spec_folders_reset(("016-z",), phase="define", define_floor=16)
-            before = self.raw()
-            self.assertEqual(self.post_tool("Write"), "")
-            self.assertEqual(self.raw(), before)
-        with self.subTest("plan phase does not scan"):
-            self.spec_folders_reset(("016-z",), phase="plan", define_floor=15)
+        with self.subTest("plan phase does not record"):
+            self.spec_folders_reset(old + ["016-z"], phase="plan", define_before=old)
             before = self.raw()
             self.assertEqual(self.post_tool("Write"), "")
             self.assertEqual(self.raw(), before)
         with self.subTest("folder without spec.md"):
-            self.spec_folders_reset(("013-x",), phase="define", define_floor=15)
+            self.spec_folders_reset(old, phase="define", define_before=old)
             self.spec_folder("017-w", spec=False)
             before = self.raw()
             self.assertEqual(self.post_tool("Write"), "")
             self.assertEqual(self.raw(), before)
-        with self.subTest("names that are not spec folders"):
-            self.spec_folders_reset(("abc-x", "999-x$(y)"), phase="define", define_floor=15)
+        with self.subTest("bad names"):
+            self.spec_folders_reset(old + ["new$(x)", "a b"], phase="define", define_before=old)
             before = self.raw()
             self.assertEqual(self.post_tool("Write"), "")
             self.assertEqual(self.raw(), before)
         with self.subTest("status skill and stop while define"):
-            self.spec_folders_reset(("016-z",), phase="define", define_floor=15)
+            self.spec_folders_reset(old + ["016-z"], phase="define", define_before=old)
             before = self.raw()
             self.assertEqual(self.pre_skill("stratum:st-status"), "")
             self.assertEqual(self.stop_event(), "")

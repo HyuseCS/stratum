@@ -30,8 +30,8 @@ skill lines write today. Grep the skills for any `state.json` write instruction.
 1. **Given** a reply in the current turn that has the line `Lane: full, risk high (...)`, **When** the hook runs on a later Skill or Agent call in that turn, after an Agent call, or at the end of the reply, **Then** `risk` is `high` in the main checkout's `state.json`.
 2. **Given** `risk` is `high`, **When** the user sends the prompt `risk low`, **Then** `risk` is `low`.
 3. **Given** a `Lane:` line in an earlier turn and a `risk high` prompt in this turn, **When** the hook runs at the end of this reply, **Then** `risk` stays `high` (the old line does not apply again).
-4. **Given** `phase` is `define` and `feature_directory` is `specs/013-x`, **When** a tool call creates `specs/015-y/spec.md`, **Then** `feature_directory` is `specs/015-y`.
-5. **Given** `phase` is `define` and `feature_directory` is `specs/015-y`, **When** a tool call edits `specs/013-x/spec.md`, **Then** `feature_directory` stays `specs/015-y`.
+4. **Given** Define started with a description while `specs/` held `013-x`, and `feature_directory` is `specs/013-x`, **When** a tool call creates `specs/015-y/spec.md`, **Then** `feature_directory` is `specs/015-y`.
+5. **Given** `phase` is `define` and `feature_directory` is `specs/015-y` (the new folder already found), **When** a tool call edits `specs/013-x/spec.md`, **Then** `feature_directory` stays `specs/015-y`.
 6. **Given** `phase` is `close` (or `fast`), **When** the reply has the line `Phase: done`, **Then** `phase` is `done` at the end of the reply.
 7. **Given** a held reply label (`skill` is `st-build` or `st-worker`), **When** the reply has the line `Build done.`, **Then** `skill` is empty at the end of the reply and the next prompt gets no `[st-build]` label.
 8. For each scenario above, **Given** the same state with no marker line (or the marker only in a tool result or in an earlier turn), **Then** the value does not change.
@@ -53,7 +53,7 @@ skill lines write today. Grep the skills for any `state.json` write instruction.
 - **FR-001**: The hook MUST write `risk` from a line that starts with `Lane: <lane>, risk <level>` in the main session's reply text of the current turn, where `<level>` is `high`, `normal`, `low` or `none`. If the turn has more than one such line, the last one wins.
 - **FR-002**: The hook MUST write `risk` from a user prompt that is only `risk <level>`.
 - **FR-003**: The risk write MUST land before the first in-turn reader: in the Fast lane, before `st-advisor.sh change` in `st-fast` step 2.
-- **FR-004**: While `phase` is `define`, after a tool call, the hook MUST set `feature_directory` to the highest-numbered `specs/NNN-<name>` folder (name matching `^\d{3}-[a-z0-9-]+$`; on a tie, the name that sorts last) that has a `spec.md`, only when that number is higher than the number of the current `feature_directory` (or there is none) and higher than `define_floor`. When Define starts with a description, the hook stores `define_floor`: the highest `NNN` of the `specs/NNN-*` folders on disk then (0 if none). When Define starts with no description (a redo), the hook removes `define_floor`. With no `define_floor`, the hook does not switch.
+- **FR-004**: When Define starts with a description, the hook MUST store `define_before`: the sorted list of all folder names in `specs/` then (empty if none). When Define starts with no description (a redo), the hook MUST remove `define_before`. While `phase` is `define` and `define_before` is a list, after a tool call, the hook MUST look for new folders in `specs/`: not in the list, with a name that fully matches `[A-Za-z0-9._-]+`, holding a `spec.md`. If there is one or more, it MUST set `feature_directory` to `specs/<name>` for the name that sorts last, and remove `define_before`. Folder names need no number. With no `define_before`, the hook does not switch.
 - **FR-005**: The hook MUST set `phase` to `done` when the current turn's reply has a line `Phase: done`, in any phase. Only st-close and st-fast tell the session to say it.
 - **FR-006**: The hook MUST set `skill` to empty when the current turn's reply has a line `Build done.`.
 - **FR-007**: A marker MUST count only in the current turn: the reply text after the last real user prompt. Tool results, injected skill text and earlier turns MUST NOT count.
@@ -65,7 +65,7 @@ skill lines write today. Grep the skills for any `state.json` write instruction.
 
 ### Key Entities
 
-- **State file** (`.stratum/state.json`): the keys `risk`, `feature_directory`, `phase`, `lane`, `skill`, `skill_session`. Only `risk`, `feature_directory`, `phase` (`done`) and `skill` (cleared) get new writers. A new key, `define_floor` (a number), is written and read only by the hook: it holds the highest spec folder number on disk when a new Define starts.
+- **State file** (`.stratum/state.json`): the keys `risk`, `feature_directory`, `phase`, `lane`, `skill`, `skill_session`. Only `risk`, `feature_directory`, `phase` (`done`) and `skill` (cleared) get new writers. A new key, `define_before` (a list of folder names), is written and read only by the hook: it holds the `specs/` folder names on disk when a new Define starts, and exists only until the hook finds the new folder or a redo removes it.
 - **Marker line**: a line at the start of the main session's reply text: `Lane: <lane>, risk <level> (...)`, `Phase: done`, `Build done.`.
 
 ## Success Criteria *(mandatory)*

@@ -43,10 +43,10 @@ No `.stratum/constitution.md` in this repo (base repo) and no `apps/*/ORDINANCE.
 
 | Event (matcher) | Today | New reads | New writes (file) |
 |-----------------|-------|-----------|-------------------|
-| UserPromptSubmit | phase, lane, held label, label line | prompt that is only `risk <level>`; text after `/stratum:st-define` | `risk` (main); `define_floor` set or removed (cwd) |
-| PreToolUse `Skill\|Agent` | phase, lane, held label (Skill only) | reply markers, when no `agent_id`; `tool_input.args` of `st-define` | `risk` (main), `phase` done, `skill` "", `define_floor` set or removed (cwd) |
-| PostToolUse `Bash\|Write\|Edit\|MultiEdit` | none | `specs/` scan, only while `phase` is `define` | `feature_directory` (cwd) |
-| PostToolUse `Agent` | none | `specs/` scan (define only), reply markers when no `agent_id` | all four |
+| UserPromptSubmit | phase, lane, held label, label line | prompt that is only `risk <level>`; text after `/stratum:st-define` | `risk` (main); `define_before` set or removed (cwd) |
+| PreToolUse `Skill\|Agent` | phase, lane, held label (Skill only) | reply markers, when no `agent_id`; `tool_input.args` of `st-define` | `risk` (main), `phase` done, `skill` "", `define_before` set or removed (cwd) |
+| PostToolUse `Bash\|Write\|Edit\|MultiEdit` | none | new-folder scan of `specs/`, only while `phase` is `define` and `define_before` is a list | `feature_directory` set and `define_before` removed (cwd) |
+| PostToolUse `Agent` | none | new-folder scan (as above), reply markers when no `agent_id` | all four, and `define_before` removed |
 | Stop | none | reply markers plus `last_assistant_message` | `risk` (main), `phase` done, `skill` "" (cwd) |
 
 The marker grammar, the turn rule and the file rules are in [data-model.md](data-model.md) and
@@ -61,10 +61,12 @@ The marker grammar, the turn rule and the file rules are in [data-model.md](data
    hook returns.
 2. Find the cwd-walked state file as today (`hooks/st-phase.py:29-38`). Missing or bad: return before
    any transcript read (Stop runs in projects without Stratum too).
-3. Apply the markers of the current turn (text before this event), then the `specs/` scan, then the
-   existing phase, lane and held-label logic on the updated state.
-   When the skill is `st-define`, set `define_floor` (Define with a description) or remove it
-   (Define with no description, a redo) in the same step that sets `phase` to `define`.
+3. Apply the markers of the current turn (text before this event), then the new-folder scan of
+   `specs/` (data-model.md "`feature_directory` transition"), then the existing phase, lane and
+   held-label logic on the updated state.
+   When the skill is `st-define`, set `define_before` to the sorted folder names in `specs/` (Define
+   with a description) or remove it (Define with no description, a redo) in the same step that sets
+   `phase` to `define`.
 4. Write the cwd file once if it changed. Write the risk to the main file if it changed (one write
    if both paths are the same file). A main file that is missing or bad while `git` works gets no
    write and is not created.
@@ -76,7 +78,7 @@ The marker grammar, the turn rule and the file rules are in [data-model.md](data
 |------|--------------------------|--------------|-----------|
 | Lane pick | `risk` in main checkout | hook, `Lane:` line | yes |
 | User's `risk <level>` | `risk` in main checkout | hook, prompt or repeated `Lane:` line | yes |
-| Define (specify) | `feature_directory`, `phase define`, `lane full` in `.stratum/state.json` | `phase`, `lane`: hook at st-define start (today too). `feature_directory`: hook `specs/` scan above `define_floor` | yes |
+| Define (specify) | `feature_directory`, `phase define`, `lane full` in `.stratum/state.json` | `phase`, `lane`: hook at st-define start (today too). `feature_directory`: hook, the new folder not in `define_before` | yes |
 | Plan, Inspect, Build start | `phase`, `lane` | unchanged | yes |
 | Build end | `skill ""` in main checkout | hook, `Build done.` line | cwd file (same in main checkout, spec Assumptions) |
 | Close end, Fast end | `phase done` in `<project>` | hook, `Phase: done` line | yes |
@@ -87,12 +89,16 @@ The marker grammar, the turn rule and the file rules are in [data-model.md](data
   phase skill, Stop applies the marker again after it. The skills say these lines at the end of a
   run, before a user gate, so a later phase in the same turn does not happen in the lanes today.
 - `procedures/specify.md` keeps its `{}` start line (spec Assumptions). With a fresh `{}` file the
-  Define start found no state file, so `phase` is not `define` and there is no `define_floor`: the
+  Define start found no state file, so `phase` is not `define` and there is no `define_before`: the
   hook records no feature for that run. The user sets `feature_directory` once by hand.
+- `define_before` sits in `state.json` only during Define: from a Define start with a description
+  until the hook finds the new folder (or a redo removes it). If Define ends with no new `spec.md`,
+  the list stays until the next Define start. In a repo with many spec folders the list makes
+  `state.json` longer for that time, and a commit made then carries the key.
 - Stop may not fire when the user interrupts the reply or the API call fails. A `Phase: done` or
   `Build done.` line said just before is then lost, and the value stays as it was. A `Lane:` line is
   also read at PreToolUse and PostToolUse `Agent`, so only a turn with no later tool call loses it.
-- The hook reads Claude Code's transcript format (`type`, `isMeta`, `isSidechain`,
+- The hook reads Claude Code's transcript format (`type`, `isMeta`, `isSidechain`, `promptId`,
   `api-request-blob`, `last_assistant_message`), measured on 2.1.316 headless (R1, R2, R4). If the
   format changes, the writes stop with no sign: a stale `risk` picks the wrong advisors and the held
   label sticks. The live check after merge (quickstart.md) runs on both machines, PC and laptop.
@@ -101,9 +107,12 @@ The marker grammar, the turn rule and the file rules are in [data-model.md](data
 ## Security notes
 
 - **Data model** (`state.json`): the hook writes four keys in two files. Values are fixed sets
-  (`high|normal|low|none`, `done`, `""`), a number (`define_floor`), or a `specs/NNN-<name>` folder
-  name the hook read from disk. Only names matching `^\d{3}-[a-z0-9-]+$` count, so a cloned folder
-  such as `999-x$(y)` never becomes `feature_directory`, a value skills put into shell commands.
+  (`high|normal|low|none`, `done`, `""`), a list of folder names (`define_before`), or a
+  `specs/<name>` folder name the hook read from disk. Two guards keep a bad name out of
+  `feature_directory`, a value skills put into shell commands. A folder that came with a clone is
+  already on disk when Define starts, so it is in `define_before` and never counts as new. A new
+  folder counts only when its name fully matches `[A-Za-z0-9._-]+`, so a name with shell
+  characters (such as `x$(y)`) is ignored.
   Writes are atomic (`mkstemp` in the same folder, then `os.replace`) and happen only on change.
 - **Personal data**: the transcript holds the user's prompts and the replies. The hook reads it,
   keeps only the marker values, prints nothing and stores nothing else.
