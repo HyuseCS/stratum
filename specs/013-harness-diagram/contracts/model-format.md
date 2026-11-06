@@ -149,7 +149,8 @@ views {
 ```
 
 - `include` terms name groups one by one (`skills.* -> data.*`). `* -> x.*` collapses sources to
-  their groups (research R5).
+  their groups (research R5). `a.* <-> b.*` draws the links both ways. `views/7-dataflow.c4` uses
+  this form.
 - `harness`: `events.*`, `hooks.*`, `statusline.*`, `claude`, `scripts.st-advisor-sh`,
   `scripts.st-codex-agent-sh`, `codex`, `advisor`, `stratum.state-json` (risk level),
   `stratum.advisor-json`, and the links between them.

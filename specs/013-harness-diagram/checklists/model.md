@@ -25,7 +25,7 @@
 
 ## Requirement Consistency
 
-- [ ] CHK010 Do the 7 views in SC-006 match the views named in FR-005 and FR-006 (4 lanes + agents + harness + data flow)? [Consistency, Spec §SC-006]
+- [ ] CHK010 Do the 15 views in SC-006 match the views named in FR-005 and FR-006 (the 4 lanes with their overview and phase or mode views, agents, harness and data flow)? [Consistency, Spec §SC-006]
 - [ ] CHK011 Is the edit-notes location the same in FR-010 and decision D6? [Consistency, Spec §FR-010]
 
 ## Acceptance Criteria Quality

@@ -4,9 +4,9 @@
 
 **Created**: 2026-11-05
 
-**Status**: Draft
+**Status**: Built
 
-**Input**: User description: "#78 Add a diagram of the Stratum workflows and harness. Purpose: see the harness so we can make the workflows work better and the skills in the workflows more cohesive and autonomous. The diagram must be editable by the developer, easy to consume, and easy for an LLM to read." Decisions D1 to D18 are in `decisions.md`.
+**Input**: User description: "#78 Add a diagram of the Stratum workflows and harness. Purpose: see the harness so we can make the workflows work better and the skills in the workflows more cohesive and autonomous. The diagram must be editable by the developer, easy to consume, and easy for an LLM to read." Decisions D1 to D20 are in `decisions.md`.
 
 ## User Scenarios & Testing *(mandatory)*
 

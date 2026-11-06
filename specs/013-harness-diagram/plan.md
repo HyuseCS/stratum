@@ -2,13 +2,13 @@
 
 **Branch**: `078-harness-diagram` | **Date**: 2026-11-05 | **Spec**: [spec.md](spec.md)
 
-**Input**: Feature specification from `specs/013-harness-diagram/spec.md`, decisions D1 to D18 in
+**Input**: Feature specification from `specs/013-harness-diagram/spec.md`, decisions D1 to D20 in
 [decisions.md](decisions.md).
 
-**Status**: Phase 0 and Phase 1 done. Plan decisions D8 to D19 are in decisions.md. D13 (split
+**Status**: Phase 0 and Phase 1 done. Plan decisions D8 to D20 are in decisions.md. D13 (split
 the Full and Design lane views with click-through) came after Build and adds T024 to T028. D14 to
 D18 (the system atlas, US5) add T029 to T032. D19 (keep both, atlas first in the README, atlas
-drift check) adds T033 to T035. No open decisions.
+drift check) adds T033 to T035. D20 (the MIT notice of the atlas template) adds no task. No open decisions.
 
 ## Summary
 
@@ -48,8 +48,8 @@ downloads `likec4@1.60.0` from npm.
 diagram, research R8). No file that Claude Code loads as a plugin component (FR-012).
 
 **Scale/Scope**: 40 skills, 15 agents, 17 hook files (9 in `hooks/`, 8 in `hooks/ponytail/`), 15 scripts, 3 statusline files, 9
-procedures, 15 `.stratum` data files, 12 feature files, 6 actors, 7 events, 12 groups, about 22 other files (D10). About 175
-elements.
+procedures, 16 `.stratum` data files, 12 feature files, 6 actors, 7 events, 12 groups, 44 other files (D10: 21 project, 13 plugin,
+10 outside). 178 elements, not counting groups and actors.
 
 ## Constitution Check
 
@@ -174,7 +174,8 @@ Small calls made here (no user decision needed):
 
 - Two actors beyond FR-006: `git` (commits and branches go to it) and `claude` (Claude Code fires
   the events and runs the statusline).
-- `workflows/pr.js` gets no element: no harness file names it.
+- `workflows/pr.js` gets one element, `plugin.workflows-pr-js`: the `stratum:pr` workflow that
+  `skills/st-pr/SKILL.md:37` calls is this file.
 - The rebuild check fails, not skips, when `npx` exists but the download fails. A SKIP there would
   hide a broken check (D9 names only two SKIP cases).
 - Atlas: 24 structures in the chapter outline (data-model.md "Atlas"), the first flow id `turn`
@@ -190,14 +191,16 @@ Small calls made here (no user decision needed):
   `t=$(mktemp -d) && cp ~/.claude/skills/system-atlas/assets/build.mjs ~/.claude/skills/system-atlas/assets/template.html docs/harness/atlas/data.mjs "$t" && node "$t/build.mjs" && cp "$t/atlas.html" "$t/SYSTEM.md" docs/harness/atlas/ && rm -rf "$t"`.
   It needs only Node (no npm package) and the system-atlas skill installed at
   `~/.claude/skills/system-atlas` on that machine (the user's PC and laptop). Reading the atlas
-  needs neither.
+  needs neither. The build line is in three code places: `README.md` (FR-023), `META.buildCmd` in
+  `docs/harness/atlas/data.mjs`, and the `readme` check of `tests/test_harness_model.sh`. A change
+  to it changes all three together, and the atlas is rebuilt so that `SYSTEM.md` shows it.
 - **Paths.** By default `build.mjs` writes to the parent of its folder (`join(here, '..')`). In
   the temp build that is outside the temp folder. `META.outDir: '.'` keeps both outputs in the
   temp folder (probed in a scratch copy of the skill assets). The `nomcp` allow list gets exactly
   the 3 atlas files (FR-021). The atlas folder has no `.c4` file, so `likec4 validate` and
   `export markdown` ignore it, and the `rebuild` check still diffs only `docs/harness/README.md`.
 - **No ADRs and no `CONTEXT.md`.** The skill pairs the atlas with a glossary and ADRs.
-  `decisions.md` is already the decision record (D1 to D19), and the atlas needs no glossary
+  `decisions.md` is already the decision record (D1 to D20), and the atlas needs no glossary
   (YAGNI). `DECISIONS` in `data.mjs` cites `decisions.md Dn` in the ADR column. No atlas
   `README.md` either: `SYSTEM.md` has the maintenance footer, and `docs/harness/README.md` is the
   generated LikeC4 page.
@@ -229,7 +232,7 @@ The model is large (D3), so each `.c4` file has one owner task. Ids are fixed in
 the model tasks (US2) and the view tasks (US1) all run at the same time after T002. Only the
 integration task T018 needs all of them: it runs `likec4 validate` and makes the page. A per-task
 test cannot run `validate`, because links point into files that other tasks write. Per-task tests
-use the checks that read one file at a time (`summaries`, `links`, `missing`, `vendored`, `views`).
+use the checks that read one file at a time (`summaries`, `links`, `missing`, `vendored`, `views-<lane>`).
 
 US5 work (T029 to T032): T029 (the `nomcp` allow list, test first), then T030 writes `data.mjs`
 and builds with the D17 build line. T031 is the orchestrator's publish step, not a subagent's.
@@ -308,3 +311,5 @@ F7. spec.md:33-34 US1 scenario 3 (a skill in more than one lane shows only that 
 automated check and no step in quickstart.md section 2. It holds by construction because lane views list
 steps by hand. -> st-plan: add one hand step to quickstart.md section 2 (`/st-build` in Full and Fast),
 or mark the scenario as true by construction.
+
+This record predates D13 to D20 (the split views, the atlas and its drift check). Its findings F1 to F7 are not re-checked here.

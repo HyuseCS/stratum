@@ -35,7 +35,7 @@ Link kinds:
 |------|---------|---------|
 | `starts` | Starts an agent (Agent tool) or another skill (Skill tool). | `skills.st-plan -[starts]-> agents.st-plan 'plugin root, project root, feature dir'` |
 | `runs` | Runs a script or a hook file as a process. An event runs a hook. | `events.pre-tool-use -[runs]-> hooks.st-git-guard-py 'Bash command'` |
-| `reads` | Reads a file or folder, also a procedure or template it follows. | `agents.st-plan -[reads]-> procedures.plan-md 'plan steps to follow'` |
+| `reads` | Reads a file or folder, also a procedure or template it follows. The target can also be the actor `git` or `github`, for the history or the GitHub state it reads. | `agents.st-plan -[reads]-> procedures.plan-md 'plan steps to follow'` |
 | `writes` | Creates, changes or deletes a file or folder. The label names what is written. | `scripts.st-state-sh -[writes]-> stratum.state-json 'risk level'` |
 | `passes` | Hands data to an element that is not a file: a report back, a question to the user, a prompt to Codex, a PR to GitHub, a commit to git. | `agents.st-plan -[passes]-> skills.st-plan 'plan report and open decisions'` |
 
@@ -76,8 +76,12 @@ starts at 1 and goes up by 1 in file order. A gate step is `(n) gate: <what the 
 (FR-005, D8). A phase or mode view repeats its gate step, so the overview and the phase view both
 show it.
 
-Click-through (D13): each view in the "Opened from" column is the target of at least one
-`navigateTo` in that overview. Every `navigateTo` target is a view id of this table.
+Click-through (D13): in each overview, the step lines with `navigateTo` name the child views in
+table order, one per child. The Full overview's `include skills.<phase> with { navigateTo <view> }`
+lines open the same views. Every view in the "Opened from" column is one of these targets. Every
+`navigateTo` target is a view id of this table. The `views-<lane>` checks of
+`tests/test_harness_model.sh` enforce the order, the pairing, and that each overview gate step is a
+step of a child view.
 
 ### Page
 
@@ -224,11 +228,13 @@ Kind `procedure`, title `procedures/<file>`, `path 'procedures/<file>'`. Ids:
 
 ### Data files (`model/data.c4`)
 
-`.stratum` files (15), kind `datafile`, title and `data` = `.stratum/<name>`:
-`stratum.advisor-json`, `stratum.approve`, `stratum.autonomous`, `stratum.commit-mode`,
+`.stratum` files (16), kind `datafile`, title and `data` = `.stratum/<name>`:
+`stratum.advisor-json`, `stratum.app-constitution-md`, `stratum.approve`, `stratum.autonomous`, `stratum.commit-mode`,
 `stratum.constitution-md`, `stratum.decisions-md`, `stratum.git-guard-json`,
 `stratum.handoff-md`, `stratum.lessons-md`, `stratum.models-json`, `stratum.powerline-json`,
 `stratum.state-json`, `stratum.templates`, `stratum.weather-json`, `stratum.worker-setup-sh`.
+`stratum.app-constitution-md` has the path `.stratum/APP-constitution.md`, where APP is the name of
+an app under `apps/`.
 
 Feature files (12), kind `datafile`, title and `data` = `specs/NNN-feature/<name>`:
 `feature.spec-md`, `feature.plan-md`, `feature.research-md`, `feature.data-model-md`,
@@ -248,6 +254,18 @@ Project files (D10), kind `datafile`, `data` = the project path:
 | `project.claude-settings-local-json` | `.claude/settings.local.json` |
 | `project.impeccable` | `.impeccable` |
 | `project.gitignore` | `.gitignore` |
+| `project.specs` | `specs` |
+| `project.apps-app-ordinance-md` | `apps/APP/ORDINANCE.md` |
+| `project.apps-app-claude-md` | `apps/APP/CLAUDE.md` |
+| `project.package-json` | `package.json` |
+| `project.product-md` | `PRODUCT.md` |
+| `project.design-system` | `design-system` |
+| `project.hallmark` | `.hallmark` |
+| `project.design` | `design` |
+| `project.git-stratum-name-lock` | `.git/stratum-NAME.lock` |
+| `project.claude-local-md` | `CLAUDE.local.md` |
+| `project.brief-md` | `brief.md` |
+| `project.result-md` | `result.md` |
 
 Plugin files (D10), kind `pluginfile`, `path` = repo path (must exist):
 
@@ -264,14 +282,27 @@ Plugin files (D10), kind `pluginfile`, `path` = repo path (must exist):
 | `plugin.vendor-lock` | `vendor.lock` |
 | `plugin.sr-opus-5-md` | `sr-opus-5.md` |
 | `plugin.third-party-notices-md` | `THIRD_PARTY_NOTICES.md` |
+| `plugin.workflows-pr-js` | `workflows/pr.js` |
+| `plugin.templates` | `templates` |
 
 Machine files (D10), kind `datafile`, `data` = the path:
-`outside.local-state-stratum-codex-home` (`~/.local/state/stratum/codex-home`),
-`outside.claude-settings-json` (`~/.claude/settings.json`).
 
-`workflows/pr.js` is named in D10 but no skill, agent, hook, script or procedure names it, so no
-link needs it and it gets no element. The T010 data task declares a registered extra only when a
-source file names it.
+| id | Title and data |
+|----|----------------|
+| `outside.local-state-stratum-codex-home` | `~/.local/state/stratum/codex-home` |
+| `outside.claude-settings-json` | `~/.claude/settings.json` |
+| `outside.claude-ponytail-active` | `~/.claude/.ponytail-active` |
+| `outside.claude-ponytail-modes` | `~/.claude/ponytail-modes` |
+| `outside.config-ponytail-config-json` | `~/.config/ponytail/config.json` |
+| `outside.codex-auth-json` | `~/.codex/auth.json` |
+| `outside.xdg-runtime-dir-st-figcraft-port` | `$XDG_RUNTIME_DIR/st-figcraft-PORT` |
+| `outside.claude-plugins-installed-plugins-json` | `~/.claude/plugins/installed_plugins.json` |
+| `outside.claude-plugins-known-marketplaces-json` | `~/.claude/plugins/known_marketplaces.json` |
+| `outside.claude-projects-project-memory` | `~/.claude/projects/PROJECT/memory` |
+
+`workflows/pr.js` is the script of the `stratum:pr` workflow that `skills/st-pr/SKILL.md:37` calls.
+It has the element `plugin.workflows-pr-js` (Plugin files below), linked from `skills.st-pr`. The
+T010 data task declares a registered extra only when a source file names it.
 
 ## Validation rules (the test checks these, contracts/test-contract.md)
 
@@ -336,9 +367,9 @@ none and has `flow: null`.
 | Ch | Title | Code, name, kind | LikeC4 ids in `how` (main ones) |
 |----|-------|------------------|----------------------------------|
 | 1 | You and /st | U You (`screen`); O Orchestrator /st (`tall`) | `user`; `skills.st` |
-| 2 | The four lanes | L Lane skills (`box`); P Phase skills (`box`); T Tool skills (`cards`) | `skills.st-full`, `-fast`, `-quick`, `-design`; `skills.st-define` ... `skills.st-close`; the other skills (not `st-handoff`, `st-git`, `st-pr`, `st-issues`), with `st-worker.sh`, `st-herdr-workspace.sh`, `st-worktree.sh`, `st-update.sh` |
+| 2 | The four lanes | L Lane skills (`box`); P Phase skills (`box`); T Tool skills (`cards`) | `skills.st-full`, `-fast`, `-quick`, `-design`, `st-design-check.sh`, `st-figcraft.sh`; `skills.st-define` ... `skills.st-close`; the other skills (not `st-handoff`, `st-git`, `st-pr`, `st-issues`), with `st-worker.sh`, `st-herdr-workspace.sh`, `st-worktree.sh`, `st-update.sh` |
 | 3 | The spec on disk | F Feature files (`store`); S State files (`store`); R Procedures and templates (`cards`) | `feature.*`; `stratum.state-json` and the other `.stratum` files, `st-state.sh`; `procedures.*`, `plugin.templates-*`, `check-prerequisites.sh`, `resolve-template.sh`, `common.sh` |
-| 4 | The agents that do the work | A Plan and check agents (`box`); B Build agents (`box`); C Lane and close agents (`box`) | `agents.st-plan`, `-inspect`, `-triage`; `agents.st-test`, `-build`, `-debug`, `-review`, `-design`, `st-design-check.sh`, `st-figcraft.sh`; `agents.st-fast`, `-quick`, `-close`, `-impeccable`, `-ponytail-audit`, `-ponytail-debt`, `st-shortcuts.sh` |
+| 4 | The agents that do the work | A Plan and check agents (`box`); B Build agents (`box`); C Lane and close agents (`box`) | `agents.st-plan`, `-inspect`, `-triage`; `agents.st-test`, `-build`, `-debug`, `-review`, `-design`; `agents.st-fast`, `-quick`, `-close`, `-impeccable`, `-ponytail-audit`, `-ponytail-debt`, `st-shortcuts.sh` |
 | 5 | Gates: asking you first | G Gates (`gate`); V Verify and lock (`job`) | the gate steps of the lane views; `st-verify.sh`, `st-lock.sh` |
 | 6 | Second opinion: Codex and /advisor | X Advisor script (`box`); K Codex (`box`); D /advisor (`box`) | `st-advisor.sh`, `st-codex-agent.sh`, `stratum.advisor-json`; `codex`, `outside.local-state-stratum-codex-home`; `advisor` |
 | 7 | Guard rails: hooks | E Hook events (`slab`); W Git guard (`gate`); H Approve, phase and model hooks (`gate`) | `events.*`, `hooks.commands-json`, `hooks.hooks-json`, `claude`; `hooks.st-git-guard-py`, `stratum.git-guard-json`; `hooks.st-approve-py`, `hooks.st-phase-py`, `hooks.st-models-py` |

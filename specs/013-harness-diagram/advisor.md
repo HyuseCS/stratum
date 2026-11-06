@@ -16,3 +16,9 @@ summary: The earlier topic-view consolidation is incorporated. The remaining lan
 
 ## decisions | 2026-11-05T23:50:28Z | /advisor
 summary: D13 small decisions: all 7 approved; ask the user to confirm the click-through in the VS Code preview (Full box, Design step) before the PR
+
+## decisions | 2026-11-06T01:19:46Z | /advisor
+summary: US5 small decisions: all 10 approved; re-run the atlas chapter-rule check and a browser render before Close
+
+## diff | 2026-11-06T01:20:22Z | /advisor
+summary: End-of-Build diff fcda651..68bd041: license notice and decisions, docs only, approve

@@ -122,7 +122,7 @@ Full lane's phases and gates in order in under 2 minutes.
 
 **Independent Test**: each negative control gives its expected line.
 
-- [X] T021 [US4] Run each negative control in [contracts/test-contract.md](contracts/test-contract.md) "Negative controls" in a fresh copy (`c=$(mktemp -d); cp -r . "$c/r"`, change the copy, `ST_ROOT="$c/r" bash tests/test_harness_model.sh <checks>`, `rm -rf "$c"`). For the `PATH` control use `env PATH=<a folder with bash, python3, grep, coreutils and no npx>`. For the two Node controls put a folder first on `PATH` with an executable `node` that runs `[ "$1" = --version ] && echo v22.22.2 || exec <real node> "$@"` (then `v22.9.0`). Each must print its expected line and the right exit code. If one does not, fix `tests/test_harness_model.sh` and run all controls again. Depends on T018. Test: `bash tests/test_harness_model.sh` (on the unchanged repo: exit 0) and the 15 control commands of the table.
+- [X] T021 [US4] Run each negative control in [contracts/test-contract.md](contracts/test-contract.md) "Negative controls" in a fresh copy (`c=$(mktemp -d); cp -r . "$c/r"`, change the copy, `ST_ROOT="$c/r" bash tests/test_harness_model.sh <checks>`, `rm -rf "$c"`). For the `PATH` control use `env PATH=<a folder with bash, python3, grep, coreutils and no npx>`. For the two Node controls put a folder first on `PATH` with an executable `node` that runs `[ "$1" = --version ] && echo v22.22.2 || exec <real node> "$@"` (then `v22.9.0`). Each must print its expected line and the right exit code. If one does not, fix `tests/test_harness_model.sh` and run all controls again. Depends on T018. Test: `bash tests/test_harness_model.sh` (on the unchanged repo: exit 0) and every control command of the table.
 
 ---
 
@@ -197,7 +197,8 @@ drift check that D15 deferred (FR-022, FR-023).
 - T018: after T011 and T012 to T017. It is the first task that runs `likec4 validate`. T012's
   `README.md` is committed with T018's page or after it (`tests/test_inspect.sh` "README paths").
 - US3 (T019, T020) and US4 (T021): after T018. They share no file, so they run at the same time.
-- Polish (T022, T023): after T018 to T021.
+- Polish (T022, T023): after T018, with T021. Both were recorded before the hand checks T019 and T020
+  (c6e9743, then 3df996f and 4c4f06e).
 - D13 split (Phase 8): after T019 and T020. T024 first (the test fails on the unsplit files). Then
   T025 and T026 at the same time (they share no file). Then T027, then T028.
 - US5 atlas (Phase 9): after T028, before Close. T029, then T030, then T031 (orchestrator),
