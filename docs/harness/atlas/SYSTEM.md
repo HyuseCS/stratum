@@ -31,6 +31,7 @@ Stratum is a Claude Code plugin that runs a coding task through a lane. You give
 | Atlas files | Only `data.mjs` and the built `atlas.html` and `SYSTEM.md` are committed. `build.mjs` and `template.html` come from the installed skill. | decisions.md D17 |
 | Atlas URL | The private URL stays out of the repo, in the session handoff and project memory. | decisions.md D18 |
 | Atlas role | Keep both: the atlas is the picture for people and gets a drift check against the model, and the LikeC4 model stays the checked source for the LLM. | decisions.md D19 |
+| Atlas license | The atlas template is MIT (NousResearch/hermes-agent system-atlas skill); its notice is in THIRD_PARTY_NOTICES.md and licenses/system-atlas.MIT.txt. | decisions.md D20 |
 
 ## Cost model
 

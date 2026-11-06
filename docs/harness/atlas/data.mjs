@@ -42,6 +42,7 @@ export const DECISIONS = [
   { axis: 'Atlas files', decision: 'Only `data.mjs` and the built `atlas.html` and `SYSTEM.md` are committed. `build.mjs` and `template.html` come from the installed skill.', adr: 'decisions.md D17' },
   { axis: 'Atlas URL', decision: 'The private URL stays out of the repo, in the session handoff and project memory.', adr: 'decisions.md D18' },
   { axis: 'Atlas role', decision: 'Keep both: the atlas is the picture for people and gets a drift check against the model, and the LikeC4 model stays the checked source for the LLM.', adr: 'decisions.md D19' },
+  { axis: 'Atlas license', decision: 'The atlas template is MIT (NousResearch/hermes-agent system-atlas skill); its notice is in THIRD_PARTY_NOTICES.md and licenses/system-atlas.MIT.txt.', adr: 'decisions.md D20' },
 ];
 
 export const GROUPS = [

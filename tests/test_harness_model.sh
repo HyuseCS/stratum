@@ -56,8 +56,8 @@ atlas() {
   command -v node >/dev/null || { echo "SKIP atlas: node not found"; return 0; }
   if ! node --input-type=module -e '
     import { pathToFileURL } from "node:url";
-    const { NODES } = await import(pathToFileURL(process.argv[1]).href);
-    process.stdout.write(JSON.stringify(NODES.map((n) => ({ code: n.code, how: n.how }))));
+    const { NODES, DECISIONS } = await import(pathToFileURL(process.argv[1]).href);
+    process.stdout.write(JSON.stringify({ nodes: NODES.map((n) => ({ code: n.code, how: n.how })), adrs: DECISIONS.map((d) => d.adr) }));
   ' "$root/docs/harness/atlas/data.mjs" > "$tmp/atlas.json" 2> "$tmp/atlas.err"; then
     echo "FAIL atlas: node could not read docs/harness/atlas/data.mjs"
     head -n 5 "$tmp/atlas.err"
@@ -397,6 +397,7 @@ def c_readme():
         return fail("README.md does not exist")
     t = open(p, encoding="utf-8").read()
     atlas_link, page_link = f"]({DOCS}/atlas/atlas.html)", f"]({DOCS}/README.md)"
+    build = 't=$(mktemp -d) && cp ~/.claude/skills/system-atlas/assets/build.mjs ~/.claude/skills/system-atlas/assets/template.html docs/harness/atlas/data.mjs "$t" && node "$t/build.mjs" && cp "$t/atlas.html" "$t/SYSTEM.md" docs/harness/atlas/ && rm -rf "$t"'
     need = [
         page_link,
         f"npx -y likec4@{v} validate {DOCS}",
@@ -407,7 +408,7 @@ def c_readme():
         atlas_link,
         f"xdg-open {DOCS}/atlas/atlas.html",
         "~/.claude/skills/system-atlas",
-        't=$(mktemp -d) && cp ~/.claude/skills/system-atlas/assets/build.mjs ~/.claude/skills/system-atlas/assets/template.html docs/harness/atlas/data.mjs "$t" && node "$t/build.mjs" && cp "$t/atlas.html" "$t/SYSTEM.md" docs/harness/atlas/ && rm -rf "$t"',
+        build,
     ]
     for s in need:
         if s not in t:
@@ -417,7 +418,13 @@ def c_readme():
         fail(f'"{atlas_link}" comes after "{page_link}"')
     if "claude.ai" in t:
         fail('names "claude.ai"')
-    done(f"{len(need)} links and commands found, atlas first")
+    dm = at(DOCS, "atlas", "data.mjs")
+    m = re.search(r"^\s*buildCmd: (" + STR + r"),?\s*$", open(dm, encoding="utf-8").read(), re.M) if os.path.isfile(dm) else None
+    if not m:
+        fail(f"{DOCS}/atlas/data.mjs has no META.buildCmd")
+    elif re.sub(r"\\(.)", r"\1", m[1][1:-1]) != build:
+        fail(f"META.buildCmd in {DOCS}/atlas/data.mjs is not the README build line")
+    done(f"{len(need)} links and commands found, atlas first, META.buildCmd is the build line")
 
 
 def c_nomcp():
@@ -447,7 +454,8 @@ def harness_id(p):
 
 
 def c_atlas():
-    nodes = json.load(open(sys.argv[4], encoding="utf-8"))
+    data = json.load(open(sys.argv[4], encoding="utf-8"))
+    nodes = data["nodes"]
     ids = {e["id"] for e in parse()[0]}
     views = declared_views()
     for s in nodes:
@@ -472,7 +480,18 @@ def c_atlas():
         n = sum(f"<code>{h}</code>" in s["how"] for s in nodes)
         if n != 1:
             fail(f"{h} is in {n} structures, expected 1")
-    done(f"{len(nodes)} structures name only model elements and views, {len(files)} harness files are each in one structure")
+    dp = at("specs", "013-harness-diagram", "decisions.md")
+    if not os.path.isfile(dp):
+        return fail(f"{rel(dp)} does not exist")
+    decs = re.findall(r"^- (D\d+) \(", open(dp, encoding="utf-8").read(), re.M)
+    rows = [m[1] for a in data["adrs"] if (m := re.fullmatch(r"decisions\.md (D\d+)", a or ""))]
+    named = {x for a in data["adrs"] for x in re.findall(r"\bD\d+\b", a or "")}
+    for d in decs:
+        if d not in rows:
+            fail(f"{d} of decisions.md has no DECISIONS row with adr 'decisions.md {d}'")
+    for d in sorted(named - set(decs), key=lambda x: int(x[1:])):
+        fail(f"a DECISIONS row names {d}, not a decision in decisions.md")
+    done(f"{len(nodes)} structures name only model elements and views, {len(files)} harness files are each in one structure, {len(decs)} decisions each have a DECISIONS row")
 
 
 CHECKS = {
