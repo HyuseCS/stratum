@@ -18,9 +18,10 @@ Every entry: `python3 "${CLAUDE_PLUGIN_ROOT}/hooks/st-phase.py"`, `"timeout": 10
 | `hook_event_name` | all | event switch |
 | `cwd` | all | find the state file; `git` working folder for the risk path |
 | `session_id` | UserPromptSubmit, PreToolUse | held label (unchanged) |
-| `prompt` | UserPromptSubmit | phase skill name (unchanged), `risk <level>` |
+| `prompt` | UserPromptSubmit | phase skill name (unchanged), `risk <level>`, the text after `/stratum:st-define` (description or none, for `define_floor`) |
 | `tool_name` | PreToolUse, PostToolUse | `Skill` gives a skill name; `Agent` reads markers |
 | `tool_input.skill` | PreToolUse Skill | phase skill name (unchanged) |
+| `tool_input.args` | PreToolUse Skill `st-define` | non-blank: set `define_floor`; blank or missing: remove it |
 | `agent_id` | PreToolUse, PostToolUse | present: no transcript read |
 | `transcript_path` | PreToolUse, PostToolUse `Agent`, Stop | reply markers of the current turn |
 | `last_assistant_message` | Stop | appended after the transcript text |

@@ -53,26 +53,26 @@ skill lines write today. Grep the skills for any `state.json` write instruction.
 - **FR-001**: The hook MUST write `risk` from a line that starts with `Lane: <lane>, risk <level>` in the main session's reply text of the current turn, where `<level>` is `high`, `normal`, `low` or `none`. If the turn has more than one such line, the last one wins.
 - **FR-002**: The hook MUST write `risk` from a user prompt that is only `risk <level>`.
 - **FR-003**: The risk write MUST land before the first in-turn reader: in the Fast lane, before `st-advisor.sh change` in `st-fast` step 2.
-- **FR-004**: While `phase` is `define`, after a tool call, the hook MUST set `feature_directory` to the highest-numbered `specs/NNN-*` folder that has a `spec.md`, only when that number is higher than the number of the current `feature_directory` (or there is none).
+- **FR-004**: While `phase` is `define`, after a tool call, the hook MUST set `feature_directory` to the highest-numbered `specs/NNN-<name>` folder (name matching `^\d{3}-[a-z0-9-]+$`; on a tie, the name that sorts last) that has a `spec.md`, only when that number is higher than the number of the current `feature_directory` (or there is none) and higher than `define_floor`. When Define starts with a description, the hook stores `define_floor`: the highest `NNN` of the `specs/NNN-*` folders on disk then (0 if none). When Define starts with no description (a redo), the hook removes `define_floor`. With no `define_floor`, the hook does not switch.
 - **FR-005**: The hook MUST set `phase` to `done` when the current turn's reply has a line `Phase: done`, in any phase. Only st-close and st-fast tell the session to say it.
 - **FR-006**: The hook MUST set `skill` to empty when the current turn's reply has a line `Build done.`.
 - **FR-007**: A marker MUST count only in the current turn: the reply text after the last real user prompt. Tool results, injected skill text and earlier turns MUST NOT count.
 - **FR-008**: Every hook write MUST stay atomic (temp file in the same folder, then rename), as the hook does now.
-- **FR-009**: The skill lines MUST no longer tell the session to write `state.json`: `skills/st/SKILL.md:37`, `procedures/specify.md:41` (the `st-state.sh` part), `skills/st-close/SKILL.md:58`, `skills/st-fast/SKILL.md:41`, `skills/st-build/SKILL.md:77`, `skills/st-worker/SKILL.md:52`. In st-close and st-fast, the line tells the session to say `Phase: done`. In st-build and st-worker, it tells the session to say `Build done.`.
+- **FR-009**: The skill lines MUST no longer tell the session to write `state.json`: `skills/st/SKILL.md:37`, `procedures/specify.md:41` (the `st-state.sh` part), `skills/st-close/SKILL.md:58`, `skills/st-fast/SKILL.md:41`, `skills/st-build/SKILL.md:77`, `skills/st-worker/SKILL.md:52`. In st-close and st-fast, the line tells the session to say `Phase: done`. In st-build and st-worker, it tells the session to say `Build done.`. `skills/st-define/SKILL.md:26` MUST no longer say that specify writes `state.json`: the hook records `feature_directory`.
 - **FR-010**: `scripts/st-state.sh` MUST be deleted, with the half of `tests/test_state.sh` that tests it. The skill-text checks in `tests/test_state.sh` (S1–S4), `tests/test_inspect.sh` (H2) and `tests/test_risk_rules.sh` (R3) MUST follow the new lines.
 - **FR-011**: Each of the four writes MUST have a hook test and a negative control (the same input without the signal, or the signal out of the current turn, leaves the value as it was).
 - **FR-012**: The hook MUST never block the session or print a state value into the chat. On any error it changes nothing.
 
 ### Key Entities
 
-- **State file** (`.stratum/state.json`): the keys `risk`, `feature_directory`, `phase`, `lane`, `skill`, `skill_session`. Only `risk`, `feature_directory`, `phase` (`done`) and `skill` (cleared) get new writers.
+- **State file** (`.stratum/state.json`): the keys `risk`, `feature_directory`, `phase`, `lane`, `skill`, `skill_session`. Only `risk`, `feature_directory`, `phase` (`done`) and `skill` (cleared) get new writers. A new key, `define_floor` (a number), is written and read only by the hook: it holds the highest spec folder number on disk when a new Define starts.
 - **Marker line**: a line at the start of the main session's reply text: `Lane: <lane>, risk <level> (...)`, `Phase: done`, `Build done.`.
 
 ## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes
 
-- **SC-001**: A grep of `skills/` and `procedures/` finds no instruction that writes or prints `state.json`, except the accepted `{}` start line (see Assumptions).
+- **SC-001**: A grep of `skills/` and `procedures/` finds no instruction that writes or prints `state.json`, except the accepted `{}` start line (see Assumptions) and the file creation in `skills/st-init/SKILL.md:11`.
 - **SC-002**: At each step of a Full run (lane pick, Define, Plan, Inspect, Build end, Close end), `state.json` has the same values as the skill lines give today.
 - **SC-003**: Four hook tests pass, and each negative control fails when the guard it checks is removed.
 - **SC-004**: All existing tests still pass.

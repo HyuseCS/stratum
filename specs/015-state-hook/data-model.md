@@ -6,12 +6,13 @@ A JSON object. The hook keeps every key it does not write.
 
 | Key | Values | Writer after this feature | File |
 |-----|--------|---------------------------|------|
-| `risk` | `high`, `normal`, `low`, `none` | hook: `Lane:` marker, `risk <level>` prompt | main checkout: `dirname(git rev-parse --path-format=absolute --git-common-dir)/.stratum/state.json`; fallback: cwd-walked file when `git` fails |
+| `risk` | `high`, `normal`, `low`, `none` | hook: `Lane:` marker, `risk <level>` prompt | main checkout: `dirname(git rev-parse --path-format=absolute --git-common-dir)/.stratum/state.json`; fallback: cwd-walked file only when `git` fails. When `git` works and the main file is missing or bad: no write, nothing created |
 | `feature_directory` | `specs/NNN-<name>` | hook: `specs/` scan while `phase` is `define`; unchanged otherwise | cwd-walked file |
 | `phase` | `define` ... `close`, `fast`, `quick`, `done`, null | hook (existing); new: `done` from the `Phase: done` marker; `st-quick` agent (unchanged) | cwd-walked file |
 | `lane` | `full`, `fast`, `quick`, `none` | hook (existing, unchanged) | cwd-walked file |
 | `skill` | `st-build`, `st-worker`, `""` | hook (existing set); new: `""` from the `Build done.` marker | cwd-walked file |
 | `skill_session` | session id | hook (existing, unchanged) | cwd-walked file |
+| `define_floor` | integer, 0 or more | hook only (new key, read only by the hook): set when Define starts with a description, removed when Define starts with none | cwd-walked file |
 
 The cwd-walked file is the one the hook finds today: walk up from the input `cwd` to the first
 folder that has `.stratum/` or `.git` (`hooks/st-phase.py:29-33`).
@@ -26,15 +27,33 @@ folder that has `.stratum/` or `.git` (`hooks/st-phase.py:29-33`).
 
 ### `feature_directory` transition (FR-004)
 
+At Define start (UserPromptSubmit `/stratum:st-define <text>` or PreToolUse Skill `st-define`), in
+the same write that sets `phase` to `define`:
+
+- Description given (the prompt has non-blank text after the command, or `tool_input.args` is
+  non-blank): `define_floor` = the highest `NNN` of the folders in `<root>/specs/` whose name starts
+  with `^\d{3}-`, or 0 when there is none or `specs/` is missing.
+- No description (a redo of the current feature): remove `define_floor`.
+
 Only on PostToolUse, only while `phase == "define"`:
 
-1. List `<root>/specs/`. Candidates: folders whose name matches `^\d{3}-` and that hold a file
-   `spec.md`.
-2. Pick the highest number. Current number: the `NNN` of `specs/NNN-` in `feature_directory`, or
-   none when the key is missing, empty or does not match.
-3. Write `specs/<folder>` only when the current number is none or lower than the picked number.
+1. No `define_floor` (or not an integer): stop, no write.
+2. List `<root>/specs/`. Candidates: folders whose name matches `^\d{3}-[a-z0-9-]+$` and that hold a
+   file `spec.md`. Any other name (such as `999-x$(y)`) is ignored.
+3. Pick the highest number. On a tie, pick the name that sorts last. Current number: the `NNN` of
+   `specs/NNN-` in `feature_directory`, or none when the key is missing, empty or does not match.
+4. Write `specs/<folder>` only when the picked number is higher than `define_floor` and the current
+   number is none or lower than the picked number.
 
 `<root>` is the folder that holds the cwd-walked `.stratum/`.
+
+Examples (scenarios 4 and 5, and the redo):
+
+| Start | On disk | Result |
+|-------|---------|--------|
+| redo of `specs/013-x` (no description, floor removed) | `013-x`, `015-y` with `spec.md` | stays `specs/013-x` |
+| new Define, floor 15 | `013-x`, `015-y`, then `016-z/spec.md` written | `specs/016-z` |
+| new Define, floor 15, `feature_directory` `specs/016-z` | `013-x/spec.md` edited | stays `specs/016-z` |
 
 ## Transcript turn
 
