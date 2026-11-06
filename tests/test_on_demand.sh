@@ -238,7 +238,7 @@ phrases <<'EOF'
 #17 C4 failure list machine	skills/st-worker/SKILL.md	run `bash <plugin root>/scripts/st-worker.sh list [--machine <m>]` and show what exists
 #17 C4 wait machine	skills/st-worker/SKILL.md	bash <plugin root>/scripts/st-worker.sh wait <id> [--machine <m>]
 #17 C4 roster machine	skills/st-worker/SKILL.md	take <m> from the worker's roster row and pass it on every follow-up
-#17 C4 answer machine	skills/st-worker/SKILL.md	bash <plugin root>/scripts/st-worker.sh answer <id> --keys <key>... [--machine <m>]
+#17 C4 answer machine	skills/st-worker/SKILL.md	bash <plugin root>/scripts/st-worker.sh answer <id> [--machine <m>] --keys <key>...
 #17 C4 answer text machine	skills/st-worker/SKILL.md	bash <plugin root>/scripts/st-worker.sh answer <id> --text <text> [--machine <m>]
 #17 C4 result machine	skills/st-worker/SKILL.md	bash <plugin root>/scripts/st-worker.sh result <id> [--machine <m>]
 #17 C4 close machine	skills/st-worker/SKILL.md	bash <plugin root>/scripts/st-worker.sh close <id> [--machine <m>]

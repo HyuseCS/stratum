@@ -25,7 +25,7 @@ A permission dialog in normal mode (the pane asks "Do you want to proceed?" or t
 T013 replaces the built W1 line in `skills/st-worker/SKILL.md` with this line, same 5-space indent:
 
 ```text
-A permission dialog in normal mode (the pane asks "Do you want to proceed?" or to allow a tool): judge it with the allow list and the never list of `approval` below. Normal mode has no request id, so `approve` and `pass` are not used. The dialog must show the whole command or path. Else send no key and tell the user. An action on the allow list: send the key of the one-time yes only, `bash <plugin root>/scripts/st-worker.sh answer <id> --screen <hash> --keys <key> [--machine <m>]`, with the key from the dialog text and the hash from the `screen` line that `wait` or `watch` printed with that dialog. Name the dialog's action in short in the Bash description of that call: the tool and the command or path, so the permission check sees what you approve. Never pick an option that says "don't ask again", "this session" or "in the future". No one-time yes, an action on the never list, one the worker's own classifier blocked, or one you do not recognise: send no key, and tell the user the worker's workspace, the tab and the exact dialog text.
+A permission dialog in normal mode (the pane asks "Do you want to proceed?" or to allow a tool): judge it with the allow list and the never list of `approval` below. Normal mode has no request id, so `approve` and `pass` are not used. The dialog must show the whole command or path. Else send no key and tell the user. An action on the allow list: send the key of the one-time yes only, `bash <plugin root>/scripts/st-worker.sh answer <id> [--machine <m>] --screen <hash> --keys <key>`, with the key from the dialog text and the hash from the `screen` line that `wait` or `watch` printed with that dialog. Name the dialog's action in short in the Bash description of that call: the tool and the command or path, so the permission check sees what you approve. Never pick an option that says "don't ask again", "this session" or "in the future". No one-time yes, an action on the never list, one the worker's own classifier blocked, or one you do not recognise: send no key, and tell the user the worker's workspace, the tab and the exact dialog text.
 ```
 
 | Row | Change | Phrase |
@@ -33,9 +33,10 @@ A permission dialog in normal mode (the pane asks "Do you want to proceed?" or t
 | W1 | new text: the whole line above | |
 | W28, W29 | unchanged, still inside W1 | |
 | W31 | new | ``judge it with the allow list and the never list of `approval` below. Normal mode has no request id, so `approve` and `pass` are not used.`` |
-| W32 | new | ``answer <id> --screen <hash> --keys <key> [--machine <m>]`, with the key from the dialog text and the hash from the `screen` line that `wait` or `watch` printed with that dialog.`` |
+| W32 | new | ``answer <id> [--machine <m>] --screen <hash> --keys <key>`, with the key from the dialog text and the hash from the `screen` line that `wait` or `watch` printed with that dialog.`` |
 | G8 | new gone row | `which hold in both modes` |
 | G9 | new gone row | ``answer <id> --keys <key> [--machine <m>]`, with the key from the dialog text.`` |
+| G10 | new gone row | `answer <id> --screen <hash> --keys <key> [--machine <m>]` |
 
 G9 does not match line 25 (`answer <id> --keys <key>... [--machine <m>]` has `...`) or W32 (which has `--screen <hash>` between `<id>` and `--keys`).
 
