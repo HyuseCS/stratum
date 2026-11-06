@@ -258,11 +258,20 @@ dependency.
     No file or no entry keeps the plugin default.
   - A bad file (bad JSON, unknown agent, key, model, or effort) denies the start with a message.
   - `st-model` edits the file. `st-status` shows the overrides.
-- **D20. Phase (`st-phase`).** A UserPromptSubmit hook and a PreToolUse hook on `Skill`,
-  `hooks/st-phase.py`:
+- **D20. Phase (`st-phase`).** A UserPromptSubmit hook, a PreToolUse hook on `Skill` and `Agent`,
+  a PostToolUse hook and a Stop hook, `hooks/st-phase.py`:
   - When `st-define`, `st-plan`, `st-inspect`, `st-build`, `st-close`, `st-fast`, `st-quick` or
     `st-full` starts (the user types `/stratum:st-<name>` or the model starts the skill), it
     writes `.stratum/state.json` and keeps the other keys. The skills make no tool call for it.
+  - It writes `risk` to the main checkout's file from a `Lane: <lane>, risk <level>` line in the
+    current turn's reply or a `risk <level>` prompt, `phase: done` from a `Phase: done` line and
+    `skill: ""` from a `Build done.` line. Only the main session's reply text after the last user
+    prompt counts.
+  - It writes `feature_directory` for a new Define. A Define with a description stores
+    `define_before`, the sorted folder names in `specs/`. While `phase` is `define`, after a tool
+    call, the new folder that has a `spec.md` and a name that fully matches `[A-Za-z0-9._-]+` becomes
+    `feature_directory` (the name that sorts last, if there are several), and `define_before` is
+    removed. A Define with no description (a redo) removes `define_before`.
   - `st-fast` and `st-quick` set `lane` and `phase` to `fast` or `quick`. `st-full` sets `lane`
     to `full`. If `phase` is `fast` or `quick`, it sets `phase` to null. `st-define` sets `phase`
     and sets `lane` to `full`. `st-plan` to `st-close` set `phase`, and set `lane` to `full` only
@@ -277,7 +286,7 @@ dependency.
   The `st-close` skill (Full Close) and the `st-fast` skill set `phase` to `done` after their last commit.
   The `st-quick` agent does it at the end of its run.
   With no lane running, `st-build` and `st-worker` set `lane` to `none` and `skill` to their name, and
-  the label is `[st-build]` or `[st-worker]` in that session until the skill sets `skill` to `""` at its end.
+  the label is `[st-build]` or `[st-worker]` in that session until the skill says `Build done.` at its end and the hook sets `skill` to `""`.
   Any other Stratum skill typed as a prompt labels that one reply `[st-<name>]`.
   Else the hook adds nothing, and the session-start line says to start with `[Orchestrator]`.
 - **D22. Verify script (`scripts/st-verify.sh`).** The orchestrator's check after a build: run

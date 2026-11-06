@@ -68,7 +68,7 @@ model {
   skills.st -[reads]-> stratum.handoff-md 'last session handoff'
   skills.st -[reads]-> project.graphify-out-graph-report-md 'impact areas of the task'
   skills.st -[starts]-> skills.st-triage 'issue numbers'
-  skills.st -[runs]-> scripts.st-state-sh 'state.json path, risk and level'
+  skills.st -[passes]-> hooks.st-phase-py 'Lane line with the risk level'
   skills.st -[passes]-> user 'lane and risk line, big decisions and the small-decision list'
   skills.st -[starts]-> skills.st-define 'feature description'
   skills.st -[starts]-> skills.st-plan 'feature in state.json'
@@ -107,7 +107,7 @@ model {
   skills.st-fast -[starts]-> agents.st-git 'exact paths and drift docs'
   skills.st-fast -[starts]-> agents.st-close 'base commit for the drift fix and shortcut list'
   skills.st-fast -[reads]-> skills.st-close 'Shortcuts, Lessons and drift check steps'
-  skills.st-fast -[runs]-> scripts.st-state-sh 'state.json phase done'
+  skills.st-fast -[passes]-> hooks.st-phase-py 'Phase: done line'
   skills.st-fast -[starts]-> skills.st-full 'change that needs a new user story or touches access'
 
   skills.st-quick -[starts]-> agents.st-quick 'plugin root, project root and edit'
@@ -165,7 +165,7 @@ model {
   skills.st-build -[reads]-> feature.quickstart-md 'story steps to run'
   skills.st-build -[passes]-> advisor 'same input as Codex at each advisor point'
   skills.st-build -[writes]-> stratum.advisor-json 'advisor mode answer'
-  skills.st-build -[runs]-> scripts.st-state-sh 'state.json skill cleared'
+  skills.st-build -[passes]-> hooks.st-phase-py 'Build done. line'
   skills.st-build -[passes]-> user 'lock timeout line, big decisions and steps to run by hand'
 
   skills.st-close -[reads]-> stratum.state-json 'feature directory'
@@ -186,7 +186,7 @@ model {
   skills.st-close -[runs]-> scripts.st-verify-sh 'test command and touched files'
   skills.st-close -[starts]-> agents.st-git 'fix files, changed docs and lesson files'
   skills.st-close -[starts]-> skills.st-graphify 'docs graph update'
-  skills.st-close -[runs]-> scripts.st-state-sh 'state.json phase done'
+  skills.st-close -[passes]-> hooks.st-phase-py 'Phase: done line'
 
   skills.st-design -[runs]-> scripts.st-design-check-sh 'custom flag for custom design'
   skills.st-design -[reads]-> project.package-json 'framework and dev script port'

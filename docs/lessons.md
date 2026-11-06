@@ -359,3 +359,15 @@
 
 - What happened: during T019 a probe ran with the real `herdr` first on PATH, not the stub, and made two local `st-workers` workspaces. The agent closed both and checked the local lists; the laptop was not checked.
 - Rule: A task that may call the real herdr compares `herdr workspace list` before and after its calls, and fails when a workspace it did not ask for is left.
+
+## 2026-11-06: 015-state-hook
+
+### L53. Timing claims need a live run
+
+- What happened: research R8 gave the Fast-lane read order by reasoning, and called PostToolUse Agent the first safe read. Live run `06d0f0ac-8beb-423a-b5d9-cf2ce35c61a4` showed that PreToolUse Agent of step 1 already writes `high`, and PreToolUse Skill does not see the line.
+- Rule: A spec, plan or research sentence that says when a hook reads a transcript line names a live run ID with its event times, and Inspect fails a sentence without them.
+
+### L54. Renamed rules leave old names in the docs
+
+- What happened: after `define_floor` became `define_before` (commit `4ea124e`), DESIGN.md D20 still named `define_floor`, and tasks.md T007, T008 and T024 still named the old rule and tests. The plan's order section still described the first build's early return.
+- Rule: Before Close, a grep of the feature's spec, plan, tasks, data-model, quickstart, research and DESIGN.md for each renamed or removed name returns no hit, and Close fails the feature until it does.

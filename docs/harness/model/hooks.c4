@@ -15,6 +15,12 @@ model {
     user-prompt-submit = event 'UserPromptSubmit' {
       summary 'Fires on each user prompt. It tracks the ponytail mode and adds the reply label for the current phase.'
     }
+    post-tool-use = event 'PostToolUse' {
+      summary 'Fires after Claude Code runs a tool. It runs the phase tracker after Bash, Write, Edit, MultiEdit and Agent.'
+    }
+    stop = event 'Stop' {
+      summary 'Fires when Claude Code ends its reply. It runs the phase tracker.'
+    }
     session-end = event 'SessionEnd' {
       summary 'Fires when the session ends. It saves the handoff facts.'
     }
@@ -61,7 +67,7 @@ model {
       }
     }
     st-phase-py = hook 'st-phase.py' {
-      summary 'Sets the phase and lane in state.json when a phase skill starts. On each prompt it tells Claude the reply label and warns on a phase out of order.'
+      summary 'Writes state.json: phase and lane when a phase skill starts, risk, phase done and the label clear from reply lines, and the new spec folder. On each prompt it adds the reply label.'
       metadata {
         path 'hooks/st-phase.py'
       }
@@ -156,7 +162,7 @@ model {
 
   events.pre-tool-use -[runs]-> hooks.st-git-guard-py 'matcher Bash'
   events.pre-tool-use -[runs]-> hooks.st-models-py 'matcher Agent'
-  events.pre-tool-use -[runs]-> hooks.st-phase-py 'matcher Skill'
+  events.pre-tool-use -[runs]-> hooks.st-phase-py 'matcher Skill|Agent'
   events.pre-tool-use -[runs]-> hooks.st-approve-py 'matcher Bash|Edit|Write|MultiEdit|NotebookEdit|Read|Grep|Glob'
   events.permission-request -[runs]-> hooks.st-approve-py 'no matcher, every permission request'
   events.session-start -[runs]-> hooks.st-session-start-sh 'matcher startup|resume|clear|compact'
@@ -164,6 +170,8 @@ model {
   events.subagent-start -[runs]-> hooks.ponytail-subagent-js 'no matcher, every subagent'
   events.user-prompt-submit -[runs]-> hooks.ponytail-mode-tracker-js 'no matcher, every prompt'
   events.user-prompt-submit -[runs]-> hooks.st-phase-py 'no matcher, every prompt'
+  events.post-tool-use -[runs]-> hooks.st-phase-py 'matcher Bash|Write|Edit|MultiEdit|Agent'
+  events.stop -[runs]-> hooks.st-phase-py 'no matcher, end of each reply'
   events.session-end -[runs]-> hooks.st-handoff-facts-sh 'no matcher, session end'
   events.pre-compact -[runs]-> hooks.st-handoff-facts-sh 'no matcher, before compaction'
 
@@ -183,8 +191,9 @@ model {
   hooks.st-models-py -[reads]-> stratum.models-json 'model and effort per agent'
   hooks.st-models-py -[passes]-> claude 'model and effort for the Agent call, or a deny with the file errors'
 
-  hooks.st-phase-py -[reads]-> stratum.state-json 'phase, lane, feature directory and skill'
-  hooks.st-phase-py -[writes]-> stratum.state-json 'phase, lane, skill and skill session'
+  hooks.st-phase-py -[reads]-> stratum.state-json 'phase, lane, feature directory, skill and define_before'
+  hooks.st-phase-py -[reads]-> project.specs 'spec folder names before and after a Define'
+  hooks.st-phase-py -[writes]-> stratum.state-json 'phase, lane, skill, skill session, risk, feature_directory, define_before, phase done and the label clear'
   hooks.st-phase-py -[passes]-> claude 'reply label and out-of-order phase warning'
 
   hooks.st-session-start-sh -[reads]-> plugin.sr-opus-5-md 'communication rules'

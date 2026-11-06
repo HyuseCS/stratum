@@ -8,8 +8,8 @@ views {
     include skills.st-close with { navigateTo full-close }
     user -> skills.st '(1) task in plain words'
     skills.st -> user '(2) lane and risk line'
-    skills.st -> scripts.st-state-sh '(3) risk level'
-    scripts.st-state-sh -> stratum.state-json '(4) risk level'
+    skills.st -> hooks.st-phase-py '(3) Lane line with the risk level'
+    hooks.st-phase-py -> stratum.state-json '(4) risk level'
     skills.st -> skills.st-define '(5) feature description' { navigateTo full-define }
     skills.st-define -> user '(6) gate: you agree the spec'
     skills.st -> skills.st-plan '(7) feature dir' { navigateTo full-plan }
@@ -29,7 +29,7 @@ views {
     skills.st-define -> procedures.specify-md '(5) description and grilling summary'
     procedures.specify-md -> feature.spec-md '(6) spec from the spec template'
     procedures.specify-md -> feature.checklists '(7) requirements checklist'
-    procedures.specify-md -> scripts.st-state-sh '(8) feature dir and phase define'
+    hooks.st-phase-py -> stratum.state-json '(8) feature dir from the new spec folder'
     skills.st-define -> procedures.clarify-md '(9) spec with open markers, only if gaps remain'
     procedures.clarify-md -> feature.spec-md '(10) clarified spec'
     skills.st-define -> procedures.checklist-md '(11) highest impact areas'
@@ -105,7 +105,7 @@ views {
     skills.st-close -> skills.st-graphify '(11) docs graph update'
     skills.st-close -> agents.st-git '(12) changed doc paths'
     agents.st-git -> git '(13) close commit'
-    skills.st-close -> scripts.st-state-sh '(14) phase done'
+    skills.st-close -> hooks.st-phase-py '(14) Phase: done line'
     skills.st-close -> user '(15) gate: push'
   }
 }

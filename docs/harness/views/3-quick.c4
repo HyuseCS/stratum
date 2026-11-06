@@ -3,7 +3,7 @@ views {
     title 'Quick lane'
     user -> skills.st '(1) task in plain words'
     skills.st -> user '(2) lane and risk line'
-    skills.st -> scripts.st-state-sh '(3) risk none'
+    skills.st -> hooks.st-phase-py '(3) Lane line with risk none'
     skills.st -> skills.st-quick '(4) one file: the edit'
     skills.st-quick -> agents.st-quick '(5) plugin root, project root, the edit'
     agents.st-quick -> stratum.state-json '(6) phase done'

@@ -14,7 +14,7 @@
         ]
       },
       {
-        "matcher": "Skill",
+        "matcher": "Skill|Agent",
         "hooks": [
           { "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/st-phase.py\"", "timeout": 10 }
         ]
@@ -23,6 +23,21 @@
         "matcher": "Bash|Edit|Write|MultiEdit|NotebookEdit|Read|Grep|Glob",
         "hooks": [
           { "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/st-approve.py\"", "timeout": 10 }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash|Write|Edit|MultiEdit|Agent",
+        "hooks": [
+          { "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/st-phase.py\"", "timeout": 10 }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/st-phase.py\"", "timeout": 10 }
         ]
       }
     ],

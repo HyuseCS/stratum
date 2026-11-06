@@ -29,7 +29,7 @@ views {
     skills.st-fast -> user '(26) shortcut rows to fix now or keep, small decisions and findings'
     skills.st-fast -> agents.st-git '(27) docs st-close changed, kept lesson files, gitignore'
     agents.st-git -> git '(28) docs commit'
-    skills.st-fast -> scripts.st-state-sh '(29) state.json path, phase done'
-    scripts.st-state-sh -> stratum.state-json '(30) phase done'
+    skills.st-fast -> hooks.st-phase-py '(29) Phase: done line'
+    hooks.st-phase-py -> stratum.state-json '(30) phase done'
   }
 }
