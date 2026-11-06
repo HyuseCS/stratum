@@ -34,7 +34,7 @@ W20|skills/st/SKILL.md|Watch each agent you summon. Answer its permission prompt
 W21|skills/st-build/SKILL.md|Watch each agent you summon. Answer its permission prompt when the answer keeps it in its brief. Bring every other prompt to the user with the exact text.
 W22|skills/st-worker/SKILL.md|Watch each agent you summon. Answer its permission prompt when the answer keeps it in its brief. Bring every other prompt to the user with the exact text.
 W23|skills/st/SKILL.md|The lists: the Codex tab in `/stratum:st-build` (Advisor), herdr workers in `/stratum:st-worker` (step 6), in-session subagents in the next lines.
-W26|skills/st-build/SKILL.md|The Codex tab lists are under Advisor. The worker lists are in `/stratum:st-worker`.
+W26|skills/st-build/SKILL.md|The Codex tab lists are under Advisor. The worker lists are in the st-worker skill, step 6.
 W27|skills/st-worker/SKILL.md|The worker lists are in step 6, under `approval`.
 W24|skills/st/SKILL.md|An in-session subagent (the Agent tool) asks the user, not you: you cannot answer, approve or deny its permission prompt. Never run an action a subagent was denied in its place: bring the denial to the user.
 W30|skills/st/SKILL.md|First put the `model` and `effort` from `.stratum/models.json` in the Agent call yourself, so the hook changes nothing.

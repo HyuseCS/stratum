@@ -65,7 +65,7 @@ Rule sentence R (FR-005): `Watch each agent you summon. Answer its permission pr
 | W21 | `skills/st-build/SKILL.md` | a new bullet at the end of `## Always` | R |
 | W22 | `skills/st-worker/SKILL.md` | a new line after line 10, with a blank line before it | R |
 | W23 | `skills/st/SKILL.md` | the line after R, 2-space indent | ``The lists: the Codex tab in `/stratum:st-build` (Advisor), herdr workers in `/stratum:st-worker` (step 6), in-session subagents in the next lines.`` |
-| W26 | `skills/st-build/SKILL.md` | the line after R, 2-space indent | ``The Codex tab lists are under Advisor. The worker lists are in `/stratum:st-worker`.`` |
+| W26 | `skills/st-build/SKILL.md` | the line after R, 2-space indent | `The Codex tab lists are under Advisor. The worker lists are in the st-worker skill, step 6.` |
 | W27 | `skills/st-worker/SKILL.md` | the same line as R, after it | ``The worker lists are in step 6, under `approval`.`` |
 
 R is one physical line in each file. Lines 98 to 100 of `skills/st-build/SKILL.md` do not change (FR-009, rows A18 to A28).
