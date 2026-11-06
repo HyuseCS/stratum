@@ -498,6 +498,19 @@ class PhaseHookTest(unittest.TestCase):
                 fire()
                 self.assertEqual(self.read_state().get("risk"), "high")
 
+    def test_fast_lane_risk_before_step2(self):
+        self.reset()
+        t = self.transcript(prompt_line("/stratum:st-fast do it"))
+        self.pre_skill("stratum:st-fast", t)
+        self.assertEqual(self.read_state().get("risk"), "normal")
+        with open(t, "a") as f:
+            for line in (reply_line("Lane: fast, risk high (x)"), result_line("r")):
+                f.write(json.dumps(line) + "\n")
+        self.pre_agent(t)
+        self.assertEqual(self.read_state().get("risk"), "high")
+        self.post_tool("Bash", t)
+        self.assertEqual(self.read_state().get("risk"), "high")
+
     def test_risk_to_main_when_worktree_has_no_state(self):
         main, linked = self.make_worktree()
         os.remove(state_path(linked))
