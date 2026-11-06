@@ -1,0 +1,249 @@
+model {
+  extend skills {
+    st-review = skill '/st-review' {
+      summary 'Runs the st-review agent on the current feature diff, main..HEAD by default. Checks each finding against the source before it shows it.'
+      metadata {
+        path 'skills/st-review'
+      }
+    }
+    st-test = skill '/st-test' {
+      summary 'Runs the st-test agent for task IDs of the current feature. Runs each test again and confirms it fails for the right reason.'
+      metadata {
+        path 'skills/st-test'
+      }
+    }
+    st-debug = skill '/st-debug' {
+      summary 'Runs the st-debug agent for one task of the current feature. Then st-verify.sh checks the test is green and no comment lines were added.'
+      metadata {
+        path 'skills/st-debug'
+      }
+    }
+    st-git = skill '/st-git' {
+      summary 'Commits on demand through the st-git agent, only the files the user picks. Then it shows the file list of the commit.'
+      metadata {
+        path 'skills/st-git'
+      }
+    }
+    st-triage = skill '/st-triage' {
+      summary 'Checks GitHub issues against the code and git history, read-only. Starts one st-triage agent per issue and checks every cite.'
+      metadata {
+        path 'skills/st-triage'
+      }
+    }
+    st-worker = skill '/st-worker' {
+      summary 'Runs tasks in worker sessions, each a claude in its own herdr pane and worktree, or headless. Then it reviews and merges their branches.'
+      metadata {
+        path 'skills/st-worker'
+      }
+    }
+    st-herdr-workspace = skill '/st-herdr-workspace' {
+      summary 'Opens a project folder as a new herdr workspace with the full or basic layout, here or on a saved machine.'
+      metadata {
+        path 'skills/st-herdr-workspace'
+      }
+    }
+    st-pr = skill '/st-pr' {
+      summary 'Opens a pull request for the current branch from git facts and the feature spec. One gate, then a draft PR that becomes ready when CI passes.'
+      metadata {
+        path 'skills/st-pr'
+      }
+    }
+    st-issues = skill '/st-issues' {
+      summary 'Turns the tasks.md of the current feature into GitHub issues on the own remote of the repo. Skips tasks that already have one.'
+      metadata {
+        path 'skills/st-issues'
+      }
+    }
+    st-handoff = skill '/st-handoff' {
+      summary 'Writes the session handoff to .stratum/handoff.md so the next session starts where this one stopped.'
+      metadata {
+        path 'skills/st-handoff'
+      }
+    }
+    st-status = skill '/st-status' {
+      summary 'Shows where Stratum work stands: feature, phase, lane, tasks, git guard, next gate, tools, duplicates, sync age and model overrides. Changes nothing.'
+      metadata {
+        path 'skills/st-status'
+      }
+    }
+    st-init = skill '/st-init' {
+      summary 'Sets up Stratum in a project: .stratum files, specs folder, pointers, constitution, statusline, graphify hook, advisor and a tool check.'
+      metadata {
+        path 'skills/st-init'
+      }
+    }
+    st-update = skill '/st-update' {
+      summary 'Audits the Stratum files of the project in every checkout. After one OK it updates the install, statusline and harness lines.'
+      metadata {
+        path 'skills/st-update'
+      }
+    }
+    st-sync = skill '/st-sync' {
+      summary 'Maintainer only. Lists upstream changes since the pins in vendor.lock and ports them into the Stratum forks after review.'
+      metadata {
+        path 'skills/st-sync'
+      }
+    }
+    st-template = skill '/st-template' {
+      summary 'Copies one plugin template into .stratum/templates so the project can edit it. The project copy then overrides the plugin one.'
+      metadata {
+        path 'skills/st-template'
+      }
+    }
+    st-constitution = skill '/st-constitution' {
+      summary 'Creates or amends the project rules in .stratum/constitution.md from the words of the user, with a version bump and sync report.'
+      metadata {
+        path 'skills/st-constitution'
+      }
+    }
+    st-model = skill '/st-model' {
+      summary 'Sets the model or effort of one Stratum agent for this project in .stratum/models.json.'
+      metadata {
+        path 'skills/st-model'
+      }
+    }
+    st-shape = skill '/st-shape' {
+      summary 'Sets the statusline segment shape for this project in .stratum/powerline.json.'
+      metadata {
+        path 'skills/st-shape'
+      }
+    }
+    st-theme = skill '/st-theme' {
+      summary 'Sets the statusline color theme for this project in .stratum/powerline.json, Token Weather line included.'
+      metadata {
+        path 'skills/st-theme'
+      }
+    }
+  }
+
+  skills.st-review -[reads]-> stratum.state-json 'feature directory'
+  skills.st-review -[starts]-> agents.st-review 'plugin root, project root, feature dir, story and range'
+  skills.st-review -[passes]-> user 'real findings and dropped findings with why'
+
+  skills.st-test -[reads]-> stratum.state-json 'feature directory'
+  skills.st-test -[starts]-> agents.st-test 'plugin root, project root, feature dir and task IDs'
+  skills.st-test -[passes]-> user 'test file, command and failing line per task'
+
+  skills.st-debug -[reads]-> stratum.state-json 'feature directory'
+  skills.st-debug -[reads]-> feature.tasks-md 'test command of the task'
+  skills.st-debug -[starts]-> agents.st-debug 'plugin root, project root, feature dir, task ID, test command and what was tried'
+  skills.st-debug -[runs]-> scripts.st-verify-sh 'test command and changed files'
+  skills.st-debug -[passes]-> user 'st-verify line or the stop text of the agent'
+
+  skills.st-git -[reads]-> git 'changed files and file list of the last commit'
+  skills.st-git -[passes]-> user 'changed files to pick'
+  skills.st-git -[starts]-> agents.st-git 'plugin root, project root, change and file list'
+
+  skills.st-triage -[reads]-> github 'issue number, state and updatedAt'
+  skills.st-triage -[reads]-> git 'HEAD, status and hashes of changed files'
+  skills.st-triage -[starts]-> agents.st-triage 'plugin root, project root and one issue number'
+  skills.st-triage -[passes]-> user 'one report per issue and the dropped cites'
+
+  skills.st-worker -[reads]-> feature.tasks-md 'task text and test command'
+  skills.st-worker -[runs]-> scripts.st-worker-sh 'start, watch, wait, answer, approve, pass, result, followup, close or headless with worker id'
+  skills.st-worker -[starts]-> skills.st-review 'range from the base to the worker branch'
+  skills.st-worker -[passes]-> git 'merge of the worker branch'
+  skills.st-worker -[passes]-> github 'merge of the worker PR after the user tested it'
+  skills.st-worker -[writes]-> feature.tasks-md 'task tick after the merge'
+  skills.st-worker -[starts]-> agents.st-git 'task tick or headless changes to commit'
+  skills.st-worker -[runs]-> scripts.st-state-sh 'state file, key skill and an empty value'
+  skills.st-worker -[passes]-> user 'big decisions, permission prompts, answers given and the approvals file'
+
+  skills.st-herdr-workspace -[runs]-> scripts.st-herdr-workspace-sh 'folder, label, machine, template and agent'
+  skills.st-herdr-workspace -[passes]-> user 'script output'
+
+  skills.st-pr -[reads]-> github 'existing PR for the branch'
+  skills.st-pr -[reads]-> stratum.state-json 'feature directory'
+  skills.st-pr -[reads]-> feature.spec-md 'FRs'
+  skills.st-pr -[reads]-> feature.tasks-md 'ticked tasks'
+  skills.st-pr -[reads]-> feature.quickstart-md 'test steps'
+  skills.st-pr -[runs]-> plugin.workflows-pr-js 'project root, plugin root, scratchpad, base, branch, feature dir and commits'
+  skills.st-pr -[reads]-> stratum.templates 'project PR template'
+  skills.st-pr -[reads]-> plugin.templates-pr-md 'plugin PR template'
+  skills.st-pr -[passes]-> user 'PR body, title, base and warnings at the gate'
+  skills.st-pr -[passes]-> git 'push of the branch'
+  skills.st-pr -[passes]-> github 'draft PR with title and body'
+  skills.st-pr -[passes]-> user 'PR URL, draft or ready and failed checks'
+
+  skills.st-issues -[reads]-> stratum.state-json 'feature directory'
+  skills.st-issues -[reads]-> procedures.issues-md 'issue steps to follow'
+  skills.st-issues -[passes]-> user 'issues created, duplicates skipped and errors'
+
+  skills.st-handoff -[writes]-> stratum.handoff-md 'goal, where we are, decisions, open questions, blockers and next step'
+  skills.st-handoff -[writes]-> project.gitignore 'handoff.md ignore line'
+  skills.st-handoff -[passes]-> user 'next step'
+
+  skills.st-status -[reads]-> stratum.state-json 'feature dir, phase and lane'
+  skills.st-status -[reads]-> feature.tasks-md 'tasks done and total'
+  skills.st-status -[reads]-> stratum.git-guard-json 'git guard modes'
+  skills.st-status -[reads]-> outside.claude-settings-json 'global guard options and enabled plugins'
+  skills.st-status -[reads]-> project.claude-settings-json 'enabled plugins'
+  skills.st-status -[runs]-> scripts.st-design-check-sh 'design lane tool check'
+  skills.st-status -[runs]-> scripts.st-figcraft-sh 'check'
+  skills.st-status -[reads]-> plugin.vendor-lock 'synced date'
+  skills.st-status -[reads]-> stratum.models-json 'model and effort per agent'
+  skills.st-status -[reads]-> agents 'default model line of each agent file'
+  skills.st-status -[runs]-> hooks.st-models-py 'sample st-inspect start input'
+  skills.st-status -[passes]-> user 'status block'
+
+  skills.st-init -[writes]-> stratum.state-json 'empty feature directory, phase and lane'
+  skills.st-init -[writes]-> project.specs 'empty specs folder'
+  skills.st-init -[writes]-> project.gitignore 'Stratum ignore lines'
+  skills.st-init -[writes]-> stratum.git-guard-json 'eight guard modes set to ask'
+  skills.st-init -[reads]-> plugin.templates-models-json 'default agent entries'
+  skills.st-init -[writes]-> stratum.models-json 'agent model and effort'
+  skills.st-init -[reads]-> agents 'default model line of each agent file'
+  skills.st-init -[starts]-> skills.st-constitution 'project rules from the user'
+  skills.st-init -[writes]-> project.agents-md 'pointer to the constitution'
+  skills.st-init -[writes]-> project.claude-md 'AGENTS.md and constitution imports'
+  skills.st-init -[writes]-> project.claude-settings-local-json 'statusLine command'
+  skills.st-init -[writes]-> stratum.powerline-json 'theme, shape and weather'
+  skills.st-init -[reads]-> outside.claude-settings-json 'enabled plugins'
+  skills.st-init -[writes]-> project.claude-settings-json 'disabled duplicate plugins and allowed FigCraft tools'
+  skills.st-init -[reads]-> skills.st-status 'tool and duplicate checks of steps 4 and 5'
+  skills.st-init -[runs]-> scripts.st-figcraft-sh 'check'
+  skills.st-init -[reads]-> skills.st-design 'FigCraft Install and Tools lines of design-tool.md'
+  skills.st-init -[writes]-> stratum.advisor-json 'advisor mode'
+  skills.st-init -[runs]-> scripts.st-advisor-sh 'codex-home'
+  skills.st-init -[passes]-> user 'setup questions and the report'
+  skills.st-init -[passes]-> git 'commit of the created project files'
+
+  skills.st-update -[runs]-> scripts.st-update-sh 'audit, plugin or fix with folder, kind and name'
+  skills.st-update -[passes]-> user 'table of items not current and the update question'
+  skills.st-update -[reads]-> skills.st-init 'questions of steps 3, 4, 7 and 11'
+  skills.st-update -[writes]-> stratum.git-guard-json 'guard modes'
+  skills.st-update -[writes]-> stratum.models-json 'agent model and effort'
+  skills.st-update -[writes]-> stratum.powerline-json 'theme, shape and weather'
+  skills.st-update -[writes]-> stratum.advisor-json 'advisor mode'
+  skills.st-update -[passes]-> git 'harness update commit per checkout'
+  skills.st-update -[passes]-> user 'changes, skips and commands to run'
+
+  skills.st-sync -[reads]-> plugin.claude-plugin-plugin-json 'plugin name'
+  skills.st-sync -[reads]-> plugin.vendor-lock 'repo, ref, path and pinned commit per source'
+  skills.st-sync -[reads]-> plugin.third-party-notices-md 'upstream to Stratum file map'
+  skills.st-sync -[reads]-> skills.st-design 'ignore and keep lines of engine.md'
+  skills.st-sync -[passes]-> user 'changes per source and the combined diff'
+  skills.st-sync -[writes]-> plugin.vendor-lock 'new commit, version and synced date'
+  skills.st-sync -[passes]-> git 'one sync commit per source'
+
+  skills.st-template -[reads]-> plugin.templates 'template names and template text'
+  skills.st-template -[writes]-> stratum.templates 'project copy of the template'
+  skills.st-template -[passes]-> user 'path of the copy'
+
+  skills.st-constitution -[reads]-> procedures.constitution-md 'constitution steps to follow'
+  skills.st-constitution -[passes]-> user 'rule questions, version change and summary'
+  skills.st-constitution -[starts]-> agents.st-git 'constitution.md to commit'
+
+  skills.st-model -[reads]-> plugin.templates-models-json 'default entries when the file is missing'
+  skills.st-model -[writes]-> stratum.models-json 'model and effort of the agent'
+  skills.st-model -[writes]-> project.gitignore 'models.json ignore line'
+  skills.st-model -[runs]-> hooks.st-models-py 'sample st-inspect start input'
+  skills.st-model -[reads]-> agents 'default model line of the agent file'
+  skills.st-model -[passes]-> user 'model and effort line of the agent'
+
+  skills.st-shape -[writes]-> stratum.powerline-json 'shape'
+  skills.st-shape -[passes]-> user 'shape line'
+
+  skills.st-theme -[writes]-> stratum.powerline-json 'theme'
+  skills.st-theme -[passes]-> user 'theme line'
+}

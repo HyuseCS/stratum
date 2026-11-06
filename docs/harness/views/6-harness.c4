@@ -1,0 +1,6 @@
+views {
+  view harness {
+    title 'Harness'
+    include events.*, hooks.*, statusline.*, claude, scripts.st-advisor-sh, scripts.st-codex-agent-sh, codex, advisor, stratum.state-json, stratum.advisor-json
+  }
+}

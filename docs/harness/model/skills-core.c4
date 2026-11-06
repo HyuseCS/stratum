@@ -1,0 +1,204 @@
+model {
+  extend skills {
+    st = skill '/st' {
+      summary 'Main entry and orchestrator. Picks the lane and risk level for a task, then runs the lane and verifies what subagents return.'
+      metadata {
+        path 'skills/st'
+      }
+    }
+    st-full = skill '/st-full' {
+      summary 'Runs the Full lane without lane selection: Define, Plan, Inspect, Build and Close in order, stopping at each gate.'
+      metadata {
+        path 'skills/st-full'
+      }
+    }
+    st-fast = skill '/st-fast' {
+      summary 'Fast lane: a short change plan with one gate, a test-first build, review, commit, then the drift fix and the shortcut list.'
+      metadata {
+        path 'skills/st-fast'
+      }
+    }
+    st-quick = skill '/st-quick' {
+      summary 'Quick lane for a one-file, low-risk edit with no gate. The st-quick agent edits, the skill verifies, and st-git commits the file.'
+      metadata {
+        path 'skills/st-quick'
+      }
+    }
+    st-define = skill '/st-define' {
+      summary 'Full-lane Define phase. Grills the user, has the spec written, clarifies gaps, runs the checklist and stops at the gate: user agrees the spec.'
+      metadata {
+        path 'skills/st-define'
+      }
+    }
+    st-plan = skill '/st-plan' {
+      summary 'Full-lane Plan phase. Starts the st-plan agent for plan and tasks, asks the user its open decisions, and runs the plan advisor point.'
+      metadata {
+        path 'skills/st-plan'
+      }
+    }
+    st-inspect = skill '/st-inspect' {
+      summary 'Full-lane Inspect phase. Starts the st-inspect agent, brings its findings to the user and stops at the gate: user OKs the build.'
+      metadata {
+        path 'skills/st-inspect'
+      }
+    }
+    st-build = skill '/st-build' {
+      summary 'Full-lane Build phase. Runs each task test first, builds, verifies and commits, debugs after 2 tries, and reviews each story.'
+      metadata {
+        path 'skills/st-build'
+      }
+    }
+    st-close = skill '/st-close' {
+      summary 'Full-lane Close phase. Starts the st-close agent for drift fixes, gaps, lessons and shortcuts, updates the docs graph, and pushes only on push.'
+      metadata {
+        path 'skills/st-close'
+      }
+    }
+    st-design = skill '/st-design' {
+      summary 'Design lane in three modes: new look, autonomous and custom. Builds and checks a screen with the st-design agent and asks at one gate in the new-look and custom modes.'
+      metadata {
+        path 'skills/st-design'
+      }
+    }
+  }
+
+  user -[starts]-> skills.st 'task in plain words'
+
+  skills.st -[reads]-> stratum.state-json 'feature, phase and lane'
+  skills.st -[reads]-> stratum.handoff-md 'last session handoff'
+  skills.st -[reads]-> project.graphify-out-graph-report-md 'impact areas of the task'
+  skills.st -[starts]-> skills.st-triage 'issue numbers'
+  skills.st -[runs]-> scripts.st-state-sh 'state.json path, risk and level'
+  skills.st -[passes]-> user 'lane and risk line, big decisions and the small-decision list'
+  skills.st -[starts]-> skills.st-define 'feature description'
+  skills.st -[starts]-> skills.st-plan 'feature in state.json'
+  skills.st -[starts]-> skills.st-inspect 'feature in state.json'
+  skills.st -[starts]-> skills.st-build 'feature in state.json'
+  skills.st -[starts]-> skills.st-close 'feature in state.json'
+  skills.st -[starts]-> skills.st-fast 'change'
+  skills.st -[starts]-> skills.st-quick 'one-file edit'
+  skills.st -[starts]-> skills.st-design 'task'
+  skills.st -[starts]-> agents.st-build 'brief, plugin root and project root'
+  skills.st -[starts]-> agents.st-git 'exact files to commit'
+  skills.st -[runs]-> scripts.st-verify-sh 'test command and touched files'
+  skills.st -[writes]-> stratum.autonomous 'session id for autonomous build mode'
+  skills.st -[runs]-> scripts.st-worker-sh 'autonomous-off and roster file'
+  skills.st -[starts]-> skills.st-worker 'tasks for workers in autonomous build mode'
+  skills.st -[starts]-> skills.st-pr 'branch to open a PR for'
+  skills.st -[passes]-> github 'PR merge with gh pr merge'
+  skills.st -[starts]-> skills.st-handoff 'session end'
+
+  skills.st-full -[starts]-> skills.st-define 'task as feature description'
+  skills.st-full -[starts]-> skills.st-plan 'feature in state.json'
+  skills.st-full -[starts]-> skills.st-inspect 'feature in state.json'
+  skills.st-full -[starts]-> skills.st-build 'feature in state.json'
+  skills.st-full -[starts]-> skills.st-close 'feature in state.json'
+
+  skills.st-fast -[starts]-> agents.st-fast 'plugin root, project root, feature dir and change'
+  skills.st-fast -[runs]-> scripts.st-advisor-sh 'change point, feature dir and change file'
+  skills.st-fast -[reads]-> skills.st-build 'Advisor rules'
+  skills.st-fast -[passes]-> user 'change plan in short form with the advisor verdict'
+  skills.st-fast -[starts]-> agents.st-test 'test from the change plan'
+  skills.st-fast -[starts]-> agents.st-build 'test to make pass and small review fixes'
+  skills.st-fast -[starts]-> agents.st-debug 'test red after 2 tries and the advisor answer'
+  skills.st-fast -[passes]-> advisor 'red test, diff and small-decision list'
+  skills.st-fast -[runs]-> scripts.st-verify-sh 'test command and touched files'
+  skills.st-fast -[starts]-> agents.st-review 'change plan path and uncommitted diff'
+  skills.st-fast -[starts]-> agents.st-git 'exact paths and drift docs'
+  skills.st-fast -[starts]-> agents.st-close 'base commit for the drift fix and shortcut list'
+  skills.st-fast -[reads]-> skills.st-close 'Shortcuts, Lessons and drift check steps'
+  skills.st-fast -[runs]-> scripts.st-state-sh 'state.json phase done'
+  skills.st-fast -[starts]-> skills.st-full 'change that needs a new user story or touches access'
+
+  skills.st-quick -[starts]-> agents.st-quick 'plugin root, project root and edit'
+  skills.st-quick -[starts]-> agents.st-build 'brief for a fix that needs a second file'
+  skills.st-quick -[starts]-> skills.st-fast 'edit that needs the Fast lane'
+  skills.st-quick -[runs]-> scripts.st-verify-sh 'tests run and the edited files'
+  skills.st-quick -[starts]-> agents.st-git 'the edited files'
+  skills.st-quick -[passes]-> user 'one-line change summary'
+
+  skills.st-define -[reads]-> stratum.state-json 'feature to redo and lane'
+  skills.st-define -[starts]-> skills.st-grill 'feature description'
+  skills.st-define -[reads]-> procedures.specify-md 'steps to write the spec'
+  skills.st-define -[reads]-> procedures.clarify-md 'steps to clear open markers'
+  skills.st-define -[reads]-> procedures.checklist-md 'checklist steps for the impact areas'
+  skills.st-define -[passes]-> user 'spec in short form and the agree question'
+  skills.st-define -[starts]-> agents.st-git 'spec files to commit'
+
+  skills.st-plan -[reads]-> stratum.state-json 'feature directory'
+  skills.st-plan -[starts]-> agents.st-plan 'plugin root, project root and feature dir'
+  skills.st-plan -[passes]-> user 'open decisions with options and a recommendation'
+  skills.st-plan -[passes]-> agents.st-plan 'answers to open decisions and gaps to fix'
+  skills.st-plan -[reads]-> feature.plan-md 'file that must exist'
+  skills.st-plan -[reads]-> feature.research-md 'file that must exist'
+  skills.st-plan -[reads]-> feature.quickstart-md 'file that must exist'
+  skills.st-plan -[reads]-> feature.tasks-md 'test, owns and screen mode of each task'
+  skills.st-plan -[runs]-> scripts.st-advisor-sh 'plan point and feature dir'
+  skills.st-plan -[reads]-> skills.st-build 'Advisor rules'
+  skills.st-plan -[starts]-> agents.st-git 'plan files and advisor.md'
+
+  skills.st-inspect -[reads]-> stratum.state-json 'feature directory'
+  skills.st-inspect -[starts]-> agents.st-inspect 'plugin root, project root and feature dir'
+  skills.st-inspect -[reads]-> feature.plan-md 'plan.md diff, only Validate may change'
+  skills.st-inspect -[reads]-> feature.tasks-md 'removed or renamed task ids'
+  skills.st-inspect -[passes]-> user 'big decisions, verdict and the OK to build question'
+  skills.st-inspect -[passes]-> agents.st-plan 'fixes to spec, plan or tasks'
+  skills.st-inspect -[runs]-> scripts.st-advisor-sh 'check plan, or waive plan with a reason'
+  skills.st-inspect -[starts]-> agents.st-git 'fix files and advisor.md'
+  skills.st-inspect -[starts]-> skills.st-build 'OK to build'
+
+  skills.st-build -[reads]-> stratum.state-json 'feature directory'
+  skills.st-build -[reads]-> feature.tasks-md 'unticked tasks in order'
+  skills.st-build -[starts]-> agents.st-test 'test task ids and absolute paths'
+  skills.st-build -[starts]-> agents.st-build 'build task ids and absolute paths'
+  skills.st-build -[runs]-> scripts.st-verify-sh 'test command and touched files'
+  skills.st-build -[runs]-> scripts.st-lock-sh 'test command of a lock test'
+  skills.st-build -[runs]-> scripts.st-advisor-sh 'advisor point, feature dir and inputs'
+  skills.st-build -[starts]-> agents.st-debug 'task, test, both failures and the advisor answer'
+  skills.st-build -[starts]-> agents.st-git 'task paths, tasks.md and advisor.md'
+  skills.st-build -[starts]-> skills.st-design 'screen task and its mode'
+  skills.st-build -[writes]-> feature.tasks-md 'screen task tick'
+  skills.st-build -[starts]-> skills.st-worker 'one parallel task per worker'
+  skills.st-build -[passes]-> git 'merge of each worktree branch into the feature branch'
+  skills.st-build -[starts]-> agents.st-review 'story diff'
+  skills.st-build -[starts]-> skills.st-impeccable 'changed screens'
+  skills.st-build -[reads]-> feature.quickstart-md 'story steps to run'
+  skills.st-build -[passes]-> advisor 'same input as Codex at each advisor point'
+  skills.st-build -[writes]-> stratum.advisor-json 'advisor mode answer'
+  skills.st-build -[runs]-> scripts.st-state-sh 'state.json skill cleared'
+  skills.st-build -[passes]-> user 'lock timeout line, big decisions and steps to run by hand'
+
+  skills.st-close -[reads]-> stratum.state-json 'feature directory'
+  skills.st-close -[reads]-> feature.tasks-md 'unticked tasks for the gap report choice'
+  skills.st-close -[starts]-> agents.st-close 'plugin root, project root, feature dir, gap report choice and shortcut base'
+  skills.st-close -[passes]-> agents.st-close 'gaps sent back to append as tasks'
+  skills.st-close -[starts]-> skills.st-build 'tasks of sent-back gaps'
+  skills.st-close -[passes]-> user 'gaps, lessons and shortcuts to pick, and the push prompt'
+  skills.st-close -[writes]-> project.gitignore 'the .stratum/lessons.md line'
+  skills.st-close -[reads]-> stratum.lessons-md 'lessons with target file and reason'
+  skills.st-close -[writes]-> stratum.lessons-md 'dropped and kept lessons removed'
+  skills.st-close -[writes]-> stratum.constitution-md 'kept lesson rule, version and amend date'
+  skills.st-close -[writes]-> stratum.app-constitution-md 'kept lesson rule, version and amend date, created when missing'
+  skills.st-close -[reads]-> procedures.constitution-md 'version bump rule'
+  skills.st-close -[writes]-> project.apps-app-ordinance-md 'kept lesson rule'
+  skills.st-close -[writes]-> project.apps-app-claude-md 'the ORDINANCE.md import line'
+  skills.st-close -[starts]-> agents.st-build 'shortcut row to fix now'
+  skills.st-close -[runs]-> scripts.st-verify-sh 'test command and touched files'
+  skills.st-close -[starts]-> agents.st-git 'fix files, changed docs and lesson files'
+  skills.st-close -[starts]-> skills.st-graphify 'docs graph update'
+  skills.st-close -[runs]-> scripts.st-state-sh 'state.json phase done'
+
+  skills.st-design -[runs]-> scripts.st-design-check-sh 'custom flag for custom design'
+  skills.st-design -[reads]-> project.package-json 'framework and dev script port'
+  skills.st-design -[reads]-> project.design-md 'design file, page job, visitor and main action'
+  skills.st-design -[reads]-> project.impeccable 'design.json beside DESIGN.md'
+  skills.st-design -[passes]-> user 'mode line, grill questions, themes, report and gate'
+  skills.st-design -[reads]-> skills.st-grill 'grill method'
+  skills.st-design -[runs]-> skills.st-hallmark 'theme deal and scaffold commands'
+  skills.st-design -[starts]-> skills.st-impeccable 'document, audit and critique of the screen'
+  skills.st-design -[runs]-> skills.st-impeccable 'ignores and live-server stop commands'
+  skills.st-design -[writes]-> project.impeccable 'detector ignore rules added, then removed'
+  skills.st-design -[runs]-> scripts.st-figcraft-sh 'start with the project root'
+  skills.st-design -[starts]-> agents.st-design 'task, mode, answers, dev server URL, custom step and findings'
+  skills.st-design -[starts]-> agents.st-git 'reported paths, DESIGN.md, design.json, tokens and saved design'
+}

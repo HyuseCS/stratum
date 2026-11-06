@@ -16,6 +16,7 @@ keeps its original license. Full license texts are in `licenses/`. Pinned upstre
 | Token Weather | anthropics/claude-code-playground authors | Apache-2.0 | `hooks/token-weather.mjs`, `statusline/st-statusline.sh` (third line) | `licenses/claude-code-playground.Apache-2.0.txt` |
 | claude-powerline theme colors | Copyright (c) 2025 Owloops | MIT | `statusline/themes.json` | `licenses/claude-powerline.MIT.txt` |
 | hallmark | Copyright (c) 2026 Hallmark contributors | MIT | `skills/st-hallmark` | `licenses/hallmark.MIT.txt` |
+| system-atlas skill (NousResearch/hermes-agent `optional-skills/creative/system-atlas`) | Copyright (c) 2026 Harshyt Goel | MIT | `docs/harness/atlas/atlas.html` (built from the skill's `template.html`) | `licenses/system-atlas.MIT.txt` |
 
 ## Changes made by Stratum (Apache-2.0 section 4(b))
 
