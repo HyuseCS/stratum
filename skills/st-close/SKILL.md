@@ -55,7 +55,7 @@ Plugin root (`<plugin root>`) is two levels up from this skill's base directory.
 7. **Docs graph.** Run the `st-graphify` skill once to update the docs graph.
 8. `st-git` commits the changed docs with exact paths, and the files step 5 wrote (never
    `.stratum/lessons.md`).
-   After the commit lands, set `phase` to `done` in `<project>/.stratum/state.json` with `bash <plugin root>/scripts/st-state.sh <project>/.stratum/state.json phase done`.
+   After the commit lands, say `Phase: done` on its own line: the Stratum hook sets `phase` to `done`.
 
 ## Gate
 

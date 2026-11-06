@@ -49,7 +49,7 @@ Make no herdr call yourself. Run only `scripts/st-worker.sh`, git and the `st-re
 
 Headless: run `bash <plugin root>/scripts/st-worker.sh headless <id> --task <file> --test <cmd>` and show its lines. A reply that says what is missing goes to the user. On exit 0, run the test command here and commit only on its exit 0: commit the changed files through the `stratum:st-git` agent, because the headless worker never commits. A red test means no commit: report it.
 
-When the run ends (after the last close or the headless run), clear the reply label: `bash <plugin root>/scripts/st-state.sh "$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/.stratum/state.json" skill ""`. Skip this when `/stratum:st-build` sent you here: st-build clears it.
+When the run ends (after the last close or the headless run), say `Build done.` on its own line: the Stratum hook clears the reply label. Skip this when `/stratum:st-build` sent you here: st-build says it.
 
 Never run `herdr machine reconnect` or `herdr server stop`, never push, and never remove a worktree folder.
 
