@@ -98,3 +98,82 @@ c=$(mktemp -d) && cp -r . "$c/r" && mkdir "$c/r/skills/zz-probe" && ST_ROOT="$c/
 ```
 
 Expected: `FAIL coverage-skills: skills/zz-probe has no element`, exit 1.
+
+## 9. The system atlas (US5)
+
+Layout and fields: [data-model.md](data-model.md) "Atlas". Run from the repo root. The build
+needs the system-atlas skill installed at `~/.claude/skills/system-atlas` on this machine (the
+user's PC and laptop). The skill's `build.mjs` and `template.html` are not in the repo (D17): the
+build line copies them and `data.mjs` into a temp folder, builds there, and copies the two
+outputs back.
+
+1. Build and check the script:
+
+```bash
+t=$(mktemp -d) && cp ~/.claude/skills/system-atlas/assets/build.mjs ~/.claude/skills/system-atlas/assets/template.html docs/harness/atlas/data.mjs "$t" && node "$t/build.mjs" && cp "$t/atlas.html" "$t/SYSTEM.md" docs/harness/atlas/ && rm -rf "$t"
+node -e 'const h=require("fs").readFileSync("docs/harness/atlas/atlas.html","utf8"); new Function(h.split("<script>")[1].split("</script>")[0]); console.log("script ok")'
+```
+
+Expected: `built SYSTEM.md + atlas.html · 13 open · 0 resolved · <n> structures · <n> decisions`,
+then `script ok`. `ls docs/harness/atlas` shows exactly `SYSTEM.md`, `atlas.html`, `data.mjs`, and
+`git status --short docs/harness` shows changes only in `docs/harness/atlas/`.
+
+2. Check the chapter rule, the fields and the 13 questions:
+
+```bash
+node --input-type=module -e '
+const { NODES, CH } = await import(process.cwd() + "/docs/harness/atlas/data.mjs");
+const bad = [], shown = new Set();
+for (const n of NODES) for (const k of ["one", "what", "how", "short", "kind"]) if (!n[k]) bad.push(`${n.code} has no ${k}`);
+for (const n of NODES) if (n.short.length > 14) bad.push(`${n.code} short is over 14`);
+if (CH.length !== 10) bad.push(`${CH.length} chapters, expected 10`);
+CH.forEach((c, i) => {
+  if (i < CH.length - 1 && c.reveal.length > 3) bad.push(`chapter ${i + 1} adds ${c.reveal.length}`);
+  c.reveal.forEach((r) => shown.add(r));
+  for (const h of c.flow || []) for (const x of [h[0], h[1]]) if (!shown.has(x)) bad.push(`chapter ${i + 1} flow uses ${x} before it is shown`);
+});
+if (CH.at(-1).flow !== null || CH.at(-1).reveal.length) bad.push("last chapter must add none and have flow null");
+const q = NODES.flatMap((n) => n.cond || []).length;
+if (q !== 13) bad.push(`${q} questions, expected 13`);
+console.log(bad.length ? bad.join("\n") : "atlas ok");
+process.exit(bad.length ? 1 : 0);'
+```
+
+Expected: `atlas ok`.
+
+3. Check that each skill, agent, hook, statusline, script and procedure id of the LikeC4 model is
+   in the `how` of exactly one structure:
+
+```bash
+node --input-type=module -e '
+import { readdirSync, statSync } from "node:fs";
+const { NODES } = await import(process.cwd() + "/docs/harness/atlas/data.mjs");
+const id = (g, f) => g + "." + f.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+const walk = (d) => readdirSync(d).flatMap((f) => statSync(`${d}/${f}`).isDirectory() ? (f === "__pycache__" ? [] : walk(`${d}/${f}`)) : [f]);
+const ids = [
+  ...readdirSync("skills").map((d) => "skills." + d),
+  ...readdirSync("agents").filter((f) => f.endsWith(".md")).map((f) => "agents." + f.slice(0, -3)),
+  ...walk("hooks").filter((f) => !f.endsWith(".pyc")).map((f) => id("hooks", f)),
+  ...walk("statusline").map((f) => id("statusline", f)),
+  ...readdirSync("scripts").filter((f) => f.endsWith(".sh")).map((f) => id("scripts", f)),
+  ...readdirSync("procedures").filter((f) => f.endsWith(".md")).map((f) => id("procedures", f)),
+];
+const bad = ids.map((i) => [i, NODES.filter((n) => n.how.includes(`<code>${i}</code>`)).length]).filter(([, c]) => c !== 1);
+console.log(bad.length ? bad.map(([i, c]) => `${i} is in ${c} structures, expected 1`).join("\n") : `all ${ids.length} ids in exactly one structure`);
+process.exit(bad.length ? 1 : 0);'
+```
+
+Expected: `all 99 ids in exactly one structure`.
+
+4. Open it from a static server (the user, or the orchestrator with a browser):
+   `python3 -m http.server 8765 -d docs/harness/atlas`, then open
+   `http://localhost:8765/atlas.html` at about 1280×800. Not from `file://`. Expected: chapter 1
+   shows 2 structures and one moving flow, `Next ▸` adds at most 3 structures per chapter, chapter
+   10 shows all with a flow picker (Full, Fast, Quick, Design lanes, a commit, All flows). The
+   Open questions tab lists 13 ids `Q-<code><n>`, and no question is drawn on the map. Check the
+   light theme and one "go inside" view. Stop the server with Ctrl+C.
+5. Open the published atlas URL (the orchestrator publishes it, T031; the URL is in the handoff and
+   project memory, not in the repo, D18). Expected: the same atlas.
+6. Compare (SC-007), check by hand: answer "where does the Full lane ask me first?" and "which
+   parts write `.stratum/state.json`?" once with the atlas and once with the LikeC4 views
+   (`docs/harness/README.md`, VS Code preview). Say which form helped more and why.

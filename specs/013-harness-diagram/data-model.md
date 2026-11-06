@@ -282,3 +282,85 @@ source file names it.
 - Missing, model to repo: every `path` exists. Every `.stratum/` `data` is still named in the code.
 - Summaries (FR-003), links (FR-004), vendored tags (FR-008), kinds (FR-007), lane steps and gates
   (FR-005), views and page (FR-006, FR-009).
+
+## Atlas (US5, D14 to D18)
+
+The repo holds 3 atlas files in `docs/harness/atlas/`: `data.mjs` (edited) and the built
+`atlas.html` and `SYSTEM.md`. The skill's `build.mjs` and `template.html` are not committed (D17).
+
+`data.mjs` exports `META`, `DECISIONS`, `GROUPS`, `NODES`, `FLOWS`, `CH` and `HOW_HTML`, in the
+shape of the skill's `assets/data.example.mjs` (fields are listed there). `META.outDir` is `'.'`,
+so the build writes `atlas.html` and `SYSTEM.md` into its temp folder, and the build line copies
+them to `docs/harness/atlas/` (plan.md "System atlas"). `META.sourcePath` is
+`docs/harness/atlas/data.mjs`. `META.buildCmd` is the full build line of spec.md FR-015, so the
+`SYSTEM.md` footer names it. `META.artifactUrl` is `''` (D18: the URL lives in the handoff and
+project memory).
+
+### Structure (one isometric box)
+
+| Field | Rule |
+|-------|------|
+| `id`, `code` | 1 or 2 letters, the same value, unique. Not `Q` (question ids start with `Q-`). |
+| `name`, `short` | Noun. `short` is upper case, 14 characters at most. |
+| `group` | One of `GROUPS`. |
+| `kind` | `box`, `tall`, `store`, `cards`, `slab`, `screen`, `gate` or `job` (design-language "Shapes by role"). |
+| `one` | One sentence. |
+| `what` | For a reader who does not know the code. |
+| `how` | Names files with `<code>`, and ends with the LikeC4 element ids the structure stands for, for example `<code>skills.st-plan</code>`. |
+| `steps` | Optional `[[name, desc], ...]` for the "go inside" view. |
+| `cond` | Questions: the gaps of `gaps.md` (D16) as plain strings (open). No other questions now. |
+| `gx`, `gy`, `w`, `d`, `h` | Layout on the grid. No two footprints overlap. |
+
+Every skill, agent, hook, script, statusline and procedure element of the LikeC4 model is named in
+the `how` of exactly one structure, written in full as `<code><id></code>` (no `*` shorthand;
+quickstart.md section 9 step 3 checks it). Data files are named where they belong (`.stratum` files in
+S, M or N, feature files in F). This is the link between the two forms.
+
+### Chapters and structures
+
+Proposed list (24 structures). The build task may merge or rename, but keeps the chapter rule:
+chapters 1 to 9 add at most 3 structures each and one flow among shown structures, chapter 10 adds
+none and has `flow: null`.
+
+| Ch | Title | Code, name, kind | LikeC4 ids in `how` (main ones) |
+|----|-------|------------------|----------------------------------|
+| 1 | You and /st | U You (`screen`); O Orchestrator /st (`tall`) | `user`; `skills.st` |
+| 2 | The four lanes | L Lane skills (`box`); P Phase skills (`box`); T Tool skills (`cards`) | `skills.st-full`, `-fast`, `-quick`, `-design`; `skills.st-define` ... `skills.st-close`; the other skills (not `st-handoff`, `st-git`, `st-pr`, `st-issues`), with `st-worker.sh`, `st-herdr-workspace.sh`, `st-worktree.sh`, `st-update.sh` |
+| 3 | The spec on disk | F Feature files (`store`); S State files (`store`); R Procedures and templates (`cards`) | `feature.*`; `stratum.state-json` and the other `.stratum` files, `st-state.sh`; `procedures.*`, `plugin.templates-*`, `check-prerequisites.sh`, `resolve-template.sh`, `common.sh` |
+| 4 | The agents that do the work | A Plan and check agents (`box`); B Build agents (`box`); C Lane and close agents (`box`) | `agents.st-plan`, `-inspect`, `-triage`; `agents.st-test`, `-build`, `-debug`, `-review`, `-design`, `st-design-check.sh`, `st-figcraft.sh`; `agents.st-fast`, `-quick`, `-close`, `-impeccable`, `-ponytail-audit`, `-ponytail-debt`, `st-shortcuts.sh` |
+| 5 | Gates: asking you first | G Gates (`gate`); V Verify and lock (`job`) | the gate steps of the lane views; `st-verify.sh`, `st-lock.sh` |
+| 6 | Second opinion: Codex and /advisor | X Advisor script (`box`); K Codex (`box`); D /advisor (`box`) | `st-advisor.sh`, `st-codex-agent.sh`, `stratum.advisor-json`; `codex`, `outside.local-state-stratum-codex-home`; `advisor` |
+| 7 | Guard rails: hooks | E Hook events (`slab`); W Git guard (`gate`); H Approve, phase and model hooks (`gate`) | `events.*`, `hooks.commands-json`, `hooks.hooks-json`, `claude`; `hooks.st-git-guard-py`, `stratum.git-guard-json`; `hooks.st-approve-py`, `hooks.st-phase-py`, `hooks.st-models-py` |
+| 8 | Memory across sessions | M Handoff (`store`); N Statusline and ponytail (`screen`) | `skills.st-handoff`, `hooks.st-handoff-facts-sh`, `hooks.st-session-start-sh`, `stratum.handoff-md`, `stratum.lessons-md`; `statusline.*`, `hooks.token-weather-mjs`, `hooks.ponytail-*` |
+| 9 | Shipping | Z st-git agent (`job`); I git repository (`store`); GH GitHub PR (`screen`) | `agents.st-git`, `skills.st-git`; `git`; `github`, `skills.st-pr`, `skills.st-issues` |
+| 10 | The whole system | none | flow picker over `FLOWS` |
+
+`FLOWS` (chapter 10 picker): one per lane (Full, Fast, Quick, Design) and one for a commit
+through the guard. The first flow has id `turn`: the template draws only that id with a solid
+line in the last chapter.
+
+### Gap questions (D16)
+
+| Gap in `gaps.md` (in file order) | Structure |
+|-----|-----------|
+| 1. st-close records defer and drop, the agent has no record step | C |
+| 2. st-full names a Plan gate, st-plan names none | G |
+| 3. `gaps.md` is declared, nothing names it | F |
+| 4. tasks procedure: tests optional vs every task has `Test:` | R |
+| 5. specify procedure: checklist template not resolved | R |
+| 6. st-model lists `st-worker` as an agent | T |
+| 7. st-quick agent writes `phase` with no script | S |
+| 8. st-hallmark calls itself `/hallmark` | T |
+| 9. st-impeccable names other paths and `/impeccable` | T |
+| 10. st-ponytail-help points at the upstream plugin | T |
+| 11. st-build agent gives the Fast-lane path without the feature folder | B |
+| 12. ponytail-activate copies a `.ps1` file that does not exist | N |
+| 13. `ponytail-statusline.sh` is copied but never run | N |
+
+Each question keeps the `file:line` cites of its gap. Ids follow from order on the structure:
+`Q-T1` to `Q-T4`, `Q-R1`, `Q-R2`, `Q-N1`, `Q-N2`, and `Q-C1`, `Q-G1`, `Q-F1`, `Q-S1`, `Q-B1`.
+
+### Decisions
+
+`DECISIONS` has one row per decision of `decisions.md` (D1 to D18 now): `axis` = the question in
+a few words, `decision` = the chosen option in one line, `adr` = `decisions.md Dn` (no ADRs).

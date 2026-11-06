@@ -13,3 +13,6 @@ summary: End-of-Build diff 3c5a3f7..c6e9743 docs only, approve; resolve gap G2 v
 
 ## plan | 2026-11-05T23:28:47Z | sha256 3dec05229e4ea303dc8d64df6054d46812910ee00db150eadc7dddf5d2af9293 | APPROVED
 summary: The earlier topic-view consolidation is incorporated. The remaining lane splits have clear ownership and a shared integration step; no further task cuts or merges are warranted within this plan review.
+
+## decisions | 2026-11-05T23:50:28Z | /advisor
+summary: D13 small decisions: all 7 approved; ask the user to confirm the click-through in the VS Code preview (Full box, Design step) before the PR

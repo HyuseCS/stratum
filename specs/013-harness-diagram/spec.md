@@ -6,7 +6,7 @@
 
 **Status**: Draft
 
-**Input**: User description: "#78 Add a diagram of the Stratum workflows and harness. Purpose: see the harness so we can make the workflows work better and the skills in the workflows more cohesive and autonomous. The diagram must be editable by the developer, easy to consume, and easy for an LLM to read." Decisions D1 to D10 are in `decisions.md`.
+**Input**: User description: "#78 Add a diagram of the Stratum workflows and harness. Purpose: see the harness so we can make the workflows work better and the skills in the workflows more cohesive and autonomous. The diagram must be editable by the developer, easy to consume, and easy for an LLM to read." Decisions D1 to D18 are in `decisions.md`.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -113,6 +113,39 @@ Remove the folder. The test passes.
 4. **Given** a machine with no `npx`, or with Node below 22.22.3, **When** the test runs, **Then**
    the validity and rebuild checks print SKIP and the coverage check still runs.
 
+---
+
+### User Story 5 - Compare with a system atlas (Priority: P3)
+
+The developer opens a system atlas of the same harness: an interactive isometric page that shows
+the harness a few structures at a time, chapter by chapter, with a generated text twin
+(`SYSTEM.md`). The developer compares it with the LikeC4 views to see which form helps more to
+improve the workflows (D14). The atlas is a trial: one data file, no drift test (D15).
+
+**Why this priority**: The LikeC4 views (US1 to US4) are the deliverable. The atlas is a second
+form to compare, so it comes last.
+
+**Independent Test**: Open the published atlas. Step through the 10 chapters. Pick each flow in
+the last chapter. Open the questions tab and find the 13 gaps of `gaps.md`.
+
+**Acceptance Scenarios**:
+
+1. **Given** the published atlas, **When** the developer opens its URL, **Then** `atlas.html`
+   opens at one stable private URL. The same file also opens from a static server.
+2. **Given** the atlas, **When** the developer steps through it, **Then** it has 10 chapters.
+   Each of chapters 1 to 9 adds at most 3 structures and runs one small flow that touches only
+   structures shown so far. The last chapter shows all structures with a flow picker.
+3. **Given** any structure, **When** the developer selects it, **Then** it has a one-line summary,
+   a "what it does", a "how it is built" that names the LikeC4 element ids it stands for, a short
+   label and a role shape.
+4. **Given** the questions tab, **When** the developer reads it, **Then** the 13 gaps of `gaps.md`
+   are open questions `Q-<code><n>`, each on the structure it touches, and none is drawn on the map
+   (D16).
+5. **Given** `docs/harness/atlas/data.mjs` and the system-atlas skill installed on the machine,
+   **When** the developer runs the build line of FR-015, **Then** it runs with no error and writes
+   `atlas.html` and `SYSTEM.md` into `docs/harness/atlas/`. `SYSTEM.md` has the decisions table, the question index and the "how this file is
+   maintained" footer.
+
 ### Edge Cases
 
 - A data file that git ignores (`.stratum/handoff.md`, `.stratum/models.json`) is still an
@@ -167,6 +200,33 @@ Remove the folder. The test passes.
   below 22.22.3 (D9).
 - **FR-014**: The model MUST describe the harness as it is now. No skill, agent, hook or script
   changes in this feature.
+- **FR-015**: The atlas MUST live in `docs/harness/atlas/` (D15) as exactly 3 files: `data.mjs`
+  (the only edited source) and the generated `atlas.html` and `SYSTEM.md`. The skill's
+  `build.mjs` and `template.html` are NOT committed: they have no license and the repo is public
+  and ships as the plugin (D17). The build runs them from the installed skill in a temp folder,
+  and MUST run with no error:
+  `t=$(mktemp -d) && cp ~/.claude/skills/system-atlas/assets/build.mjs ~/.claude/skills/system-atlas/assets/template.html docs/harness/atlas/data.mjs "$t" && node "$t/build.mjs" && cp "$t/atlas.html" "$t/SYSTEM.md" docs/harness/atlas/ && rm -rf "$t"`.
+  `META.outDir` is `'.'`, so the build writes into the temp folder. Nobody edits a generated file.
+- **FR-016**: The atlas MUST have 10 chapters: 1 You and /st, 2 The four lanes, 3 The spec on
+  disk, 4 The agents that do the work, 5 Gates: asking you first, 6 Second opinion: Codex and
+  /advisor, 7 Guard rails: hooks, 8 Memory across sessions, 9 Shipping, 10 The whole system.
+  Chapters 1 to 9 each add at most 3 structures and run one small flow among the structures shown
+  so far. Chapter 10 adds none and has a flow picker. The chapters, structures, flows, decisions
+  and questions are all in `data.mjs`.
+- **FR-017**: Each atlas structure MUST have `one`, `what`, `how`, `short` (14 characters at most)
+  and a role `kind`. Structures are at group level (about 20). Each `how` names the LikeC4 element
+  ids the structure stands for, so the developer can compare the two forms.
+- **FR-018**: The 13 gaps of `gaps.md` MUST be open questions `Q-<code><n>` on the structure each
+  touches, in the questions tab and the index counts only, not drawn on the map. The LikeC4 model
+  stays facts only (D5, D16).
+- **FR-019**: `SYSTEM.md` MUST be generated with the decisions table (the decisions of
+  `decisions.md`), the question index and the "how this file is maintained" footer.
+- **FR-020**: The orchestrator MUST publish `atlas.html` as a private claude.ai artifact at one
+  stable URL and republish it there after each data change. The URL stays out of the repo
+  (`META.artifactUrl` is empty): it lives in the session handoff and project memory (D18). The
+  page MUST also open from a static server (`python3 -m http.server`).
+- **FR-021**: The atlas MUST NOT break the existing tests. The `nomcp` check allows exactly the 3
+  atlas files. The atlas gets no drift test while it is a trial (D15).
 
 ### Key Entities
 
@@ -177,6 +237,8 @@ Remove the folder. The test passes.
   the lane views (D12).
 - **View**: a lane view (ordered steps) or a topic view (agents, harness, data flow).
 - **Page**: the generated `docs/harness/README.md`, one diagram per view.
+- **Atlas**: `docs/harness/atlas/data.mjs` and what it builds. It has structures (group-level
+  boxes), flows, chapters, decisions and questions.
 
 ## Success Criteria *(mandatory)*
 
@@ -191,6 +253,8 @@ Remove the folder. The test passes.
   the list matches a search of the repo.
 - **SC-005**: A skill added with no model change makes the test fail on its first run.
 - **SC-006**: All 15 views draw on GitHub with no error.
+- **SC-007**: The developer compares the atlas and the LikeC4 views on the same question (for
+  example "where does the Full lane ask me first?") and says which form helps more.
 
 ## Assumptions
 
@@ -205,3 +269,9 @@ Remove the folder. The test passes.
   which is harmless because Claude Code loads nothing from `docs/`.
 - The project has no constitution.
 - #51 will change the lanes later. This feature draws the lanes as they are now.
+- The atlas has no ADRs and no `CONTEXT.md`: `decisions.md` is the decision record, and a
+  glossary is not needed for a trial (YAGNI).
+- The atlas page loads the IBM Plex Mono font from Google Fonts when it opens.
+- Rebuilding the atlas needs the system-atlas skill installed at `~/.claude/skills/system-atlas`
+  on that machine (the user's PC and laptop). Reading the atlas does not: the 3 committed files
+  and the published URL are enough.
