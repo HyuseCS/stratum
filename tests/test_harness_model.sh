@@ -56,10 +56,15 @@ atlas() {
   command -v node >/dev/null || { echo "SKIP atlas: node not found"; return 0; }
   if ! node --input-type=module -e '
     import { pathToFileURL } from "node:url";
+    import { readFileSync } from "node:fs";
+    import vm from "node:vm";
     const { NODES, DECISIONS } = await import(pathToFileURL(process.argv[1]).href);
-    process.stdout.write(JSON.stringify({ nodes: NODES.map((n) => ({ code: n.code, how: n.how })), adrs: DECISIONS.map((d) => d.adr) }));
-  ' "$root/docs/harness/atlas/data.mjs" > "$tmp/atlas.json" 2> "$tmp/atlas.err"; then
-    echo "FAIL atlas: node could not read docs/harness/atlas/data.mjs"
+    const lines = readFileSync(process.argv[2], "utf8").split("\n");
+    const pick = (p) => lines.find((l) => l.startsWith(p)) ?? "";
+    const render = vm.runInNewContext(`${pick("const NODES = ")}\n${pick("const qOpen=")}\nNODES.map((n) => ({ code: n.code, n: (n.cond || []).length, html: qHtml(n.cond || []) }))`);
+    process.stdout.write(JSON.stringify({ nodes: NODES.map((n) => ({ code: n.code, how: n.how })), adrs: DECISIONS.map((d) => d.adr), render }));
+  ' "$root/docs/harness/atlas/data.mjs" "$root/docs/harness/atlas/atlas.html" > "$tmp/atlas.json" 2> "$tmp/atlas.err"; then
+    echo "FAIL atlas: node could not read docs/harness/atlas/data.mjs and atlas.html"
     head -n 5 "$tmp/atlas.err"
     fail=1
     return 0
@@ -491,7 +496,13 @@ def c_atlas():
             fail(f"{d} of decisions.md has no DECISIONS row with adr 'decisions.md {d}'")
     for d in sorted(named - set(decs), key=lambda x: int(x[1:])):
         fail(f"a DECISIONS row names {d}, not a decision in decisions.md")
-    done(f"{len(nodes)} structures name only model elements and views, {len(files)} harness files are each in one structure, {len(decs)} decisions each have a DECISIONS row")
+    qs = 0
+    for r in data["render"]:
+        qs += r["n"]
+        u, li = r["html"].count("undefined"), r["html"].count("<li")
+        if u or li < r["n"]:
+            fail(f"{r['code']} renders its {r['n']} questions in atlas.html as {li} items, {u} undefined")
+    done(f"{len(nodes)} structures name only model elements and views, {len(files)} harness files are each in one structure, {len(decs)} decisions each have a DECISIONS row, {qs} questions render in atlas.html")
 
 
 CHECKS = {
