@@ -1,0 +1,408 @@
+# Data Model: Harness Diagram
+
+The model is LikeC4 text in `docs/harness/`. This file fixes every kind, group and element id
+before the build starts, so that parallel tasks can write links to each other's elements. The
+`.c4` text rules are in [contracts/model-format.md](contracts/model-format.md).
+
+## Entities
+
+### Element
+
+| Field | Rule |
+|-------|------|
+| id | Fully qualified: `<group>.<name>`, or a bare actor id. Fixed by the registry below. |
+| kind | One of the element kinds below. No other kind (FR-007: no step elements). |
+| title | What the page shows. Follows the title rule below. |
+| summary | Required. 1 or 2 short sentences, at most 200 characters, plain words (FR-003). |
+| path | Repo-relative path of a plugin file or folder. The file must exist. |
+| data | Run-time path of a data file in the project or on the machine. Never checked for existence. |
+| tags | `#vendored` on the 11 vendored skills only (FR-008). |
+
+An element has `path` or `data` or neither (groups, actors, events). Never both.
+
+### Link (LikeC4 relationship)
+
+| Field | Rule |
+|-------|------|
+| source, target | Fully qualified element ids. |
+| kind | `starts`, `reads`, `writes`, `runs` or `passes` (FR-004). |
+| label | Required. Names the data the link carries (FR-004, SC-003). |
+| tags | None. Lane membership is only in the lane views (D12). |
+
+Link kinds:
+
+| Kind | Meaning | Example |
+|------|---------|---------|
+| `starts` | Starts an agent (Agent tool) or another skill (Skill tool). | `skills.st-plan -[starts]-> agents.st-plan 'plugin root, project root, feature dir'` |
+| `runs` | Runs a script or a hook file as a process. An event runs a hook. | `events.pre-tool-use -[runs]-> hooks.st-git-guard-py 'Bash command'` |
+| `reads` | Reads a file or folder, also a procedure or template it follows. The target can also be the actor `git` or `github`, for the history or the GitHub state it reads. | `agents.st-plan -[reads]-> procedures.plan-md 'plan steps to follow'` |
+| `writes` | Creates, changes or deletes a file or folder. The label names what is written. | `scripts.st-state-sh -[writes]-> stratum.state-json 'risk level'` |
+| `passes` | Hands data to an element that is not a file: a report back, a question to the user, a prompt to Codex, a PR to GitHub, a commit to git. | `agents.st-plan -[passes]-> skills.st-plan 'plan report and open decisions'` |
+
+Where a link goes: in the `.c4` file that owns its source element. A link whose source is an
+actor or an event goes in the file that owns its target. A link comes from the element whose
+source text gives the instruction or holds the code (for example `procedures/specify.md` writes
+`spec.md`, not `/st-define`).
+
+### View
+
+15 views (D13). The page lists them in this order: file order, then declaration order in the file.
+
+| id | Kind | Title (exact, the page heading) | File | Gates needed | Opened from |
+|----|------|------|------|------|------|
+| `full` | dynamic, overview | Full lane | `views/1-full.c4` | 4 | |
+| `full-define` | dynamic | Full lane: Define | `views/1-full.c4` | 1 | `full` |
+| `full-plan` | dynamic | Full lane: Plan | `views/1-full.c4` | 1 | `full` |
+| `full-inspect` | dynamic | Full lane: Inspect | `views/1-full.c4` | 1 | `full` |
+| `full-build` | dynamic | Full lane: Build | `views/1-full.c4` | 0 | `full` |
+| `full-close` | dynamic | Full lane: Close | `views/1-full.c4` | 1 | `full` |
+| `fast` | dynamic | Fast lane | `views/2-fast.c4` | 1 | |
+| `quick` | dynamic | Quick lane | `views/3-quick.c4` | 0 | |
+| `design` | dynamic, overview | Design lane | `views/4-design.c4` | 2 | |
+| `design-new-look` | dynamic | Design lane: New look | `views/4-design.c4` | 1 | `design` |
+| `design-autonomous` | dynamic | Design lane: Autonomous | `views/4-design.c4` | 0 | `design` |
+| `design-custom` | dynamic | Design lane: Custom | `views/4-design.c4` | 1 | `design` |
+| `agents` | element view | Agents | `views/5-agents.c4` | | |
+| `harness` | element view | Harness | `views/6-harness.c4` | | |
+| `dataflow` | element view | Data flow | `views/7-dataflow.c4` | | |
+
+"Gates needed" is the least number of gate steps the view must have. The Full overview's 4 gates
+are you agree the spec, you answer each open decision, OK to build, and push. The Design
+overview's 2 gates are the new look's yes and the custom mode's yes.
+
+Lane step: one line `<source> -> <target> '(n) <data>'` (an optional kind `-[passes]->` is
+allowed), with an optional ` { navigateTo <view id> }` at the end of the line. In each view, `n`
+starts at 1 and goes up by 1 in file order. A gate step is `(n) gate: <what the user must say>`
+(FR-005, D8). A phase or mode view repeats its gate step, so the overview and the phase view both
+show it.
+
+Click-through (D13): in each overview, the step lines with `navigateTo` name the child views in
+table order, one per child. The Full overview's `include skills.<phase> with { navigateTo <view> }`
+lines open the same views. Every view in the "Opened from" column is one of these targets. Every
+`navigateTo` target is a view id of this table. The `views-<lane>` checks of
+`tests/test_harness_model.sh` enforce the order, the pairing, and that each overview gate step is a
+step of a child view.
+
+### Page
+
+`docs/harness/README.md`, made only by `npx -y likec4@1.60.0 export markdown docs/harness`. First
+line `<!-- Generated by likec4 export markdown. Do not edit manually. -->`, heading
+`# Stratum harness`, then one `### <title>` and one Mermaid block per view, in the order of the
+view table above.
+
+## Element kinds
+
+`group`, `actor`, `event`, `skill`, `agent`, `hook`, `statusline`, `script`, `procedure`,
+`pluginfile`, `datafile`. Relationship kinds: `starts`, `reads`, `writes`, `runs`, `passes`. Tags:
+`vendored` only (D12: no lane tags).
+
+## Title rule
+
+The page shows titles only (research R5), so a title tells the kind apart:
+
+| Kind | Title | Example |
+|------|-------|---------|
+| skill | `/` + folder name | `/st-plan` |
+| agent | file name without `.md` + ` agent` | `st-plan agent` |
+| hook, statusline, script | file name | `st-phase.py` |
+| procedure | repo path | `procedures/plan.md` |
+| pluginfile | repo path | `templates/spec.md` |
+| datafile | run-time path, `specs/NNN-feature/` for feature files | `.stratum/state.json` |
+| event | Claude Code event name | `PreToolUse` |
+| actor, group | name | `Codex`, `Skills` |
+
+A folder's title, `path` and `data` have no trailing slash: `.stratum/templates`,
+`specs/NNN-feature/contracts`, `graphify-out`, `.impeccable`.
+
+No backtick, `<` or `>` in any title, summary or label (research R6).
+
+## Id rule
+
+`<group>.<name>`. For skills: the folder name. For agents: the file name without `.md`. For every
+other file: the file or folder name (procedures, hooks, scripts, statusline, `.stratum`, feature
+files) or the whole path (project, plugin, outside), in lower case, each run of characters other
+than `a-z` and `0-9` replaced by one `-`, with leading and trailing `-` removed. Examples:
+`hooks/ponytail/ponytail-map.js` is `hooks.ponytail-map-js`. `graphify-out/GRAPH_REPORT.md` is
+`project.graphify-out-graph-report-md`.
+
+A task that needs an element that the registry does not list uses the id that the rule gives,
+does not declare it, and names it in its report. The integration task (T018) declares it in
+`model/data.c4`.
+
+## Registry
+
+### Groups (declared in `model/0-spec.c4`)
+
+| id | Title | Holds |
+|----|-------|-------|
+| `skills` | Skills | `skills/*` folders |
+| `agents` | Agents | `agents/*.md` |
+| `events` | Hook events | Claude Code events in `hooks/commands.json` |
+| `hooks` | Hooks | files under `hooks/` and `hooks/ponytail/` |
+| `statusline` | Statusline | files under `statusline/` |
+| `scripts` | Scripts | `scripts/*.sh` |
+| `procedures` | Procedures | `procedures/*.md` |
+| `stratum` | .stratum files | project `.stratum/*` data files |
+| `feature` | Feature files | `specs/NNN-feature/*` data files |
+| `project` | Project files | other project files the harness reads or writes (D10) |
+| `plugin` | Other plugin files | plugin files outside the folders above (D10) |
+| `outside` | Machine files | files outside the project (D10) |
+
+### Actors (declared in `model/0-spec.c4`, no path, no data)
+
+| id | Title |
+|----|-------|
+| `user` | User |
+| `codex` | Codex |
+| `advisor` | /advisor |
+| `github` | GitHub |
+| `git` | git repository |
+| `claude` | Claude Code |
+
+### Skills (40; `model/skills-core.c4`, `skills-tools.c4`, `skills-vendored.c4`)
+
+Each: kind `skill`, title `/<name>`, `path 'skills/<name>'`.
+
+| File | Ids |
+|------|-----|
+| `skills-core.c4` (10) | `skills.st`, `skills.st-full`, `skills.st-fast`, `skills.st-quick`, `skills.st-define`, `skills.st-plan`, `skills.st-inspect`, `skills.st-build`, `skills.st-close`, `skills.st-design` |
+| `skills-tools.c4` (19) | `skills.st-review`, `skills.st-test`, `skills.st-debug`, `skills.st-git`, `skills.st-triage`, `skills.st-worker`, `skills.st-herdr-workspace`, `skills.st-pr`, `skills.st-issues`, `skills.st-handoff`, `skills.st-status`, `skills.st-init`, `skills.st-update`, `skills.st-sync`, `skills.st-template`, `skills.st-constitution`, `skills.st-model`, `skills.st-shape`, `skills.st-theme` |
+| `skills-vendored.c4` (11, all `#vendored`) | `skills.st-ponytail`, `skills.st-ponytail-review`, `skills.st-ponytail-audit`, `skills.st-ponytail-debt`, `skills.st-ponytail-gain`, `skills.st-ponytail-help`, `skills.st-grill`, `skills.st-ui-ux`, `skills.st-impeccable`, `skills.st-graphify`, `skills.st-hallmark` |
+
+### Agents (15; `model/agents.c4`)
+
+Each: kind `agent`, title `<name> agent`, `path 'agents/<name>.md'`. Ids: `agents.st-build`,
+`agents.st-close`, `agents.st-debug`, `agents.st-design`, `agents.st-fast`, `agents.st-git`,
+`agents.st-impeccable`, `agents.st-inspect`, `agents.st-plan`, `agents.st-ponytail-audit`,
+`agents.st-ponytail-debt`, `agents.st-quick`, `agents.st-review`, `agents.st-test`,
+`agents.st-triage`.
+
+### Events, hooks and statusline (`model/hooks.c4`)
+
+Events, kind `event`, no path: `events.pre-tool-use` (PreToolUse), `events.permission-request`
+(PermissionRequest), `events.session-start` (SessionStart), `events.subagent-start`
+(SubagentStart), `events.user-prompt-submit` (UserPromptSubmit), `events.session-end`
+(SessionEnd), `events.pre-compact` (PreCompact).
+
+Hooks, kind `hook`, title = file name:
+
+| id | path |
+|----|------|
+| `hooks.commands-json` | `hooks/commands.json` |
+| `hooks.hooks-json` | `hooks/hooks.json` |
+| `hooks.st-approve-py` | `hooks/st-approve.py` |
+| `hooks.st-git-guard-py` | `hooks/st-git-guard.py` |
+| `hooks.st-handoff-facts-sh` | `hooks/st-handoff-facts.sh` |
+| `hooks.st-models-py` | `hooks/st-models.py` |
+| `hooks.st-phase-py` | `hooks/st-phase.py` |
+| `hooks.st-session-start-sh` | `hooks/st-session-start.sh` |
+| `hooks.token-weather-mjs` | `hooks/token-weather.mjs` |
+| `hooks.ponytail-activate-js` | `hooks/ponytail/ponytail-activate.js` |
+| `hooks.ponytail-config-js` | `hooks/ponytail/ponytail-config.js` |
+| `hooks.ponytail-instructions-js` | `hooks/ponytail/ponytail-instructions.js` |
+| `hooks.ponytail-map-js` | `hooks/ponytail/ponytail-map.js` |
+| `hooks.ponytail-mode-tracker-js` | `hooks/ponytail/ponytail-mode-tracker.js` |
+| `hooks.ponytail-runtime-js` | `hooks/ponytail/ponytail-runtime.js` |
+| `hooks.ponytail-statusline-sh` | `hooks/ponytail/ponytail-statusline.sh` |
+| `hooks.ponytail-subagent-js` | `hooks/ponytail/ponytail-subagent.js` |
+
+Statusline, kind `statusline`: `statusline.st-statusline-sh` (`statusline/st-statusline.sh`),
+`statusline.powerline-json` (`statusline/powerline.json`), `statusline.themes-json`
+(`statusline/themes.json`).
+
+### Scripts (15; `model/scripts.c4`)
+
+Kind `script`, title = file name, `path 'scripts/<file>'`. Ids:
+`scripts.check-prerequisites-sh`, `scripts.common-sh`, `scripts.resolve-template-sh`,
+`scripts.st-advisor-sh`, `scripts.st-codex-agent-sh`, `scripts.st-design-check-sh`,
+`scripts.st-figcraft-sh`, `scripts.st-herdr-workspace-sh`, `scripts.st-lock-sh`,
+`scripts.st-shortcuts-sh`, `scripts.st-state-sh`, `scripts.st-update-sh`, `scripts.st-verify-sh`,
+`scripts.st-worker-sh`, `scripts.st-worktree-sh`.
+
+### Procedures (9; `model/procedures.c4`)
+
+Kind `procedure`, title `procedures/<file>`, `path 'procedures/<file>'`. Ids:
+`procedures.analyze-md`, `procedures.checklist-md`, `procedures.clarify-md`,
+`procedures.constitution-md`, `procedures.converge-md`, `procedures.issues-md`,
+`procedures.plan-md`, `procedures.specify-md`, `procedures.tasks-md`.
+
+### Data files (`model/data.c4`)
+
+`.stratum` files (16), kind `datafile`, title and `data` = `.stratum/<name>`:
+`stratum.advisor-json`, `stratum.app-constitution-md`, `stratum.approve`, `stratum.autonomous`, `stratum.commit-mode`,
+`stratum.constitution-md`, `stratum.decisions-md`, `stratum.git-guard-json`,
+`stratum.handoff-md`, `stratum.lessons-md`, `stratum.models-json`, `stratum.powerline-json`,
+`stratum.state-json`, `stratum.templates`, `stratum.weather-json`, `stratum.worker-setup-sh`.
+`stratum.app-constitution-md` has the path `.stratum/APP-constitution.md`, where APP is the name of
+an app under `apps/`.
+
+Feature files (12), kind `datafile`, title and `data` = `specs/NNN-feature/<name>`:
+`feature.spec-md`, `feature.plan-md`, `feature.research-md`, `feature.data-model-md`,
+`feature.contracts`, `feature.quickstart-md`, `feature.tasks-md`, `feature.checklists`,
+`feature.changes`, `feature.decisions-md`, `feature.advisor-md`, `feature.gaps-md`.
+
+Project files (D10), kind `datafile`, `data` = the project path:
+
+| id | Title and data |
+|----|----------------|
+| `project.design-md` | `DESIGN.md` |
+| `project.agents-md` | `AGENTS.md` |
+| `project.claude-md` | `CLAUDE.md` |
+| `project.graphify-out-graph-report-md` | `graphify-out/GRAPH_REPORT.md` |
+| `project.graphify-out` | `graphify-out` |
+| `project.claude-settings-json` | `.claude/settings.json` |
+| `project.claude-settings-local-json` | `.claude/settings.local.json` |
+| `project.impeccable` | `.impeccable` |
+| `project.gitignore` | `.gitignore` |
+| `project.specs` | `specs` |
+| `project.apps-app-ordinance-md` | `apps/APP/ORDINANCE.md` |
+| `project.apps-app-claude-md` | `apps/APP/CLAUDE.md` |
+| `project.package-json` | `package.json` |
+| `project.product-md` | `PRODUCT.md` |
+| `project.design-system` | `design-system` |
+| `project.hallmark` | `.hallmark` |
+| `project.design` | `design` |
+| `project.git-stratum-name-lock` | `.git/stratum-NAME.lock` |
+| `project.claude-local-md` | `CLAUDE.local.md` |
+| `project.brief-md` | `brief.md` |
+| `project.result-md` | `result.md` |
+
+Plugin files (D10), kind `pluginfile`, `path` = repo path (must exist):
+
+| id | Title and path |
+|----|----------------|
+| `plugin.templates-checklist-md` | `templates/checklist.md` |
+| `plugin.templates-constitution-md` | `templates/constitution.md` |
+| `plugin.templates-models-json` | `templates/models.json` |
+| `plugin.templates-plan-md` | `templates/plan.md` |
+| `plugin.templates-pr-md` | `templates/pr.md` |
+| `plugin.templates-spec-md` | `templates/spec.md` |
+| `plugin.templates-tasks-md` | `templates/tasks.md` |
+| `plugin.claude-plugin-plugin-json` | `.claude-plugin/plugin.json` |
+| `plugin.vendor-lock` | `vendor.lock` |
+| `plugin.sr-opus-5-md` | `sr-opus-5.md` |
+| `plugin.third-party-notices-md` | `THIRD_PARTY_NOTICES.md` |
+| `plugin.workflows-pr-js` | `workflows/pr.js` |
+| `plugin.templates` | `templates` |
+
+Machine files (D10), kind `datafile`, `data` = the path:
+
+| id | Title and data |
+|----|----------------|
+| `outside.local-state-stratum-codex-home` | `~/.local/state/stratum/codex-home` |
+| `outside.claude-settings-json` | `~/.claude/settings.json` |
+| `outside.claude-ponytail-active` | `~/.claude/.ponytail-active` |
+| `outside.claude-ponytail-modes` | `~/.claude/ponytail-modes` |
+| `outside.config-ponytail-config-json` | `~/.config/ponytail/config.json` |
+| `outside.codex-auth-json` | `~/.codex/auth.json` |
+| `outside.xdg-runtime-dir-st-figcraft-port` | `$XDG_RUNTIME_DIR/st-figcraft-PORT` |
+| `outside.claude-plugins-installed-plugins-json` | `~/.claude/plugins/installed_plugins.json` |
+| `outside.claude-plugins-known-marketplaces-json` | `~/.claude/plugins/known_marketplaces.json` |
+| `outside.claude-projects-project-memory` | `~/.claude/projects/PROJECT/memory` |
+
+`workflows/pr.js` is the script of the `stratum:pr` workflow that `skills/st-pr/SKILL.md:37` calls.
+It has the element `plugin.workflows-pr-js` (Plugin files below), linked from `skills.st-pr`. The
+T010 data task declares a registered extra only when a source file names it.
+
+## Validation rules (the test checks these, contracts/test-contract.md)
+
+- Coverage, repo to model (FR-002): every `skills/*/`, `agents/*.md`, file under `hooks/` (not
+  `__pycache__`), `scripts/*.sh`, file under `statusline/` and `procedures/*.md` has an element
+  with that `path`. Every `.stratum/<name>` that the research R10 grep finds has an element with
+  that `data`. Every FR-002 feature file has an element with `data 'specs/NNN-feature/<name>'`.
+- Missing, model to repo: every `path` exists. Every `.stratum/` `data` is still named in the code.
+- Summaries (FR-003), links (FR-004), vendored tags (FR-008), kinds (FR-007), lane steps and gates
+  (FR-005), views and page (FR-006, FR-009).
+
+## Atlas (US5, D14 to D19)
+
+The repo holds 3 atlas files in `docs/harness/atlas/`: `data.mjs` (edited) and the built
+`atlas.html` and `SYSTEM.md`. The skill's `build.mjs` and `template.html` are not committed (D17).
+
+`data.mjs` exports `META`, `DECISIONS`, `GROUPS`, `NODES`, `FLOWS`, `CH` and `HOW_HTML`, in the
+shape of the skill's `assets/data.example.mjs` (fields are listed there). `META.outDir` is `'.'`,
+so the build writes `atlas.html` and `SYSTEM.md` into its temp folder, and the build line copies
+them to `docs/harness/atlas/` (plan.md "System atlas"). `META.sourcePath` is
+`docs/harness/atlas/data.mjs`. `META.buildCmd` is the full build line of spec.md FR-015, so the
+`SYSTEM.md` footer names it. `META.artifactUrl` is `''` (D18: the URL lives in the handoff and
+project memory).
+
+### Structure (one isometric box)
+
+| Field | Rule |
+|-------|------|
+| `id`, `code` | 1 or 2 letters, the same value, unique. Not `Q` (question ids start with `Q-`). |
+| `name`, `short` | Noun. `short` is upper case, 14 characters at most. |
+| `group` | One of `GROUPS`. |
+| `kind` | `box`, `tall`, `store`, `cards`, `slab`, `screen`, `gate` or `job` (design-language "Shapes by role"). |
+| `one` | One sentence. |
+| `what` | For a reader who does not know the code. |
+| `how` | Names files with `<code>`, and ends with the LikeC4 ids the structure stands for: a `LikeC4 id:` or `LikeC4 ids:` list of element ids, or (for a structure that is not files, like G) a `LikeC4 views:` list of view ids. Each item is `<code><id></code>`, for example `<code>skills.st-plan</code>`. Every structure has at least one of the two lists. |
+| `steps` | Optional `[[name, desc], ...]` for the "go inside" view. |
+| `cond` | Questions: the gaps of `gaps.md` (D16) as plain strings (open). No other questions now. |
+| `gx`, `gy`, `w`, `d`, `h` | Layout on the grid. No two footprints overlap. |
+
+Every skill, agent, hook, script, statusline and procedure element of the LikeC4 model is named in
+the `how` of exactly one structure, written in full as `<code><id></code>` (no `*` shorthand).
+Data files are named where they belong (`.stratum` files in S, M or N, feature files in F). This
+is the link between the two forms.
+
+Atlas check (D19, FR-022, the `atlas` check of test-contract.md):
+
+- Every `<code>` item in a `LikeC4 id(s):` list is an element id declared in `model/*.c4`, and
+  every `<code>` item in a `LikeC4 views:` list is a view id declared in `views/*.c4`.
+- Every harness file id is in the `how` of exactly one structure (as `<code><id></code>`
+  anywhere in `how`). Harness file ids come from the repo files by the id rule above:
+  `skills/*/`, `agents/*.md`, every file under `hooks/` (not `__pycache__`, not `*.pyc`), every
+  file under `statusline/`, `scripts/*.sh`, `procedures/*.md` (99 today). Reading the repo, not
+  the model, makes a new skill folder fail this check too, not only `coverage`.
+- Every structure has a `LikeC4 id(s):` or `LikeC4 views:` list.
+
+### Chapters and structures
+
+Proposed list (24 structures). The build task may merge or rename, but keeps the chapter rule:
+chapters 1 to 9 add at most 3 structures each and one flow among shown structures, chapter 10 adds
+none and has `flow: null`.
+
+| Ch | Title | Code, name, kind | LikeC4 ids in `how` (main ones) |
+|----|-------|------------------|----------------------------------|
+| 1 | You and /st | U You (`screen`); O Orchestrator /st (`tall`) | `user`; `skills.st` |
+| 2 | The four lanes | L Lane skills (`box`); P Phase skills (`box`); T Tool skills (`cards`) | `skills.st-full`, `-fast`, `-quick`, `-design`, `st-design-check.sh`, `st-figcraft.sh`; `skills.st-define` ... `skills.st-close`; the other skills (not `st-handoff`, `st-git`, `st-pr`, `st-issues`), with `st-worker.sh`, `st-herdr-workspace.sh`, `st-worktree.sh`, `st-update.sh` |
+| 3 | The spec on disk | F Feature files (`store`); S State files (`store`); R Procedures and templates (`cards`) | `feature.*`; `stratum.state-json` and the other `.stratum` files, `st-state.sh`; `procedures.*`, `plugin.templates-*`, `check-prerequisites.sh`, `resolve-template.sh`, `common.sh` |
+| 4 | The agents that do the work | A Plan and check agents (`box`); B Build agents (`box`); C Lane and close agents (`box`) | `agents.st-plan`, `-inspect`, `-triage`; `agents.st-test`, `-build`, `-debug`, `-review`, `-design`; `agents.st-fast`, `-quick`, `-close`, `-impeccable`, `-ponytail-audit`, `-ponytail-debt`, `st-shortcuts.sh` |
+| 5 | Gates: asking you first | G Gates (`gate`); V Verify and lock (`job`) | the gate steps of the lane views; `st-verify.sh`, `st-lock.sh` |
+| 6 | Second opinion: Codex and /advisor | X Advisor script (`box`); K Codex (`box`); D /advisor (`box`) | `st-advisor.sh`, `st-codex-agent.sh`, `stratum.advisor-json`; `codex`, `outside.local-state-stratum-codex-home`; `advisor` |
+| 7 | Guard rails: hooks | E Hook events (`slab`); W Git guard (`gate`); H Approve, phase and model hooks (`gate`) | `events.*`, `hooks.commands-json`, `hooks.hooks-json`, `claude`; `hooks.st-git-guard-py`, `stratum.git-guard-json`; `hooks.st-approve-py`, `hooks.st-phase-py`, `hooks.st-models-py` |
+| 8 | Memory across sessions | M Handoff (`store`); N Statusline and ponytail (`screen`) | `skills.st-handoff`, `hooks.st-handoff-facts-sh`, `hooks.st-session-start-sh`, `stratum.handoff-md`, `stratum.lessons-md`; `statusline.*`, `hooks.token-weather-mjs`, `hooks.ponytail-*` |
+| 9 | Shipping | Z st-git agent (`job`); I git repository (`store`); GH GitHub PR (`screen`) | `agents.st-git`, `skills.st-git`; `git`; `github`, `skills.st-pr`, `skills.st-issues` |
+| 10 | The whole system | none | flow picker over `FLOWS` |
+
+`FLOWS` (chapter 10 picker): one per lane (Full, Fast, Quick, Design) and one for a commit
+through the guard. The first flow has id `turn`: the template draws only that id with a solid
+line in the last chapter.
+
+### Gap questions (D16)
+
+| Gap in `gaps.md` (in file order) | Structure |
+|-----|-----------|
+| 1. st-close records defer and drop, the agent has no record step | C |
+| 2. st-full names a Plan gate, st-plan names none | G |
+| 3. `gaps.md` is declared, nothing names it | F |
+| 4. tasks procedure: tests optional vs every task has `Test:` | R |
+| 5. specify procedure: checklist template not resolved | R |
+| 6. st-model lists `st-worker` as an agent | T |
+| 7. st-quick agent writes `phase` with no script | S |
+| 8. st-hallmark calls itself `/hallmark` | T |
+| 9. st-impeccable names other paths and `/impeccable` | T |
+| 10. st-ponytail-help points at the upstream plugin | T |
+| 11. st-build agent gives the Fast-lane path without the feature folder | B |
+| 12. ponytail-activate copies a `.ps1` file that does not exist | N |
+| 13. `ponytail-statusline.sh` is copied but never run | N |
+
+Each question keeps the `file:line` cites of its gap. Ids follow from order on the structure:
+`Q-T1` to `Q-T4`, `Q-R1`, `Q-R2`, `Q-N1`, `Q-N2`, and `Q-C1`, `Q-G1`, `Q-F1`, `Q-S1`, `Q-B1`.
+
+### Decisions
+
+`DECISIONS` has one row per decision of `decisions.md` (D1 to D19 now): `axis` = the question in
+a few words, `decision` = the chosen option in one line, `adr` = `decisions.md Dn` (no ADRs).

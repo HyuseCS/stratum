@@ -1,0 +1,111 @@
+views {
+  dynamic view full {
+    title 'Full lane'
+    include skills.st-define with { navigateTo full-define }
+    include skills.st-plan with { navigateTo full-plan }
+    include skills.st-inspect with { navigateTo full-inspect }
+    include skills.st-build with { navigateTo full-build }
+    include skills.st-close with { navigateTo full-close }
+    user -> skills.st '(1) task in plain words'
+    skills.st -> user '(2) lane and risk line'
+    skills.st -> scripts.st-state-sh '(3) risk level'
+    scripts.st-state-sh -> stratum.state-json '(4) risk level'
+    skills.st -> skills.st-define '(5) feature description' { navigateTo full-define }
+    skills.st-define -> user '(6) gate: you agree the spec'
+    skills.st -> skills.st-plan '(7) feature dir' { navigateTo full-plan }
+    skills.st-plan -> user '(8) gate: you answer each open decision'
+    skills.st -> skills.st-inspect '(9) feature dir' { navigateTo full-inspect }
+    skills.st-inspect -> user '(10) gate: OK to build'
+    skills.st -> skills.st-build '(11) feature dir' { navigateTo full-build }
+    skills.st -> skills.st-close '(12) feature dir' { navigateTo full-close }
+    skills.st-close -> user '(13) gate: push'
+  }
+  dynamic view full-define {
+    title 'Full lane: Define'
+    skills.st -> skills.st-define '(1) feature description'
+    skills.st-define -> skills.st-grill '(2) feature description'
+    skills.st-grill -> user '(3) one question at a time with a recommended answer'
+    user -> skills.st-grill '(4) answers on scope, users, data, privacy and done-criteria'
+    skills.st-define -> procedures.specify-md '(5) description and grilling summary'
+    procedures.specify-md -> feature.spec-md '(6) spec from the spec template'
+    procedures.specify-md -> feature.checklists '(7) requirements checklist'
+    procedures.specify-md -> scripts.st-state-sh '(8) feature dir and phase define'
+    skills.st-define -> procedures.clarify-md '(9) spec with open markers, only if gaps remain'
+    procedures.clarify-md -> feature.spec-md '(10) clarified spec'
+    skills.st-define -> procedures.checklist-md '(11) highest impact areas'
+    procedures.checklist-md -> feature.checklists '(12) impact-area checklist'
+    skills.st-define -> user '(13) gate: you agree the spec'
+    skills.st-define -> agents.st-git '(14) spec file paths'
+    agents.st-git -> git '(15) spec commit'
+  }
+  dynamic view full-plan {
+    title 'Full lane: Plan'
+    skills.st -> skills.st-plan '(1) feature dir'
+    skills.st-plan -> agents.st-plan '(2) plugin root, project root, feature dir'
+    agents.st-plan -> procedures.plan-md '(3) plan steps to follow'
+    procedures.plan-md -> feature.plan-md '(4) plan'
+    procedures.plan-md -> feature.research-md '(5) research decisions'
+    procedures.plan-md -> feature.data-model-md '(6) entities'
+    procedures.plan-md -> feature.contracts '(7) interface contracts'
+    procedures.plan-md -> feature.quickstart-md '(8) validation guide'
+    agents.st-plan -> procedures.tasks-md '(9) task steps to follow'
+    procedures.tasks-md -> feature.tasks-md '(10) tasks with test commands'
+    agents.st-plan -> skills.st-plan '(11) plan report and open decisions'
+    skills.st-plan -> user '(12) gate: you answer each open decision'
+    skills.st-plan -> agents.st-plan '(13) answers, same agent'
+    skills.st-plan -> scripts.st-advisor-sh '(14) plan point and feature dir'
+    scripts.st-advisor-sh -> codex '(15) spec, plan and tasks, read-only'
+    codex -> scripts.st-advisor-sh '(16) verdict and findings'
+    scripts.st-advisor-sh -> feature.advisor-md '(17) plan point record'
+    skills.st-plan -> agents.st-git '(18) plan file paths and advisor.md'
+    agents.st-git -> git '(19) plan commit'
+  }
+  dynamic view full-inspect {
+    title 'Full lane: Inspect'
+    skills.st -> skills.st-inspect '(1) feature dir'
+    skills.st-inspect -> agents.st-inspect '(2) plugin root, project root, feature dir'
+    agents.st-inspect -> procedures.analyze-md '(3) analysis steps to follow'
+    agents.st-inspect -> feature.plan-md '(4) Validate section'
+    agents.st-inspect -> skills.st-inspect '(5) findings and verdict'
+    skills.st-inspect -> scripts.st-advisor-sh '(6) check plan, stale or approved'
+    skills.st-inspect -> user '(7) gate: OK to build'
+  }
+  dynamic view full-build {
+    title 'Full lane: Build'
+    skills.st -> skills.st-build '(1) feature dir'
+    skills.st-build -> agents.st-test '(2) test task ids and absolute paths'
+    agents.st-test -> skills.st-build '(3) failing test output'
+    skills.st-build -> agents.st-build '(4) build task ids and absolute paths'
+    agents.st-build -> feature.tasks-md '(5) ticked task'
+    skills.st-build -> scripts.st-verify-sh '(6) test command and touched files'
+    scripts.st-verify-sh -> skills.st-build '(7) one PASS or FAIL line'
+    skills.st-build -> scripts.st-advisor-sh '(8) test point after 2 red tries, task and both failures'
+    skills.st-build -> agents.st-debug '(9) task, test, both failures and advisor answer'
+    skills.st-build -> agents.st-git '(10) task paths, tasks.md and advisor.md'
+    agents.st-git -> git '(11) task commit'
+    skills.st-build -> skills.st-design '(12) screen task and its mode'
+    skills.st-build -> agents.st-review '(13) story diff'
+    agents.st-review -> skills.st-build '(14) review findings'
+    skills.st-build -> scripts.st-advisor-sh '(15) decisions point and small-decision list'
+    skills.st-build -> skills.st-impeccable '(16) changed screens not done by the Design lane'
+    skills.st-build -> scripts.st-advisor-sh '(17) diff point after the last review'
+  }
+  dynamic view full-close {
+    title 'Full lane: Close'
+    skills.st -> skills.st-close '(1) feature dir'
+    skills.st-close -> agents.st-close '(2) feature dir, gap report choice, shortcut base'
+    agents.st-close -> feature.spec-md '(3) drift fixes'
+    agents.st-close -> procedures.converge-md '(4) gap steps 1 to 6, only when asked'
+    agents.st-close -> stratum.lessons-md '(5) proposed lessons'
+    agents.st-close -> scripts.st-shortcuts-sh '(6) shortcut base'
+    agents.st-close -> skills.st-close '(7) drift fixes, gaps, lessons and shortcut rows'
+    skills.st-close -> user '(8) send back, defer or drop each gap'
+    skills.st-close -> user '(9) keep, retarget or drop each lesson'
+    skills.st-close -> user '(10) fix now or keep each shortcut'
+    skills.st-close -> skills.st-graphify '(11) docs graph update'
+    skills.st-close -> agents.st-git '(12) changed doc paths'
+    agents.st-git -> git '(13) close commit'
+    skills.st-close -> scripts.st-state-sh '(14) phase done'
+    skills.st-close -> user '(15) gate: push'
+  }
+}

@@ -1,0 +1,134 @@
+model {
+  extend procedures {
+    analyze-md = procedure 'procedures/analyze.md' {
+      summary 'Read-only check of spec.md, plan.md and tasks.md against each other and the constitution. Returns a findings table, coverage and next actions.'
+      metadata {
+        path 'procedures/analyze.md'
+      }
+    }
+    checklist-md = procedure 'procedures/checklist.md' {
+      summary 'Asks up to 5 questions, then writes or appends a domain checklist that tests how well the requirements are written.'
+      metadata {
+        path 'procedures/checklist.md'
+      }
+    }
+    clarify-md = procedure 'procedures/clarify.md' {
+      summary 'Scans the spec for gaps and asks the user up to 5 questions, one at a time. Writes each answer into spec.md.'
+      metadata {
+        path 'procedures/clarify.md'
+      }
+    }
+    constitution-md = procedure 'procedures/constitution.md' {
+      summary 'Fills the constitution template with project rules, bumps the version and writes .stratum/constitution.md.'
+      metadata {
+        path 'procedures/constitution.md'
+      }
+    }
+    converge-md = procedure 'procedures/converge.md' {
+      summary 'Gap report: checks the code against spec, plan and tasks. Appends a Convergence phase to tasks.md only when the user sends work back.'
+      metadata {
+        path 'procedures/converge.md'
+      }
+    }
+    issues-md = procedure 'procedures/issues.md' {
+      summary 'Makes one GitHub issue per task in tasks.md, and skips a task that already has an issue.'
+      metadata {
+        path 'procedures/issues.md'
+      }
+    }
+    plan-md = procedure 'procedures/plan.md' {
+      summary 'Writes plan.md from the plan template, then research.md, data-model.md, contracts and quickstart.md. Lists open decisions.'
+      metadata {
+        path 'procedures/plan.md'
+      }
+    }
+    specify-md = procedure 'procedures/specify.md' {
+      summary 'Makes the feature folder, writes spec.md from the spec template and checks it with a quality checklist. Sets the feature in state.json.'
+      metadata {
+        path 'procedures/specify.md'
+      }
+    }
+    tasks-md = procedure 'procedures/tasks.md' {
+      summary 'Writes tasks.md from the tasks template: tasks by user story, each with its files and its test command.'
+      metadata {
+        path 'procedures/tasks.md'
+      }
+    }
+  }
+
+  procedures.analyze-md -[runs]-> scripts.check-prerequisites-sh '--require-spec --require-plan --require-tasks --include-tasks'
+  procedures.analyze-md -[reads]-> feature.spec-md 'requirements, success criteria, user stories'
+  procedures.analyze-md -[reads]-> feature.plan-md 'stack choices, phases, constraints'
+  procedures.analyze-md -[reads]-> feature.tasks-md 'task ids, phases, file paths'
+  procedures.analyze-md -[reads]-> stratum.constitution-md 'principles to check against'
+
+  procedures.checklist-md -[runs]-> scripts.check-prerequisites-sh '--require-spec --template checklist'
+  procedures.checklist-md -[reads]-> plugin.templates-checklist-md 'checklist structure'
+  procedures.checklist-md -[reads]-> stratum.templates 'project checklist template, if set'
+  procedures.checklist-md -[reads]-> stratum.constitution-md 'project principles'
+  procedures.checklist-md -[reads]-> feature.spec-md 'requirements and scope'
+  procedures.checklist-md -[reads]-> feature.plan-md 'technical details, if present'
+  procedures.checklist-md -[reads]-> feature.tasks-md 'tasks, if present'
+  procedures.checklist-md -[writes]-> feature.checklists 'domain checklist of CHK items, new or appended'
+  procedures.checklist-md -[passes]-> user 'up to 5 clarifying questions'
+
+  procedures.clarify-md -[runs]-> scripts.check-prerequisites-sh '--paths-only'
+  procedures.clarify-md -[reads]-> stratum.constitution-md 'project principles'
+  procedures.clarify-md -[reads]-> feature.spec-md 'spec to scan for gaps'
+  procedures.clarify-md -[writes]-> feature.spec-md 'Clarifications session and the sections each answer changes'
+  procedures.clarify-md -[writes]-> feature.checklists 'requirements.md checkbox states'
+  procedures.clarify-md -[passes]-> user 'up to 5 questions, one at a time, with a recommended answer'
+
+  procedures.constitution-md -[runs]-> scripts.resolve-template-sh 'constitution'
+  procedures.constitution-md -[reads]-> plugin.templates-constitution-md 'constitution scaffold'
+  procedures.constitution-md -[reads]-> stratum.templates 'project constitution template, if set'
+  procedures.constitution-md -[reads]-> stratum.constitution-md 'current rules and amendments'
+  procedures.constitution-md -[writes]-> stratum.constitution-md 'filled constitution with version, dates and sync report'
+  procedures.constitution-md -[passes]-> user 'new version, open TODOs, commit message, next actions'
+
+  procedures.converge-md -[runs]-> scripts.check-prerequisites-sh '--require-spec --require-plan --require-tasks --include-tasks'
+  procedures.converge-md -[reads]-> feature.spec-md 'requirements and acceptance scenarios'
+  procedures.converge-md -[reads]-> feature.plan-md 'plan decisions and file paths'
+  procedures.converge-md -[reads]-> feature.tasks-md 'existing tasks and file paths'
+  procedures.converge-md -[reads]-> stratum.constitution-md 'MUST principles'
+  procedures.converge-md -[writes]-> feature.tasks-md 'appended Convergence phase, one task per finding'
+
+  procedures.issues-md -[runs]-> scripts.check-prerequisites-sh '--require-plan --require-tasks --include-tasks'
+  procedures.issues-md -[reads]-> stratum.constitution-md 'project principles'
+  procedures.issues-md -[reads]-> feature.tasks-md 'task ids and descriptions'
+  procedures.issues-md -[reads]-> git 'origin remote URL'
+  procedures.issues-md -[passes]-> github 'one issue per new task, titled with its task id'
+
+  procedures.plan-md -[runs]-> scripts.check-prerequisites-sh '--require-spec --template plan'
+  procedures.plan-md -[reads]-> plugin.templates-plan-md 'plan structure'
+  procedures.plan-md -[reads]-> stratum.templates 'project plan template, if set'
+  procedures.plan-md -[reads]-> feature.spec-md 'feature spec'
+  procedures.plan-md -[reads]-> stratum.constitution-md 'constitution check'
+  procedures.plan-md -[writes]-> feature.plan-md 'technical context, constitution check, phases'
+  procedures.plan-md -[writes]-> feature.research-md 'decisions, reasons, alternatives'
+  procedures.plan-md -[writes]-> feature.data-model-md 'entities, fields, rules'
+  procedures.plan-md -[writes]-> feature.contracts 'interface contracts'
+  procedures.plan-md -[writes]-> feature.quickstart-md 'validation scenarios'
+
+  procedures.specify-md -[runs]-> scripts.resolve-template-sh 'spec'
+  procedures.specify-md -[runs]-> scripts.st-state-sh '.stratum/state.json feature_directory, phase define, lane full'
+  procedures.specify-md -[reads]-> plugin.templates-spec-md 'spec structure'
+  procedures.specify-md -[reads]-> stratum.templates 'project spec template, if set'
+  procedures.specify-md -[reads]-> stratum.constitution-md 'project principles'
+  procedures.specify-md -[writes]-> feature.spec-md 'feature spec'
+  procedures.specify-md -[writes]-> feature.checklists 'requirements.md spec quality checklist'
+  procedures.specify-md -[writes]-> stratum.state-json 'feature_directory, phase define, lane full when no lane is set'
+  procedures.specify-md -[passes]-> user 'up to 3 clarification questions, then feature dir, spec path, checklist results'
+
+  procedures.tasks-md -[runs]-> scripts.check-prerequisites-sh '--require-spec --require-plan --template tasks'
+  procedures.tasks-md -[reads]-> plugin.templates-tasks-md 'tasks structure'
+  procedures.tasks-md -[reads]-> stratum.templates 'project tasks template, if set'
+  procedures.tasks-md -[reads]-> stratum.constitution-md 'project principles'
+  procedures.tasks-md -[reads]-> feature.spec-md 'user stories and priorities'
+  procedures.tasks-md -[reads]-> feature.plan-md 'stack and project structure'
+  procedures.tasks-md -[reads]-> feature.research-md 'decisions for setup tasks'
+  procedures.tasks-md -[reads]-> feature.data-model-md 'entities and field rules'
+  procedures.tasks-md -[reads]-> feature.contracts 'interface contracts'
+  procedures.tasks-md -[reads]-> feature.quickstart-md 'test scenarios'
+  procedures.tasks-md -[writes]-> feature.tasks-md 'tasks by user story, with owned files and test commands'
+}
