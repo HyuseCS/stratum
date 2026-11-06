@@ -93,11 +93,11 @@ T010 to T013 are built (90113d2, 9c1e04b). T014 and T015 change them. They run b
 
 ### Tests for User Story 2
 
-- [ ] T005 [US2] In `tests/test_worker_rules.sh`, first table, add W20, W21, W22, W23, W26 and W27 with the files and phrases in `contracts/skill-lines.md` section 3. Red now: all six print `FAIL`, and `tests/test_advisor_rules.sh` is green (A18 to A28 hold the Codex lists). Test: bash tests/test_worker_rules.sh; bash tests/test_advisor_rules.sh.
+- [X] T005 [US2] In `tests/test_worker_rules.sh`, first table, add W20, W21, W22, W23, W26 and W27 with the files and phrases in `contracts/skill-lines.md` section 3. Red now: all six print `FAIL`, and `tests/test_advisor_rules.sh` is green (A18 to A28 hold the Codex lists). Test: bash tests/test_worker_rules.sh; bash tests/test_advisor_rules.sh.
 
 ### Implementation for User Story 2
 
-- [ ] T006 [US2] Add the rule sentence R and its pointer as `contracts/skill-lines.md` section 3 says: in `skills/st/SKILL.md`, a new `## Always` bullet with R after the bullet that ends "and why." (:68), and the W23 line under it, 2-space indent; in `skills/st-build/SKILL.md`, a new last bullet in `## Always` with R, and the W26 line under it, 2-space indent; in `skills/st-worker/SKILL.md`, a blank line and then one line with R and the W27 text after line 10. R is one physical line in each file. Do not change `skills/st-build/SKILL.md:98-100`. Then delete R from `skills/st-build/SKILL.md` once with the Edit tool, run the test, see W21 `FAIL`, and put it back with the Edit tool. Test: bash tests/test_worker_rules.sh && bash tests/test_advisor_rules.sh && bash tests/test_risk_rules.sh && bash tests/test_lane_steps.sh.
+- [X] T006 [US2] Add the rule sentence R and its pointer as `contracts/skill-lines.md` section 3 says: in `skills/st/SKILL.md`, a new `## Always` bullet with R after the bullet that ends "and why." (:68), and the W23 line under it, 2-space indent; in `skills/st-build/SKILL.md`, a new last bullet in `## Always` with R, and the W26 line under it, 2-space indent; in `skills/st-worker/SKILL.md`, a blank line and then one line with R and the W27 text after line 10. R is one physical line in each file. Do not change `skills/st-build/SKILL.md:98-100`. Then delete R from `skills/st-build/SKILL.md` once with the Edit tool, run the test, see W21 `FAIL`, and put it back with the Edit tool. Test: bash tests/test_worker_rules.sh && bash tests/test_advisor_rules.sh && bash tests/test_risk_rules.sh && bash tests/test_lane_steps.sh.
 
 **Checkpoint**: SC-002: `grep -cF` of R gives 1 in each of the three files.
 

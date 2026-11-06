@@ -66,6 +66,8 @@ tell the user in one line, and restart at the higher lane with what was learned.
   source: the defect exists at that `file:line`, and the stated cause is the real one. Drop the
   false ones. A real finding is a decision like any other: small ones get fixed, big ones go to
   the user. The end-of-run list names what was fixed and what was dropped, and why.
+- Watch each agent you summon. Answer its permission prompt when the answer keeps it in its brief. Bring every other prompt to the user with the exact text.
+  The lists: the Codex tab in `/stratum:st-build` (Advisor), herdr workers in `/stratum:st-worker` (step 6), in-session subagents in the next lines.
 - Before accepting code from a subagent, run
   `bash <plugin root>/scripts/st-verify.sh '<test command>' <files it touched>`
   from the project root. It re-runs the tests and greps the diff for added comment lines. Send

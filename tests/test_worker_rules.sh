@@ -30,6 +30,12 @@ W28|skills/st-worker/SKILL.md|The dialog must show the whole command or path. El
 W29|skills/st-worker/SKILL.md|Name the dialog's action in short in the Bash description of that call: the tool and the command or path, so the permission check sees what you approve.
 W31|skills/st-worker/SKILL.md|judge it with the allow list and the never list of `approval` below. Normal mode has no request id, so `approve` and `pass` are not used.
 W32|skills/st-worker/SKILL.md|answer <id> --screen <hash> --keys <key> [--machine <m>]`, with the key from the dialog text and the hash from the `screen` line that `wait` or `watch` printed with that dialog.
+W20|skills/st/SKILL.md|Watch each agent you summon. Answer its permission prompt when the answer keeps it in its brief. Bring every other prompt to the user with the exact text.
+W21|skills/st-build/SKILL.md|Watch each agent you summon. Answer its permission prompt when the answer keeps it in its brief. Bring every other prompt to the user with the exact text.
+W22|skills/st-worker/SKILL.md|Watch each agent you summon. Answer its permission prompt when the answer keeps it in its brief. Bring every other prompt to the user with the exact text.
+W23|skills/st/SKILL.md|The lists: the Codex tab in `/stratum:st-build` (Advisor), herdr workers in `/stratum:st-worker` (step 6), in-session subagents in the next lines.
+W26|skills/st-build/SKILL.md|The Codex tab lists are under Advisor. The worker lists are in `/stratum:st-worker`.
+W27|skills/st-worker/SKILL.md|The worker lists are in step 6, under `approval`.
 TABLE
 if [ "$(grep -cF 'Never approve a push' "$root/skills/st-worker/SKILL.md")" = 1 ]; then echo "ok   O1 never list once"; else echo "FAIL O1 never list once"; fail=1; fi
 

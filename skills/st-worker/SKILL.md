@@ -9,6 +9,8 @@ Plugin root is two levels up from this skill's base directory.
 
 Make no herdr call yourself. Run only `scripts/st-worker.sh`, git and the `st-review` skill.
 
+Watch each agent you summon. Answer its permission prompt when the answer keeps it in its brief. Bring every other prompt to the user with the exact text. The worker lists are in step 6, under `approval`.
+
 1. Read from the request: the task ids, the machine per task (this machine by default), and headless only when the user says headless or asks for a quick local task with no question expected. "A team of N" means N tasks of the named story, in task order, one worker each. Put a task that builds on a teammate's work on that teammate's machine: no commit crosses machines (D25). When the request names a model ("model <name>"), pass `--model <name>` to `start` or `headless` (D27); else pass none.
 2. Per task, get the task text from `<feature>/tasks.md` (or the user's words), the test command the task names (none: ask the user), and the lane: the default lane is `plain edit, no lane`, and pass a Stratum lane only when the user names one in the request. For a saved machine, get the repo path there (unknown: ask the user). A worker whose branch goes to main (a whole issue) opens its own PR: end its task text with "When the test is green and the change is committed, run /stratum:st-pr main, then write the result file with the PR URL on the Open line."
 3. Record the base: `git rev-parse HEAD` of the current branch before the first `start`. This sha is `<base>` in step 8. Write the roster to a scratchpad file, one line per worker with `worker-<id>`, machine (`local` for this machine), branch (`worker-<id>`) and task id, split by TAB. Write each task text to its own scratchpad file.
