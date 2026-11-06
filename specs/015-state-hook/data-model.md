@@ -15,15 +15,17 @@ A JSON object. The hook keeps every key it does not write.
 | `define_before` | sorted list of folder names (strings), may be empty | hook only (new key, read only by the hook): set when Define starts with a description; removed when Define starts with none, and when the hook finds the new folder | cwd-walked file |
 
 The cwd-walked file is the one the hook finds today: walk up from the input `cwd` to the first
-folder that has `.stratum/` or `.git` (`hooks/st-phase.py:29-33`).
+folder that has `.stratum/` or `.git` (the walk at the top of `main` in `hooks/st-phase.py`).
 
 ### Rules
 
-- Missing file, unreadable file or not a JSON object: no write, no output.
+- The cwd-walked file missing, unreadable or not a JSON object: no key is written to it, and no
+  output. The risk still goes to the main checkout's file when the walk found a `.stratum/` folder or
+  a `.git` file (a linked worktree with no `state.json`).
 - Write only when the new value differs from the stored one (a missing `skill` key counts as
   different from `""`, as the deleted script added it).
-- Every write: `tempfile.mkstemp(dir=<state folder>, prefix=".state-")`, then `os.replace`, as
-  `hooks/st-phase.py:61-64` does. One write per file per hook run.
+- Every write: `tempfile.mkstemp(dir=<state folder>, prefix=".state-")`, then `os.replace`, as the
+  `save` function in `hooks/st-phase.py` does. One write per file per hook run.
 
 ### `feature_directory` transition (FR-004)
 

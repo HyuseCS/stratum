@@ -11,7 +11,7 @@ main chat) into `hooks/st-phase.py`: `risk`, `feature_directory`, `phase: done` 
 clear (`skill: ""`). The hook gets three new events (PreToolUse `Agent`, PostToolUse, Stop). It reads
 marker lines from the main session's reply text of the current turn in the transcript, the
 `risk <level>` prompt, and the `specs/` folder. The six skill lines say a marker instead of running
-the script, and the script is deleted. See [research.md](research.md) R1-R9.
+the script, and the script is deleted. See [research.md](research.md) R1-R10.
 
 ## Technical Context
 
@@ -55,22 +55,26 @@ The marker grammar, the turn rule and the file rules are in [data-model.md](data
 
 ### Order inside one hook run
 
-1. Read input. A PreToolUse input with no `skill` (the Agent call) must not fail: compute the skill
-   name only for UserPromptSubmit and for `tool_name == "Skill"`. Today
-   `"/" + (tool_input or {}).get("skill")` raises on the Agent input (`hooks/st-phase.py:22`) and the
-   hook returns.
-2. Find the cwd-walked state file as today (`hooks/st-phase.py:29-38`). Missing or bad: return before
-   any transcript read (Stop runs in projects without Stratum too).
-3. Apply the markers of the current turn (text before this event), then the new-folder scan of
-   `specs/` (data-model.md "`feature_directory` transition"), then the existing phase, lane and
-   held-label logic on the updated state.
-   When the skill is `st-define`, set `define_before` to the sorted folder names in `specs/` (Define
-   with a description) or remove it (Define with no description, a redo) in the same step that sets
-   `phase` to `define`.
-4. Write the cwd file once if it changed. Write the risk to the main file if it changed (one write
-   if both paths are the same file). A main file that is missing or bad while `git` works gets no
-   write and is not created.
-5. Print the label and out-of-order notes exactly as today. Stop and PostToolUse print nothing.
+1. Read input. The skill name comes from a UserPromptSubmit prompt or from a `Skill` tool call
+   (`tool_input.skill`). An Agent input has no `skill`, so none is read from it.
+2. Find the cwd-walked state file: walk up to the first folder with `.stratum/` or `.git`. If the
+   file cannot be loaded and the walk found neither a `.stratum/` folder nor a `.git` file, return
+   before any transcript read (Stop runs in projects without Stratum too). If the file cannot be
+   loaded but the walk found one of those, the run goes on with no state file: the cwd file gets no
+   key, and the risk still reaches the main checkout (a linked worktree with no `state.json`).
+3. Read the current turn's reply markers when the input has no `agent_id`, on PreToolUse `Skill` and
+   `Agent`, PostToolUse `Agent` and Stop (Stop appends `last_assistant_message`). `risk` is the last
+   `Lane:` line, or the `risk <level>` prompt on UserPromptSubmit.
+4. With a loaded state file only: the done and clear markers set `phase` to `done` and `skill` to
+   `""`. On PostToolUse while `phase` is `define` and `define_before` is a list, the new-folder scan
+   runs (data-model.md "`feature_directory` transition"). Then the existing phase, lane and
+   held-label logic runs on the updated state. A Define with a description sets `define_before` in
+   the same step that sets `phase` to `define`. A Define with no description removes it.
+5. Writes: the risk goes to the main checkout's file first, one write when it is the cwd file too.
+   Then the cwd file is written once, if it changed. A main file that is missing or bad is not
+   created or rewritten.
+6. Print: the label (UserPromptSubmit only) and the out-of-order note (UserPromptSubmit or Skill).
+   PreToolUse Agent, PostToolUse and Stop print nothing.
 
 ### Parity with today (SC-002)
 
@@ -97,11 +101,22 @@ The marker grammar, the turn rule and the file rules are in [data-model.md](data
   `state.json` longer for that time, and a commit made then carries the key.
 - Stop may not fire when the user interrupts the reply or the API call fails. A `Phase: done` or
   `Build done.` line said just before is then lost, and the value stays as it was. A `Lane:` line is
-  also read at PreToolUse and PostToolUse `Agent`, so only a turn with no later tool call loses it.
+  also read at PreToolUse `Skill` and `Agent` and at PostToolUse `Agent`. If Stop does not fire and
+  no later Skill or Agent call comes in the turn, the risk is lost.
+- Fast lane order (R8): the `Lane:` line and the step-2 read of `st-advisor.sh change` must be in
+  different model messages. The skill as written puts the step-1 Agent call in a later message, so
+  PreToolUse Agent writes the risk before step 2. If a step-2 read ever ran in the same model message
+  as the `Lane:` line, no hook reads between them, and the risk lands only at Stop, after the read.
+  This cannot happen with the skill as written.
+- A write error (a folder that cannot take the temp file) ends the run with exit 1 and a traceback.
+  No file is half written. Only exit 2 blocks a hook in Claude Code, so the session goes on (not
+  measured live).
 - The hook reads Claude Code's transcript format (`type`, `isMeta`, `isSidechain`, `promptId`,
   `api-request-blob`, `last_assistant_message`), measured on 2.1.316 headless (R1, R2, R4). If the
   format changes, the writes stop with no sign: a stale `risk` picks the wrong advisors and the held
-  label sticks. The live check after merge (quickstart.md) runs on both machines, PC and laptop.
+  label sticks. The live check after merge (quickstart.md) runs on both machines, PC and laptop. In a
+  Fast run it reads the `advisors:` line of `st-advisor.sh change`: `advisors: none (change, risk low)`
+  in the default `auto` mode.
 - Interactive mode transcript timing is not measured (R1).
 
 ## Security notes
@@ -131,7 +146,7 @@ The marker grammar, the turn rule and the file rules are in [data-model.md](data
 specs/015-state-hook/
 ├── spec.md
 ├── plan.md              # this file
-├── research.md          # R1 (orchestrator), R2-R9
+├── research.md          # R1 (orchestrator), R2-R10
 ├── data-model.md
 ├── quickstart.md
 ├── contracts/

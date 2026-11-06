@@ -42,7 +42,7 @@ skill lines write today. Grep the skills for any `state.json` write instruction.
 
 - The transcript does not have the newest reply text yet when a tool-call hook fires (measured: up to about 1 second, see `research.md` R1). The hook then also reads at a later tool call and at the end of the reply, and at the end it also reads the last reply text the hook input gives.
 - A marker line inside a tool result, a quoted user prompt, or a subagent's own reply: it does not count. Only the main session's reply text in the current turn counts, and only at the start of a line.
-- The state file is missing or is not valid JSON: the hook changes nothing and does not block the session.
+- The state file is missing or is not valid JSON: the hook writes no key to it and does not block the session. The risk still goes to the main checkout's file when the walk found a `.stratum/` folder or a `.git` file (a linked worktree with no `state.json`).
 - The `Lane:` line names a level that is not `high`, `normal`, `low` or `none`: no write.
 - A run in a linked worktree: the risk goes to the main checkout's `state.json`, as it does today, because `st-advisor.sh` reads it there.
 
@@ -53,7 +53,7 @@ skill lines write today. Grep the skills for any `state.json` write instruction.
 - **FR-001**: The hook MUST write `risk` from a line that starts with `Lane: <lane>, risk <level>` in the main session's reply text of the current turn, where `<level>` is `high`, `normal`, `low` or `none`. If the turn has more than one such line, the last one wins.
 - **FR-002**: The hook MUST write `risk` from a user prompt that is only `risk <level>`.
 - **FR-003**: The risk write MUST land before the first in-turn reader: in the Fast lane, before `st-advisor.sh change` in `st-fast` step 2.
-- **FR-004**: When Define starts with a description, the hook MUST store `define_before`: the sorted list of all folder names in `specs/` then (empty if none). When Define starts with no description (a redo), the hook MUST remove `define_before`. While `phase` is `define` and `define_before` is a list, after a tool call, the hook MUST look for new folders in `specs/`: not in the list, with a name that fully matches `[A-Za-z0-9._-]+`, holding a `spec.md`. If there is one or more, it MUST set `feature_directory` to `specs/<name>` for the name that sorts last, and remove `define_before`. Folder names need no number. With no `define_before`, the hook does not switch.
+- **FR-004**: When Define starts with a description, the hook MUST store `define_before`: the sorted list of all folder names in `specs/` then (empty if none). When Define starts with no description (a redo), the hook MUST remove `define_before`. While `phase` is `define` and `define_before` is a list, after a `Bash`, `Write`, `Edit`, `MultiEdit` or `Agent` tool call, the hook MUST look for new folders in `specs/`: not in the list, with a name that fully matches `[A-Za-z0-9._-]+`, holding a `spec.md`. If there is one or more, it MUST set `feature_directory` to `specs/<name>` for the name that sorts last, and remove `define_before`. Folder names need no number. With no `define_before`, the hook does not switch.
 - **FR-005**: The hook MUST set `phase` to `done` when the current turn's reply has a line `Phase: done`, in any phase. Only st-close and st-fast tell the session to say it.
 - **FR-006**: The hook MUST set `skill` to empty when the current turn's reply has a line `Build done.`.
 - **FR-007**: A marker MUST count only in the current turn: the reply text after the last real user prompt. Tool results, injected skill text and earlier turns MUST NOT count.
@@ -66,7 +66,7 @@ skill lines write today. Grep the skills for any `state.json` write instruction.
 ### Key Entities
 
 - **State file** (`.stratum/state.json`): the keys `risk`, `feature_directory`, `phase`, `lane`, `skill`, `skill_session`. Only `risk`, `feature_directory`, `phase` (`done`) and `skill` (cleared) get new writers. A new key, `define_before` (a list of folder names), is written and read only by the hook: it holds the `specs/` folder names on disk when a new Define starts, and exists only until the hook finds the new folder or a redo removes it.
-- **Marker line**: a line at the start of the main session's reply text: `Lane: <lane>, risk <level> (...)`, `Phase: done`, `Build done.`.
+- **Marker line**: a line at the start of the main session's reply text: `Lane: <lane>, risk <level> (...)`, `Phase: done`, `Build done.`. The line may have an optional `[label] ` and `- ` bullet in front, and `**` or backticks around it (forms in data-model.md "Marker lines").
 
 ## Success Criteria *(mandatory)*
 

@@ -94,7 +94,21 @@ Method: grep of assistant `text` blocks in `~/.claude/projects/*/*.jsonl` for `L
 
 ## R8. Timing check against FR-003 (Fast lane)
 
-- `/stratum:st` says the `Lane:` line, then starts `st-fast` (PreToolUse Skill: the line may not be in the file yet, R1), then the `st-fast` planner agent (PreToolUse Agent, then PostToolUse Agent many seconds later), then `st-advisor.sh change`. PostToolUse Agent is the latest safe read and it comes before the advisor. Stop is the fallback for the Quick lane and for lanes that ask the user first.
+Question: does the risk land before `st-advisor.sh change` (st-fast step 2)?
+
+Method: live headless run `06d0f0ac-8beb-423a-b5d9-cf2ce35c61a4` (Claude Code 2.1.316, `claude -p`, scratchpad `fastprobe`, the new hook on PreToolUse `Skill|Agent`, PostToolUse `Bash|Write|Edit|MultiEdit|Agent` and Stop). The model wrote the line `Lane: fast, risk high (probe).`, called a Skill, then an Agent, then ran a Bash read of `state.json` (the stand-in for step 2). Hook log, the `risk` value in the main file after each event:
+
+- PreToolUse Skill: `normal`. The Lane line is not in the transcript yet (R1).
+- PreToolUse Agent (step 1, in the next model message, about 1.6 s after the Skill event): `high`.
+- PostToolUse Agent: `high`.
+- PostToolUse Bash (step-2 stand-in): `high`.
+- Stop: `high`.
+
+Decision: the skill text returns before the model acts on it, so step 1's Agent call starts in a later model message. The transcript holds the Lane line by then, and PreToolUse Agent writes `high` before the planner agent runs. Stop is the backup for a turn with no later tool call. With the skill as written, the step-2 read never runs in the same model message as the Lane line, so the advisor reads `high`.
+
+Limit: if a step-2 read ever ran in the same model message as the Lane line, no hook reads between them. The risk would then land only at Stop, after the read.
+
+Not checked: a real `st-fast` run (the probe stands in for it), a background (async) Agent call, and interactive mode. The live check after merge (quickstart.md) covers the real Fast run on PC and laptop.
 
 ## R9. Writes happen only on change
 

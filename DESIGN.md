@@ -264,11 +264,14 @@ dependency.
     `st-full` starts (the user types `/stratum:st-<name>` or the model starts the skill), it
     writes `.stratum/state.json` and keeps the other keys. The skills make no tool call for it.
   - It writes `risk` to the main checkout's file from a `Lane: <lane>, risk <level>` line in the
-    current turn's reply or a `risk <level>` prompt, `feature_directory` from the highest
-    `specs/NNN-<name>` folder with a `spec.md` while `phase` is `define`, when its number is above
-    the highest folder number on disk when a new Define started (`define_floor`), `phase: done`
-    from a `Phase: done` line and `skill: ""` from a `Build done.` line. Only the main session's
-    reply text after the last user prompt counts.
+    current turn's reply or a `risk <level>` prompt, `phase: done` from a `Phase: done` line and
+    `skill: ""` from a `Build done.` line. Only the main session's reply text after the last user
+    prompt counts.
+  - It writes `feature_directory` for a new Define. A Define with a description stores
+    `define_before`, the sorted folder names in `specs/`. While `phase` is `define`, after a tool
+    call, the new folder that has a `spec.md` and a name that fully matches `[A-Za-z0-9._-]+` becomes
+    `feature_directory` (the name that sorts last, if there are several), and `define_before` is
+    removed. A Define with no description (a redo) removes `define_before`.
   - `st-fast` and `st-quick` set `lane` and `phase` to `fast` or `quick`. `st-full` sets `lane`
     to `full`. If `phase` is `fast` or `quick`, it sets `phase` to null. `st-define` sets `phase`
     and sets `lane` to `full`. `st-plan` to `st-close` set `phase`, and set `lane` to `full` only

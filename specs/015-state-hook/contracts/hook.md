@@ -27,12 +27,15 @@ Every entry: `python3 "${CLAUDE_PLUGIN_ROOT}/hooks/st-phase.py"`, `"timeout": 10
 | `transcript_path` | PreToolUse, PostToolUse `Agent`, Stop | reply markers of the current turn |
 | `last_assistant_message` | Stop | appended after the transcript text |
 
-Any field missing or of the wrong type: that part does nothing. Exit code is always 0.
+Any field missing or of the wrong type: that part does nothing. The exit code is 0 unless a write
+fails (a folder that cannot take the temp file): then Python prints a traceback and exits 1. No file
+is half written, and only exit 2 blocks in Claude Code (not measured live).
 
 ## Output
 
-- UserPromptSubmit and PreToolUse Skill: the existing `hookSpecificOutput.additionalContext` line
-  (label, out-of-order note), unchanged.
+- UserPromptSubmit: the existing `hookSpecificOutput.additionalContext` line (the label, and the
+  out-of-order note when there is one), unchanged.
+- PreToolUse Skill: the out-of-order note only, when there is one, unchanged.
 - PreToolUse Agent, PostToolUse, Stop: no output at all.
 - Never a `decision`, `permissionDecision` or `continue` field.
 

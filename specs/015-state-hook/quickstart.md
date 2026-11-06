@@ -23,10 +23,12 @@ grep -rn 'st-state' skills procedures agents hooks scripts
 grep -rn 'state\.json' skills procedures
 ```
 
-Expected: the first prints nothing. The second shows only reads of `state.json`, the `{}` start
-line in `procedures/specify.md`, the file creation in `skills/st-init/SKILL.md:11`, and the
-st-define line that says the hook records `feature_directory` (no instruction to write). These are
-the SC-001 exceptions.
+Expected: the first prints nothing. The second prints reads of `state.json`, the st-define line that
+says the hook records `feature_directory` (no instruction to write), the `{}` start line in
+`procedures/specify.md:41`, the file creation in `skills/st-init/SKILL.md:11`, the st-init commit
+list at `skills/st-init/SKILL.md:87` (a file name in a commit list, no write), and lines about other
+tools' `state.json` files (st-impeccable). Only the `{}` start line and the file creation are SC-001
+exceptions that write `.stratum/state.json`.
 
 ## Negative controls (SC-003)
 
@@ -61,7 +63,9 @@ update, in a test project with `.stratum/state.json`, on both machines (PC and l
 
 1. Run `/stratum:st add a one-line note to README` and pick Fast. After the `Lane:` line and the
    `st-fast` planner agent, run `cat .stratum/state.json` yourself in a terminal: `risk` is `low`.
-   The chat shows no command that writes `state.json`.
+   The chat shows no command that writes `state.json`. At step 2 of the Fast run, the `advisors:` line
+   that `st-advisor.sh change` prints reads `advisors: none (change, risk low)`. This needs mode `auto`
+   in `.stratum/advisor.json` (or no file). A line that says `risk not set` means the risk did not land.
 2. Send `risk high`. In the terminal: `risk` is `high`.
 3. Finish the Fast run. The last reply has the line `Phase: done`. In the terminal: `phase` is `done`.
 4. Run `/stratum:st-define` for a small feature. After `spec.md` exists: `feature_directory` names
