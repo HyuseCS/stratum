@@ -37,10 +37,11 @@ export const DECISIONS = [
   { axis: 'Lane tags', decision: 'Links carry no lane tags. The lane views are the one source for lane steps.', adr: 'decisions.md D12' },
   { axis: 'Big lane views', decision: 'Full and Design lanes have an overview view that clicks through to one view per phase or mode.', adr: 'decisions.md D13' },
   { axis: 'Atlas', decision: 'Add this atlas as a fifth user story, to compare with the LikeC4 views.', adr: 'decisions.md D14' },
-  { axis: 'Atlas home', decision: 'In-tree at `docs/harness/atlas/` and published at one private URL. No drift test while it is a trial.', adr: 'decisions.md D15' },
+  { axis: 'Atlas home', decision: 'In-tree at `docs/harness/atlas/` and published at one private URL. D19 added its drift check.', adr: 'decisions.md D15' },
   { axis: 'Atlas questions', decision: 'The 13 gaps of `gaps.md` are the open questions, each on the structure it touches, not drawn on the map.', adr: 'decisions.md D16' },
   { axis: 'Atlas files', decision: 'Only `data.mjs` and the built `atlas.html` and `SYSTEM.md` are committed. `build.mjs` and `template.html` come from the installed skill.', adr: 'decisions.md D17' },
   { axis: 'Atlas URL', decision: 'The private URL stays out of the repo, in the session handoff and project memory.', adr: 'decisions.md D18' },
+  { axis: 'Atlas role', decision: 'Keep both: the atlas is the picture for people and gets a drift check against the model, and the LikeC4 model stays the checked source for the LLM.', adr: 'decisions.md D19' },
 ];
 
 export const GROUPS = [

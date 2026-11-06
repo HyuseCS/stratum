@@ -26,10 +26,11 @@ Stratum is a Claude Code plugin that runs a coding task through a lane. You give
 | Lane tags | Links carry no lane tags. The lane views are the one source for lane steps. | decisions.md D12 |
 | Big lane views | Full and Design lanes have an overview view that clicks through to one view per phase or mode. | decisions.md D13 |
 | Atlas | Add this atlas as a fifth user story, to compare with the LikeC4 views. | decisions.md D14 |
-| Atlas home | In-tree at `docs/harness/atlas/` and published at one private URL. No drift test while it is a trial. | decisions.md D15 |
+| Atlas home | In-tree at `docs/harness/atlas/` and published at one private URL. D19 added its drift check. | decisions.md D15 |
 | Atlas questions | The 13 gaps of `gaps.md` are the open questions, each on the structure it touches, not drawn on the map. | decisions.md D16 |
 | Atlas files | Only `data.mjs` and the built `atlas.html` and `SYSTEM.md` are committed. `build.mjs` and `template.html` come from the installed skill. | decisions.md D17 |
 | Atlas URL | The private URL stays out of the repo, in the session handoff and project memory. | decisions.md D18 |
+| Atlas role | Keep both: the atlas is the picture for people and gets a drift check against the model, and the LikeC4 model stays the checked source for the LLM. | decisions.md D19 |
 
 ## Cost model
 
