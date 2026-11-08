@@ -19,7 +19,7 @@ Prerequisites: `codex` logged in, `.stratum/advisor.json` with mode `codex`, her
 M1. Plain form, no spec folder (Story 1)
 1. In a scratch repo with no `specs/`: `git switch -c try/one`, make two commits.
 2. Run `/stratum:st-advisor`.
-3. Expect: the Codex tab opens and runs the review; last line `codex: tab st-codex-<label>`; record at `<repo>/.stratum/advisor/try-one.md` with one `## review |` entry; `git status --porcelain` the same as before.
+3. Expect: the Codex tab opens and runs the review; last line `codex: tab st-codex-<label>`; record at `<repo>/.stratum/advisor/try-one.md` with one `## review |` entry; `git status --porcelain` the same as before except `?? .stratum/advisor/` (the scratch repo does not ignore it, SC-002).
 4. Run it again: the file has two entries.
 
 M2. Headless fallback

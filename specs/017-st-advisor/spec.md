@@ -1,12 +1,12 @@
 # Feature Specification: st-advisor, an on-demand Codex review with no spec folder
 
-**Feature Branch**: `079-st-advisor`
+**Feature Branch**: `worker-f79` (feature folder `017-st-advisor`)
 
 **Created**: 2026-11-08
 
 **Status**: Draft
 
-**Input**: User description: "Issue #79: an on-demand Codex diff review that needs no `spec.md`, fits a whole-build diff, and has a skill the user can call by name. Grill decisions D11–D18 in `decisions.md`."
+**Input**: User description: "Issue #79: an on-demand Codex diff review that needs no `spec.md`, fits a whole-build diff, and has a skill the user can call by name. Grill decisions D11–D18 in `decisions.md`; D19 and D20 come from the plan."
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -98,7 +98,8 @@ diff does not make. Check that the record has a finding about the missing change
 - No commits between the base and HEAD: no review runs, and the output says there is no change.
 - No `main` branch and no base given: the skill stops and asks for the base.
 - The base is not a commit: the skill stops with the usage line.
-- A file changes in the review folder during the review: the review is BLOCKED, the same as today, and the record says so. The review is made for finished work, so this is an error case.
+- A file changes in the review folder during a review in the Codex tab: the review is BLOCKED, the same as today, and the record says so. A headless review has no change check, the same as the other points. The review is made for finished work, so this is an error case.
+- Codex cannot run in the PR form (mode off, mode not set, Codex not installed): the skill stops before either reviewer starts, with the same line as the script, and CodeRabbit does not run (D19).
 - Uncommitted files in the review folder: they are not part of the review. The skill says that they are not reviewed.
 - Advisor mode is not set: the skill stops and asks the advisor question of `/stratum:st-init`, the same as the lane points.
 - Codex is not installed: no review runs, and the output says so.
@@ -116,7 +117,7 @@ diff does not make. Check that the record has a finding about the missing change
 - **FR-003**: The `review` point MUST run Codex in advisor mode `auto`, `codex` or `both`, at any risk level. Mode `off`, mode not set, and Codex not installed MUST give the same lines as the other points.
 - **FR-004**: The `review` point MUST use the Codex tab first. It MUST fall back to a headless run only when the session is not in herdr, the tab is busy, or the tab name is in use in another folder. The output MUST say which one ran.
 - **FR-005**: The headless fallback of `review` MUST have a limit of 1800 s. The other points MUST keep their 540 s limit.
-- **FR-006**: A change to a file or to HEAD in the review folder during the review MUST make the review BLOCKED, the same as the other points.
+- **FR-006**: In a review that runs in the Codex tab, a change to a file or to HEAD in the review folder during the review MUST make the review BLOCKED, the same as the other points. A headless review has no change check, the same as the other points.
 - **FR-007**: The `review` point MUST add each result (verdict, summary, findings, or BLOCKED with the reason) to `<main checkout>/.stratum/advisor/<branch>.md`, also from a linked worktree. Each `/` in the branch name MUST become `-`. On a detached HEAD the file name MUST be the short commit id. Earlier entries MUST stay.
 - **FR-008**: This repo's `.gitignore` MUST ignore `.stratum/advisor/`.
 - **FR-009**: The `review` prompt MUST ask Codex for a full review: bugs, regressions, security and broken rules of the project's constitution. It MUST keep the review-only and secrets rules of the other points.
@@ -126,7 +127,7 @@ diff does not make. Check that the record has a finding about the missing change
 - **FR-013**: For a PR number only, the skill MUST also run a CodeRabbit review of the same range at the same time as Codex, and add its findings to the same record file in their own section. When CodeRabbit cannot run, the skill MUST say why and the Codex review MUST still run.
 - **FR-014**: The skill MUST watch the Codex tab during the review and handle its prompts with the same rules as the Advisor section of the Build skill.
 - **FR-015**: The skill MUST check each finding from Codex and CodeRabbit against the source before it shows it, and show the dropped ones with why, the record path, and which runner (tab or headless) ran Codex.
-- **FR-016**: The other advisor points, the lanes, and the `advisor.md` in feature folders MUST NOT change.
+- **FR-016**: The other advisor points, the lanes, and the `advisor.md` in feature folders MUST NOT change. The one allowed change to their output is the shared usage line, which gains `review`.
 - **FR-017**: The harness model and its drift test MUST list the new skill, so that all existing tests pass.
 
 ### Key Entities
@@ -139,7 +140,7 @@ diff does not make. Check that the record has a finding about the missing change
 ### Measurable Outcomes
 
 - **SC-001**: A user can start a review of a finished whole-build diff of about 5,800 lines with one command, with no `spec.md`, and the review in the Codex tab ends with a verdict and not with "timed out".
-- **SC-002**: After any review, `git status` in the review folder is the same as before it.
+- **SC-002**: After any review, `git status` in the review folder is the same as before it, except the record file in a project that does not ignore `.stratum/advisor/`.
 - **SC-003**: A user can review a worker's PR from the orchestrator session with one command, and the record has both a Codex entry and a CodeRabbit section.
 - **SC-004**: Every finding the skill shows was checked against the source. 100% of the dropped findings are listed with a reason.
 - **SC-005**: The lane points give the same output as before for the same inputs.

@@ -39,8 +39,8 @@ R8. Codex tab for the PR form
 
 R9. CodeRabbit
 - Installed: `coderabbit` 0.9.2. `review` flags used: `--agent` (structured findings), `--committed`, `--base-commit <commit>`. It keeps its state in `~/.coderabbit/` (`reviews/`, `logs/`), not in the repo, so it does not trip the tab snapshot.
-- Help text: `--fresh` reviews "without reusing the previous local checkpoint". Decision D2 = A: add it, so each run covers the same whole range (FR-013). Command: `coderabbit review --agent --fresh --committed --base-commit <base>`.
-- Decision D1 = B: the skill checks the mode file and `command -v codex` before it starts either reviewer. Mode `off`, mode not set or no `codex` stop the PR form with the script's own line, and CodeRabbit does not run. This matches the edge case "no review runs", and it does not use CodeRabbit quota before the mode question.
+- Help text: `--fresh` reviews "without reusing the previous local checkpoint". Decision D20: add it, so each run covers the same whole range (FR-013). Command: `coderabbit review --agent --fresh --committed --base-commit <base>`.
+- Decision D19: the skill checks the mode file and `command -v codex` before it starts either reviewer. Mode `off`, mode not set or no `codex` stop the PR form with the script's own line, and CodeRabbit does not run. This matches the edge case "no review runs", and it does not use CodeRabbit quota before the mode question.
 - The output format of `--agent` was not run (a live run sends code out). The record keeps the output as text.
 - Who writes the section: the skill, with the Edit tool, after the Codex point ends. No script change. The point writes its own entry first, so the two never write at the same time.
 - Which errors: any non-zero exit (not installed, not signed in, network, usage limit). The skill shows the first error line and says CodeRabbit did not run.
