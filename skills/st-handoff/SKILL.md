@@ -7,6 +7,7 @@ description: Write the session handoff to .stratum/handoff.md so the next sessio
 
 ## Where it runs
 
+- First, then go on to the other bullets: The user said they are done or will continue some other time, and autonomous build mode is on for this session: before you write, run `bash <plugin root>/scripts/st-worker.sh autonomous-off --roster <roster file>` if workers ran, else `bash <plugin root>/scripts/st-worker.sh autonomous-off`. Show its lines word for word and say `Autonomous build mode: off`.
 - A `Handoff` fork is already running: do not start another and do not write here. Wait for its report. If the user said they are done, wait for it before the reply ends.
 - The user said they are done or is ending the session: write it here, in the main session, so it finishes before they leave.
 - Else start the Agent tool with `subagent_type: "fork"` and the description `Handoff`. A fork has this whole conversation and runs in the background. Prompt: "You are the fork. Write `.stratum/handoff.md` now as `/stratum:st-handoff` says after its Where it runs section. Do not start another agent." Tell the user in one line that a fork is writing it, and keep answering. When it reports, relay its next step in one line. If its report shows no file was written, write it here.

@@ -130,6 +130,7 @@ When a change touches shared config, test setup, a schema or migration, middlewa
 | `st-review`, `st-test`, `st-debug`, `st-git` | Run one Build-loop agent on demand. A missing feature comes from `.stratum/state.json`, a missing range is `main..HEAD`. |
 | `st-triage <issue#>...` | Check GitHub issues against the code and git history, read-only: verdict, what is built, blocker, next step. |
 | `st-advisor [base \| #PR] [plan file]` | On-demand Codex review of finished work with no spec folder, from the base to HEAD. A PR gets a CodeRabbit review too. |
+| `st-research <words>` | Research on demand: a scope and numbered questions, facts with cites from the code and the web, one research file. No plan or feature needed. |
 | `st-herdr-workspace <folder>` | Open a project folder as a new herdr workspace with the full or basic layout, here or on a saved machine. |
 | `st-worker <task>...` | Run tasks in worker sessions (a `claude` in its own herdr pane and worktree, here or on a saved machine, or headless), then review and merge their branches. |
 | `st-status` | Feature, phase, lane, tasks done, git guard options, next gate, missing tools, duplicate installs, days since the last upstream sync, model overrides. |
@@ -170,6 +171,7 @@ All skills are called as `/stratum:<name>`.
 | `st-ponytail-audit` | Opus | Background ponytail audit, read-only |
 | `st-ponytail-debt` | Sonnet | Background ponytail debt ledger, read-only |
 | `st-triage` | Opus | Checks a GitHub issue against the code and git history, read-only |
+| `st-research` | Opus | Answers numbered research questions with cites and writes one research file, read-only otherwise |
 
 The Model column is the plugin default. `st-init`'s template runs `st-build`, `st-debug`,
 `st-quick`, `st-plan`, and `st-fast` on Opus with effort high, and `st-close`, `st-git`, and
@@ -292,7 +294,7 @@ read the `.c4` text, or run `npx -y likec4@1.60.0 export json docs/harness`.
   inside the new worktree, after the worktree is made and before `claude` starts there, and shows
   its output. If it exits non-zero, `start` stops and starts no `claude`. On a saved machine it
   runs that machine's own file. It runs with no prompt of its own, so read it before you add it.
-- **Autonomous build mode.** In autonomous build mode a worker's permission prompt goes to the orchestrator, which approves only a test, a lint, an edit inside the worker's worktree, or a commit of the task's own files on the worker's own branch with no `--amend` and no `--no-verify`, one time. Never put `st-worker.sh` on a permission allow list: each `approve` call names the full command it approves, and your permission check must see it. The hook acts only while autonomous build mode is on for the orchestrator's session (the main checkout's `.stratum/autonomous` and the worker's session file must match). For a commit it checks that the command's git parts are only `git add` and `git commit`, the branch is the worker's, every staged file is one the task owns, and there is no `--amend`, no `--no-verify` and no option it does not know. A commit on the worker's own branch runs with no prompt (`commit: auto`), so it is checked at the review, not here. In a worker session, a check before every Bash command, Edit, Write, Read, Grep and Glob blocks any that touches `.stratum/approve/` or `.stratum/autonomous`, and any Bash command that runs `st-worker.sh` with `approve`, `pass`, `autonomous-off`, `wait`, `start`, `resend`, `followup` or `watch`. Workers run as the same OS user as you, so this is a guard against mistakes and simple prompt injection, not a wall: a worker that works around it on purpose, for example by building that path at run time, is not stopped. A write outside the worker's worktree still prompts and goes to the user.
+- **Autonomous build mode.** In autonomous build mode a worker's permission prompt goes to the orchestrator, which approves only a test, a lint, an edit inside the worker's worktree, or a commit of the task's own files on the worker's own branch with no `--amend` and no `--no-verify`, one time. Never put `st-worker.sh` on a permission allow list: each `approve` call names the full command it approves, and your permission check must see it. The hook acts only while autonomous build mode is on for the orchestrator's session (the main checkout's `.stratum/autonomous/` folder holds an entry named with the session id in the worker's session file). For a commit it checks that the command's git parts are only `git add` and `git commit`, the branch is the worker's, every staged file is one the task owns, and there is no `--amend`, no `--no-verify` and no option it does not know. A commit on the worker's own branch runs with no prompt (`commit: auto`), so it is checked at the review, not here. In a worker session, a check before every Bash command, Edit, Write, Read, Grep and Glob blocks any that touches `.stratum/approve/` or `.stratum/autonomous`, and any Bash command that runs `st-worker.sh` with `approve`, `pass`, `autonomous-on`, `autonomous-off`, `wait`, `start`, `resend`, `followup` or `watch`. Workers run as the same OS user as you, so this is a guard against mistakes and simple prompt injection, not a wall: a worker that works around it on purpose, for example by building that path at run time, is not stopped. A write outside the worker's worktree still prompts and goes to the user.
 - **PR flow.** Every merge into main goes through its GitHub PR, never a local merge. The
   session that works a branch opens its own PR with `st-pr` and stays open until it is merged.
   Nothing merges before you test it. An Approve at the `st-pr` gate counts as "push". A worker
@@ -300,12 +302,12 @@ read the `.c4` text, or run `npx -y likec4@1.60.0 export json docs/harness`.
 - **Model overrides.** `.stratum/models.json` maps an agent name to an optional `model` and
   `effort`, for example `{ "st-close": { "model": "haiku", "effort": "xhigh" } }`. Agents:
   `st-build`, `st-close`, `st-debug`, `st-design`, `st-fast`, `st-git`, `st-impeccable`, `st-inspect`,
-  `st-plan`, `st-ponytail-audit`, `st-ponytail-debt`, `st-quick`, `st-review`, `st-test`, `st-triage`. Models:
+  `st-plan`, `st-ponytail-audit`, `st-ponytail-debt`, `st-quick`, `st-research`, `st-review`, `st-test`, `st-triage`. Models:
   `sonnet`, `opus`, `haiku`, `fable`. Efforts: `low`, `medium`, `high`, `xhigh`, `max`. `st-init` writes it from `templates/models.json`:
   `st-build`, `st-debug`, `st-quick`, `st-plan`, `st-fast` on opus with effort high, and
   `st-close`, `st-git`, `st-test` on haiku with effort xhigh.
   `st-inspect` and `st-review` have no entry and keep the plugin default.
-  `st-design`, `st-impeccable`, `st-ponytail-audit`, `st-ponytail-debt` and `st-triage` have no entry either. A hook applies
+  `st-design`, `st-impeccable`, `st-ponytail-audit`, `st-ponytail-debt`, `st-research` and `st-triage` have no entry either. A hook applies
   the file each time a Stratum agent starts, so the next start picks up an edit. A bad file blocks every
   Stratum agent start with a message that names the problem. Only Stratum agents are affected.
   `CLAUDE_CODE_EFFORT_LEVEL` beats the file's effort.
@@ -439,6 +441,7 @@ bash tests/test_codex_agent.sh
 bash tests/test_plan_rules.sh
 bash tests/test_screen_rules.sh
 bash tests/test_triage_rules.sh
+bash tests/test_research.sh
 bash tests/test_no_frontend_design.sh
 bash tests/test_risk_rules.sh
 bash tests/test_worker_rules.sh

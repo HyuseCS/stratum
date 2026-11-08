@@ -69,6 +69,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 | `st-ponytail-audit` | ponytail audit | Opus | No | Background over-engineering audit. Read-only. |
 | `st-ponytail-debt` | ponytail debt | Sonnet | No | Background `ponytail:` ledger. Read-only. |
 | `st-triage` | issue #15 | Opus | No | Checks a GitHub issue against the code and git history. Read-only. |
+| `st-research` | issue #80 | Opus | Research file only | Answers numbered research questions with cites. Writes one research file. |
 
 - **D8. Rules every agent carries.** Read `sr-opus-5.md` first. Navigate graph, then search,
   then read. Agents that write code also carry the `[PONYTAIL]` directive and the no-comments
@@ -76,7 +77,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 
 ## 3. Skills
 
-- **D9.** Twenty-six entry skills:
+- **D9.** Twenty-seven entry skills:
 
 | Skill | Job |
 |-------|-----|
@@ -95,6 +96,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 | `st-pr [base]` | Open a PR: facts from git and the spec, one gate, a draft that becomes ready when CI passes. |
 | `st-review`, `st-test`, `st-debug`, `st-git` | Run one Build-loop agent on demand, then the check the orchestrator runs after it in a lane. |
 | `st-triage <issue#>...` | Check GitHub issues against the code and git history: verdict, what is built, blocker, next step. Read-only. |
+| `st-research <words>` | Research on demand: scope and numbered questions, facts with cites from the code and the web, one research file. No plan needed. |
 | `st-herdr-workspace <folder>` | Open a project folder as a new herdr workspace with the full or basic layout, here or on a saved machine. |
 | `st-worker <task>...` | Run tasks in worker sessions (a `claude` in its own herdr pane and worktree, here or on a saved machine, or headless), then review and merge their branches. |
 
@@ -192,7 +194,7 @@ dependency.
   |------|----------|-----|
   | `.stratum/advisor.json` | main | One advisor mode for the project (`st-advisor.sh`). |
   | `.stratum/advisor` | main | `st-advisor.sh review` writes each branch's review record to the main checkout's folder, also from a worktree. |
-  | `.stratum/autonomous` | main | Only the main checkout holds the flag (`st-approve.py`, `st-worker.sh`). |
+  | `.stratum/autonomous` | main | Only the main checkout holds the mode folder, one entry per session (`st-approve.py`, `st-worker.sh`). |
   | `.stratum/worker-setup.sh` | main | The user's own setup for a new worker worktree. `st-worker.sh start` runs the main checkout's file in the worktree before `claude` starts. Stratum never writes it. |
   | `.stratum/state.json` | own | Each checkout runs its own phase. `st-advisor.sh` reads `risk` from the main checkout's file. |
   | `.stratum/git-guard.json` | own | `st-worker.sh start` writes each worker's own. |
@@ -202,6 +204,7 @@ dependency.
   | `.stratum/weather.json` | own | The statusline cache of that checkout. |
   | `.stratum/handoff.md` | own | Each checkout's session writes its own. |
   | `.stratum/decisions.md` | own | Grill decisions when no feature is set. |
+  | `.stratum/research` | own | Research files of `/stratum:st-research` when no feature folder is named. Each checkout writes its own. |
   | `.stratum/commit-mode` | own | Discontinued. `st-update` removes it from each checkout. |
   | `.stratum/lessons.md` | link | Lessons written in a worktree go to the main checkout's file. |
   | `.stratum/constitution.md` | link | The project rules, also each `<app>-constitution.md`. |

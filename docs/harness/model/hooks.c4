@@ -43,7 +43,7 @@ model {
       }
     }
     st-approve-py = hook 'st-approve.py' {
-      summary 'Denies worker access to the approve folder and the autonomous flag. In an autonomous run it writes each permission request to a file and allows it when the orchestrator answers ok.'
+      summary 'Denies worker access to the approve folder and the autonomous folder. In an autonomous run it writes each permission request to a file and allows it when the orchestrator answers ok.'
       metadata {
         path 'hooks/st-approve.py'
       }

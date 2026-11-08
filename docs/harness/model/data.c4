@@ -19,7 +19,7 @@ model {
       }
     }
     autonomous = datafile '.stratum/autonomous' {
-      summary 'The autonomous build flag with the session id in the main checkout. The orchestrator writes it, st-worker.sh and st-approve.py read it.'
+      summary 'One empty entry per session in this folder of the main checkout, named with the session id. st-worker.sh makes and removes it, st-worker.sh, st-approve.py and the statusline read it.'
       metadata {
         data '.stratum/autonomous'
       }
@@ -46,6 +46,12 @@ model {
       summary 'Grill decisions when no feature is set. /st-grill writes it.'
       metadata {
         data '.stratum/decisions.md'
+      }
+    }
+    research = datafile '.stratum/research' {
+      summary 'Research files of /st-research when no feature folder is named. The st-research agent writes them.'
+      metadata {
+        data '.stratum/research'
       }
     }
     git-guard-json = datafile '.stratum/git-guard.json' {

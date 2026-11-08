@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
-usage() { echo "usage: st-worker.sh start <id> --task <file> --test <cmd> --lane <text> --roster <file> [--machine <m> --repo <path>] [--model <name>] [--autonomous] | goal <id> --test <cmd> [--machine <m>] | resend <id> [--machine <m>] | followup <id> --task <file> --test <cmd> [--machine <m>] | wait <id> [--machine <m>] | answer <id> [--machine <m>] [--screen <hash>] --keys <key>... | --text <text> | result <id> [--machine <m>] | close <id> [--machine <m>] | list [--machine <m>] | headless <id> --task <file> --test <cmd> [--model <name>] | approve <id> --request <rid> --input-stdin --record <file> [--machine <m>] | pass <id> --request <rid> [--machine <m>] | autonomous-off [--roster <file>] | watch --roster <file>" >&2; exit 2; }
+usage() { echo "usage: st-worker.sh start <id> --task <file> --test <cmd> --lane <text> --roster <file> [--machine <m> --repo <path>] [--model <name>] [--autonomous] | goal <id> --test <cmd> [--machine <m>] | resend <id> [--machine <m>] | followup <id> --task <file> --test <cmd> [--machine <m>] | wait <id> [--machine <m>] | answer <id> [--machine <m>] [--screen <hash>] --keys <key>... | --text <text> | result <id> [--machine <m>] | close <id> [--machine <m>] | list [--machine <m>] | headless <id> --task <file> --test <cmd> [--model <name>] | approve <id> --request <rid> --input-stdin --record <file> [--machine <m>] | pass <id> --request <rid> [--machine <m>] | autonomous-on | autonomous-off [--roster <file>] | watch --roster <file>" >&2; exit 2; }
 fail() { echo "$1" >&2; exit 1; }
 [ $# -gt 0 ] || usage
 cmd=$1; shift
 case $cmd in
   start | goal | resend | followup | wait | answer | result | close | headless | approve | pass) [ $# -gt 0 ] || usage; id=$1; shift ;;
   list | autonomous-off | watch) ;;
+  autonomous-on) [ $# = 0 ] || usage ;;
   *) usage ;;
 esac
 m= repo= auto= instdin=
@@ -55,17 +56,18 @@ esac
 for v in ${text+"$text"} ${keys+"${keys[@]}"}; do [[ $v != -* ]] || { echo 'Answer values must not start with -.' >&2; exit 2; }; done
 
 N=
-if [ "$cmd" != list ] && [ "$cmd" != autonomous-off ] && [ "$cmd" != watch ]; then
+if [ "$cmd" != list ] && [ "$cmd" != autonomous-off ] && [ "$cmd" != autonomous-on ] && [ "$cmd" != watch ]; then
   [[ $id =~ ^[A-Za-z0-9][A-Za-z0-9-]{0,24}$ ]] || fail "Task id must be letters, digits or dash, start with a letter or digit, and be at most 25 characters."
   N=worker-${id,,}
 fi
-if [ "$cmd" = approve ] || [ "$cmd" = pass ] || [ "$cmd" = autonomous-off ] || [ -n "$auto" ]; then
+if [ "$cmd" = approve ] || [ "$cmd" = pass ] || [ "$cmd" = autonomous-off ] || [ "$cmd" = autonomous-on ] || [ -n "$auto" ]; then
   if { tl=$(git rev-parse --show-toplevel 2>/dev/null) && [ -e "$tl/.stratum/approve" ]; } || [[ $(git symbolic-ref --short HEAD 2>/dev/null) == worker-* ]]; then
     fail "Run this from the orchestrator's checkout, not a worker worktree."
   fi
   d=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) && MAIN=$(dirname "$d") || MAIN=
   SID=${CLAUDE_CODE_SESSION_ID:-}
-  [ "$cmd" = autonomous-off ] || { [ -n "$MAIN" ] && [ -n "$SID" ] && [ -f "$MAIN/.stratum/autonomous" ] && [ "$(head -n 1 "$MAIN/.stratum/autonomous")" = "$SID" ]; } || fail "Autonomous build mode is off for this session."
+  D=$MAIN/.stratum/autonomous
+  [ "$cmd" = autonomous-on ] || { [[ $SID =~ ^[A-Za-z0-9-]+$ ]] && { [ "$cmd" = autonomous-off ] || { [ -n "$MAIN" ] && [ -d "$D" ] && [ ! -L "$D" ] && [ -f "$D/$SID" ] && [ ! -L "$D/$SID" ]; }; }; } || fail "Autonomous build mode is off for this session."
 fi
 if [ "$cmd" = approve ] || [ "$cmd" = pass ]; then
   [[ $rid =~ ^[0-9]+-[0-9]+$ ]] || fail "No request $rid for $N."
@@ -105,7 +107,7 @@ if [ "$cmd" = start ] || [ "$cmd" = goal ] || [ "$cmd" = followup ]; then
   P="/goal \`$test\` exits 0, the change is committed on branch $N, and result.md is written; read brief.md in this folder first and follow it"
   [ ${#P} -le 4000 ] || fail "The /goal prompt is over 4000 characters."
 fi
-[ "$cmd" = headless ] || [ "$cmd" = autonomous-off ] || [ -n "$m" ] || { [ "${HERDR_ENV:-}" = 1 ] && { [ "$cmd" != start ] || [ -n "${HERDR_WORKSPACE_ID:-}" ]; }; } || fail "Not inside a herdr pane. Run it from a herdr pane, or name a --machine."
+[ "$cmd" = headless ] || [ "$cmd" = autonomous-off ] || [ "$cmd" = autonomous-on ] || [ -n "$m" ] || { [ "${HERDR_ENV:-}" = 1 ] && { [ "$cmd" != start ] || [ -n "${HERDR_WORKSPACE_ID:-}" ]; }; } || fail "Not inside a herdr pane. Run it from a herdr pane, or name a --machine."
 [ "$cmd" != start ] || [ -z "$m" ] || [[ $repo == [/~]* ]] || fail "A saved machine needs --repo <path> starting with / or ~."
 
 H=(herdr)
@@ -169,7 +171,7 @@ screen() { SC=$("${H[@]}" agent read "$N" --source recent-unwrapped --lines 40 2
 perm() { tail -n 15 <<<"$SC" | grep -qaE "$PERM"; }
 readpane() { "${H[@]}" agent read "$N" --source visible >"$t" 2>/dev/null; }
 unsent() { readpane && grep -a '^❯' "$t" | tail -n 1 | grep -qaE '^❯.{0,2}/goal '; }
-question() { readpane && ! grep -qaE "$PERM" "$t" && grep -qa 'Enter to select' "$t"; }
+question() { readpane && ! grep -qaE "$PERM" "$t" && { grep -qa 'Enter to select' "$t" || { grep -qa 'Ready to submit your answers?' "$t" && grep -qaE '^([[:space:]]|❯)*1\. Submit answers[[:space:]]*$' "$t"; }; }; }
 push() {
   h agent send-keys "$N" enter
   "${H[@]}" agent wait "$N" --until working --until blocked --timeout 10000 >/dev/null 2>&1 || true # ponytail: fixed 10 s for a resent prompt to leave the input box, raise it if a live run measures a slower start
@@ -274,7 +276,7 @@ start)
   path="$(dirname "$repo")/$(basename "$repo")-$N"
   if [ -n "$auto" ] && [ -n "$m" ]; then
     quote "$repo"
-    sshq "[ ! -L $Q/.stratum ] || { echo \"$Q/.stratum is a symlink\" >&2; exit 3; }; [ ! -L $Q/.stratum/autonomous ] || { echo \"$Q/.stratum/autonomous is a symlink\" >&2; exit 3; }; mkdir -p $Q/.stratum && printf '%s\n' $(printf %q "$SID") > $Q/.stratum/autonomous" </dev/null || { rc=$? msg=$(head -1 "$e"); fail "cannot write .stratum/autonomous on $m: ${msg:-exit $rc}"; }
+    sshq "[ ! -L $Q/.stratum ] || { echo \"$Q/.stratum is a symlink\" >&2; exit 3; }; [ ! -L $Q/.stratum/autonomous ] || { echo \"$Q/.stratum/autonomous is a symlink\" >&2; exit 3; }; [ ! -f $Q/.stratum/autonomous ] || rm -f -- $Q/.stratum/autonomous || :; mkdir -p $Q/.stratum/autonomous 2>/dev/null; [ -d $Q/.stratum/autonomous ] || { echo \"$Q/.stratum/autonomous is not a folder\" >&2; exit 3; }; [ ! -L $Q/.stratum/autonomous/$SID ] || { echo \"$Q/.stratum/autonomous/$SID is a symlink\" >&2; exit 3; }; [ -f $Q/.stratum/autonomous/$SID ] || : > $Q/.stratum/autonomous/$SID" </dev/null || { rc=$? msg=$(head -1 "$e"); fail "cannot write .stratum/autonomous on $m: ${msg:-exit $rc}"; }
   fi
   if [ -z "$m" ]; then
     WS=$HERDR_WORKSPACE_ID
@@ -456,7 +458,10 @@ answer)
     w=$(tail -n 15 <<<"$SC")
     n=$(sed -nE "/$HEAD/=" <<<"$w" | tail -n 1)
     o="^([[:space:]]|│)*(❯[[:space:]]*)?$k\.[[:space:]]"
-    [ -n "$n" ] && [ "$(sed -nE "/$HEAD/=" <<<"$w" | wc -l)" -eq 1 ] && b=$(tail -n "+$((n + 1))" <<<"$w") && [ "$(grep -caE "$o" <<<"$b")" -eq 1 ] && l=$(grep -naE "$o" <<<"$b") && grep -qaE "^([[:space:]]|│)*(❯[[:space:]]*)?$k\. (Yes|Yes, proceed|Yes, just this once)( \([a-z0-9]\))?[[:space:]]*\$" <<<"${l#*:}" && ! sed -n "$((${l%%:*} + 1))p" <<<"$b" | grep -qavE '^[[:space:]]*$|^([[:space:]]|│)*(❯[[:space:]]*)?[0-9]+\.[[:space:]]' || fail "Option $k is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt."
+    [ -n "$n" ] && [ "$(sed -nE "/$HEAD/=" <<<"$w" | wc -l)" -eq 1 ] && b=$(tail -n "+$((n + 1))" <<<"$w") && [ "$(grep -caE "$o" <<<"$b")" -eq 1 ] && l=$(grep -naE "$o" <<<"$b") && {
+      grep -qaE "^([[:space:]]|│)*(❯[[:space:]]*)?$k\. (Yes|Yes, proceed|Yes, just this once)( \([a-z0-9]\))?[[:space:]]*\$" <<<"${l#*:}" ||
+        { grep -qaE "^([[:space:]]|│)*(❯[[:space:]]*)?$k\. No([,[:space:]].*)?\$" <<<"${l#*:}" && ! grep -qaiE "don'?t ask|always|this session|in the future|[a-z0-9-]\.[a-z]{2,}" <<<"${l#*:}"; }
+    } && ! sed -n "$((${l%%:*} + 1))p" <<<"$b" | grep -qavE '^[[:space:]]*$|^([[:space:]]|│)*(❯[[:space:]]*)?[0-9]+\.[[:space:]]' || fail "Option $k is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt."
   fi
   if [ -n "${keys+x}" ]; then
     h agent send-keys "$N" "${keys[@]}"
@@ -687,6 +692,17 @@ approve | pass)
     printf 'passed\t%s\t%s\n' "$N" "$rid"
   fi
   ;;
+autonomous-on)
+  [ -n "$MAIN" ] || fail "cannot turn on autonomous mode: not in a git repo"
+  [[ $SID =~ ^[A-Za-z0-9-]+$ ]] || fail "cannot turn on autonomous mode: session id must be letters, digits or -"
+  [ ! -L "$D" ] || fail "cannot turn on autonomous mode: $D is a symlink"
+  [ ! -f "$D" ] || rm -f -- "$D" 2>/dev/null || :
+  mkdir -p "$D" 2>/dev/null || :
+  [ -d "$D" ] && [ ! -L "$D" ] || fail "cannot turn on autonomous mode: $D is not a folder"
+  [ ! -L "$D/$SID" ] || fail "cannot turn on autonomous mode: $D/$SID is a symlink"
+  [ -f "$D/$SID" ] || : >"$D/$SID" 2>/dev/null || fail "cannot turn on autonomous mode: cannot write $D/$SID"
+  printf 'autonomous on\t%s\n' local
+  ;;
 autonomous-off)
   [ -z "${roster+x}" ] || [ -f "$roster" ] || fail "Roster not found: $roster"
   declare -A seen=()
@@ -698,15 +714,18 @@ autonomous-off)
     [ "$mm" = local ] || k+=$'\t'${f[4]:-}
     [ -n "$mm" ] && [ -z "${seen[$k]:-}" ] || continue
     seen[$k]=1
-    msg= held=
+    msg= skip=
     if [ "$mm" = local ]; then
-      F=$MAIN/.stratum/autonomous
       if [ -z "$MAIN" ]; then
         msg="not in a git repo"
-      elif [ -f "$F" ] && [ "$(head -n 1 "$F")" = "$SID" ]; then
-        rm -f "$F" 2>"$e" || msg=$(head -1 "$e")
-      elif [ -f "$F" ]; then
-        held=$(head -n 1 "$F")
+      elif [ -L "$D" ]; then
+        msg="$D is a symlink"
+      elif [ -L "$D/$SID" ]; then
+        msg="$D/$SID is a symlink"
+      elif [ -d "$D" ] && [ -f "$D/$SID" ]; then
+        rm -f -- "$D/$SID" 2>"$e" || msg=$(head -1 "$e")
+      else
+        skip=1
       fi
     elif [ -z "${f[4]:-}" ]; then
       msg="Roster row for ${f[0]} needs the repo path as a fifth field."
@@ -717,14 +736,14 @@ autonomous-off)
       msg="Unknown machine: $mm."
     else
       quote "${f[4]}"
-      sshq "[ ! -L $Q/.stratum ] || { echo \"$Q/.stratum is a symlink\" >&2; exit 3; }; [ ! -L $Q/.stratum/autonomous ] || { echo \"$Q/.stratum/autonomous is a symlink\" >&2; exit 3; }; [ ! -f $Q/.stratum/autonomous ] || { h=\$(head -n 1 $Q/.stratum/autonomous); if [ \"\$h\" = $(printf %q "$SID") ]; then rm -f $Q/.stratum/autonomous; else printf '%s\n' \"\$h\"; fi; }" </dev/null >"$t" || { rc=$?; msg=$(head -1 "$e"); msg=${msg:-exit $rc}; }
-      [ -n "$msg" ] || held=$(head -n 1 "$t")
+      sshq "[ ! -L $Q/.stratum ] || { echo \"$Q/.stratum is a symlink\" >&2; exit 3; }; [ ! -L $Q/.stratum/autonomous ] || { echo \"$Q/.stratum/autonomous is a symlink\" >&2; exit 3; }; [ ! -L $Q/.stratum/autonomous/$SID ] || { echo \"$Q/.stratum/autonomous/$SID is a symlink\" >&2; exit 3; }; if [ -d $Q/.stratum/autonomous ] && [ -f $Q/.stratum/autonomous/$SID ]; then rm -f -- $Q/.stratum/autonomous/$SID; else echo skip; fi" </dev/null >"$t" || { rc=$?; msg=$(head -1 "$e"); msg=${msg:-exit $rc}; }
+      [ -n "$msg" ] || [ "$(head -n 1 "$t")" != skip ] || skip=1
     fi
     if [ -n "$msg" ]; then
       printf 'autonomous off failed\t%s\t%s\n' "$mm" "$msg"
       bad=1
-    elif [ -n "$held" ]; then
-      printf 'autonomous off skipped\t%s\tflag held by %s\n' "$mm" "$held"
+    elif [ -n "$skip" ]; then
+      printf 'autonomous off skipped\t%s\tnot on for this session\n' "$mm"
     else
       printf 'autonomous off\t%s\n' "$mm"
     fi
