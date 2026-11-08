@@ -34,4 +34,6 @@ Each answer reshapes the tree: a settled decision pushes the frontier outward an
 
 Finding _facts_ is your job, never the user's. When a question needs a fact from the environment (filesystem, tools, etc.), look it up or dispatch a sub-agent; don't ask the user for anything you could find yourself. Don't block on it: a running exploration is an unsettled prerequisite, so only the questions downstream of it wait; ask the rest of the frontier meanwhile. The _decisions_ are the user's: put each to them and wait.
 
+When a question needs facts from the code that a quick look cannot find, run `/stratum:st-research` (Skill tool) with the facts the grill has as its scope, and the research path your caller gives, if any. Show its findings to the user, then go on with the grill.
+
 The session is done when the frontier is empty: every branch of the design tree visited, nothing left silently assumed. End with the list of decisions by code. Do not act on it until the user confirms you have reached a shared understanding.
