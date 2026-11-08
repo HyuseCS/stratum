@@ -6,3 +6,9 @@ reason: Inspect fixes only: usage-line test update, SC-002 and FR-006 wording, D
 
 ## decisions | 2026-11-08T13:10:28Z | /advisor
 summary: /advisor: all 14 US1/US2 small decisions fine; D8 and D12 fall within D19, none goes to the user.
+
+## decisions | 2026-11-08T13:16:12Z | /advisor
+summary: /advisor: all 10 US3 small decisions fine; plan-file check order matches the contract now, none goes to the user.
+
+## diff | 2026-11-08T13:16:16Z | /advisor
+summary: /advisor: post-review changes since 8ca5332 are a duplicate-line delete, a README phrase and a contract row swap; nothing to flag.

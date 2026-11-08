@@ -43,7 +43,7 @@ This repo has no `.stratum/constitution.md` and no `apps/*/ORDINANCE.md`. No gat
 | 4 `usage()` | Add `review` after `change`: `usage: st-advisor.sh plan\|test\|diff\|decisions\|change\|review\|round\|check\|continued\|waive\|note\|talk\|count\|answer\|watch ...`. This is the one allowed change to lane output (FR-016); `tests/test_advisor_matrix.sh:401` pins the line and T002 updates it. |
 | 63 arity case | Add `"run review 2"` and `"run review 3"`. No `review` for `check`, `continued`, `waive`, `note`, `talk`, `round`, `count`. |
 | 67-69 feature folder check | Skip for `review`: `$2` is the base, `$3` the optional plan file. |
-| 105-113 input checks | `run-review`: base check and no-change line copied from `*-diff` with `$2` (`no change since <base>: skip`); with `$3`, `[ -f "$3" ] && [ -r "$3" ] || usage`. |
+| 105-113 input checks | `run-review`: with `$3`, the plan file check first, then the base check and no-change line copied from `*-diff` with `$2` (`no change since <base>: skip`); the plan file check is `[ -f "$3" ] && [ -r "$3" ] || usage`. |
 | 67-69, 120 record path | Set `rec=$f/advisor.md` right after the line 67-69 checks for every lane point. For `review`, directly after `main` is set at line 120 and outside the `cfg` success branch (so `block "bad advisor.json"` at line 195 already has it): `rec=$main/.stratum/advisor/<slug>.md`, slug = `git symbolic-ref -q --short HEAD` with each `/` as `-`, else `git rev-parse --short HEAD`. A symlink at the folder or the file stops with the usage line. `mkdir -p` the folder before the first write. |
 | 146-159 mode | In `auto`, add `review-*) aset=codex ;;` first in the case, so risk `none` and `low` still run Codex. Mode `codex` and `both` already reach Codex (line 158 names only `diff` and `decisions`). The `mode both: also consult /advisor if one is set` line prints for `review` too (no code change). Mode `off`, mode not set and no `codex` keep their lines. |
 | 175 hash | `*-review`: same as `*-diff` with `$2`. The plan file is not in the hash (the record holds the hash of the reviewed diff). |
@@ -60,6 +60,7 @@ See [contracts/skill.md](contracts/skill.md). PR form decisions: D19, the skill 
 
 ### Docs and harness model
 
+- `DESIGN.md`: one row in the D13a table: `.stratum/advisor`, main checkout, holds the review records.
 - `README.md`: one row in the Skills table, and lines in the Advisor part of Built in: the `review` point, its 1800 s headless limit, the record path, what leaves the machine (whole range to OpenAI, PR diffs to CodeRabbit).
 - `docs/harness/model/data.c4`: datafile `stratum.advisor-dir` with `data '.stratum/advisor'` (id not `advisor`: that is an actor).
 - `docs/harness/model/scripts.c4`: summary of `st-advisor-sh` names the review record; relationship `-[writes]-> stratum.advisor-dir`.
@@ -105,6 +106,7 @@ scripts/st-advisor.sh            review point (changed)
 skills/st-advisor/SKILL.md       new skill
 .gitignore                       .stratum/advisor/
 README.md                        skills table, Advisor text
+DESIGN.md                        D13a row for .stratum/advisor
 docs/harness/model/data.c4       stratum.advisor-dir
 docs/harness/model/scripts.c4    st-advisor-sh writes the record
 docs/harness/model/skills-tools.c4  skills.st-advisor
