@@ -129,6 +129,7 @@ When a change touches shared config, test setup, a schema or migration, middlewa
 | `st-define`, `st-plan`, `st-inspect`, `st-build`, `st-close` | Run or resume one Full-lane phase. |
 | `st-review`, `st-test`, `st-debug`, `st-git` | Run one Build-loop agent on demand. A missing feature comes from `.stratum/state.json`, a missing range is `main..HEAD`. |
 | `st-triage <issue#>...` | Check GitHub issues against the code and git history, read-only: verdict, what is built, blocker, next step. |
+| `st-research <words>` | Research on demand: a scope and numbered questions, facts with cites from the code and the web, one research file. No plan or feature needed. |
 | `st-herdr-workspace <folder>` | Open a project folder as a new herdr workspace with the full or basic layout, here or on a saved machine. |
 | `st-worker <task>...` | Run tasks in worker sessions (a `claude` in its own herdr pane and worktree, here or on a saved machine, or headless), then review and merge their branches. |
 | `st-status` | Feature, phase, lane, tasks done, git guard options, next gate, missing tools, duplicate installs, days since the last upstream sync, model overrides. |
@@ -169,6 +170,7 @@ All skills are called as `/stratum:<name>`.
 | `st-ponytail-audit` | Opus | Background ponytail audit, read-only |
 | `st-ponytail-debt` | Sonnet | Background ponytail debt ledger, read-only |
 | `st-triage` | Opus | Checks a GitHub issue against the code and git history, read-only |
+| `st-research` | Opus | Answers numbered research questions with cites and writes one research file, read-only otherwise |
 
 The Model column is the plugin default. `st-init`'s template runs `st-build`, `st-debug`,
 `st-quick`, `st-plan`, and `st-fast` on Opus with effort high, and `st-close`, `st-git`, and
@@ -298,12 +300,12 @@ read the `.c4` text, or run `npx -y likec4@1.60.0 export json docs/harness`.
 - **Model overrides.** `.stratum/models.json` maps an agent name to an optional `model` and
   `effort`, for example `{ "st-close": { "model": "haiku", "effort": "xhigh" } }`. Agents:
   `st-build`, `st-close`, `st-debug`, `st-design`, `st-fast`, `st-git`, `st-impeccable`, `st-inspect`,
-  `st-plan`, `st-ponytail-audit`, `st-ponytail-debt`, `st-quick`, `st-review`, `st-test`, `st-triage`. Models:
+  `st-plan`, `st-ponytail-audit`, `st-ponytail-debt`, `st-quick`, `st-research`, `st-review`, `st-test`, `st-triage`. Models:
   `sonnet`, `opus`, `haiku`, `fable`. Efforts: `low`, `medium`, `high`, `xhigh`, `max`. `st-init` writes it from `templates/models.json`:
   `st-build`, `st-debug`, `st-quick`, `st-plan`, `st-fast` on opus with effort high, and
   `st-close`, `st-git`, `st-test` on haiku with effort xhigh.
   `st-inspect` and `st-review` have no entry and keep the plugin default.
-  `st-design`, `st-impeccable`, `st-ponytail-audit`, `st-ponytail-debt` and `st-triage` have no entry either. A hook applies
+  `st-design`, `st-impeccable`, `st-ponytail-audit`, `st-ponytail-debt`, `st-research` and `st-triage` have no entry either. A hook applies
   the file each time a Stratum agent starts, so the next start picks up an edit. A bad file blocks every
   Stratum agent start with a message that names the problem. Only Stratum agents are affected.
   `CLAUDE_CODE_EFFORT_LEVEL` beats the file's effort.
@@ -437,6 +439,7 @@ bash tests/test_codex_agent.sh
 bash tests/test_plan_rules.sh
 bash tests/test_screen_rules.sh
 bash tests/test_triage_rules.sh
+bash tests/test_research.sh
 bash tests/test_no_frontend_design.sh
 bash tests/test_risk_rules.sh
 bash tests/test_worker_rules.sh
