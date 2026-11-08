@@ -696,6 +696,7 @@ graph TB
   subgraph Stratum["`.stratum files`"]
     Stratum.State_json@{ shape: rectangle, label: ".stratum/state.json" }
     Stratum.Advisor_json@{ shape: rectangle, label: ".stratum/advisor.json" }
+    Stratum.Advisor_dir@{ shape: rectangle, label: ".stratum/advisor" }
   end
   Events.Pre_tool_use -. "`matcher 
 Bash|Edit|Write|MultiEdit|NotebookEdit|Read|Grep|Glob`" .-> Hooks.St_approve_py
@@ -765,6 +766,8 @@ the Codex tab`" .-> Scripts.St_codex_agent_sh
   Scripts.St_advisor_sh -. "`risk level of the main checkout`" .-> Stratum.State_json
   Scripts.St_advisor_sh -. "`mode, model and effort, from the 
 worktree or the main checkout`" .-> Stratum.Advisor_json
+  Scripts.St_advisor_sh -. "`review point record per branch: base, 
+time, sha256, verdict and findings`" .-> Stratum.Advisor_dir
 ```
 
 ### Data flow
@@ -782,6 +785,7 @@ graph TB
   SkillsSt_build@{ shape: rectangle, label: "/st-build" }
   SkillsSt_close@{ shape: rectangle, label: "/st-close" }
   SkillsSt_review@{ shape: rectangle, label: "/st-review" }
+  SkillsSt_advisor@{ shape: rectangle, label: "/st-advisor" }
   SkillsSt_test@{ shape: rectangle, label: "/st-test" }
   SkillsSt_debug@{ shape: rectangle, label: "/st-debug" }
   SkillsSt_pr@{ shape: rectangle, label: "/st-pr" }
@@ -857,6 +861,7 @@ graph TB
   ProjectSpecs@{ shape: rectangle, label: "specs" }
   StratumHandoff_md@{ shape: rectangle, label: ".stratum/handoff.md" }
   StratumLessons_md@{ shape: rectangle, label: ".stratum/lessons.md" }
+  StratumAdvisor_dir@{ shape: rectangle, label: ".stratum/advisor" }
   FeatureChanges@{ shape: rectangle, label: "specs/NNN-feature/changes" }
   FeatureAdvisor_md@{ shape: rectangle, label: "specs/NNN-feature/advisor.md" }
   StratumAdvisor_json@{ shape: rectangle, label: ".stratum/advisor.json" }
@@ -903,6 +908,7 @@ date, created when missing`" .-> StratumApp_constitution_md
   SkillsSt_close -. "`[...]`" .-> StratumLessons_md
   SkillsSt_close -. "`feature directory`" .-> StratumState_json
   SkillsSt_review -. "`feature directory`" .-> StratumState_json
+  SkillsSt_advisor -. "`CodeRabbit section in the review record`" .-> StratumAdvisor_dir
   SkillsSt_test -. "`feature directory`" .-> StratumState_json
   SkillsSt_debug -. "`feature directory`" .-> StratumState_json
   SkillsSt_pr -. "`feature directory`" .-> StratumState_json
@@ -1066,6 +1072,8 @@ growth`" .-> StratumWeather_json
 Define`" .-> ProjectSpecs
   ScriptsCheck_prerequisites_sh -. "`feature_directory`" .-> StratumState_json
   ScriptsResolve_template_sh -. "`project override template NAME.md`" .-> StratumTemplates
+  ScriptsSt_advisor_sh -. "`review point record per branch: base, 
+time, sha256, verdict and findings`" .-> StratumAdvisor_dir
   ScriptsSt_advisor_sh -. "`mode, model and effort, from the 
 worktree or the main checkout`" .-> StratumAdvisor_json
   ScriptsSt_advisor_sh -. "`risk level of the main checkout`" .-> StratumState_json

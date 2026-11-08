@@ -1,5 +1,11 @@
 model {
   extend stratum {
+    advisor-dir = datafile '.stratum/advisor' {
+      summary 'One review record per branch from the review point. st-advisor.sh writes it in the main checkout, git ignores it.'
+      metadata {
+        data '.stratum/advisor'
+      }
+    }
     advisor-json = datafile '.stratum/advisor.json' {
       summary 'The advisor mode: auto, codex, both or off. st-init writes it, st-advisor.sh reads it from the main checkout.'
       metadata {

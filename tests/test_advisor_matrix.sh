@@ -398,7 +398,7 @@ mark
 akey --screen "$sh2" --keys y
 unmark
 check "(M21) answer with the hash of a screen not shown: refused, no send-keys" '[ $rc = 1 ] && [ "$out" = "the Codex tab shows another prompt" ] && nokeys'
-ul="usage: st-advisor.sh plan|test|diff|decisions|change|round|check|continued|waive|note|talk|count|answer|watch ..."
+ul="usage: st-advisor.sh plan|test|diff|decisions|change|review|round|check|continued|waive|note|talk|count|answer|watch ..."
 ok=1
 for k in 'a;b' '$(x)' -x --help; do
   akey --screen "$sh1" --keys "$k"
@@ -500,6 +500,33 @@ check "(M18) tab path: no logged timeout call runs st-lock.sh or st-codex-agent.
 hreset
 hrun nomarkers
 check "(M19) no markers in the tab answer: first line BLOCKED: no answer between the markers, exit 1, codex exec not run" '[ $rc = 1 ] && [ "$(head -n1 <<<"$out")" = "BLOCKED: no answer between the markers" ] && [ ! -e "$tmp/argv" ]'
+hreset
+setmode '{"mode": "codex"}'
+approve
+br=$(git -C "$proj" symbolic-ref --short HEAD)
+rrecf="$proj/.stratum/advisor/${br//\//-}.md"
+rrun() {
+  rm -f "$tmp/argv" "$tmp/herdr.log" "$tmp/h.args" "$tmp/hget.n" "$tmp/timeout.log"
+  printf '%s' "$1" > "$tmp/hmode"
+  out=$(cd "$proj" && PATH="$tmp/hbin2:$PATH" HERDR_ENV=1 HERDR_WORKSPACE_ID=$ws bash "$root/scripts/st-advisor.sh" review "$first"); rc=$?
+}
+rrun nofolder
+check "(R1) review in the tab: exit 0, no codex exec, last line names the tab" '[ $rc = 0 ] && [ ! -e "$tmp/argv" ] && [ "$(tail -n1 <<<"$out")" = "codex: tab st-codex-demo" ]'
+check "(R2) review in the tab: exit 0 and no timeout call" '[ $rc = 0 ] && [ ! -e "$tmp/timeout.log" ]'
+hreset
+touch "$tmp/htab"
+printf '%s' working > "$tmp/hstatus"
+rrun nofolder
+check "(R3) review, tab working: codex exec runs, last line says Codex tab in use" '[ $rc = 0 ] && [ -f "$tmp/argv" ] && [ "$(tail -n1 <<<"$out")" = "codex: headless (Codex tab in use)" ]'
+hreset
+touch "$tmp/helsewhere"
+rrun nofolder
+check "(R4) review, tab name in use elsewhere: codex exec runs, last line says so" '[ $rc = 0 ] && [ -f "$tmp/argv" ] && [ "$(tail -n1 <<<"$out")" = "codex: headless (Codex tab name st-codex-demo in use elsewhere)" ]'
+hreset
+rm -f "$rrecf"
+rrun writes
+check "(R5) review, Codex writes a file in the tab: BLOCKED with the file, exit 1, BLOCKED entry in the branch record" '[ $rc = 1 ] && [ "$(head -n1 <<<"$out")" = "BLOCKED: Codex changed files during the review: new.txt" ] && grep -qE "^## review \| [^|]+ \| sha256 [0-9a-f]{64} \| BLOCKED$" "$rrecf"'
+rm -f "$proj/new.txt"
 hreset
 check "no repo writes" '[ "$(git -C "$root" status --porcelain)" = "$repo_before" ]'
 exit $fail

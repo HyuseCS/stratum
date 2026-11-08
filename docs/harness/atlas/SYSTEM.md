@@ -254,7 +254,7 @@ Stratum is a Claude Code plugin that runs a coding task through a lane. You give
 
 **What it does.** At set points (the plan, a Fast-lane change, a test still red after two tries, the small decisions, the final diff) the work goes out for review. The advisor mode decides who reviews: auto, Codex, both or off.
 
-**How it's built.** `scripts/st-advisor.sh` reads the mode in `.stratum/advisor.json` and the risk level, sends the prompt to Codex headless with `codex exec` read-only, or through `scripts/st-codex-agent.sh` in a herdr Codex tab under the lock, and appends each verdict to `specs/NNN-feature/advisor.md`. LikeC4 ids: `scripts.st-advisor-sh`, `scripts.st-codex-agent-sh`, `stratum.advisor-json`.
+**How it's built.** `scripts/st-advisor.sh` reads the mode in `.stratum/advisor.json` and the risk level, sends the prompt to Codex headless with `codex exec` read-only, or through `scripts/st-codex-agent.sh` in a herdr Codex tab under the lock, and appends each verdict to `specs/NNN-feature/advisor.md`. `skills/st-advisor` runs the review point on demand and writes the record to `.stratum/advisor/`. LikeC4 ids: `scripts.st-advisor-sh`, `scripts.st-codex-agent-sh`, `stratum.advisor-json`, `skills.st-advisor`, `stratum.advisor-dir`.
 
 **Steps in execution.**
 

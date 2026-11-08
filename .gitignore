@@ -9,3 +9,4 @@ graphify-out/
 .stratum/git-guard.json
 .stratum/models.json
 __pycache__/
+.stratum/advisor/

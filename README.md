@@ -129,6 +129,7 @@ When a change touches shared config, test setup, a schema or migration, middlewa
 | `st-define`, `st-plan`, `st-inspect`, `st-build`, `st-close` | Run or resume one Full-lane phase. |
 | `st-review`, `st-test`, `st-debug`, `st-git` | Run one Build-loop agent on demand. A missing feature comes from `.stratum/state.json`, a missing range is `main..HEAD`. |
 | `st-triage <issue#>...` | Check GitHub issues against the code and git history, read-only: verdict, what is built, blocker, next step. |
+| `st-advisor [base \| #PR] [plan file]` | On-demand Codex review of finished work with no spec folder, from the base to HEAD. A PR gets a CodeRabbit review too. |
 | `st-research <words>` | Research on demand: a scope and numbered questions, facts with cites from the code and the web, one research file. No plan or feature needed. |
 | `st-herdr-workspace <folder>` | Open a project folder as a new herdr workspace with the full or basic layout, here or on a saved machine. |
 | `st-worker <task>...` | Run tasks in worker sessions (a `claude` in its own herdr pane and worktree, here or on a saved machine, or headless), then review and merge their branches. |
@@ -254,6 +255,7 @@ read the `.c4` text, or run `npx -y likec4@1.60.0 export json docs/harness`.
   It answers `APPROVED`, `REVISE` (findings, checked against the source like any finding; one more run only when a CRITICAL or HIGH fix changed the plan, two rounds at most), or `BLOCKED` (the orchestrator stops and asks you).
   A failed, empty, malformed or late answer is `BLOCKED`, never approval. Late means 540 seconds, and only in the background (headless) run.
   Each run appends the point, a SHA256 of the input, the verdict and the findings to `specs/<feature>/advisor.md`. An approval of a plan that changed since then is stale.
+  The `review` point, run by `/stratum:st-advisor`, reviews finished work with no spec folder: the range from a base to HEAD, and a plan file if you name one. Its headless limit is 1800 seconds (lane points keep 540). It records to `<main checkout>/.stratum/advisor/<branch>.md`. What leaves the machine: the whole range and the plan file go to OpenAI. In the PR form (`#<n>`) CodeRabbit also gets the PR diff. The plain form never runs CodeRabbit.
   What leaves the machine: each call sends the prompt and the files Codex reads to OpenAI, on your Codex login and quota (about 37,000 tokens per plan review). At the plan point the prompt names the plan files and Codex reads them; at the test point it holds the task text, the test path and both failure outputs. At the diff point Codex reads the diff since the last review, and at the decisions and round points the prompt holds the list or the views text. At the change point (Fast lane, before its gate) the prompt names the spec and the change plan, and Codex reads them.
   The prompt tells Codex to stay inside the named inputs, never open env or secret files, and never quote a secret value. The sandbox does not block reads.
   Whether Codex's own shell sees your environment variables is not checked.
