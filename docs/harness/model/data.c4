@@ -42,6 +42,12 @@ model {
         data '.stratum/decisions.md'
       }
     }
+    research = datafile '.stratum/research' {
+      summary 'Research files of /st-research when no feature folder is named. The st-research agent writes them.'
+      metadata {
+        data '.stratum/research'
+      }
+    }
     git-guard-json = datafile '.stratum/git-guard.json' {
       summary 'The git guard mode for commit and each risky git command. st-init and st-worker.sh write it, st-git-guard.py reads it.'
       metadata {

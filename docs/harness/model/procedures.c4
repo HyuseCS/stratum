@@ -36,6 +36,12 @@ model {
         path 'procedures/issues.md'
       }
     }
+    research-md = procedure 'procedures/research.md' {
+      summary 'Steps of the st-research agent: one file, rounds with fixed sections, cites for each fact, web only for facts outside the repo.'
+      metadata {
+        path 'procedures/research.md'
+      }
+    }
     plan-md = procedure 'procedures/plan.md' {
       summary 'Writes plan.md from the plan template, then research.md, data-model.md, contracts and quickstart.md. Lists open decisions.'
       metadata {
@@ -109,6 +115,7 @@ model {
   procedures.plan-md -[writes]-> feature.data-model-md 'entities, fields, rules'
   procedures.plan-md -[writes]-> feature.contracts 'interface contracts'
   procedures.plan-md -[writes]-> feature.quickstart-md 'validation scenarios'
+  procedures.plan-md -[reads]-> feature.research-md 'st-research rounds and facts'
 
   procedures.specify-md -[runs]-> scripts.resolve-template-sh 'spec'
   procedures.specify-md -[writes]-> stratum.state-json 'empty file when none exists'
