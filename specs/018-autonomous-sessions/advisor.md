@@ -25,3 +25,6 @@ summary: Simplify task grouping to reduce repeated edits and sequential phases. 
 
 ## plan | 2026-11-08T11:39:32Z | /advisor
 summary: rerun after F5 added DESIGN.md: same merge MEDIUM as round 1, dropped again because procedures/tasks.md:65,110 requires one phase per story
+
+## decisions | 2026-11-08T11:59:47Z | /advisor
+summary: US1 D1-D10 accepted; D1 cannot-write row goes to C2 table at Close; review F1 closed by 60a70af; D10 dropped as in-model

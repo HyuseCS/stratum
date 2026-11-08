@@ -107,7 +107,7 @@ edit tools. Check that each try is refused.
 - **FR-012**: The statusline, approve-hook and worker-script tests MUST each have a case with two sessions in two linked worktrees of the same repository, both on, and each session MUST be seen as on. The worker-script test MUST also show that turning one session off leaves the other on.
 - **FR-013**: All existing tests MUST still pass, changed only where they name the old single-file layout.
 - **FR-014**: `st-worker.sh answer` MUST treat the AskUserQuestion "Review your answers" screen ("Ready to submit your answers?" with "1. Submit answers / 2. Cancel") as a question, so the orchestrator can send `1` (Submit answers), also when herdr reports the worker as `done`. Today `question()` (`scripts/st-worker.sh:172`) matches only `Enter to select`, so `answer` fails with `not blocked: done` (`scripts/st-worker.sh:447`). Seen live 2026-11-08 (D21).
-- **FR-015**: Step 6 of the worker skill MUST let the orchestrator approve a one-time yes on a permission dialog that does not show the whole command or path, when what it sees is safe and any hidden part can only be the worker's own worktree or scratchpad. The never list stays as it is (D21).
+- **FR-015**: Step 6 of the worker skill MUST say: "Approve a one-time yes on a cut-off dialog only when the cut part is a file path that can only be inside the worker's own worktree or its scratchpad and what it shows is safe. A cut-off Bash command goes to the user. Else send no key and tell the user." The never list stays as it is (D21).
 
 ### Key Entities
 
