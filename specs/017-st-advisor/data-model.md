@@ -13,7 +13,7 @@ File: `<main checkout>/.stratum/advisor/<slug>.md`.
 Codex entry (written by `st-advisor.sh review`, same line format as `advisor.md`):
 
 ```text
-## review | <UTC time YYYY-MM-DDTHH:MM:SSZ> | sha256 <64 hex of git diff --no-ext-diff --no-color <base> HEAD --> | APPROVED|REVISE|BLOCKED
+## review | <UTC time YYYY-MM-DDTHH:MM:SSZ> | sha256 <64 hex of git diff --no-ext-diff --no-color <base> HEAD --, then the plan file when one is given> | APPROVED|REVISE|BLOCKED
 summary: <one line>
 - [CRITICAL|HIGH|MEDIUM|LOW] <location>: <claim> Evidence: <evidence>
 ```

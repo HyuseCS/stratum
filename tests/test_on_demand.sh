@@ -376,7 +376,12 @@ phrases <<'EOF'
 #79 FR-011 plan file	skills/st-advisor/SKILL.md	st-advisor.sh review <base> [<plan file>]
 #79 D19 bad json	skills/st-advisor/SKILL.md	not a JSON object with only the keys `mode`, `model` and `effort`
 #79 D19 bad json	skills/st-advisor/SKILL.md	say `BLOCKED: bad advisor.json` and stop before step 6
+#79 R1 same rules	skills/st-advisor/SKILL.md	the same rules as `scripts/st-advisor.sh`
+#79 R1 same rules	skills/st-advisor/SKILL.md	`model`, when set, matches
 #79 PR tab elsewhere	skills/st-advisor/SKILL.md	A Codex tab already open at another folder makes the review run headless. To watch it in a tab, close that tab first.
 EOF
+
+pats=$(grep -oE 're\.fullmatch\(r"[^"]+"' "$root/scripts/st-advisor.sh" | sed 's/^re\.fullmatch(r"//; s/"$//')
+check "#79 R1 skill names each advisor.json pattern of the script" '[ "$(wc -l <<<"$pats")" = 2 ] && ! while IFS= read -r p; do grep -qF -- "\`$p\`" "$root/skills/st-advisor/SKILL.md" || echo miss; done <<<"$pats" | grep -q miss'
 
 exit $fail
