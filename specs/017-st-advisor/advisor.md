@@ -1,0 +1,2 @@
+## plan | 2026-11-08T11:19:43Z | sha256 fa642d7eae223274271c5be798a78651861571482e9dd4336978866ff2829326 | APPROVED
+summary: The plan reuses the existing advisor machinery, limits new implementation to the review point and skill, and stages delivery around a usable MVP. No actionable simplification warrants revision. Correctness, coverage and risks were outside this review's scope. No files changed.
