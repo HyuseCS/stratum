@@ -171,7 +171,7 @@ screen() { SC=$("${H[@]}" agent read "$N" --source recent-unwrapped --lines 40 2
 perm() { tail -n 15 <<<"$SC" | grep -qaE "$PERM"; }
 readpane() { "${H[@]}" agent read "$N" --source visible >"$t" 2>/dev/null; }
 unsent() { readpane && grep -a '^❯' "$t" | tail -n 1 | grep -qaE '^❯.{0,2}/goal '; }
-question() { readpane && ! grep -qaE "$PERM" "$t" && grep -qaE 'Enter to select|Ready to submit your answers\?' "$t"; }
+question() { readpane && ! grep -qaE "$PERM" "$t" && { grep -qa 'Enter to select' "$t" || { grep -qa 'Ready to submit your answers?' "$t" && grep -qaE '^([[:space:]]|❯)*1\. Submit answers[[:space:]]*$' "$t"; }; }; }
 push() {
   h agent send-keys "$N" enter
   "${H[@]}" agent wait "$N" --until working --until blocked --timeout 10000 >/dev/null 2>&1 || true # ponytail: fixed 10 s for a resent prompt to leave the input box, raise it if a live run measures a slower start

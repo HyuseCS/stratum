@@ -742,6 +742,9 @@ check "AQ7 plain output while done: exit 1, not blocked, nothing sent" '[ $rc = 
 mk; states done; { printf '%s\n' ' Do you want to proceed?'; reviewpane; } > "$tmp/pane.txt"
 run bash "$script" answer T004 --keys 1
 check "AQ8 permission line above review screen: exit 1, not blocked, nothing sent" '[ $rc = 1 ] && [ "$out" = "not blocked: done" ] && [ "$(cnt "^agent\tsend-keys\t")" = 0 ]'
+mk; states done; printf '%s\n' '$ grep -n Ready spec.md' '42: the "Ready to submit your answers?" screen (with "1. Submit answers / 2. Cancel")' '❯ ' > "$tmp/pane.txt"
+run bash "$script" answer T004 --keys 1
+check "AQ9 review phrase as plain text while done: exit 1, not blocked, nothing sent" '[ $rc = 1 ] && [ "$out" = "not blocked: done" ] && [ "$(cnt "^agent\tsend-keys\t")" = 0 ]'
 for a in --keys --text; do
   fresh; reset
   run bash "$script" answer T004 $a -x
