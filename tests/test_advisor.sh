@@ -578,6 +578,13 @@ rm -f "$tmp/argv"
 rrun "$c1"
 check "FR-007 .stratum/advisor symlink: usage, exit 2, no codex, target unchanged" 'usage_rc2 && [ ! -e "$tmp/argv" ] && [ -z "$(ls -A "$tmp/linkdir")" ]'
 rm -f "$rdir"
+mkdir "$rdir"
+printf 'keep\n' > "$tmp/linkfile"
+ln -s "$tmp/linkfile" "$rdir/main.md"
+rm -f "$tmp/argv"
+rrun "$c1"
+check "FR-007 record file symlink: usage, exit 2, no codex, target unchanged" 'usage_rc2 && [ ! -e "$tmp/argv" ] && [ "$(cat "$tmp/linkfile")" = keep ]'
+rm -rf "$rdir"
 
 printf 'do x\n' > "$tmp/plan.md"
 printf 'secret\n' > "$tmp/plan000.md"

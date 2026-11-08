@@ -95,9 +95,9 @@ if [ $cmd = talk ]; then
   exit 0
 fi
 if [ $cmd = check ] || [ $cmd = continued ]; then
-  rec=$(grep -aE "^## $point \| [^|]* \| sha256 " "$f/advisor.md" 2>/dev/null | tail -n1)
-  if [ -z "$rec" ]; then echo "no record: $point"; [ $cmd = check ] && exit 1; exit 2; fi
-  rest=${rec#* | * | sha256 }
+  last=$(grep -aE "^## $point \| [^|]* \| sha256 " "$f/advisor.md" 2>/dev/null | tail -n1)
+  if [ -z "$last" ]; then echo "no record: $point"; [ $cmd = check ] && exit 1; exit 2; fi
+  rest=${last#* | * | sha256 }
   rhash=${rest%% | *}
   if [ $cmd = continued ]; then
     { [ -s "$f/advisor.md" ] && echo; printf '## %s | %s | sha256 %s | BLOCKED, user continued\n' "$point" "$ts" "$rhash"; } >> "$f/advisor.md" || exit 1
