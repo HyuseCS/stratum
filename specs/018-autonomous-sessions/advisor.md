@@ -28,3 +28,6 @@ summary: rerun after F5 added DESIGN.md: same merge MEDIUM as round 1, dropped a
 
 ## decisions | 2026-11-08T11:59:47Z | /advisor
 summary: US1 D1-D10 accepted; D1 cannot-write row goes to C2 table at Close; review F1 closed by 60a70af; D10 dropped as in-model
+
+## decisions | 2026-11-08T12:19:04Z | /advisor
+summary: US2/US3/D21 D1-D7 accepted; D4 handoff flow wording and D6 pane match go to Close
