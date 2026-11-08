@@ -732,6 +732,16 @@ check "AQ3 no Type something option: exit 1, the line, nothing sent" '[ $rc = 1 
 mk; states done; { printf '%s\n' ' Do you want to proceed?' '❯ 1. Yes' '  2. No'; echo 'Enter to select · Esc to cancel'; } > "$tmp/pane.txt"
 run bash "$script" answer T004 --keys 1
 check "AQ4 permission dialog while done is not a question: exit 1, not blocked, nothing sent" '[ $rc = 1 ] && [ "$out" = "not blocked: done" ] && [ "$(cnt "^agent\tsend-keys\t")" = 0 ]'
+reviewpane() { printf '%s\n' ' Review your answers' ' ● Which folder holds the brief.md? → Newest brief.md folder' '' 'Ready to submit your answers?' '' '❯ 1. Submit answers' '  2. Cancel'; }
+mk; states done working; reviewpane > "$tmp/pane.txt"
+run bash "$script" answer T004 --keys 1
+check "AQ6 review screen while done: exit 0, key 1 sent once" '[ $rc = 0 ] && [ "$(cnt "^agent\tsend-keys\tworker-t004\t1\$")" = 1 ]'
+mk; states done; printf '%s\n' 'Done. Ran the tests.' 'All green.' > "$tmp/pane.txt"
+run bash "$script" answer T004 --keys 1
+check "AQ7 plain output while done: exit 1, not blocked, nothing sent" '[ $rc = 1 ] && [ "$out" = "not blocked: done" ] && [ "$(cnt "^agent\tsend-keys\t")" = 0 ]'
+mk; states done; { printf '%s\n' ' Do you want to proceed?'; reviewpane; } > "$tmp/pane.txt"
+run bash "$script" answer T004 --keys 1
+check "AQ8 permission line above review screen: exit 1, not blocked, nothing sent" '[ $rc = 1 ] && [ "$out" = "not blocked: done" ] && [ "$(cnt "^agent\tsend-keys\t")" = 0 ]'
 for a in --keys --text; do
   fresh; reset
   run bash "$script" answer T004 $a -x
@@ -1247,6 +1257,9 @@ check "ON7 an argument: usage line, exit 2, nothing made" '[ $rc = 2 ] && grep -
 mkdir -p "$tmp/nogit"
 RUNDIR="$tmp/nogit" CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-on
 check "ON9 outside a git repo: exit 1, the not-in-a-repo line" '[ $rc = 1 ] && [ "$out" = "cannot turn on autonomous mode: not in a git repo" ] && [ ! -e "$tmp/nogit/.stratum" ]'
+autoclr; mkdir -p "$repo/.stratum/autonomous"; printf 'keep\n' > "$repo/.stratum/autonomous/$sid"
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-on
+check "ON10 an existing entry: exit 0, the on line, the entry is not truncated" '[ $rc = 0 ] && [ "$out" = "$(printf "autonomous on\tlocal")" ] && [ "$(cat "$repo/.stratum/autonomous/$sid")" = keep ]'
 for n in 1 2 3; do
   autoclr; printf 'old\n' > "$repo/.stratum/autonomous"; rm -f "$tmp"/bg.*
   bgrun sA autonomous-on & bgrun sB autonomous-on & wait
@@ -1621,6 +1634,10 @@ autoclr
 ax; autoset "$sid"
 STUB_SSH_RC=255 axrun
 check "AM6 ssh down on the repo flag write: exit 1, the line, no worktree add or agent start" '[ $rc = 1 ] && hasline "cannot write .stratum/autonomous on laptop: ssh: stub failure" && ! grep -q "worktree add" "$tmp/ssh" && [ "$(cnt "^--machine\tlaptop\tagent\tstart\t")" = 0 ]'
+autoclr
+ax; autoset "$sid"; mkdir -p "$rrepo/.stratum/autonomous"; printf 'keep\n' > "$rrepo/.stratum/autonomous/$sid"
+axrun
+check "AM7 an existing repo entry on the machine: exit 0, the entry is not truncated" '[ $rc = 0 ] && [ "$(cat "$rrepo/.stratum/autonomous/$sid")" = keep ]'
 autoclr
 rfresh; xsetup; STUB_SSH_EXEC=1 STUB_GIT_FAIL=add255 rrun bash "$script" start "${rxargs[@]}"
 check "R16b saved machine, git worktree add exits 255: exit 1, git's fatal line, not ssh failed, no tab create" '[ $rc = 1 ] && [ "$(grep -c "^stopped:" <<<"$out")" = 1 ] && hasline "stopped: fatal: stub git refused 255" && ! grep -q "ssh to" <<<"$out" && hasline "worker\tworker-t004\tlaptop\t-\t-\t-\t-" && [ "$(rcnt "tab\tcreate\t")" = 0 ]'

@@ -171,7 +171,7 @@ screen() { SC=$("${H[@]}" agent read "$N" --source recent-unwrapped --lines 40 2
 perm() { tail -n 15 <<<"$SC" | grep -qaE "$PERM"; }
 readpane() { "${H[@]}" agent read "$N" --source visible >"$t" 2>/dev/null; }
 unsent() { readpane && grep -a '^❯' "$t" | tail -n 1 | grep -qaE '^❯.{0,2}/goal '; }
-question() { readpane && ! grep -qaE "$PERM" "$t" && grep -qa 'Enter to select' "$t"; }
+question() { readpane && ! grep -qaE "$PERM" "$t" && grep -qaE 'Enter to select|Ready to submit your answers\?' "$t"; }
 push() {
   h agent send-keys "$N" enter
   "${H[@]}" agent wait "$N" --until working --until blocked --timeout 10000 >/dev/null 2>&1 || true # ponytail: fixed 10 s for a resent prompt to leave the input box, raise it if a live run measures a slower start
@@ -276,7 +276,7 @@ start)
   path="$(dirname "$repo")/$(basename "$repo")-$N"
   if [ -n "$auto" ] && [ -n "$m" ]; then
     quote "$repo"
-    sshq "[ ! -L $Q/.stratum ] || { echo \"$Q/.stratum is a symlink\" >&2; exit 3; }; [ ! -L $Q/.stratum/autonomous ] || { echo \"$Q/.stratum/autonomous is a symlink\" >&2; exit 3; }; [ ! -f $Q/.stratum/autonomous ] || rm -f -- $Q/.stratum/autonomous || :; mkdir -p $Q/.stratum/autonomous 2>/dev/null; [ -d $Q/.stratum/autonomous ] || { echo \"$Q/.stratum/autonomous is not a folder\" >&2; exit 3; }; [ ! -L $Q/.stratum/autonomous/$SID ] || { echo \"$Q/.stratum/autonomous/$SID is a symlink\" >&2; exit 3; }; : > $Q/.stratum/autonomous/$SID" </dev/null || { rc=$? msg=$(head -1 "$e"); fail "cannot write .stratum/autonomous on $m: ${msg:-exit $rc}"; }
+    sshq "[ ! -L $Q/.stratum ] || { echo \"$Q/.stratum is a symlink\" >&2; exit 3; }; [ ! -L $Q/.stratum/autonomous ] || { echo \"$Q/.stratum/autonomous is a symlink\" >&2; exit 3; }; [ ! -f $Q/.stratum/autonomous ] || rm -f -- $Q/.stratum/autonomous || :; mkdir -p $Q/.stratum/autonomous 2>/dev/null; [ -d $Q/.stratum/autonomous ] || { echo \"$Q/.stratum/autonomous is not a folder\" >&2; exit 3; }; [ ! -L $Q/.stratum/autonomous/$SID ] || { echo \"$Q/.stratum/autonomous/$SID is a symlink\" >&2; exit 3; }; [ -f $Q/.stratum/autonomous/$SID ] || : > $Q/.stratum/autonomous/$SID" </dev/null || { rc=$? msg=$(head -1 "$e"); fail "cannot write .stratum/autonomous on $m: ${msg:-exit $rc}"; }
   fi
   if [ -z "$m" ]; then
     WS=$HERDR_WORKSPACE_ID
@@ -697,7 +697,7 @@ autonomous-on)
   mkdir -p "$D" 2>/dev/null || :
   [ -d "$D" ] && [ ! -L "$D" ] || fail "cannot turn on autonomous mode: $D is not a folder"
   [ ! -L "$D/$SID" ] || fail "cannot turn on autonomous mode: $D/$SID is a symlink"
-  : >"$D/$SID" 2>/dev/null || fail "cannot turn on autonomous mode: cannot write $D/$SID"
+  [ -f "$D/$SID" ] || : >"$D/$SID" 2>/dev/null || fail "cannot turn on autonomous mode: cannot write $D/$SID"
   printf 'autonomous on\t%s\n' local
   ;;
 autonomous-off)
