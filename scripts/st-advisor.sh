@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -o pipefail
 SECONDS=0
-usage() { echo "usage: st-advisor.sh plan|test|diff|decisions|change|round|check|continued|waive|note|talk|count|answer|watch ..."; exit 2; }
+usage() { echo "usage: st-advisor.sh plan|test|diff|decisions|change|review|round|check|continued|waive|note|talk|count|answer|watch ..."; exit 2; }
 tabs=${XDG_STATE_HOME:-$HOME/.local/state}/stratum/codex-tabs
 tabname() {
   local l
@@ -60,13 +60,16 @@ esac
 cmd=run
 case ${1:-} in check|continued|waive|note|round|talk) cmd=$1; shift ;; count) cmd=count ;; esac
 point=${1:-}
-case "$cmd $point $#" in "run plan 2"|"run test 6"|"run diff 3"|"run decisions 3"|"run change 3"|"round plan 4"|"round test 4"|"round diff 4"|"round decisions 4"|"round change 4"|"check plan 2"|"continued plan 2"|"continued test 2"|"continued diff 2"|"continued decisions 2"|"continued change 2"|"waive plan 3"|"note plan 3"|"note test 3"|"note diff 3"|"note decisions 3"|"note change 3"|"talk plan 3"|"talk test 3"|"talk diff 3"|"talk decisions 3"|"talk change 3"|"count count 2") ;; *) usage ;; esac
+case "$cmd $point $#" in "run plan 2"|"run test 6"|"run diff 3"|"run decisions 3"|"run change 3"|"run review 2"|"round plan 4"|"round test 4"|"round diff 4"|"round decisions 4"|"round change 4"|"check plan 2"|"continued plan 2"|"continued test 2"|"continued diff 2"|"continued decisions 2"|"continued change 2"|"waive plan 3"|"note plan 3"|"note test 3"|"note diff 3"|"note decisions 3"|"note change 3"|"talk plan 3"|"talk test 3"|"talk diff 3"|"talk decisions 3"|"talk change 3"|"count count 2") ;; *) usage ;; esac
 at=$point
 label=$point
 [ $cmd = round ] && { at=round; label="$point round $3"; }
 f=${2%/}
-[ -f "$f/spec.md" ] && [ -r "$f/spec.md" ] || usage
-[ -L "$f/advisor.md" ] && usage
+if [ $point != review ]; then
+  [ -f "$f/spec.md" ] && [ -r "$f/spec.md" ] || usage
+  [ -L "$f/advisor.md" ] && usage
+fi
+rec=$f/advisor.md
 ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 if [ $cmd = count ]; then
   src=/dev/null
@@ -107,9 +110,10 @@ case $cmd-$point in
   *-plan) [ -f "$f/plan.md" ] && [ -r "$f/plan.md" ] && [ -f "$f/tasks.md" ] && [ -r "$f/tasks.md" ] || usage ;;
   *-decisions|*-change) [ -f "$3" ] && [ -r "$3" ] || usage ;;
   *-test) [ -f "$3" ] && [ -r "$3" ] && [ -f "$5" ] && [ -r "$5" ] && [ -f "$6" ] && [ -r "$6" ] || usage ;;
-  *-diff) git rev-parse --verify --quiet "$3^{commit}" >/dev/null || usage
-    git diff --quiet "$3" HEAD --
-    case $? in 0) echo "no change since $3: skip"; exit 0 ;; 1) ;; *) usage ;; esac ;;
+  *-diff|*-review) b=$3; [ $point = review ] && b=$2
+    git rev-parse --verify --quiet "$b^{commit}" >/dev/null || usage
+    git diff --quiet "$b" HEAD --
+    case $? in 0) echo "no change since $b: skip"; exit 0 ;; 1) ;; *) usage ;; esac ;;
 esac
 if [ $cmd = waive ]; then
   last=$(awk '/^## plan \| [^|]* \| sha256 /{sub(/^.* sha256 [^ ]* \| /, ""); v=$0; bad=0; r=1; next} /^## /{r=0} r && /^- / && !/^- \[(MEDIUM|LOW)\] /{bad=1} END{if (v != "") print v (bad ? " bad" : "")}' "$f/advisor.md" 2>/dev/null)
@@ -118,6 +122,11 @@ fi
 bad=0 say=
 if [ $cmd = run ] || [ $cmd = round ]; then
   common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) && main=$(dirname "$common") || main=.
+  if [ $point = review ]; then
+    slug=$(git symbolic-ref -q --short HEAD) || slug=$(git rev-parse --short HEAD) || exit 1
+    rec=$main/.stratum/advisor/${slug//\//-}.md
+    [ -L "$main/.stratum/advisor" ] || [ -L "$rec" ] && usage
+  fi
   af=.stratum/advisor.json
   [ -e "$af" ] || af=$main/.stratum/advisor.json
   [ -e "$af" ] || { echo 'no advisor: mode not set. Write .stratum/advisor.json with "mode": "auto", "codex", "both" or "off".'; exit 0; }
@@ -146,7 +155,7 @@ PY
     if [ $mode = auto ]; then
       [ -n "$risk" ] || { echo "risk not set: normal"; risk=normal; }
       case $at-$risk in
-        round-*) aset=codex ;;
+        review-*|round-*) aset=codex ;;
         plan-high|decisions-high|diff-high|change-high) aset=both ;;
         *-none|plan-low|change-low) aset=none ;;
         *-low) aset=/advisor ;;
@@ -164,6 +173,7 @@ PY
     command -v codex >/dev/null || { echo "no advisor: codex not found"; exit 0; }
   fi
 fi
+[ $point = review ] && { mkdir -p "$main/.stratum/advisor" || exit 1; }
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
@@ -172,7 +182,7 @@ case $cmd-$point in
   *-decisions|*-change) hash=$(sha256sum < "$3") || { echo "cannot hash inputs"; exit 2; } ;;
   *-plan) hash=$({ cat "$f/spec.md" && awk '/^```/{f=!f} !f&&/^## Validate$/{s=1;next} !f&&/^## /{s=0} !s' "$f/plan.md" && cat "$f/tasks.md"; } | sha256sum) || { echo "cannot hash inputs"; exit 2; } ;;
   *-test) hash=$(cat "$5" "$6" | sha256sum) || { echo "cannot hash inputs"; exit 2; } ;;
-  *-diff) hash=$(git diff --no-ext-diff --no-color "$3" HEAD -- | sha256sum) || { echo "cannot hash inputs"; exit 2; } ;;
+  *-diff|*-review) hash=$(git diff --no-ext-diff --no-color "$b" HEAD -- | sha256sum) || { echo "cannot hash inputs"; exit 2; } ;;
 esac
 hash=${hash%% *}
 [[ $hash =~ ^[0-9a-f]{64}$ ]] || { echo "cannot hash inputs"; exit 2; }
@@ -187,8 +197,8 @@ if [ $cmd = waive ]; then
   exit 0
 fi
 block() {
-  { [ -s "$f/advisor.md" ] && echo; printf '## %s | %s | sha256 %s | BLOCKED\nreason: %s\n' "$label" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$hash" "$1"; } >> "$f/advisor.md" || exit 1
-  printf 'BLOCKED: %s\nrecord: %s/advisor.md\n' "$1" "$f"
+  { [ -s "$rec" ] && echo; printf '## %s | %s | sha256 %s | BLOCKED\nreason: %s\n' "$label" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$hash" "$1"; } >> "$rec" || exit 1
+  printf 'BLOCKED: %s\nrecord: %s\n' "$1" "$rec"
   exit 1
 }
 [ -n "${say:-}" ] && echo "$say"
@@ -211,6 +221,8 @@ printf '%s\n' '{"type":"object","additionalProperties":false,"required":["verdic
     *-decisions)
       printf '%s\n' 'Point: decisions. Below is the list of small decisions the orchestrator made. For each one, say whether it is fine. A finding with severity CRITICAL or HIGH means the decision must go to the user.'
       cat "$3" ;;
+    *-review)
+      printf '%s\n' "Point: review. Do a full review of the changes in git diff $2..HEAD (run it yourself): bugs, regressions, security and broken rules of the project's constitution. Do not build or fix." ;;
     *-diff)
       printf '%s\n' "Point: diff. Review the changes in git diff $3..HEAD (run it yourself): hidden regressions and broken rules of the project's constitution. Do not build or fix." ;;
     *-plan)
@@ -243,24 +255,26 @@ if [ "${HERDR_ENV:-}" = 1 ] && [ -n "${HERDR_WORKSPACE_ID:-}" ] && command -v he
     *) grep -a '^ERROR:' "$tmp/tab" | tail -n1; via="codex: headless (Codex tab failed)" ;;
   esac
 fi
-left=$((540 - SECONDS))
+lim=540
+[ $point = review ] && lim=1800
+left=$((lim - SECONDS))
 # ponytail: the 60 s floor has no test (it needs a 60 s wait), add one with a fake clock if the budget changes
 [ $rc != 0 ] && [ $left -lt 60 ] && block "timed out"
 [ $rc = 0 ] || { rc=0; timeout -k 10 $left codex exec -s read-only --ignore-user-config "${opts[@]}" --ephemeral --output-schema "$tmp/schema.json" -o "$tmp/answer.json" - < "$tmp/prompt" > "$tmp/out" 2> "$tmp/err" || rc=$?; }
 
-python3 -I - "$label" "$f" "$hash" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$tmp/answer.json" "$rc" "$tmp/err" <<'PY'
+python3 -I - "$label" "$rec" "$hash" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$tmp/answer.json" "$rc" "$tmp/err" <<'PY'
 import json, os, sys
 sys.stdout.reconfigure(errors="replace")
 point, f, h, ts, ans, rc, err = sys.argv[1:]
 def clean(s):
     return s.replace("\r", " ").replace("\n", " ")
 def record(v, lines):
-    with open(f"{f}/advisor.md", "a", encoding="utf-8", errors="replace") as r:
+    with open(f, "a", encoding="utf-8", errors="replace") as r:
         r.write("\n" * bool(r.tell()) + "".join(l + "\n" for l in [f"## {point} | {ts} | sha256 {h} | {v}", *lines]))
 def blocked(reason, extra=()):
     reason = clean(reason)
     record("BLOCKED", [f"reason: {reason}"])
-    print("\n".join([f"BLOCKED: {reason}", *extra, f"record: {f}/advisor.md"]))
+    print("\n".join([f"BLOCKED: {reason}", *extra, f"record: {f}"]))
     sys.exit(1)
 if rc in ("124", "137"):
     blocked("timed out")
@@ -291,7 +305,7 @@ summary = clean(a["summary"])
 found = [f"- [{clean(x['severity'])}] {clean(x['location'])}: {clean(x['claim'])} Evidence: {clean(x['evidence'])}" for x in a["findings"]]
 record(v, [f"summary: {summary}", *found])
 head = [f"BLOCKED: {summary}"] if v == "BLOCKED" else [f"{v} sha256 {h}", f"summary: {summary}"]
-print("\n".join(head + found + [f"record: {f}/advisor.md"]))
+print("\n".join(head + found + [f"record: {f}"]))
 sys.exit(1 if v == "BLOCKED" else 0)
 PY
 rc=$?

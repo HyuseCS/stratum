@@ -472,5 +472,112 @@ mv "$tmp/advisor.real" "$proj/specs/001-demo/advisor.md"
 recf="$proj/specs/001-demo/advisor.md"
 check "record file has no blank line at EOF" '[ -z "$(tail -c1 "$recf")" ] && [ "$(tail -c2 "$recf" | wc -l)" != 2 ] && [ "$(grep -c "^$" "$recf")" = $(( $(nrec) - 1 )) ] && git -C "$proj" add specs/001-demo/advisor.md && git -C "$proj" diff --cached --check; r=$?; git -C "$proj" reset -q; [ $r = 0 ]'
 
+rv="$tmp/rv"
+mkdir -p "$rv/.stratum"
+git -C "$rv" init -q -b main
+printf '.stratum/advisor/\n' > "$rv/.gitignore"
+printf 'x = 1\n' > "$rv/a.py"
+git -C "$rv" add -A
+git -C "$rv" -c user.name=t -c user.email=t@t commit -q -m one
+c1=$(git -C "$rv" rev-parse HEAD)
+printf 'x = 2\n' > "$rv/a.py"
+git -C "$rv" -c user.name=t -c user.email=t@t commit -q -am two
+c2=$(git -C "$rv" rev-parse HEAD)
+rvm="$rv/.stratum/advisor.json"
+rvs="$rv/.stratum/state.json"
+rdir="$rv/.stratum/advisor"
+printf '{"mode": "codex"}' > "$rvm"
+rvadv() { (cd "$rv" && bash "$root/scripts/st-advisor.sh" review "$@"); }
+rrun() { out=$(rvadv "$@"); rc=$?; }
+rh=$(git -C "$rv" diff --no-ext-diff --no-color "$c1" HEAD -- | sha256sum | cut -d' ' -f1)
+rrec() { grep -E '^## review \| ' "$1" 2>/dev/null | tail -n1; }
+usage_rc2() { [ "$rc" = 2 ] && [[ "$(head -n1 <<<"$out")" == "usage: st-advisor.sh plan|test|diff|decisions|change|review|round|check|continued|waive|note|talk|count|answer|watch ..."* ]]; }
+
+answer '{"verdict":"APPROVED","summary":"fine","findings":[]}'
+rm -f "$tmp/argv" "$tmp/timeout_argv" "$tmp/prompt"
+git -C "$rv" status --porcelain > "$tmp/st.before"
+rrun "$c1"
+git -C "$rv" status --porcelain > "$tmp/st.after"
+check "FR-001 review runs with no feature folder: exit 0, verdict line with the diff hash" '[ ! -d "$rv/specs" ] && [ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "APPROVED sha256 $rh" ]'
+check "FR-009 review output: record line and headless last line" 'grep -qxF "record: $rdir/main.md" <<<"$out" && [ "$(tail -n1 <<<"$out")" = "codex: headless (not in herdr)" ]'
+check "FR-009 review prompt: head is exact, Point line names the base" 'head -n4 "$tmp/prompt" | cmp -s - "$tmp/head.expected" && grep -qxF "Point: review. Do a full review of the changes in git diff $c1..HEAD (run it yourself): bugs, regressions, security and broken rules of the project'"'"'s constitution. Do not build or fix." "$tmp/prompt"'
+check "FR-005 review timeout argv is 1800" '[ "$(sed -n 1,4p "$tmp/timeout_argv" 2>/dev/null | paste -sd,)" = "-k,10,1800,codex" ]'
+check "FR-007 review record header" 'rrec "$rdir/main.md" | grep -qE "^## review \| [0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z \| sha256 $rh \| APPROVED$"'
+check "SC-002 review run changes nothing in git status" '[ -s "$tmp/st.before" ] && cmp -s "$tmp/st.before" "$tmp/st.after"'
+rrun "$c1"
+check "FR-007 second run keeps the first entry" '[ "$(grep -c "^## review |" "$rdir/main.md" 2>/dev/null)" = 2 ]'
+check "FR-008 .gitignore ignores .stratum/advisor/" 'git -C "$root" check-ignore -q .stratum/advisor/x.md'
+
+rm -f "$tmp/argv"
+rrun
+check "FR-002 no base: usage, exit 2, no codex" 'usage_rc2 && [ ! -e "$tmp/argv" ]'
+rrun "$c1" a b
+check "FR-002 too many arguments: usage, exit 2, no codex" 'usage_rc2 && [ ! -e "$tmp/argv" ]'
+rrun not-a-commit
+check "FR-002 base not a commit: usage, exit 2, no codex" 'usage_rc2 && [ ! -e "$tmp/argv" ]'
+rrun "$c2"
+check "FR-002 base is HEAD: skip line, exit 0, no codex" '[ $rc = 0 ] && [ "$out" = "no change since $c2: skip" ] && [ ! -e "$tmp/argv" ]'
+
+printf '{"mode": "auto"}' > "$rvm"
+for r in none low normal high; do
+  printf '{"risk": "%s"}' "$r" > "$rvs"
+  rm -f "$tmp/argv"
+  rrun "$c1"
+  check "FR-003 auto at risk $r runs codex" '[ "$(head -n1 <<<"$out")" = "advisors: codex (review, risk '"$r"')" ] && [ -f "$tmp/argv" ] && [ $rc = 0 ]'
+done
+rm -f "$rvs"
+printf '{"mode": "both"}' > "$rvm"
+rm -f "$tmp/argv"
+rrun "$c1"
+check "FR-003 mode both runs codex" '[ "$(head -n1 <<<"$out")" = "mode both: also consult /advisor if one is set" ] && [ -f "$tmp/argv" ] && [ $rc = 0 ]'
+printf '{"mode": "codex"}' > "$rvm"
+rm -f "$tmp/argv"
+rrun "$c1"
+check "FR-003 mode codex runs codex" '[ -f "$tmp/argv" ] && [[ "$(head -n1 <<<"$out")" == "APPROVED sha256 "* ]]'
+printf '{"mode": "off"}' > "$rvm"
+rm -f "$tmp/argv"
+rrun "$c1"
+check "FR-003 mode off: no advisor, no codex" '[ $rc = 0 ] && [ "$out" = "no advisor: mode off" ] && [ ! -e "$tmp/argv" ]'
+rm -f "$rvm" "$tmp/argv"
+rrun "$c1"
+check "FR-003 mode not set: no advisor, no codex" '[ $rc = 0 ] && [ "$out" = "no advisor: mode not set. Write .stratum/advisor.json with \"mode\": \"auto\", \"codex\", \"both\" or \"off\"." ] && [ ! -e "$tmp/argv" ]'
+printf '{"mode": "codex"}' > "$rvm"
+out=$(cd "$rv" && PATH="$tmp/sys" bash "$root/scripts/st-advisor.sh" review "$c1"); rc=$?
+check "FR-003 codex not found: no advisor, no codex" '[ $rc = 0 ] && [ "$out" = "no advisor: codex not found" ] && [ ! -e "$tmp/argv" ]'
+
+rm -rf "$rdir"
+git -C "$rv" checkout -q -b feat/x
+rrun "$c1"
+check "FR-007 branch feat/x writes feat-x.md" '[ -f "$rdir/feat-x.md" ] && rrec "$rdir/feat-x.md" | grep -q "| APPROVED$"'
+sid=$(git -C "$rv" rev-parse --short HEAD)
+git -C "$rv" checkout -q --detach
+rrun "$c1"
+check "FR-007 detached HEAD writes <short id>.md" '[ -f "$rdir/$sid.md" ] && rrec "$rdir/$sid.md" | grep -q "| APPROVED$"'
+git -C "$rv" checkout -q main
+wt="$tmp/rvwt"
+git -C "$rv" worktree add -q -b wtb "$wt"
+out=$(cd "$wt" && bash "$root/scripts/st-advisor.sh" review "$c1"); rc=$?
+check "FR-007 linked worktree writes into the main checkout" '[ -f "$rdir/wtb.md" ] && [ ! -e "$wt/.stratum/advisor" ] && grep -qxF "record: $rdir/wtb.md" <<<"$out"'
+git -C "$rv" worktree remove --force "$wt"
+
+rm -rf "$rdir"
+FAKE_RC=1 rrun "$c1"
+check "FR-007 codex exit 1: BLOCKED in the same file" '[ $rc = 1 ] && [ "$(head -n1 <<<"$out")" = "BLOCKED: codex exited 1" ] && rrec "$rdir/main.md" | grep -q "| BLOCKED$" && [ "$(grep -A1 -F "$(rrec "$rdir/main.md")" "$rdir/main.md" | tail -n1)" = "reason: codex exited 1" ]'
+
+rm -rf "$rdir"
+printf '{' > "$rvm"
+rm -f "$tmp/argv"
+rrun "$c1"
+check "FR-007 bad advisor.json: BLOCKED in <slug>.md, no other file" '[ $rc = 1 ] && [ "$(head -n1 <<<"$out")" = "BLOCKED: bad advisor.json" ] && [ "$(ls "$rdir" 2>/dev/null)" = main.md ] && rrec "$rdir/main.md" | grep -q "| BLOCKED$" && [ "$(grep -A1 -F "$(rrec "$rdir/main.md")" "$rdir/main.md" | tail -n1)" = "reason: bad advisor.json" ] && [ ! -e "$tmp/argv" ]'
+printf '{"mode": "codex"}' > "$rvm"
+
+rm -rf "$rdir"
+mkdir "$tmp/linkdir"
+ln -s "$tmp/linkdir" "$rdir"
+rm -f "$tmp/argv"
+rrun "$c1"
+check "FR-007 .stratum/advisor symlink: usage, exit 2, no codex, target unchanged" 'usage_rc2 && [ ! -e "$tmp/argv" ] && [ -z "$(ls -A "$tmp/linkdir")" ]'
+rm -f "$rdir"
+
 check "no repo writes" '[ "$(git -C "$root" status --porcelain)" = "$repo_before" ]'
 exit $fail
