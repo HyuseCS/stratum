@@ -109,7 +109,7 @@ edit tools. Check that each try is refused.
 
 ### Key Entities
 
-- **Mode entry**: one empty or one-line file per session, named with the session id, in the mode folder `<main checkout>/.stratum/autonomous/`. It exists while that session is in autonomous build mode.
+- **Mode entry**: one empty file per session, named with the session id, in the mode folder `<main checkout>/.stratum/autonomous/`. It exists while that session is in autonomous build mode.
 - **Session id**: the Claude Code session id of the orchestrator (`CLAUDE_CODE_SESSION_ID`, and `session_id` in hook input). A worker's `.stratum/approve/session` holds the id of its orchestrator.
 
 ## Success Criteria *(mandatory)*

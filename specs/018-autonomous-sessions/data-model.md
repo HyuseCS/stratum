@@ -28,6 +28,11 @@ No database. Files only.
 - Counts as off for every session.
 - Replaced by the folder when any session turns on. `autonomous-off` leaves it alone and reports "not on for this session".
 
+## Version mix and rollback
+
+- Every roster machine needs this plugin version. An older version on a saved machine finds a folder where it expects the old flag and counts as off: it fails safe, and its workers' prompts wait for the user.
+- Rollback: to go back to an older plugin, remove `.stratum/autonomous/` in each main checkout, here and on each saved machine.
+
 ## States of one session
 
 | From | Event | To | Effect on other sessions |

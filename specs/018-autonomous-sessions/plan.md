@@ -58,6 +58,7 @@ skills/st/SKILL.md                 # turn-on line (89), turn-off triggers (90, 9
 skills/st-worker/SKILL.md          # saved-machine sentence (43)
 skills/st-handoff/SKILL.md         # turn-off before the handoff
 README.md                          # line 293, the hook's on rule
+DESIGN.md                          # line 194, local file table row (F5)
 docs/harness/model/data.c4         # stratum.autonomous summary
 docs/harness/model/hooks.c4        # st-approve-py summary (D2)
 docs/harness/atlas/data.mjs        # node S: autonomous -> autonomous/
@@ -98,6 +99,11 @@ tests/test_harness_model.sh        # run only, no edit expected
 - S4 External service (ssh to a saved machine, `scripts/st-worker.sh:277` and `:720`): the id is passed through `printf %q` as today, and is already limited to `[A-Za-z0-9-]`. The remote script removes only `<repo>/.stratum/autonomous/<id>`.
 - S5 Data: no personal or minors' data. Session ids are local, random UUIDs.
 
+## Rollout and rollback
+
+- Every roster machine needs this plugin version. A saved machine with an older version reads the old single-file flag, finds a folder, and counts as off: it fails safe, and its workers' prompts wait for the user.
+- Rollback: to go back to an older plugin, remove `.stratum/autonomous/` in each main checkout, here and on each saved machine.
+
 ## Decisions (answered 2026-11-08)
 
 - D1 = A. The local turn-on step is a new subcommand `st-worker.sh autonomous-on` (contract C2). The skill line becomes `bash <plugin root>/scripts/st-worker.sh autonomous-on`. It is refused from a worker worktree by the existing check (`scripts/st-worker.sh:62-66`). `autonomous-on` goes into `RISKY` (`hooks/st-approve.py:16`), `LOCK2_WORKER_CALLS` (`tests/test_approve_hook.py`) and the never-list sentence (`skills/st-worker/SKILL.md:34`, row W5). Rejected: B, a longer shell line in the skill (only text-tested, and F2 in `tests/test_worker_rules.sh` would have to be loosened).
@@ -107,3 +113,26 @@ tests/test_harness_model.sh        # run only, no edit expected
 ## Complexity Tracking
 
 None.
+
+## Validate
+
+Date: 2026-11-08. Verdict: CONDITIONAL
+
+| Check | Verdict | Findings |
+|-------|---------|----------|
+| 1. Setup and dependencies | PASS | none. bash 5.3, Python 3.14, git 2.56, jq 1.8.2, node 24.14.1 (gate 22.22.3), herdr and ssh present, atlas `build.mjs` and `template.html` present. Baseline green: `bash tests/test_statusline.sh`, `python3 tests/test_approve_hook.py`, `bash tests/test_st_worker.sh`, `bash tests/test_worker_rules.sh`, `bash tests/test_harness_model.sh coverage missing summaries links validate rebuild atlas readme nomcp` (likec4@1.60.0 validate and rebuild ok). |
+| 2. Test coverage per requirement | CONCERN | F1, F2, F3, F6 |
+| 3. Breaking changes | CONCERN | F4, F5 |
+| 4. Security and privacy | PASS | none. S1-S5 each have a test task: lock 2 T014/T016, id rule T001(f)/T002(g)/T003 ON5 and OF2, symlinks T001(d)(e)/T002(e)(f)/T003 ON6 and OF3, ssh id passed through `printf %q` and limited to `[A-Za-z0-9-]`. No secrets, no personal data. |
+
+F1. tasks.md:45-46, tasks.md:64-66, tasks.md:105 `[P]` build tasks share one test file that cannot go green alone. T004 changes rows W8 and G11 (`skills/st/SKILL.md`, T008) and W15 (`README.md`, T009) together, so T008 alone leaves W15 red and T009 alone leaves W8 and G11 red. Same in Phase 4: T010 changes W9 and W34 (T011), W35 (T012) and W17 (T013). tasks.md:105 says no `[P]` task needs another's result. -> st-plan: merge T008+T009 and T011+T012+T013, or keep `[P]` and state that `bash tests/test_worker_rules.sh` goes green only when the phase is complete.
+
+F2. tasks.md:31, tasks.md:32, tasks.md:33 Negative cases that can pass with no id check. T001(f) and T002(g) (`../x` with `.stratum/x` present) prove the id rule only when the mode folder is a real directory at that moment; T001 runs (c) old file and (d) symlinked folder before (f), so (f) can pass on rule 2 alone. OF2 says "remove nothing" but names no bait file. Every statusline "no segment" case is a negated grep on stdout, so a Python error (for example `re.fullmatch` on a missing `session_id`) also passes. -> st-plan: in T001(f) and T002(g) state that the folder is a real directory with another entry; in OF2 make `$repo/.stratum/x` first and check it still exists; give each statusline no-segment case a positive check too (exit 0 and line 2 present).
+
+F3. tasks.md:33 Contract rows with no test case: local `autonomous-off` with a symlinked entry (C3 row 3, FR-006), saved-machine `autonomous-off` with a symlinked folder or entry, `autonomous-off` over an old single-file flag ("not on for this session", data-model Old flag), and `autonomous-on` outside a git repo (C2 table row 2). -> st-plan: add OF5-OF7 and ON9 to T003.
+
+F4. plan.md:9, data-model.md:27 Stored-data change with no rollback note. The path `<main checkout>/.stratum/autonomous` changes from a file to a folder. (a) Rollback to the earlier plugin: its turn-on `printf ... >` fails with "Is a directory" and its `autonomous-off` finds no file, so no session can turn on until the folder is removed. (b) Mixed versions across machines: a saved machine with the older plugin runs the older `st-approve.py`, which reads the folder as a file and stays silent, so that worker's prompts wait for the user (fails safe). (c) A session that is on at upgrade time drops to off with no message (spec edge case accepts it). -> st-plan: add a rollback line to plan.md and quickstart.md ("to go back, remove the `autonomous/` folder in each main checkout, here and on each saved machine") and a note that every machine in the roster needs this plugin version.
+
+F5. DESIGN.md:194, docs/harness/model/skills-core.c4:84 Docs left on the old layout. DESIGN.md says the main checkout "holds the flag" and is not on the file list. After D1 the skill no longer writes the entry (`st-worker.sh autonomous-on` does), so `skills.st -[writes]-> stratum.autonomous` is no longer true. D2 = A kept labels on purpose. -> user decision: accept as is, or add DESIGN.md:194 to T018 (one row, no test).
+
+F6. tasks.md:58, tasks.md:127-129 FR-009, FR-010 and FR-011 are proved only by phrase match on skill files (`tests/test_worker_rules.sh` W8, W9, W17, W34, W35). That the orchestrator runs `autonomous-off` at those moments is proved only by the by-hand steps in quickstart.md. -> no change; record it in the Close report.
