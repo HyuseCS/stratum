@@ -19,7 +19,7 @@ model {
       }
     }
     st-advisor-sh = script 'st-advisor.sh' {
-      summary 'Runs one advisor point: picks the advisors from the mode and risk, sends the review prompt to Codex and records the verdict in the feature advisor file.'
+      summary 'Runs one advisor point: picks the advisors from the mode and risk, sends the review prompt to Codex and records the verdict in the feature advisor file or the branch review record.'
       metadata {
         path 'scripts/st-advisor.sh'
       }
@@ -113,6 +113,7 @@ model {
   scripts.st-advisor-sh -[reads]-> feature.changes 'change plan, hashed for the change point'
   scripts.st-advisor-sh -[reads]-> feature.advisor-md 'last record for check, continued, waive and count'
   scripts.st-advisor-sh -[writes]-> feature.advisor-md 'point, time, sha256, verdict and findings, or a waive, note, talk or continued record'
+  scripts.st-advisor-sh -[writes]-> stratum.advisor-dir 'review point record per branch: base, time, sha256, verdict and findings'
   scripts.st-advisor-sh -[reads]-> outside.codex-auth-json 'Codex login to link'
   scripts.st-advisor-sh -[writes]-> outside.local-state-stratum-codex-home 'auth.json link and the untrusted project entry in config.toml'
   scripts.st-advisor-sh -[runs]-> scripts.st-lock-sh 'lock codex-WORKSPACE, timeout 50 s, around st-codex-agent.sh'

@@ -6,6 +6,12 @@ model {
         path 'skills/st-review'
       }
     }
+    st-advisor = skill '/st-advisor' {
+      summary 'Runs the Codex review point on a branch, a base ref or a worker PR, and CodeRabbit for a PR. Checks each finding against the source before it shows it.'
+      metadata {
+        path 'skills/st-advisor'
+      }
+    }
     st-test = skill '/st-test' {
       summary 'Runs the st-test agent for task IDs of the current feature. Runs each test again and confirms it fails for the right reason.'
       metadata {
@@ -119,6 +125,11 @@ model {
   skills.st-review -[reads]-> stratum.state-json 'feature directory'
   skills.st-review -[starts]-> agents.st-review 'plugin root, project root, feature dir, story and range'
   skills.st-review -[passes]-> user 'real findings and dropped findings with why'
+
+  skills.st-advisor -[runs]-> scripts.st-advisor-sh 'review point, base and optional plan file'
+  skills.st-advisor -[reads]-> github 'PR branch, head and base for the PR form'
+  skills.st-advisor -[writes]-> stratum.advisor-dir 'CodeRabbit section in the review record'
+  skills.st-advisor -[passes]-> user 'real findings and dropped findings with why'
 
   skills.st-test -[reads]-> stratum.state-json 'feature directory'
   skills.st-test -[starts]-> agents.st-test 'plugin root, project root, feature dir and task IDs'
