@@ -28,7 +28,7 @@ Steps, in order, the same here and on a saved machine (`start --autonomous --mac
 2. `.stratum` (saved machine) or `<folder>` is a symlink: refuse, make nothing.
 3. `<folder>` is a regular file (old flag): remove it with a non-recursive `rm -f -- "<folder>"` on the exact path, with no trailing slash and no recursive option. A failed remove is ignored before step 4.
 4. `mkdir -p <folder>`. It is not a directory afterwards: refuse.
-5. `<folder>/S` is a symlink: refuse. Else make it empty (`: >`).
+5. `<folder>/S` is a symlink: refuse. Else make it empty only when missing (`[ -f entry ] || : > entry`). An existing entry is never truncated.
 
 It never reads, changes or removes any other entry.
 
@@ -43,6 +43,7 @@ Local: `st-worker.sh autonomous-on` (D1 = A). No arguments; any argument prints 
 | `$CLAUDE_CODE_SESSION_ID` empty or fails C1.1 | `cannot turn on autonomous mode: session id must be letters, digits or -` | 1 |
 | folder or entry is a symlink | `cannot turn on autonomous mode: <path> is a symlink` | 1 |
 | folder is still not a directory after step 4 | `cannot turn on autonomous mode: <path> is not a folder` | 1 |
+| entry write fails | `cannot turn on autonomous mode: cannot write <path>` | 1 |
 | entry made (or already there) | `autonomous on` TAB `local` | 0 |
 
 A refusal makes and removes nothing, except the old-flag remove of step 3. It needs no herdr pane.
