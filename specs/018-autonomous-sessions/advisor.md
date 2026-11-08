@@ -18,3 +18,10 @@ summary: keep per-story phases (procedure requires); C2 step 3 must use non-recu
 
 ## plan | 2026-11-08T11:26:48Z | sha256 21286a28a1c845c39c793feaf9555238ffccdd0859698c9c4392f5b13cb33921 | WAIVED
 reason: C2 step 3 and T007 now say non-recursive rm -f on the old flag path; MEDIUM fix only
+
+## plan | 2026-11-08T11:39:24Z | sha256 a7cae63cf65f3d02fc4a2fcedf308fd9c6e5a8689cc8c05aba97fa86dbcedc0a | REVISE
+summary: Simplify task grouping to reduce repeated edits and sequential phases. Review limited to planning improvements.
+- [MEDIUM] specs/018-autonomous-sessions/tasks.md:109: Group work by implementation file instead of serializing all three stories. Evidence: The plan explicitly sequences stories because they revisit the same files. Merge T002/T014 and T006/T016 for the hook; consolidate T004/T010/T015 for skill-rule tests, T008/T011 for the orchestrator skill, and T013/T017 for the worker skill. Keep tests before implementation within each group and retain story IDs for traceability. This reduces repeated file handoffs and validation runs while allowing independent file groups to proceed together.
+
+## plan | 2026-11-08T11:39:32Z | /advisor
+summary: rerun after F5 added DESIGN.md: same merge MEDIUM as round 1, dropped again because procedures/tasks.md:65,110 requires one phase per story
