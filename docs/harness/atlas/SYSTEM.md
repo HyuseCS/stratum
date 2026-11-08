@@ -203,7 +203,7 @@ Stratum is a Claude Code plugin that runs a coding task through a lane. You give
 
 **In one line.** Agents that write the plan, check it, or check an issue, and report back.
 
-**What it does.** The plan agent writes the plan and the tasks, and stops with the decisions it cannot settle. The inspect agent checks that spec, plan and tasks agree. The triage agent checks a GitHub issue against the code.
+**What it does.** The plan agent writes the plan and the tasks, and stops with the decisions it cannot settle. The inspect agent checks that spec, plan and tasks agree. The triage agent checks a GitHub issue against the code. The research agent finds facts in the code and on the web and writes them to one research file.
 
 **How it's built.** `agents/st-plan.md` follows `procedures/plan.md` and `procedures/tasks.md`. `agents/st-inspect.md` follows `procedures/analyze.md` and writes only the Validate section of `plan.md`. `agents/st-triage.md` reads the issue with `gh issue view`. `agents/st-research.md` follows `procedures/research.md`. LikeC4 ids: `agents.st-plan`, `agents.st-inspect`, `agents.st-triage`, `agents.st-research`.
 

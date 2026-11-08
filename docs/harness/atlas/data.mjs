@@ -116,7 +116,7 @@ export const NODES = [
 
   { id: 'A', code: 'A', name: 'Plan and check agents', short: 'PLAN AGENTS', group: 'agents', gx: 12, gy: 4, w: 2, d: 2, h: 40, kind: 'box',
     one: 'Agents that write the plan, check it, or check an issue, and report back.',
-    what: 'The plan agent writes the plan and the tasks, and stops with the decisions it cannot settle. The inspect agent checks that spec, plan and tasks agree. The triage agent checks a GitHub issue against the code.',
+    what: 'The plan agent writes the plan and the tasks, and stops with the decisions it cannot settle. The inspect agent checks that spec, plan and tasks agree. The triage agent checks a GitHub issue against the code. The research agent finds facts in the code and on the web and writes them to one research file.',
     how: '<code>agents/st-plan.md</code> follows <code>procedures/plan.md</code> and <code>procedures/tasks.md</code>. <code>agents/st-inspect.md</code> follows <code>procedures/analyze.md</code> and writes only the Validate section of <code>plan.md</code>. <code>agents/st-triage.md</code> reads the issue with <code>gh issue view</code>. <code>agents/st-research.md</code> follows <code>procedures/research.md</code>. LikeC4 ids: <code>agents.st-plan</code>, <code>agents.st-inspect</code>, <code>agents.st-triage</code>, <code>agents.st-research</code>.' },
 
   { id: 'B', code: 'B', name: 'Build agents', short: 'BUILD AGENTS', group: 'agents', gx: 12, gy: 8, w: 2, d: 2, h: 40, kind: 'box',

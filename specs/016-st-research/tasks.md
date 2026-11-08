@@ -124,12 +124,12 @@ fixed sections and rounds. The agent is listed everywhere the other agents are.
 
 ### Tests for User Story 4
 
-- [ ] T008 [US4] In `tests/test_research.sh`, add the contracts section 6 US4 rows, and change the `FR-001 agent` tools line to `tools: Read, Grep, Glob, Bash, Write, Edit, WebSearch, WebFetch` (FR-009, FR-010). Red: US4 rows and `FR-001 agent`.
+- [x] T008 [US4] In `tests/test_research.sh`, add the contracts section 6 US4 rows, and change the `FR-001 agent` tools line to `tools: Read, Grep, Glob, Bash, Write, Edit, WebSearch, WebFetch` (FR-009, FR-010). Red: US4 rows and `FR-001 agent`.
   - Test: `bash tests/test_research.sh`.
 
 ### Implementation for User Story 4
 
-- [ ] T009 [US4] Add the `[US4: ...]` parts of contracts sections 2 and 3 to `agents/st-research.md` (description, tools line, untrusted line) and `procedures/research.md` (four web bullets, `A question the code and the web cannot answer:`) (FR-009, FR-010). Security: plan.md S3.
+- [x] T009 [US4] Add the `[US4: ...]` parts of contracts sections 2 and 3 to `agents/st-research.md` (description, tools line, untrusted line) and `procedures/research.md` (four web bullets, `A question the code and the web cannot answer:`) (FR-009, FR-010). Security: plan.md S3.
   - Test: `bash tests/test_research.sh; bash tests/test_session_hooks.sh; bash tests/test_test_scope.sh`.
 
 **Checkpoint**: all stories green.

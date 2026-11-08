@@ -135,7 +135,7 @@ Find each anchor by its text. Insert the line exactly as shown.
 - E4 (FR-015) `skills/st-define/SKILL.md`, step 1, after the line that ends `privacy, and done-criteria are clear.`:
 
   ```text
-     When the grill needs `/stratum:st-research`, make the feature folder first: `specs/<NNN>-<short-name>`, with the next free number and the short-name rule of `<plugin root>/procedures/specify.md` steps 1 and 2, made with `mkdir -p`. Pass `<folder>/research.md` as the research path. Never use the feature in `.stratum/state.json` for it.
+     When the grill needs `/stratum:st-research`, make the feature folder first: `specs/<NNN>-<short-name>`, with the next free number and the short-name rule of `<plugin root>/procedures/specify.md` steps 1 and 2, made with `mkdir -p`. Make it once per run and use it again for later research in the same run. Pass `<folder>/research.md` as the research path. Outside a redo, never use the feature in `.stratum/state.json` for it. In a redo (step 0.2), make no folder: pass `<feature_directory>/research.md` for the feature in `.stratum/state.json` that step 0.2 redoes.
   ```
 
   and step 2, after the line that ends `checklist.`, before `The Stratum hook records the new folder as`:
@@ -255,7 +255,9 @@ US2 rows:
 | FR-014 grill | skills/st-grill/SKILL.md | `Show its findings to the user, then go on with the grill.` |
 | FR-015 define | skills/st-define/SKILL.md | ``When the grill needs `/stratum:st-research`, make the feature folder first`` |
 | FR-015 define | skills/st-define/SKILL.md | ``Pass `<folder>/research.md` as the research path.`` |
-| FR-015 define | skills/st-define/SKILL.md | ``Never use the feature in `.stratum/state.json` for it.`` |
+| FR-015 define | skills/st-define/SKILL.md | ``Outside a redo, never use the feature in `.stratum/state.json` for it.`` |
+| FR-015 once | skills/st-define/SKILL.md | `Make it once per run and use it again for later research in the same run.` |
+| FR-015 redo | skills/st-define/SKILL.md | ``In a redo (step 0.2), make no folder: pass `<feature_directory>/research.md` for the feature in `.stratum/state.json` that step 0.2 redoes.`` |
 | FR-016 define | skills/st-define/SKILL.md | `If step 1 made a feature folder, put its path in the input.` |
 | FR-016 specify | procedures/specify.md | `If the input names a feature folder that Define made in this run` |
 | FR-016 specify | procedures/specify.md | `Make no second folder.` |
@@ -271,6 +273,8 @@ US3 rows:
 | FR-013 plan proc | procedures/plan.md | `Research only the unknowns it does not cover` |
 | FR-013 plan proc | procedures/plan.md | ``under a `## Decisions` heading at the end of the file`` |
 | FR-013 plan proc | procedures/plan.md | `With no such file, follow steps 1 to 3.` |
+| FR-013 no redo | procedures/plan.md | `Do not research again what it answers.` |
+| FR-013 add | procedures/plan.md | `(add to it if it exists)` |
 
 US4 rows:
 
