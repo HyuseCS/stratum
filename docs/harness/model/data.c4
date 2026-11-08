@@ -13,7 +13,7 @@ model {
       }
     }
     autonomous = datafile '.stratum/autonomous' {
-      summary 'The autonomous build flag with the session id in the main checkout. The orchestrator writes it, st-worker.sh and st-approve.py read it.'
+      summary 'One empty entry per session in this folder of the main checkout, named with the session id. st-worker.sh makes and removes it, st-worker.sh, st-approve.py and the statusline read it.'
       metadata {
         data '.stratum/autonomous'
       }

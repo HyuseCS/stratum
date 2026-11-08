@@ -106,12 +106,18 @@ LOCK2_BASH = [
     "touch .stratum/././approve/1-1.ok",
     "touch .stratum///approve/1-1.ok",
     "touch .stratum/x/../approve/1-1.ok",
+    "touch .stratum/autonomous/S9",
+    "rm -f .stratum/autonomous/S1",
+    "mkdir -p .stratum/autonomous",
+    "rm -rf .stratum/autonomous",
 ]
 
 LOCK2_WORKER_CALLS = [
     "bash scripts/st-worker.sh approve worker-t1 --request 1-1 --input-stdin --record r",
     "st-worker.sh pass worker-t1 --request 1-1",
     "st-worker.sh autonomous-off --roster r",
+    "st-worker.sh autonomous-on",
+    "bash scripts/st-worker.sh autonomous-on",
     "bash scripts/st-worker.sh $'approve' worker-t1",
     'bash scripts/st-worker.sh "pass" worker-t1',
     "st-worker.sh wait worker-b",
@@ -179,8 +185,15 @@ class ApproveHookTest(unittest.TestCase):
         git("commit", "-q", "--no-verify", "-m", "init", cwd=self.root)
         self.stratum = os.path.join(self.root, ".stratum")
         self.approve = os.path.join(self.stratum, "approve")
-        write(os.path.join(self.stratum, "autonomous"), "S1\n")
+        self.auto = os.path.join(self.stratum, "autonomous")
+        write(os.path.join(self.auto, "S1"))
         self.make_approve(self.root)
+
+    def make_linked(self, name, session):
+        wt = os.path.join(self.tmp, name)
+        git("worktree", "add", "-q", "-b", "worker-" + name, wt, cwd=self.root)
+        self.make_approve(wt, session=session + "\n")
+        return wt
 
     def make_approve(self, folder, session="S1\n", owns="src/a.py\n"):
         approve = os.path.join(folder, ".stratum", "approve")
@@ -293,7 +306,7 @@ class ApproveHookTest(unittest.TestCase):
         }})
 
     def test_a1_stale_folder_without_autonomous(self):
-        remove(os.path.join(self.stratum, "autonomous"))
+        remove(os.path.join(self.auto, "S1"))
         self.assertSilent(self.bash("bash tests/x.sh"))
 
     def test_a2_session_id_differs(self):
@@ -302,19 +315,66 @@ class ApproveHookTest(unittest.TestCase):
 
     def test_a3_stop_autonomous_after_a_round(self):
         self.assertSent(self.bash("bash tests/x.sh"))
-        remove(os.path.join(self.stratum, "autonomous"))
+        remove(os.path.join(self.auto, "S1"))
         self.assertSilent(self.bash("bash tests/y.sh"))
 
     def test_a4_linked_worktree_with_its_own_flag(self):
-        remove(os.path.join(self.stratum, "autonomous"))
+        remove(os.path.join(self.auto, "S1"))
         wt = self.make_worker()
-        write(os.path.join(wt, ".stratum", "autonomous"), "S1\n")
+        write(os.path.join(wt, ".stratum", "autonomous", "S1"))
         self.assertSilent(self.bash("bash tests/x.sh", cwd=wt))
 
     def test_a5_empty_first_lines(self):
-        write(os.path.join(self.stratum, "autonomous"), "\n")
         write(os.path.join(self.approve, "session"), "\n")
         self.assertSilent(self.bash("bash tests/x.sh"))
+
+    def test_two_sessions_each_worker_is_sent(self):
+        write(os.path.join(self.auto, "S2"))
+        w1 = self.make_linked("w1", "S1")
+        w2 = self.make_linked("w2", "S2")
+        self.assertSent(self.bash("bash tests/x.sh", cwd=w1))
+        self.assertSent(self.bash("bash tests/x.sh", cwd=w2))
+
+    def test_removing_one_entry_leaves_the_other_session(self):
+        write(os.path.join(self.auto, "S2"))
+        w1 = self.make_linked("w1", "S1")
+        w2 = self.make_linked("w2", "S2")
+        remove(os.path.join(self.auto, "S1"))
+        self.assertSilent(self.bash("bash tests/x.sh", cwd=w1))
+        self.assertSent(self.bash("bash tests/x.sh", cwd=w2))
+
+    def test_session_without_entry_is_silent(self):
+        w3 = self.make_linked("w3", "S3")
+        self.assertSilent(self.bash("bash tests/x.sh", cwd=w3))
+
+    def test_old_single_file_is_off(self):
+        shutil.rmtree(self.auto)
+        write(self.auto, "S1\n")
+        w1 = self.make_linked("w1", "S1")
+        self.assertSilent(self.bash("bash tests/x.sh", cwd=w1))
+
+    def test_symlinked_folder_is_off(self):
+        shutil.rmtree(self.auto)
+        target = os.path.join(self.tmp, "elsewhere")
+        write(os.path.join(target, "S1"))
+        os.symlink(target, self.auto)
+        w1 = self.make_linked("w1", "S1")
+        self.assertSilent(self.bash("bash tests/x.sh", cwd=w1))
+
+    def test_symlinked_entry_is_off(self):
+        remove(os.path.join(self.auto, "S1"))
+        target = os.path.join(self.tmp, "real-entry")
+        write(target)
+        os.symlink(target, os.path.join(self.auto, "S1"))
+        w1 = self.make_linked("w1", "S1")
+        self.assertSilent(self.bash("bash tests/x.sh", cwd=w1))
+
+    def test_session_id_with_dots_is_off(self):
+        remove(os.path.join(self.auto, "S1"))
+        write(os.path.join(self.auto, "S2"))
+        write(os.path.join(self.stratum, "x"))
+        w1 = self.make_linked("w1", "../x")
+        self.assertSilent(self.bash("bash tests/x.sh", cwd=w1))
 
     def test_no_approve_folder_writes_nothing(self):
         shutil.rmtree(self.approve)
@@ -525,6 +585,8 @@ class ApproveHookTest(unittest.TestCase):
             os.path.join(wt, ".stratum", "approve", "1-1.ok"),
             os.path.join(wt, ".stratum", ".", "approve", "x"),
             os.path.join(wt, ".stratum", "autonomous"),
+            os.path.join(wt, ".stratum", "autonomous", "S1"),
+            os.path.join(wt, ".stratum", ".", "autonomous", "S1"),
         ]
         cases = []
         for p in targets:
@@ -537,6 +599,9 @@ class ApproveHookTest(unittest.TestCase):
         cases += [
             ("Read", {"file_path": os.path.join(wt, ".stratum", "approve", "session")}),
             ("Read", {"file_path": os.path.join(wt, ".stratum", "autonomous")}),
+            ("Read", {"file_path": os.path.join(wt, ".stratum", "autonomous", "S1")}),
+            ("Glob", {"pattern": ".stratum/autonomous/*"}),
+            ("Grep", {"pattern": "x", "path": os.path.join(wt, ".stratum", "autonomous")}),
             ("Grep", {"pattern": "x", "path": os.path.join(wt, ".stratum", "approve")}),
             ("Grep", {"pattern": "x", "glob": ".stratum/approve/*"}),
             ("Glob", {"pattern": ".stratum/approve/*"}),
@@ -578,6 +643,7 @@ class ApproveHookTest(unittest.TestCase):
         self.assertSilent(self.pre_bash(
             "bash scripts/st-worker.sh approve worker-t1 --request 1-1 --input-stdin --record r", cwd=demo))
         self.assertSilent(self.pre_bash("printf S1 > .stratum/autonomous", cwd=demo))
+        self.assertSilent(self.pre_bash("touch .stratum/autonomous/S1", cwd=demo))
 
 
 if __name__ == "__main__":

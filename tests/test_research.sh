@@ -20,7 +20,7 @@ phrases() {
 }
 
 IFS= read -r auto <<'EOF'
-f="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/.stratum/autonomous"; [ -n "${CLAUDE_CODE_SESSION_ID:-}" ] && [ -f "$f" ] && [ "$(head -n 1 "$f")" = "$CLAUDE_CODE_SESSION_ID" ]
+d="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/.stratum/autonomous"; s="${CLAUDE_CODE_SESSION_ID:-}"; [[ "$s" =~ ^[A-Za-z0-9-]+$ ]] && [ -d "$d" ] && [ ! -L "$d" ] && [ -f "$d/$s" ] && [ ! -L "$d/$s" ]
 EOF
 IFS= read -r path <<'EOF'
 p=$(realpath -m -- '<path>') && case "$p" in "$(realpath .)"/*) true ;; *) false ;; esac
@@ -127,14 +127,21 @@ m=$tmp/m
 git init -q "$m" && git -C "$m" -c user.name=t -c user.email=t@t commit -q --allow-empty -m i
 mkdir -p "$m/.stratum"
 git -C "$m" worktree add -q "$tmp/w" -b wt >/dev/null 2>&1
-printf 'sid-1\n' > "$m/.stratum/autonomous"
+mkdir -p "$m/.stratum/autonomous" && : > "$m/.stratum/autonomous/sid-1" && : > "$m/.stratum/autonomous/sid-3"
 check "FR-002 B1 main" '[ "$(arun "$m" sid-1)" = 0 ]'
 check "FR-002 B1 worktree" '[ "$(arun "$tmp/w" sid-1)" = 0 ]'
+check "FR-002 B1 second session" '[ "$(arun "$m" sid-3)" = 0 ]'
 check "FR-002 B1 other id" '[ "$(arun "$m" sid-2)" = 1 ]'
-rm -f "$m/.stratum/autonomous"
-check "FR-002 B1 no flag" '[ "$(arun "$m" sid-1)" = 1 ]'
-printf '\n' > "$m/.stratum/autonomous"
-check "FR-002 B1 empty flag" '[ "$(arun "$m" "")" = 1 ]'
+check "FR-002 B1 empty id" '[ "$(arun "$m" "")" = 1 ]'
+check "FR-002 B1 bad id" '[ "$(arun "$m" "../autonomous/sid-1")" = 1 ]'
+ln -s "$m/.stratum/autonomous/sid-1" "$m/.stratum/autonomous/sid-4"
+check "FR-002 B1 entry symlink" '[ "$(arun "$m" sid-4)" = 1 ]'
+rm -f "$m/.stratum/autonomous/sid-1"
+check "FR-002 B1 no entry" '[ "$(arun "$m" sid-1)" = 1 ]'
+rm -rf "$m/.stratum/autonomous" && mkdir -p "$tmp/real" && : > "$tmp/real/sid-1" && ln -s "$tmp/real" "$m/.stratum/autonomous"
+check "FR-002 B1 folder symlink" '[ "$(arun "$m" sid-1)" = 1 ]'
+rm -f "$m/.stratum/autonomous" && printf 'sid-1\n' > "$m/.stratum/autonomous"
+check "FR-002 B1 old single file" '[ "$(arun "$m" sid-1)" = 1 ]'
 
 p=$tmp/p
 mkdir -p "$p" "$tmp/p2" "$tmp/other"

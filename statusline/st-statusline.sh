@@ -49,12 +49,12 @@ try:
                             capture_output=True, text=True).stdout.strip()
 except OSError:
     common = ""
-flag = f"{os.path.dirname(common)}/.stratum/autonomous" if common else f"{proj}/.stratum/autonomous"
-try:
-    first = open(flag).readline().strip()
-except OSError:
-    first = ""
-autonomous = bool(first) and first == data.get("session_id")
+folder = f"{os.path.dirname(common)}/.stratum/autonomous" if common else f"{proj}/.stratum/autonomous"
+sid = data.get("session_id")
+entry = f"{folder}/{sid}"
+autonomous = (isinstance(sid, str) and bool(re.fullmatch(r"[A-Za-z0-9-]+", sid))
+              and os.path.isdir(folder) and not os.path.islink(folder)
+              and os.path.isfile(entry) and not os.path.islink(entry))
 
 
 

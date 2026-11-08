@@ -164,7 +164,7 @@ Stratum is a Claude Code plugin that runs a coding task through a lane. You give
 
 **What it does.** One small file says which feature, phase, lane and risk level this checkout is on. Beside it sit the project rules, the model choice per agent, and the flags a parallel worker run needs.
 
-**How it's built.** `.stratum/state.json` holds feature, phase, lane and risk. The phase hook `hooks/st-phase.py` writes it and replaces the file in one atomic step. Also `constitution.md`, `APP-constitution.md`, `decisions.md`, `models.json`, `approve/`, `autonomous`, `commit-mode` and `worker-setup.sh`. LikeC4 ids: `stratum.state-json`, `stratum.constitution-md`, `stratum.app-constitution-md`, `stratum.decisions-md`, `stratum.models-json`, `stratum.approve`, `stratum.autonomous`, `stratum.commit-mode`, `stratum.worker-setup-sh`.
+**How it's built.** `.stratum/state.json` holds feature, phase, lane and risk. The phase hook `hooks/st-phase.py` writes it and replaces the file in one atomic step. Also `constitution.md`, `APP-constitution.md`, `decisions.md`, `models.json`, `approve/`, `autonomous/`, `commit-mode` and `worker-setup.sh`. LikeC4 ids: `stratum.state-json`, `stratum.constitution-md`, `stratum.app-constitution-md`, `stratum.decisions-md`, `stratum.models-json`, `stratum.approve`, `stratum.autonomous`, `stratum.commit-mode`, `stratum.worker-setup-sh`.
 
 **Questions.**
 

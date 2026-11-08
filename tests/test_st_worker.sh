@@ -732,6 +732,19 @@ check "AQ3 no Type something option: exit 1, the line, nothing sent" '[ $rc = 1 
 mk; states done; { printf '%s\n' ' Do you want to proceed?' '❯ 1. Yes' '  2. No'; echo 'Enter to select · Esc to cancel'; } > "$tmp/pane.txt"
 run bash "$script" answer T004 --keys 1
 check "AQ4 permission dialog while done is not a question: exit 1, not blocked, nothing sent" '[ $rc = 1 ] && [ "$out" = "not blocked: done" ] && [ "$(cnt "^agent\tsend-keys\t")" = 0 ]'
+reviewpane() { printf '%s\n' ' Review your answers' ' ● Which folder holds the brief.md? → Newest brief.md folder' '' 'Ready to submit your answers?' '' '❯ 1. Submit answers' '  2. Cancel'; }
+mk; states done working; reviewpane > "$tmp/pane.txt"
+run bash "$script" answer T004 --keys 1
+check "AQ6 review screen while done: exit 0, key 1 sent once" '[ $rc = 0 ] && [ "$(cnt "^agent\tsend-keys\tworker-t004\t1\$")" = 1 ]'
+mk; states done; printf '%s\n' 'Done. Ran the tests.' 'All green.' > "$tmp/pane.txt"
+run bash "$script" answer T004 --keys 1
+check "AQ7 plain output while done: exit 1, not blocked, nothing sent" '[ $rc = 1 ] && [ "$out" = "not blocked: done" ] && [ "$(cnt "^agent\tsend-keys\t")" = 0 ]'
+mk; states done; { printf '%s\n' ' Do you want to proceed?'; reviewpane; } > "$tmp/pane.txt"
+run bash "$script" answer T004 --keys 1
+check "AQ8 permission line above review screen: exit 1, not blocked, nothing sent" '[ $rc = 1 ] && [ "$out" = "not blocked: done" ] && [ "$(cnt "^agent\tsend-keys\t")" = 0 ]'
+mk; states done; printf '%s\n' '$ grep -n Ready spec.md' '42: the "Ready to submit your answers?" screen (with "1. Submit answers / 2. Cancel")' '❯ ' > "$tmp/pane.txt"
+run bash "$script" answer T004 --keys 1
+check "AQ9 review phrase as plain text while done: exit 1, not blocked, nothing sent" '[ $rc = 1 ] && [ "$out" = "not blocked: done" ] && [ "$(cnt "^agent\tsend-keys\t")" = 0 ]'
 for a in --keys --text; do
   fresh; reset
   run bash "$script" answer T004 $a -x
@@ -1150,8 +1163,9 @@ aoroster="$tmp/aoff"
 oargs=(T004 --task "$tmp/task-owns.md" --test "$testcmd" --lane "$lane" --roster "$roster" --autonomous)
 printf 'TASK BODY\nOwns: `src/a.py`, `tests/t.sh`.\n' > "$tmp/task-owns.md"
 printf 'TASK BODY\n' > "$tmp/task-none.md"
-autoset() { printf '%s\n' "$1" > "$repo/.stratum/autonomous"; }
-autoclr() { rm -f "$repo/.stratum/autonomous"; }
+autoset() { mkdir -p "$repo/.stratum/autonomous"; : > "$repo/.stratum/autonomous/$1"; }
+autoclr() { rm -rf "$repo/.stratum/autonomous"; }
+rautoset() { mkdir -p "$1/.stratum/autonomous"; : > "$1/.stratum/autonomous/$2"; }
 apd() { mkdir -p "$lw/.stratum/approve"; }
 mkreq() { apd; jq -nc --arg c "$2" '{tool_name:"Bash",tool_input:{command:$c},time:"2026-10-31T00:00:00Z"}' > "$lw/.stratum/approve/$1.req"; }
 apx() { mk; apd; printf '%s\n' "$sid" > "$lw/.stratum/approve/session"; autoset "$sid"; rm -f "$rec" "$repo/pwned" "$tmp/pwned"; }
@@ -1168,7 +1182,7 @@ check "B1 no flag file: exit 1, the off line, no herdr call" '[ $rc = 1 ] && [ "
 fresh; autoset other-session
 CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" start "${sargs[@]}" --autonomous
 check "B2 the flag holds another id: exit 1, the off line, no herdr call" '[ $rc = 1 ] && [ "$out" = "Autonomous build mode is off for this session." ] && [ ! -s "$tmp/calls" ]'
-fresh; autoset ""
+fresh; autoset "$sid"
 CLAUDE_CODE_SESSION_ID= run bash "$script" start "${sargs[@]}" --autonomous
 check "B3 empty session id: exit 1, the off line, no herdr call" '[ $rc = 1 ] && [ "$out" = "Autonomous build mode is off for this session." ] && [ ! -s "$tmp/calls" ]'
 fresh; autoset "$sid"
@@ -1197,7 +1211,7 @@ CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" start T004 --task "$tmp/task-wr
 check "B6 Owns list wraps onto the next line: exit 0, owns holds both paths" '[ $rc = 0 ] && [ "$(cat "$lw/.stratum/approve/owns")" = "$(printf "a.sh\nb.sh")" ]'
 autoclr
 
-wk="$tmp/wk"; rm -rf "$wk"; mkdir -p "$wk/.stratum/approve"; git -C "$wk" init -q; git -C "$wk" -c user.name=t -c user.email=t@t commit -q --allow-empty -m first; printf '%s\n' "$sid" > "$wk/.stratum/autonomous"
+wk="$tmp/wk"; rm -rf "$wk"; mkdir -p "$wk/.stratum/approve"; git -C "$wk" init -q; git -C "$wk" -c user.name=t -c user.email=t@t commit -q --allow-empty -m first; mkdir -p "$wk/.stratum/autonomous"; : > "$wk/.stratum/autonomous/$sid"
 git -C "$repo" worktree add -q "$tmp/repo-w9" -b worker-t9
 autoset "$sid"
 for d in "$wk" "$tmp/repo-w9"; do
@@ -1211,14 +1225,58 @@ ST_INPUT_END
   wtchk "WT3 pass from $d: exit 1, one line, no call"
   fresh; RUNDIR="$d" CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-off --roster "$roster"
   wtchk "WT4 autonomous-off from $d: exit 1, one line, no call"
+  fresh; RUNDIR="$d" CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-on
+  wtchk "WT5 autonomous-on from $d: exit 1, one line, no call"
 done
 git -C "$repo" worktree remove --force "$tmp/repo-w9"
 git -C "$repo" branch -q -D worker-t9
 autoclr
 
+bgrun() { ( cd "$repo" && PATH="$tmp/bin:$PATH" HERDR_ENV=1 HERDR_PANE_ID=w1P:p1 HERDR_TAB_ID=w1P:t1 HERDR_WORKSPACE_ID=w1P CLAUDE_CODE_SESSION_ID="$1" bash "$script" "$2" >/dev/null 2>&1; echo $? > "$tmp/bg.$1" ); }
+onbad="cannot turn on autonomous mode: session id must be letters, digits or -"
+fresh; CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-on
+check "ON1 autonomous-on from the main checkout: exit 0, the on line, no herdr call" '[ $rc = 0 ] && [ "$out" = "$(printf "autonomous on\tlocal")" ] && [ ! -s "$tmp/calls" ]'
+check "ON1 the entry is an empty regular file in a real folder" '[ -d "$repo/.stratum/autonomous" ] && [ ! -L "$repo/.stratum/autonomous" ] && [ -f "$repo/.stratum/autonomous/$sid" ] && [ ! -s "$repo/.stratum/autonomous/$sid" ]'
+autoclr; autoset other-session
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-on
+check "ON3 another session's entry is kept: exit 0, both entries" '[ $rc = 0 ] && [ -f "$repo/.stratum/autonomous/other-session" ] && [ -f "$repo/.stratum/autonomous/$sid" ]'
+autoclr; printf 'old\n' > "$repo/.stratum/autonomous"
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-on
+check "ON4 an old single file is replaced by the folder with the entry: exit 0" '[ $rc = 0 ] && [ -d "$repo/.stratum/autonomous" ] && [ ! -L "$repo/.stratum/autonomous" ] && [ -f "$repo/.stratum/autonomous/$sid" ]'
+for bad in '' '../x'; do
+  autoclr; rm -f "$repo/.stratum/x"
+  CLAUDE_CODE_SESSION_ID="$bad" run bash "$script" autonomous-on
+  check "ON5 id '$bad': exit 1, the id line, nothing made" '[ $rc = 1 ] && [ "$out" = "$onbad" ] && [ ! -e "$repo/.stratum/x" ] && [ ! -e "$repo/.stratum/autonomous" ]'
+done
+autoclr; rm -rf "$tmp/olink"; mkdir "$tmp/olink"; ln -s "$tmp/olink" "$repo/.stratum/autonomous"
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-on
+check "ON6 symlinked folder: exit 1, the symlink line, target unchanged" '[ $rc = 1 ] && [[ "$out" == "cannot turn on autonomous mode: "*" is a symlink" ]] && [ -z "$(ls -A "$tmp/olink")" ]'
+autoclr; mkdir -p "$repo/.stratum/autonomous"; printf 'keep\n' > "$tmp/otarget"; ln -s "$tmp/otarget" "$repo/.stratum/autonomous/$sid"
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-on
+check "ON6 symlinked entry: exit 1, the symlink line, target unchanged" '[ $rc = 1 ] && [[ "$out" == "cannot turn on autonomous mode: "*" is a symlink" ]] && [ "$(cat "$tmp/otarget")" = keep ]'
+autoclr
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-on extra
+check "ON7 an argument: usage line, exit 2, nothing made" '[ $rc = 2 ] && grep -q "^usage: st-worker.sh" <<<"$out" && [ ! -e "$repo/.stratum/autonomous" ]'
+mkdir -p "$tmp/nogit"
+RUNDIR="$tmp/nogit" CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-on
+check "ON9 outside a git repo: exit 1, the not-in-a-repo line" '[ $rc = 1 ] && [ "$out" = "cannot turn on autonomous mode: not in a git repo" ] && [ ! -e "$tmp/nogit/.stratum" ]'
+autoclr; mkdir -p "$repo/.stratum/autonomous"; printf 'keep\n' > "$repo/.stratum/autonomous/$sid"
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-on
+check "ON10 an existing entry: exit 0, the on line, the entry is not truncated" '[ $rc = 0 ] && [ "$out" = "$(printf "autonomous on\tlocal")" ] && [ "$(cat "$repo/.stratum/autonomous/$sid")" = keep ]'
+for n in 1 2 3; do
+  autoclr; printf 'old\n' > "$repo/.stratum/autonomous"; rm -f "$tmp"/bg.*
+  bgrun sA autonomous-on & bgrun sB autonomous-on & wait
+  check "ON8 run $n: two sessions turn on at once over an old file: both exit 0, both entries exist" '[ "$(cat "$tmp/bg.sA")" = 0 ] && [ "$(cat "$tmp/bg.sB")" = 0 ] && [ -f "$repo/.stratum/autonomous/sA" ] && [ -f "$repo/.stratum/autonomous/sB" ]'
+done
+autoclr
+
 git -C "$repo" worktree add -q "$tmp/repo-feat2" -b feat2
-mkdir -p "$tmp/repo-feat2/.stratum"; printf '%s\n' other-session > "$tmp/repo-feat2/.stratum/autonomous"
-autoset "$sid"
+sid2=sessB$RANDOM$RANDOM
+mkdir -p "$tmp/repo-feat2/.stratum/autonomous"; : > "$tmp/repo-feat2/.stratum/autonomous/other-session"
+autoclr
+fresh; RUNDIR="$tmp/repo-feat2" CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-on
+check "ON2 autonomous-on from the linked worktree: exit 0, the on line, the entry is in the main checkout" '[ $rc = 0 ] && [ "$out" = "$(printf "autonomous on\tlocal")" ] && [ -f "$repo/.stratum/autonomous/$sid" ] && [ ! -s "$repo/.stratum/autonomous/$sid" ]'
+check "ON2 nothing is made in the worktree for this id, its own folder is left alone" '[ ! -e "$tmp/repo-feat2/.stratum/autonomous/$sid" ] && [ -e "$tmp/repo-feat2/.stratum/autonomous/other-session" ]'
 fresh; RUNDIR="$tmp/repo-feat2" CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" start "${oargs[@]}"
 check "LW1 start from a feature's linked worktree: exit 0, session holds the main checkout's id" '[ $rc = 0 ] && [ "$(cat "$lw/.stratum/approve/session")" = "$sid" ]'
 mkreq "$rid" 'echo hi'
@@ -1230,8 +1288,20 @@ rid2=1700000000000000002-4242
 mkreq "$rid2" 'echo hi'
 RUNDIR="$tmp/repo-feat2" CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" pass T004 --request "$rid2"
 check "LW3 pass from the linked worktree: exit 0, passed line" '[ $rc = 0 ] && hasline "passed\tworker-t004\t%s" "$rid2"'
+git -C "$repo" worktree add -q "$tmp/repo-feat3" -b feat3
+autoset "$sid2"
+fresh; RUNDIR="$tmp/repo-feat3" CLAUDE_CODE_SESSION_ID="$sid2" run bash "$script" start "${oargs[@]}"
+check "LW5 start from a second linked worktree with session 2: exit 0, session holds the second id" '[ $rc = 0 ] && [ "$(cat "$lw/.stratum/approve/session")" = "$sid2" ]'
+mkreq "$rid" 'echo hi'
+RUNDIR="$tmp/repo-feat2" CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" approve T004 --request "$rid" --input-stdin --record "$rec" <<'ST_INPUT_END'
+Bash: {"command":"echo hi"}
+ST_INPUT_END
+check "LW5 approve from session 1 on session 2's worker: exit 1, the not-in-run line, no .ok" '[ $rc = 1 ] && [ "$out" = "Worker worker-t004 is not in this autonomous run." ] && [ ! -e "$lw/.stratum/approve/$rid.ok" ]'
 RUNDIR="$tmp/repo-feat2" CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-off --roster "$roster"
-check "LW4 autonomous-off from the linked worktree removes the main checkout's flag" '[ $rc = 0 ] && [ ! -e "$repo/.stratum/autonomous" ]'
+check "LW4 autonomous-off from the linked worktree removes only this session's entry" '[ $rc = 0 ] && hasline "autonomous off\tlocal" && [ ! -e "$repo/.stratum/autonomous/$sid" ] && [ -e "$repo/.stratum/autonomous/$sid2" ] && [ -e "$tmp/repo-feat2/.stratum/autonomous/other-session" ]'
+autoclr
+git -C "$repo" worktree remove --force "$tmp/repo-feat3"
+git -C "$repo" branch -q -D feat3
 git -C "$repo" worktree remove --force "$tmp/repo-feat2"
 git -C "$repo" branch -q -D feat2
 
@@ -1432,6 +1502,22 @@ mk; states blocked; printf '%s\n' 'Do you want to proceed?' '❯ 1. Yes' "  2. Y
 run bash "$script" wait T004; h=$(shash); states blocked
 run bash "$script" answer T004 --screen "$h" --keys 4
 check "AN8 --keys 4, the pane has no option 4: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 4 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+for no in '  2. No, and tell Claude what to do differently (esc)' '  2. No'; do
+  mk; states blocked working; printf '%s\n' 'Bash command: very-long-command ...' 'Do you want to proceed?' '❯ 1. Yes' "$no" > "$tmp/pane.txt"
+  run bash "$script" wait T004; h=$(shash); states blocked working
+  run bash "$script" answer T004 --screen "$h" --keys 2
+  check "NO1 cut-off dialog, option 2 '$no' with a matching hash: exit 0, the key sent" '[ $rc = 0 ] && hascall "agent\tsend-keys\tworker-t004\t2"'
+done
+mk; states blocked; printf '%s\n' 'Bash command: very-long-command ...' 'Do you want to proceed?' '❯ 1. Yes' '  2. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
+run bash "$script" wait T004; states blocked
+run bash "$script" answer T004 --screen 000000000000 --keys 2
+check "NO2 option 2 No with a wrong hash: exit 1, the other-prompt line, nothing sent" '[ $rc = 1 ] && [ "$out" = "The pane shows another prompt. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+for ao in '  2. Yes, and always allow access to other/ from this project' "  2. No, and don't ask again" '  2. No, always deny git commands' '  2. No, deny for this session' '  2. No, and deny this in the future' '  2. No, block example.com' '  2. Nope'; do
+  mk; states blocked; printf '%s\n' 'Do you want to proceed?' '❯ 1. Yes' "$ao" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
+  run bash "$script" wait T004; h=$(shash); states blocked
+  run bash "$script" answer T004 --screen "$h" --keys 2
+  check "NO3 option 2 '$ao' is refused: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 2 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+done
 mk; states blocked; printf '%s\n' 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
 run bash "$script" wait T004; h=$(shash)
 check "AN9 permission dialog: wait prints one screen line with a 12 hex hash, after the state line and before pane text:" '[ $rc = 4 ] && [ "$(grep -c "^screen" <<<"$out")" = 1 ] && hasline "screen\t%s" "$h" && [[ "$h" =~ ^[0-9a-f]{12}$ ]] && [ "$(grep -oP "^(state(?=\t)|screen(?=\t)|pane text:$)" <<<"$out")" = "$(printf "state\nscreen\npane text:")" ]'
@@ -1478,36 +1564,69 @@ run bash "$script" close T004
 check "CL1 close: exit 0, the approve folder is gone" '[ $rc = 0 ] && [ ! -e "$lw/.stratum/approve" ]'
 
 xsetup; printf 'worker-t004\tlocal\tworker-t004\tT004\nworker-t005\tlaptop\tworker-t005\tT005\t%s\n' "$rrepo" > "$aoroster"
-autoset "$sid"; printf '%s\n' "$sid" > "$rrepo/.stratum/autonomous"
+autoclr; autoset "$sid"; rautoset "$rrepo" "$sid"
 STUB_SSH_EXEC=1 CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-off --roster "$aoroster"
 check "AO1 exit 0, the local and laptop lines" '[ $rc = 0 ] && hasline "autonomous off\tlocal" && hasline "autonomous off\tlaptop"'
-check "AO1 both flags with this session id are removed" '[ ! -e "$repo/.stratum/autonomous" ] && [ ! -e "$rrepo/.stratum/autonomous" ]'
-xsetup; autoset other-session; printf '%s\n' other-session > "$rrepo/.stratum/autonomous"
+check "AO1 both entries with this session id are removed" '[ ! -e "$repo/.stratum/autonomous/$sid" ] && [ ! -e "$rrepo/.stratum/autonomous/$sid" ]'
+xsetup; autoclr; autoset other-session; rautoset "$rrepo" other-session
 STUB_SSH_EXEC=1 CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-off --roster "$aoroster"
-check "AO2 flags with another id are kept: exit 0" '[ $rc = 0 ] && [ -e "$repo/.stratum/autonomous" ] && [ -e "$rrepo/.stratum/autonomous" ]'
-check "AO2 each kept flag names the id that holds it" 'hasline "autonomous off skipped\tlocal\tflag held by other-session" && hasline "autonomous off skipped\tlaptop\tflag held by other-session" && ! grep -q "^autonomous off	" <<<"$out"'
+check "AO2 entries of another session are kept: exit 0" '[ $rc = 0 ] && [ -e "$repo/.stratum/autonomous/other-session" ] && [ -e "$rrepo/.stratum/autonomous/other-session" ]'
+check "AO2 each machine says this session is not on" 'hasline "autonomous off skipped\tlocal\tnot on for this session" && hasline "autonomous off skipped\tlaptop\tnot on for this session" && ! grep -q "^autonomous off	" <<<"$out"'
 reset; : > "$tmp/ssh"; CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-off
-check "AO5 no roster, another id: exit 0, the skipped line, flag kept, no ssh" '[ $rc = 0 ] && [ "$out" = "$(printf "autonomous off skipped\tlocal\tflag held by other-session")" ] && [ -e "$repo/.stratum/autonomous" ] && [ ! -s "$tmp/ssh" ]'
+check "AO5 no roster, not on: exit 0, the skipped line, other entry kept, no ssh" '[ $rc = 0 ] && [ "$out" = "$(printf "autonomous off skipped\tlocal\tnot on for this session")" ] && [ -e "$repo/.stratum/autonomous/other-session" ] && [ ! -s "$tmp/ssh" ]'
 autoset "$sid"
 CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-off
-check "AO5 no roster, this id: exit 0, the local line, flag removed" '[ $rc = 0 ] && [ "$out" = "$(printf "autonomous off\tlocal")" ] && [ ! -e "$repo/.stratum/autonomous" ]'
-xsetup; autoset "$sid"; printf '%s\n' "$sid" > "$rrepo/.stratum/autonomous"
+check "AO5 no roster, this id: exit 0, the local line, entry removed, other entry kept" '[ $rc = 0 ] && [ "$out" = "$(printf "autonomous off\tlocal")" ] && [ ! -e "$repo/.stratum/autonomous/$sid" ] && [ -e "$repo/.stratum/autonomous/other-session" ]'
+xsetup; autoclr; autoset "$sid"; rautoset "$rrepo" "$sid"
 STUB_SSH_RC=255 CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-off --roster "$aoroster"
-check "AO3 ssh down: exit 1, the failed laptop line, local removed, laptop flag kept" '[ $rc = 1 ] && hasline "autonomous off failed\tlaptop\tssh: stub failure" && hasline "autonomous off\tlocal" && [ ! -e "$repo/.stratum/autonomous" ] && [ -e "$rrepo/.stratum/autonomous" ]'
+check "AO3 ssh down: exit 1, the failed laptop line, local removed, laptop entry kept" '[ $rc = 1 ] && hasline "autonomous off failed\tlaptop\tssh: stub failure" && hasline "autonomous off\tlocal" && [ ! -e "$repo/.stratum/autonomous/$sid" ] && [ -e "$rrepo/.stratum/autonomous/$sid" ]'
 autoclr
 xsetup; rm -rf "$tmp/rrepo2"; mkdir -p "$tmp/rrepo2/.stratum"
 printf 'worker-t004\tlaptop\tworker-t004\tT004\t%s\nworker-t005\tlaptop\tworker-t005\tT005\t%s\n' "$rrepo" "$tmp/rrepo2" > "$aoroster"
-printf '%s\n' "$sid" > "$rrepo/.stratum/autonomous"; printf '%s\n' "$sid" > "$tmp/rrepo2/.stratum/autonomous"
+rautoset "$rrepo" "$sid"; rautoset "$tmp/rrepo2" "$sid"
 STUB_SSH_EXEC=1 CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-off --roster "$aoroster"
-check "AO4 two repos on one machine: exit 0, both flags removed" '[ $rc = 0 ] && [ ! -e "$rrepo/.stratum/autonomous" ] && [ ! -e "$tmp/rrepo2/.stratum/autonomous" ]'
+check "AO4 two repos on one machine: exit 0, both entries removed" '[ $rc = 0 ] && [ ! -e "$rrepo/.stratum/autonomous/$sid" ] && [ ! -e "$tmp/rrepo2/.stratum/autonomous/$sid" ]'
 autoset "$sid"
 STUB_SSH_EXEC=1 CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-off --roster "$aoroster"
-check "AO6 a roster with saved machines only still clears the local flag" '[ $rc = 0 ] && hasline "autonomous off\tlocal" && [ ! -e "$repo/.stratum/autonomous" ]'
+check "AO6 a roster with saved machines only still clears the local entry" '[ $rc = 0 ] && hasline "autonomous off\tlocal" && [ ! -e "$repo/.stratum/autonomous/$sid" ]'
+
+printf 'worker-t004\tlocal\tworker-t004\tT004\nworker-t005\tlaptop\tworker-t005\tT005\t%s\n' "$rrepo" > "$aoroster"
+ofrun() { STUB_SSH_EXEC=1 CLAUDE_CODE_SESSION_ID="$1" run bash "$script" autonomous-off --roster "$aoroster"; }
+xsetup; autoclr; autoset "$sid"; autoset other-session; rautoset "$rrepo" "$sid"; rautoset "$rrepo" other-session
+ofrun "$sid"
+check "OF1 exit 0, the local and laptop lines" '[ $rc = 0 ] && hasline "autonomous off\tlocal" && hasline "autonomous off\tlaptop"'
+check "OF1 only this session's entries are removed, here and on the laptop" '[ ! -e "$repo/.stratum/autonomous/$sid" ] && [ ! -e "$rrepo/.stratum/autonomous/$sid" ] && [ -e "$repo/.stratum/autonomous/other-session" ] && [ -e "$rrepo/.stratum/autonomous/other-session" ]'
+for bad in '' '../x'; do
+  xsetup; autoclr; autoset "$sid"; autoset other-session; rautoset "$rrepo" "$sid"; : > "$repo/.stratum/x"; : > "$rrepo/.stratum/x"; : > "$tmp/ssh"
+  ofrun "$bad"
+  check "OF2 id '$bad': exit 1, the off line, nothing removed, no ssh" '[ $rc = 1 ] && [ "$out" = "Autonomous build mode is off for this session." ] && [ -e "$repo/.stratum/autonomous/$sid" ] && [ -e "$repo/.stratum/autonomous/other-session" ] && [ -e "$rrepo/.stratum/autonomous/$sid" ] && [ -e "$repo/.stratum/x" ] && [ -e "$rrepo/.stratum/x" ] && [ ! -s "$tmp/ssh" ]'
+done
+rm -f "$repo/.stratum/x"
+xsetup; autoclr; rm -rf "$tmp/flink"; mkdir "$tmp/flink"; : > "$tmp/flink/$sid"; ln -s "$tmp/flink" "$repo/.stratum/autonomous"
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-off
+check "OF3 symlinked folder: exit 1, the failed local line, target kept" '[ $rc = 1 ] && grep -qP "^autonomous off failed\tlocal\t.* is a symlink$" <<<"$out" && [ -e "$tmp/flink/$sid" ]'
+autoclr; mkdir -p "$repo/.stratum/autonomous"; printf 'keep\n' > "$tmp/ftarget"; ln -s "$tmp/ftarget" "$repo/.stratum/autonomous/$sid"
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-off
+check "OF3b symlinked entry: exit 1, the failed local line, target kept" '[ $rc = 1 ] && grep -qP "^autonomous off failed\tlocal\t.* is a symlink$" <<<"$out" && [ "$(cat "$tmp/ftarget")" = keep ]'
+autoclr
+xsetup; rm -rf "$tmp/rlink"; mkdir "$tmp/rlink"; : > "$tmp/rlink/$sid"; ln -s "$tmp/rlink" "$rrepo/.stratum/autonomous"
+ofrun "$sid"
+check "OF3c laptop symlinked folder: exit 1, the failed laptop line, target kept" '[ $rc = 1 ] && grep -qP "^autonomous off failed\tlaptop\t" <<<"$out" && [ -e "$tmp/rlink/$sid" ]'
+xsetup; mkdir -p "$rrepo/.stratum/autonomous"; printf 'keep\n' > "$tmp/rtarget"; ln -s "$tmp/rtarget" "$rrepo/.stratum/autonomous/$sid"
+ofrun "$sid"
+check "OF3c laptop symlinked entry: exit 1, the failed laptop line, target kept" '[ $rc = 1 ] && grep -qP "^autonomous off failed\tlaptop\t" <<<"$out" && [ "$(cat "$tmp/rtarget")" = keep ]'
+autoclr; autoset sA; autoset sB; autoset other-session; rm -f "$tmp"/bg.*
+bgrun sA autonomous-off & bgrun sB autonomous-off & wait
+check "OF4 two sessions turn off at once: both exit 0, both entries removed, the other kept" '[ "$(cat "$tmp/bg.sA")" = 0 ] && [ "$(cat "$tmp/bg.sB")" = 0 ] && [ ! -e "$repo/.stratum/autonomous/sA" ] && [ ! -e "$repo/.stratum/autonomous/sB" ] && [ -e "$repo/.stratum/autonomous/other-session" ]'
+autoclr; printf 'old\n' > "$repo/.stratum/autonomous"
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-off
+check "OF5 an old single file: exit 0, the skipped line, file kept" '[ $rc = 0 ] && [ "$out" = "$(printf "autonomous off skipped\tlocal\tnot on for this session")" ] && [ "$(cat "$repo/.stratum/autonomous")" = old ]'
+autoclr
 
 ax; autoset "$sid"
 axrun
 check "AM1 saved machine: exit 0" '[ $rc = 0 ]'
-check "AM1 the repo flag on the machine holds the session id" '[ "$(cat "$rrepo/.stratum/autonomous")" = "$sid" ]'
+check "AM1 the entry on the machine is an empty file named with the session id" '[ -d "$rrepo/.stratum/autonomous" ] && [ -f "$rrepo/.stratum/autonomous/$sid" ] && [ ! -s "$rrepo/.stratum/autonomous/$sid" ]'
 check "AM1 one ssh call writes the repo flag, before worktree add" '[ "$(grep -c "stratum/autonomous" "$tmp/ssh")" = 1 ] && o1=$(grep -n "^ssh$" "$tmp/order" | head -n1 | cut -d: -f1) && o2=$(grep -n "^worktree add$" "$tmp/order" | head -n1 | cut -d: -f1) && [ -n "$o1" ] && [ -n "$o2" ] && [ "$o1" -lt "$o2" ]'
 check "AM1 the remote session file holds the session id" '[ "$(cat "$rw/.stratum/approve/session")" = "$sid" ]'
 check "AM1 the remote brief has the four-column roster row and no repo path" 'grep -qxF "| worker-t004 | laptop | worker-t004 | T004 |" "$rw/brief.md" && ! sed "s#$rrepo-worker-t004##g" "$rw/brief.md" | grep -qF "$rrepo"'
@@ -1521,19 +1640,23 @@ check "AM2b a different fifth field: the same roster line, no call" '[ $rc = 1 ]
 autoclr
 ax; autoset "$sid"; printf '%s\n' old-session > "$rrepo/.stratum/autonomous"
 axrun
-check "AM3 a stale repo flag with an old id is replaced" '[ $rc = 0 ] && [ "$(cat "$rrepo/.stratum/autonomous")" = "$sid" ]'
+check "AM3 an old single file in the repo is replaced by the folder with the entry" '[ $rc = 0 ] && [ -d "$rrepo/.stratum/autonomous" ] && [ ! -L "$rrepo/.stratum/autonomous" ] && [ -f "$rrepo/.stratum/autonomous/$sid" ]'
 autoclr
 ax; autoset "$sid"; rm -rf "$rrepo/.stratum"; mkdir "$tmp/rlink"; ln -s "$tmp/rlink" "$rrepo/.stratum"
 axrun
 check "AM4 symlinked .stratum: exit 1, the cannot-write line, no worktree add, no agent start, target empty" '[ $rc = 1 ] && grep -q "^cannot write .stratum/autonomous on laptop: " <<<"$out" && [ ! -e "$tmp/rlink/autonomous" ] && ! grep -q "worktree add" "$tmp/ssh" && [ "$(cnt "^--machine\tlaptop\tagent\tstart\t")" = 0 ]'
 autoclr
-ax; autoset "$sid"; printf 'keep\n' > "$tmp/rtarget"; ln -s "$tmp/rtarget" "$rrepo/.stratum/autonomous"
+ax; autoset "$sid"; printf 'keep\n' > "$tmp/rtarget"; mkdir -p "$rrepo/.stratum/autonomous"; ln -s "$tmp/rtarget" "$rrepo/.stratum/autonomous/$sid"
 axrun
-check "AM5 symlinked repo flag: exit 1, the cannot-write line, target unchanged, no worktree add" '[ $rc = 1 ] && grep -q "^cannot write .stratum/autonomous on laptop: " <<<"$out" && [ "$(cat "$tmp/rtarget")" = keep ] && ! grep -q "worktree add" "$tmp/ssh"'
+check "AM5 symlinked repo entry: exit 1, the cannot-write line, target unchanged, no worktree add" '[ $rc = 1 ] && grep -q "^cannot write .stratum/autonomous on laptop: " <<<"$out" && [ "$(cat "$tmp/rtarget")" = keep ] && ! grep -q "worktree add" "$tmp/ssh"'
 autoclr
 ax; autoset "$sid"
 STUB_SSH_RC=255 axrun
 check "AM6 ssh down on the repo flag write: exit 1, the line, no worktree add or agent start" '[ $rc = 1 ] && hasline "cannot write .stratum/autonomous on laptop: ssh: stub failure" && ! grep -q "worktree add" "$tmp/ssh" && [ "$(cnt "^--machine\tlaptop\tagent\tstart\t")" = 0 ]'
+autoclr
+ax; autoset "$sid"; mkdir -p "$rrepo/.stratum/autonomous"; printf 'keep\n' > "$rrepo/.stratum/autonomous/$sid"
+axrun
+check "AM7 an existing repo entry on the machine: exit 0, the entry is not truncated" '[ $rc = 0 ] && [ "$(cat "$rrepo/.stratum/autonomous/$sid")" = keep ]'
 autoclr
 rfresh; xsetup; STUB_SSH_EXEC=1 STUB_GIT_FAIL=add255 rrun bash "$script" start "${rxargs[@]}"
 check "R16b saved machine, git worktree add exits 255: exit 1, git's fatal line, not ssh failed, no tab create" '[ $rc = 1 ] && [ "$(grep -c "^stopped:" <<<"$out")" = 1 ] && hasline "stopped: fatal: stub git refused 255" && ! grep -q "ssh to" <<<"$out" && hasline "worker\tworker-t004\tlaptop\t-\t-\t-\t-" && [ "$(rcnt "tab\tcreate\t")" = 0 ]'

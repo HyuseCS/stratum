@@ -13,7 +13,7 @@ import time
 REASON = ".stratum/approve/ and .stratum/autonomous are written only by the orchestrator."
 ALLOW = '{"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"allow"}}}'
 EDIT_TOOLS = ("Edit", "Write", "MultiEdit", "NotebookEdit")
-RISKY = {"approve", "pass", "autonomous-off", "wait", "start", "resend", "followup", "watch"}
+RISKY = {"approve", "pass", "autonomous-on", "autonomous-off", "wait", "start", "resend", "followup", "watch"}
 SECRET_NAMES = (".env*", "*.pem", "*.key", "id_rsa*", "id_ed25519*", ".npmrc", ".netrc")
 DEPENDENCY_NAMES = ("package.json", "package-lock.json", "pnpm-lock.yaml", "yarn.lock", "bun.lockb",
                     "pyproject.toml", "requirements*.txt", "uv.lock", "Cargo.toml", "Cargo.lock",
@@ -88,7 +88,7 @@ def worker_session(cwd):
 
 
 def locked_path(p):
-    return "/.stratum/approve/" in p + "/" or p.endswith("/.stratum/autonomous")
+    return "/.stratum/approve/" in p + "/" or "/.stratum/autonomous/" in p + "/"
 
 
 # ponytail: lock 2 is a text match, not a wall (workers run as the same OS user); run-time paths, brace and glob forms and a Grep over the whole root get past it, move to OS-level isolation if workers turn hostile
@@ -253,8 +253,12 @@ def request(data, cwd):
     common = git(["rev-parse", "--path-format=absolute", "--git-common-dir"], root)
     if not common:
         return
-    flag = first_line(os.path.join(os.path.dirname(common), ".stratum", "autonomous"))
-    if not flag or flag != first_line(os.path.join(approve, "session")):
+    sid = first_line(os.path.join(approve, "session"))
+    if not re.fullmatch(r"[A-Za-z0-9-]+", sid):
+        return
+    folder = os.path.join(os.path.dirname(common), ".stratum", "autonomous")
+    entry = os.path.join(folder, sid)
+    if not os.path.isdir(folder) or os.path.islink(folder) or not os.path.isfile(entry) or os.path.islink(entry):
         return
     tool = data.get("tool_name")
     ti = data.get("tool_input")

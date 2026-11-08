@@ -99,28 +99,44 @@ check "cd into a subfolder: project settings kept" '! runi 100 "{\"workspace\":{
 echo '{"shape":"blocks"}' > "$tmp/home/proj/.stratum/powerline.json"
 check "shape blocks: no shaped edges" 'out=$(run 100); ! grep -qP "[\x{e0b0}-\x{e0bc}]" <<<"$out" && grep -qF "[48;2;" <<<"$out"'
 rm "$tmp/home/proj/.stratum/powerline.json"
-echo S1 > "$tmp/home/proj/.stratum/autonomous"
-check "autonomous: flag holds the session id: line 2 has the segment" 'runi 200 "{$ws,\"session_id\":\"S1\"}" | plain | sed -n 2p | grep -q " autonomous "'
-check "autonomous: segment after ponytail" 'runi 200 "{$ws,\"session_id\":\"S1\"}" | plain | sed -n 2p | grep -q "Ponytail.* autonomous "'
-check "autonomous: contextWarning background" 'runi 200 "{$ws,\"session_id\":\"S1\"}" | grep -qP "\x1b\[48;2;$(rgb f6c177)m\x1b\[38;2;[\d;]+m autonomous "'
-echo S2 > "$tmp/home/proj/.stratum/autonomous"
-check "autonomous: flag holds another session: no segment" '! runi 200 "{$ws,\"session_id\":\"S1\"}" | plain | grep -q autonomous'
-rm "$tmp/home/proj/.stratum/autonomous"
-check "autonomous: no flag file: no segment" '! runi 200 "{$ws,\"session_id\":\"S1\"}" | plain | grep -q autonomous'
-: > "$tmp/home/proj/.stratum/autonomous"
-check "autonomous: empty flag and no session id: no segment" '! runi 200 "{$ws}" | plain | grep -q autonomous'
-rm "$tmp/home/proj/.stratum/autonomous"
+ad="$tmp/home/proj/.stratum/autonomous"
+sid() { printf '{%s,"session_id":"%s"}' "$ws" "$1"; }
+noseg() { o=$(runi 200 "$1"); rc=$?; l=$(plain <<<"$o" | sed -n 2p); [ "$rc" = 0 ] && [ -n "$l" ] && ! grep -q autonomous <<<"$l"; }
+mkdir -p "$ad"; : > "$ad/S1"
+check "autonomous: own entry: line 2 has the segment" 'runi 200 "$(sid S1)" | plain | sed -n 2p | grep -q " autonomous "'
+check "autonomous: segment after ponytail" 'runi 200 "$(sid S1)" | plain | sed -n 2p | grep -q "Ponytail.* autonomous "'
+check "autonomous: contextWarning background" 'runi 200 "$(sid S1)" | grep -qP "\x1b\[48;2;$(rgb f6c177)m\x1b\[38;2;[\d;]+m autonomous "'
+rm "$ad/S1"; : > "$ad/S2"
+check "autonomous: only another session's entry: no segment" 'noseg "$(sid S1)"'
+rm -r "$ad"
+check "autonomous: no folder: no segment" 'noseg "$(sid S1)"'
+mkdir -p "$ad"
+check "autonomous: empty folder and no session id: no segment" 'noseg "{$ws}"'
+rm -r "$ad"
 g() { git -c user.name=t -c user.email=t@t -c commit.gpgsign=false "$@"; }
 g init -q "$tmp/repo"
 g -C "$tmp/repo" commit -q --allow-empty -m init
 g -C "$tmp/repo" worktree add -q "$tmp/wt" -b wt
-mkdir -p "$tmp/repo/.stratum" "$tmp/wt/.stratum"
-echo S2 > "$tmp/repo/.stratum/autonomous"
-echo S1 > "$tmp/wt/.stratum/autonomous"
+g -C "$tmp/repo" worktree add -q "$tmp/wt2" -b wt2
+ma="$tmp/repo/.stratum/autonomous"
+mkdir -p "$ma" "$tmp/wt/.stratum/autonomous"
 wtws="\"workspace\":{\"current_dir\":\"$tmp/wt\"},\"cwd\":\"$tmp/wt\""
-check "autonomous: linked worktree's own flag is ignored, main checkout's S2 decides" '! runi 200 "{$wtws,\"session_id\":\"S1\"}" | plain | grep -q autonomous'
-echo S1 > "$tmp/repo/.stratum/autonomous"
-echo S2 > "$tmp/wt/.stratum/autonomous"
-check "autonomous: linked worktree reverse, main checkout's S1 shows the segment" 'runi 200 "{$wtws,\"session_id\":\"S1\"}" | plain | sed -n 2p | grep -q " autonomous "'
+wt2ws="\"workspace\":{\"current_dir\":\"$tmp/wt2\"},\"cwd\":\"$tmp/wt2\""
+: > "$ma/S2"; : > "$tmp/wt/.stratum/autonomous/S1"
+check "autonomous: linked worktree's own folder is ignored, main checkout's S2 decides" 'noseg "{$wtws,\"session_id\":\"S1\"}"'
+rm "$ma/S2"; : > "$ma/S1"; rm -r "$tmp/wt/.stratum/autonomous"
+check "autonomous: linked worktree, main checkout's S1 entry shows the segment" 'runi 200 "{$wtws,\"session_id\":\"S1\"}" | plain | sed -n 2p | grep -q " autonomous "'
+: > "$ma/S2"
+check "autonomous: two worktrees, S1 shows the segment" 'runi 200 "{$wtws,\"session_id\":\"S1\"}" | plain | sed -n 2p | grep -q " autonomous "'
+check "autonomous: two worktrees, S2 shows the segment" 'runi 200 "{$wt2ws,\"session_id\":\"S2\"}" | plain | sed -n 2p | grep -q " autonomous "'
+check "autonomous: session with no entry: no segment" 'noseg "{$wtws,\"session_id\":\"S3\"}"'
+rm -r "$ma"; echo S1 > "$ma"
+check "autonomous: old single file holding S1: no segment" 'noseg "{$wtws,\"session_id\":\"S1\"}"'
+rm "$ma"; mkdir -p "$tmp/real"; : > "$tmp/real/S1"; ln -s "$tmp/real" "$ma"
+check "autonomous: folder is a symlink: no segment" 'noseg "{$wtws,\"session_id\":\"S1\"}"'
+rm "$ma"; mkdir -p "$ma"; echo x > "$tmp/target"; ln -s "$tmp/target" "$ma/S1"
+check "autonomous: entry is a symlink: no segment" 'noseg "{$wtws,\"session_id\":\"S1\"}"'
+rm "$ma/S1"; : > "$ma/S2"; echo x > "$tmp/repo/.stratum/x"
+check "autonomous: session id ../x: no segment" 'noseg "{$wtws,\"session_id\":\"../x\"}"'
 
 exit $fail
