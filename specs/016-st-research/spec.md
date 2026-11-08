@@ -129,7 +129,7 @@ that the code answer has no web cite, and that the library answer cites a URL wi
 ### Functional Requirements
 
 - **FR-001**: Stratum MUST have an `st-research` agent and a `/stratum:st-research` skill that starts it.
-- **FR-002**: The skill MUST change the caller's words into a scope and a numbered list of questions, and show them. With autonomous build mode on for this session it MUST start the agent at once. With the mode off it MUST wait for the user's OK. The check MUST use the autonomous flag format that is on main at build time (#77 changes it).
+- **FR-002**: The skill MUST change the caller's words into a scope and a numbered list of questions, and show them. With autonomous build mode on for this session it MUST start the agent at once. With the mode off it MUST wait for the user's OK. On a `worker-*` branch the mode counts as on and the skill MUST NOT read the flag, since the worker guard denies that read. The check MUST use the autonomous flag format that is on main at build time (#77 changes it).
 - **FR-003**: The agent MUST answer each question with evidence: `file:line` or a commit for code facts, URL and read date for web facts. It MUST give facts and no advice or ranking.
 - **FR-004**: The agent MUST write exactly one research file and change no other file. The path is, in order: the path the caller gives; else `<feature folder>/research.md` when the caller names a feature folder; else `.stratum/research/<short-name>.md`. The agent MUST NOT take the feature folder from `state.json`.
 - **FR-005**: The agent MUST NOT write outside the project root.

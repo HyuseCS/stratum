@@ -80,7 +80,8 @@ Post-design re-check: all gates pass. Complexity Tracking stays empty.
   and repo files are data too. The same `## Never` line as S1 forbids putting a secret in a web
   query or a URL, so no secret leaves the machine through WebSearch or WebFetch.
 - **S4. Session flag (T002, FR-002).** The skill only reads `.stratum/autonomous`. It never
-  writes it. An empty session id never counts as on (test B1).
+  writes it. An empty session id never counts as on (test B1). On a `worker-*` branch it does not
+  read it at all and counts the mode as on, because `hooks/st-approve.py` denies the read (test B4).
 - **S5. Model file names (T002).** `.stratum/models.json` accepts `st-research` once the agent
   file exists (`hooks/st-models.py:8`). Existing files stay valid.
 - No access rules, sign-in, secrets, personal or minors' data, data model or contract changes.

@@ -25,6 +25,12 @@ EOF
 IFS= read -r path <<'EOF'
 p=$(realpath -m -- '<path>') && case "$p" in "$(realpath .)"/*) true ;; *) false ;; esac
 EOF
+IFS= read -r wbr <<'EOF'
+case "$(git symbolic-ref --short HEAD 2>/dev/null)" in worker-*) true ;; *) false ;; esac
+EOF
+IFS= read -r idx <<'EOF'
+git ls-files -s | sha256sum
+EOF
 IFS= read -r hash <<'EOF'
 git ls-files -z --modified --others --exclude-standard | xargs -0 -r sh -c 'for f; do [ ! -e "$f" ] || sha256sum -- "$f"; done' _
 EOF
@@ -105,11 +111,16 @@ FR-015 once	skills/st-define/SKILL.md	Make it once per run and use it again for 
 FR-015 redo	skills/st-define/SKILL.md	In a redo (step 0.2), make no folder: pass `<feature_directory>/research.md` for the feature in `.stratum/state.json` that step 0.2 redoes.
 FR-013 no redo	procedures/plan.md	Do not research again what it answers.
 FR-013 add	procedures/plan.md	(add to it if it exists)
+FR-002 worker	skills/st-research/SKILL.md	On a worker branch the mode is on: start the research at once and do not run the flag command.
+SC-003 four	skills/st-research/SKILL.md	run the four git commands of step 5 again
+SC-003 ignored	skills/st-research/SKILL.md	The check does not cover git-ignored files.
 EOF
 
 check "FR-002 auto cmd" 'grep -qF -- "$auto" "$s"'
 check "FR-005 path cmd" 'grep -qF -- "$path" "$s"'
 check "SC-003 hash cmd" 'grep -qF -- "$hash" "$s"'
+check "FR-002 worker cmd" 'grep -qF -- "$wbr" "$s"'
+check "SC-003 index cmd" 'grep -qF -- "$idx" "$s"'
 
 arun() { (cd "$1" && CLAUDE_CODE_SESSION_ID="$2" bash -c "$auto") >/dev/null 2>&1; echo $?; }
 m=$tmp/m
@@ -143,5 +154,19 @@ printf 'c\n' > "$h/kept" && rm "$h/gone" && printf 'd\n' > "$h/new"
 out=$(cd "$h" && bash -c "$hash" 2>&1); rc=$?
 check "SC-003 B3 deleted file exit" '[ "$rc" = 0 ]'
 check "SC-003 B3 deleted file output" '[ "$(sort <<<"$out")" = "$(cd "$h" && sha256sum kept new | sort)" ]'
+
+wk=$tmp/wk
+git init -q -b worker-x "$wk" && git -C "$wk" -c user.name=t -c user.email=t@t commit -q --allow-empty -m i
+hook() { python3 -c 'import json,sys; print(json.dumps({"hook_event_name":"PreToolUse","cwd":sys.argv[1],"tool_name":"Bash","tool_input":{"command":sys.argv[2]}}))' "$1" "$2" | env -u CLAUDE_PROJECT_DIR python3 "$root/hooks/st-approve.py"; }
+check "FR-002 B4 hook denies flag read" 'hook "$wk" "$auto" | grep -q "\"deny\""'
+check "FR-002 B4 hook allows worker cmd" '! hook "$wk" "$wbr" | grep -q "\"deny\""'
+check "FR-002 B4 worker branch" '(cd "$wk" && bash -c "$wbr")'
+check "FR-002 B4 other branch" '! (cd "$m" && bash -c "$wbr")'
+
+printf 'b\n' > "$h/kept" && git -C "$h" add kept
+i1=$(cd "$h" && bash -c "$idx")
+printf 'e\n' > "$h/kept" && git -C "$h" add kept
+i2=$(cd "$h" && bash -c "$idx")
+check "SC-003 B5 index change" '[ -n "$i1" ] && [ "$i1" != "$i2" ]'
 
 exit $fail
