@@ -106,12 +106,18 @@ LOCK2_BASH = [
     "touch .stratum/././approve/1-1.ok",
     "touch .stratum///approve/1-1.ok",
     "touch .stratum/x/../approve/1-1.ok",
+    "touch .stratum/autonomous/S9",
+    "rm -f .stratum/autonomous/S1",
+    "mkdir -p .stratum/autonomous",
+    "rm -rf .stratum/autonomous",
 ]
 
 LOCK2_WORKER_CALLS = [
     "bash scripts/st-worker.sh approve worker-t1 --request 1-1 --input-stdin --record r",
     "st-worker.sh pass worker-t1 --request 1-1",
     "st-worker.sh autonomous-off --roster r",
+    "st-worker.sh autonomous-on",
+    "bash scripts/st-worker.sh autonomous-on",
     "bash scripts/st-worker.sh $'approve' worker-t1",
     'bash scripts/st-worker.sh "pass" worker-t1',
     "st-worker.sh wait worker-b",
@@ -579,6 +585,8 @@ class ApproveHookTest(unittest.TestCase):
             os.path.join(wt, ".stratum", "approve", "1-1.ok"),
             os.path.join(wt, ".stratum", ".", "approve", "x"),
             os.path.join(wt, ".stratum", "autonomous"),
+            os.path.join(wt, ".stratum", "autonomous", "S1"),
+            os.path.join(wt, ".stratum", ".", "autonomous", "S1"),
         ]
         cases = []
         for p in targets:
@@ -591,6 +599,9 @@ class ApproveHookTest(unittest.TestCase):
         cases += [
             ("Read", {"file_path": os.path.join(wt, ".stratum", "approve", "session")}),
             ("Read", {"file_path": os.path.join(wt, ".stratum", "autonomous")}),
+            ("Read", {"file_path": os.path.join(wt, ".stratum", "autonomous", "S1")}),
+            ("Glob", {"pattern": ".stratum/autonomous/*"}),
+            ("Grep", {"pattern": "x", "path": os.path.join(wt, ".stratum", "autonomous")}),
             ("Grep", {"pattern": "x", "path": os.path.join(wt, ".stratum", "approve")}),
             ("Grep", {"pattern": "x", "glob": ".stratum/approve/*"}),
             ("Glob", {"pattern": ".stratum/approve/*"}),
@@ -632,6 +643,7 @@ class ApproveHookTest(unittest.TestCase):
         self.assertSilent(self.pre_bash(
             "bash scripts/st-worker.sh approve worker-t1 --request 1-1 --input-stdin --record r", cwd=demo))
         self.assertSilent(self.pre_bash("printf S1 > .stratum/autonomous", cwd=demo))
+        self.assertSilent(self.pre_bash("touch .stratum/autonomous/S1", cwd=demo))
 
 
 if __name__ == "__main__":
