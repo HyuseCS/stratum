@@ -579,5 +579,25 @@ rrun "$c1"
 check "FR-007 .stratum/advisor symlink: usage, exit 2, no codex, target unchanged" 'usage_rc2 && [ ! -e "$tmp/argv" ] && [ -z "$(ls -A "$tmp/linkdir")" ]'
 rm -f "$rdir"
 
+printf 'do x\n' > "$tmp/plan.md"
+printf 'secret\n' > "$tmp/plan000.md"
+chmod 000 "$tmp/plan000.md"
+rm -rf "$rdir"
+rm -f "$tmp/argv" "$tmp/prompt"
+rrun "$c1" "$tmp/plan.md"
+check "FR-010 review with plan file: prompt has the Plan line" '[ $rc = 0 ] && grep -qxF "Plan: $tmp/plan.md. Also check whether the diff does what this file says. A gap is a finding." "$tmp/prompt"'
+check "FR-010 record hash is the same with the plan file" 'rrec "$rdir/main.md" | grep -qE "\| sha256 $rh \| APPROVED$"'
+rm -f "$tmp/argv" "$tmp/prompt"
+rrun "$c1"
+check "FR-010 review without a plan file: no Plan line" '[ $rc = 0 ] && [ -s "$tmp/prompt" ] && ! grep -q "^Plan: " "$tmp/prompt"'
+rm -rf "$rdir"
+rm -f "$tmp/argv"
+rrun "$c1" "$tmp/nope.md"
+check "FR-010 missing plan file: usage, exit 2, no codex, no record" 'usage_rc2 && [ ! -e "$tmp/argv" ] && [ ! -e "$rdir" ]'
+rrun "$c1" "$tmp/plan000.md"
+check "FR-010 plan file mode 000: usage, exit 2, no codex, no record" 'usage_rc2 && [ ! -e "$tmp/argv" ] && [ ! -e "$rdir" ]'
+chmod 600 "$tmp/plan000.md"
+rm -rf "$rdir"
+
 check "no repo writes" '[ "$(git -C "$root" status --porcelain)" = "$repo_before" ]'
 exit $fail

@@ -44,8 +44,8 @@
 
 **Independent Test**: `review <base> <plan file>` puts the `Plan:` line in the prompt; an unreadable file stops with the usage line.
 
-- [ ] T009 [US3] Add failing checks. In `tests/test_advisor.sh`: FR-010 `review <base> <file>` has the prompt line `Plan: <file>. Also check whether the diff does what this file says. A gap is a finding.`; a missing file and a file with mode 000 give the usage line, exit 2, no `codex` call, no record; `review <base>` with no file has no `Plan:` line; the record hash is the same with and without the plan file. In `tests/test_on_demand.sh`: FR-011 phrase rows for the optional plan file, made absolute, and "Cannot read". Depends on T004, T008. Test: bash tests/test_advisor.sh && bash tests/test_on_demand.sh (the new checks fail).
-- [ ] T010 [US3] Add the plan file: in `scripts/st-advisor.sh`, arity `"run review 3"`, the readable-file check for `$3`, and the `Plan:` prompt line; in `skills/st-advisor/SKILL.md`, the second argument per `contracts/skill.md` Forms. Depends on T009. Test: bash tests/test_advisor.sh && bash tests/test_advisor_matrix.sh && bash tests/test_on_demand.sh.
+- [X] T009 [US3] Add failing checks. In `tests/test_advisor.sh`: FR-010 `review <base> <file>` has the prompt line `Plan: <file>. Also check whether the diff does what this file says. A gap is a finding.`; a missing file and a file with mode 000 give the usage line, exit 2, no `codex` call, no record; `review <base>` with no file has no `Plan:` line; the record hash is the same with and without the plan file. In `tests/test_on_demand.sh`: FR-011 phrase rows for the optional plan file, made absolute, and "Cannot read". Depends on T004, T008. Test: bash tests/test_advisor.sh && bash tests/test_on_demand.sh (the new checks fail).
+- [X] T010 [US3] Add the plan file: in `scripts/st-advisor.sh`, arity `"run review 3"`, the readable-file check for `$3`, and the `Plan:` prompt line; in `skills/st-advisor/SKILL.md`, the second argument per `contracts/skill.md` Forms. Depends on T009. Test: bash tests/test_advisor.sh && bash tests/test_advisor_matrix.sh && bash tests/test_on_demand.sh.
 
 **Checkpoint**: all stories work.
 

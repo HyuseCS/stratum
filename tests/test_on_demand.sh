@@ -371,6 +371,9 @@ phrases <<'EOF'
 #79 D19 codex check	skills/st-advisor/SKILL.md	no advisor: codex not found
 #79 D19 codex check	skills/st-advisor/SKILL.md	In each case CodeRabbit does not run.
 #79 FR-013 no edit	skills/st-advisor/SKILL.md	Change no file in the review folder.
+#79 FR-011 plan file	skills/st-advisor/SKILL.md	A second argument: the plan file. Make it an absolute path.
+#79 FR-011 plan file	skills/st-advisor/SKILL.md	Cannot read <file>.
+#79 FR-011 plan file	skills/st-advisor/SKILL.md	st-advisor.sh review <base> [<plan file>]
 EOF
 
 exit $fail

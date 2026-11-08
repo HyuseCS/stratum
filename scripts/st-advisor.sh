@@ -60,7 +60,7 @@ esac
 cmd=run
 case ${1:-} in check|continued|waive|note|round|talk) cmd=$1; shift ;; count) cmd=count ;; esac
 point=${1:-}
-case "$cmd $point $#" in "run plan 2"|"run test 6"|"run diff 3"|"run decisions 3"|"run change 3"|"run review 2"|"round plan 4"|"round test 4"|"round diff 4"|"round decisions 4"|"round change 4"|"check plan 2"|"continued plan 2"|"continued test 2"|"continued diff 2"|"continued decisions 2"|"continued change 2"|"waive plan 3"|"note plan 3"|"note test 3"|"note diff 3"|"note decisions 3"|"note change 3"|"talk plan 3"|"talk test 3"|"talk diff 3"|"talk decisions 3"|"talk change 3"|"count count 2") ;; *) usage ;; esac
+case "$cmd $point $#" in "run plan 2"|"run test 6"|"run diff 3"|"run decisions 3"|"run change 3"|"run review 2"|"run review 3"|"round plan 4"|"round test 4"|"round diff 4"|"round decisions 4"|"round change 4"|"check plan 2"|"continued plan 2"|"continued test 2"|"continued diff 2"|"continued decisions 2"|"continued change 2"|"waive plan 3"|"note plan 3"|"note test 3"|"note diff 3"|"note decisions 3"|"note change 3"|"talk plan 3"|"talk test 3"|"talk diff 3"|"talk decisions 3"|"talk change 3"|"count count 2") ;; *) usage ;; esac
 at=$point
 label=$point
 [ $cmd = round ] && { at=round; label="$point round $3"; }
@@ -111,6 +111,7 @@ case $cmd-$point in
   *-decisions|*-change) [ -f "$3" ] && [ -r "$3" ] || usage ;;
   *-test) [ -f "$3" ] && [ -r "$3" ] && [ -f "$5" ] && [ -r "$5" ] && [ -f "$6" ] && [ -r "$6" ] || usage ;;
   *-diff|*-review) b=$3; [ $point = review ] && b=$2
+    [ $point = review ] && [ $# = 3 ] && { [ -f "$3" ] && [ -r "$3" ] || usage; }
     git rev-parse --verify --quiet "$b^{commit}" >/dev/null || usage
     git diff --quiet "$b" HEAD --
     case $? in 0) echo "no change since $b: skip"; exit 0 ;; 1) ;; *) usage ;; esac ;;
@@ -222,7 +223,8 @@ printf '%s\n' '{"type":"object","additionalProperties":false,"required":["verdic
       printf '%s\n' 'Point: decisions. Below is the list of small decisions the orchestrator made. For each one, say whether it is fine. A finding with severity CRITICAL or HIGH means the decision must go to the user.'
       cat "$3" ;;
     *-review)
-      printf '%s\n' "Point: review. Do a full review of the changes in git diff $2..HEAD (run it yourself): bugs, regressions, security and broken rules of the project's constitution. Do not build or fix." ;;
+      printf '%s\n' "Point: review. Do a full review of the changes in git diff $2..HEAD (run it yourself): bugs, regressions, security and broken rules of the project's constitution. Do not build or fix."
+      [ $# = 3 ] && printf '%s\n' "Plan: $3. Also check whether the diff does what this file says. A gap is a finding." ;;
     *-diff)
       printf '%s\n' "Point: diff. Review the changes in git diff $3..HEAD (run it yourself): hidden regressions and broken rules of the project's constitution. Do not build or fix." ;;
     *-plan)
