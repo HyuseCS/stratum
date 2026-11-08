@@ -60,6 +60,12 @@ model {
         path 'skills/st-design'
       }
     }
+    st-research = skill '/st-research' {
+      summary 'Research on demand. Turns words into a scope and numbered questions, starts the st-research agent and checks that only the research file changed.'
+      metadata {
+        path 'skills/st-research'
+      }
+    }
   }
 
   user -[starts]-> skills.st 'task in plain words'
@@ -201,4 +207,11 @@ model {
   skills.st-design -[runs]-> scripts.st-figcraft-sh 'start with the project root'
   skills.st-design -[starts]-> agents.st-design 'task, mode, answers, dev server URL, custom step and findings'
   skills.st-design -[starts]-> agents.st-git 'reported paths, DESIGN.md, design.json, tokens and saved design'
+
+  skills.st-research -[reads]-> git 'HEAD, status and hashes of changed files'
+  skills.st-research -[starts]-> agents.st-research 'plugin root, project root and the brief'
+  skills.st-research -[passes]-> user 'scope, questions, path and a short summary'
+  skills.st-plan -[starts]-> skills.st-research 'feature dir when code facts are unclear'
+  skills.st-define -[starts]-> skills.st-research 'research path in the new feature folder'
+  skills.st-grill -[starts]-> skills.st-research 'grill facts as the scope'
 }

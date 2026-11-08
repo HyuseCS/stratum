@@ -517,6 +517,7 @@ graph TB
   SkillsSt_inspect@{ shape: rectangle, label: "/st-inspect" }
   SkillsSt_build@{ shape: rectangle, label: "/st-build" }
   SkillsSt_close@{ shape: rectangle, label: "/st-close" }
+  SkillsSt_research@{ shape: rectangle, label: "/st-research" }
   SkillsSt_review@{ shape: rectangle, label: "/st-review" }
   SkillsSt_test@{ shape: rectangle, label: "/st-test" }
   SkillsSt_debug@{ shape: rectangle, label: "/st-debug" }
@@ -533,6 +534,7 @@ graph TB
   AgentsSt_plan@{ shape: rectangle, label: "st-plan agent" }
   AgentsSt_build@{ shape: rectangle, label: "st-build agent" }
   AgentsSt_close@{ shape: rectangle, label: "st-close agent" }
+  AgentsSt_research@{ shape: rectangle, label: "st-research agent" }
   AgentsSt_review@{ shape: rectangle, label: "st-review agent" }
   AgentsSt_test@{ shape: rectangle, label: "st-test agent" }
   AgentsSt_debug@{ shape: rectangle, label: "st-debug agent" }
@@ -581,6 +583,7 @@ advisor answer`" .-> AgentsSt_debug
 custom step and findings`" .-> AgentsSt_design
   SkillsSt_design -. "`reported paths, DESIGN.md, design.json, 
 tokens and saved design`" .-> AgentsSt_git
+  SkillsSt_research -. "`plugin root, project root and the brief`" .-> AgentsSt_research
   SkillsSt_review -. "`plugin root, project root, feature dir, 
 story and range`" .-> AgentsSt_review
   SkillsSt_test -. "`plugin root, project root, feature dir 
@@ -634,6 +637,8 @@ lane`" .-> SkillsSt_quick
   AgentsSt_test -. "`test path and failing line`" .-> SkillsSt_test
   AgentsSt_triage -. "`verdict, built parts, blocker and next 
 step`" .-> SkillsSt_triage
+  AgentsSt_research -. "`answers, open questions and the file 
+path`" .-> SkillsSt_research
   AgentsSt_impeccable -. "`audit report`" .-> User
   AgentsSt_ponytail_audit -. "`ranked cut list and net line`" .-> User
   AgentsSt_ponytail_debt -. "`ledger rows by file`" .-> User
@@ -806,6 +811,7 @@ graph TB
   AgentsSt_quick@{ shape: rectangle, label: "st-quick agent" }
   AgentsSt_review@{ shape: rectangle, label: "st-review agent" }
   AgentsSt_test@{ shape: rectangle, label: "st-test agent" }
+  AgentsSt_research@{ shape: rectangle, label: "st-research agent" }
   AgentsSt_design@{ shape: rectangle, label: "st-design agent" }
   AgentsSt_git@{ shape: rectangle, label: "st-git agent" }
   AgentsSt_triage@{ shape: rectangle, label: "st-triage agent" }
@@ -845,6 +851,7 @@ graph TB
   ProjectGraphify_out@{ shape: rectangle, label: "graphify-out" }
   ProjectHallmark@{ shape: rectangle, label: ".hallmark" }
   ProjectApps_app_ordinance_md@{ shape: rectangle, label: "apps/APP/ORDINANCE.md" }
+  StratumResearch@{ shape: rectangle, label: ".stratum/research" }
   ProjectDesign_md@{ shape: rectangle, label: "DESIGN.md" }
   ProjectGraphify_out_graph_report_md@{ shape: rectangle, label: "graphify-out/GRAPH_REPORT.md" }
   ProjectSpecs@{ shape: rectangle, label: "specs" }
@@ -979,6 +986,7 @@ questions`" .-> ProjectGraphify_out_graph_report_md
   AgentsSt_quick -. "`phase done`" .-> StratumState_json
   AgentsSt_review -. "`project rules`" .-> StratumConstitution_md
   AgentsSt_test -. "`project rules`" .-> StratumConstitution_md
+  AgentsSt_research -. "`rounds of facts with no feature`" .-> StratumResearch
   AgentsSt_build -. "`plan and Validate section`" .-> FeaturePlan_md
   AgentsSt_build -. "`entities the task touches`" .-> FeatureData_model_md
   AgentsSt_build -. "`contracts the task touches`" .-> FeatureContracts
@@ -1018,6 +1026,7 @@ questions`" .-> ProjectGraphify_out_graph_report_md
   AgentsSt_test -. "`entities the test checks`" .-> FeatureData_model_md
   AgentsSt_test -. "`contracts the test checks`" .-> FeatureContracts
   AgentsSt_test -. "`task text`" .-> FeatureTasks_md
+  AgentsSt_research -. "`rounds of facts in a feature`" .-> FeatureResearch_md
   AgentsSt_build -. "`design rules for screen tasks`" .-> ProjectDesign_md
   AgentsSt_build -. "`file map`" .-> ProjectGraphify_out_graph_report_md
   AgentsSt_close -. "`file map`" .-> ProjectGraphify_out_graph_report_md
@@ -1030,6 +1039,7 @@ questions`" .-> ProjectGraphify_out_graph_report_md
   AgentsSt_quick -. "`file map`" .-> ProjectGraphify_out_graph_report_md
   AgentsSt_review -. "`file map`" .-> ProjectGraphify_out_graph_report_md
   AgentsSt_test -. "`file map`" .-> ProjectGraphify_out_graph_report_md
+  AgentsSt_research -. "`file map`" .-> ProjectGraphify_out_graph_report_md
   AgentsSt_design -. "`design rules`" .-> ProjectDesign_md
   AgentsSt_git -. "`file map`" .-> ProjectGraphify_out_graph_report_md
   AgentsSt_triage -. "`file map`" .-> ProjectGraphify_out_graph_report_md
@@ -1131,7 +1141,7 @@ appended`" .-> FeatureChecklists
   ProceduresPlan_md -. "`feature spec`" .-> FeatureSpec_md
   ProceduresPlan_md -. "`technical context, constitution check, 
 phases`" .-> FeaturePlan_md
-  ProceduresPlan_md -. "`decisions, reasons, alternatives`" .-> FeatureResearch_md
+  ProceduresPlan_md -. "`[...]`" .-> FeatureResearch_md
   ProceduresPlan_md -. "`entities, fields, rules`" .-> FeatureData_model_md
   ProceduresPlan_md -. "`interface contracts`" .-> FeatureContracts
   ProceduresPlan_md -. "`validation scenarios`" .-> FeatureQuickstart_md

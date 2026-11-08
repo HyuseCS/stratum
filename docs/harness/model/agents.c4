@@ -90,6 +90,12 @@ model {
         path 'agents/st-triage.md'
       }
     }
+    st-research = agent 'st-research agent' {
+      summary 'Answers numbered research questions with cites from the code, git history and the web, and writes one research file. It gives facts, never advice.'
+      metadata {
+        path 'agents/st-research.md'
+      }
+    }
   }
 
   agents.st-build -[reads]-> plugin.sr-opus-5-md 'report style rules'
@@ -255,4 +261,12 @@ model {
   agents.st-triage -[reads]-> github 'issue and linked issues by gh issue view'
   agents.st-triage -[reads]-> git 'tracked files and log'
   agents.st-triage -[passes]-> skills.st-triage 'verdict, built parts, blocker and next step'
+
+  agents.st-research -[reads]-> plugin.sr-opus-5-md 'report style rules'
+  agents.st-research -[reads]-> project.graphify-out-graph-report-md 'file map'
+  agents.st-research -[reads]-> procedures.research-md 'research steps to follow'
+  agents.st-research -[reads]-> git 'tracked files and log'
+  agents.st-research -[writes]-> feature.research-md 'rounds of facts in a feature'
+  agents.st-research -[writes]-> stratum.research 'rounds of facts with no feature'
+  agents.st-research -[passes]-> skills.st-research 'answers, open questions and the file path'
 }
