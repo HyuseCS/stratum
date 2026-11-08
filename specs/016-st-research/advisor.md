@@ -4,3 +4,9 @@ summary: One task consolidation would reduce implementation churn while preservi
 
 ## plan | 2026-11-08T11:35:26Z | sha256 847cce862a74257faee38c6a62295d7a690d9964893c88ddcb6eb13de2660241 | WAIVED
 reason: Inspect fixes F1-F10 only: target platform line, quickstart steps, marker line, secret rule, test commands; no task added or removed, no approach change
+
+## decisions | 2026-11-08T11:56:35Z | /advisor
+summary: 25 small decisions approved; notes: st-define line is dense (Close decides), two duplicate-name test groups go to the shortcut list
+
+## diff | 2026-11-08T11:57:04Z | /advisor
+summary: post-review diff is the US4 F2 secret-in-URL line and the T010 tick; approved, no findings
