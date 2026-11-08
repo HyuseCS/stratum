@@ -3,3 +3,6 @@ summary: The plan reuses the existing advisor machinery, limits new implementati
 
 ## plan | 2026-11-08T12:13:25Z | sha256 d0dd8b85768ed6eb3130b31290e782f8f7a4d40081bc9f125254fbc229ded421 | WAIVED
 reason: Inspect fixes only: usage-line test update, SC-002 and FR-006 wording, D19/D20 recorded, branch name, contract check order, two phrase rows. No approach change.
+
+## decisions | 2026-11-08T13:10:28Z | /advisor
+summary: /advisor: all 14 US1/US2 small decisions fine; D8 and D12 fall within D19, none goes to the user.

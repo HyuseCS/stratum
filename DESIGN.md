@@ -191,6 +191,7 @@ dependency.
   | File | Worktree | Why |
   |------|----------|-----|
   | `.stratum/advisor.json` | main | One advisor mode for the project (`st-advisor.sh`). |
+  | `.stratum/advisor` | main | `st-advisor.sh review` writes each branch's review record to the main checkout's folder, also from a worktree. |
   | `.stratum/autonomous` | main | Only the main checkout holds the flag (`st-approve.py`, `st-worker.sh`). |
   | `.stratum/worker-setup.sh` | main | The user's own setup for a new worker worktree. `st-worker.sh start` runs the main checkout's file in the worktree before `claude` starts. Stratum never writes it. |
   | `.stratum/state.json` | own | Each checkout runs its own phase. `st-advisor.sh` reads `risk` from the main checkout's file. |
