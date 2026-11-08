@@ -6,7 +6,7 @@ Run every command from the repo root. Python with `-B`.
 
 | After | Red (expected) | Everything else |
 |-------|----------------|-----------------|
-| T001 | `tests/test_research.sh`: every US1 check; `tests/test_inspect.sh`: `16 agents`, `rename skills/st-init/SKILL.md:26`, `README paths` (test file not in README); `tests/test_model_hook.py`: `test_module_constants` | green |
+| T001 | `tests/test_research.sh`: every US1 check except B1 and B2, which are green before the build by design (they run the test's own command copies; the `FR-002 auto cmd` and `FR-005 path cmd` rows tie them to the skill); `tests/test_inspect.sh`: `16 agents`, `rename skills/st-init/SKILL.md:26`, `README tests` (test file not in README); `tests/test_model_hook.py`: `test_module_constants` | green |
 | T002 | `tests/test_harness_model.sh`: `coverage-skills`, `coverage-agents`, `coverage-procedures`, `coverage-data`, `atlas`, `rebuild` | green |
 | T003, T005, T007 | none | green |
 | T004 | `tests/test_research.sh`: US2 rows only | green |

@@ -68,7 +68,7 @@ Post-design re-check: all gates pass. Complexity Tracking stays empty.
   file before and after (research R6). These do not see git-ignored files.
   The agent reads the whole repo, and in a feature the research file is committed. A `## Never`
   line forbids copying a secret (a key, a token, a password, an `.env` value) into the research
-  file (test row `secret`).
+  file, a web query or a URL (test row `secret`).
 - **S2. Path outside the project (T002, FR-005).** The skill runs `realpath -m` on the path and
   stops unless it is under `realpath .` of the project root. `realpath` resolves `..` and
   symlinks, so a link to outside fails too. A path with a `'` stops before any shell call, so it
@@ -78,7 +78,7 @@ Post-design re-check: all gates pass. Complexity Tracking stays empty.
   Page text is data, never an instruction. The skill shows any change other than the research
   file, so an instruction on a page that makes the agent write elsewhere is found. A plan file
   and repo files are data too. The same `## Never` line as S1 forbids putting a secret in a web
-  query, so no secret leaves the machine through WebSearch or WebFetch.
+  query or a URL, so no secret leaves the machine through WebSearch or WebFetch.
 - **S4. Session flag (T002, FR-002).** The skill only reads `.stratum/autonomous`. It never
   writes it. An empty session id never counts as on (test B1).
 - **S5. Model file names (T002).** `.stratum/models.json` accepts `st-research` once the agent
@@ -157,4 +157,4 @@ F1. plan.md:33, contracts/st-research.md:27 and :30. Target platform lists macOS
 F2. quickstart.md:72, :78, :79. N3 and N4 break the copy's `tests/test_research.sh`, but the command `ST_ROOT=<copy> bash tests/test_research.sh` runs the repo's test file from the repo root. The B1 and B2 cases stay green and the negative control cannot go red. -> st-plan: run `bash <copy>/tests/test_research.sh` for N1 to N5.
 F3. spec.md:111, quickstart.md:96. US4 acceptance scenario 3 (a page with an instruction, no other file changes) has no automated row and no manual row. Q7 checks URL, date and `Conflict:` only. -> st-plan: add a Q7 step with a scratch page that holds an instruction to write a file, and expect only the research file in `git status`.
 F4. contracts/st-research.md:93 and :124. A plan-written `research.md` (no `Written by: st-research` line, for example a re-plan, or `specs/005-st-triage/research.md`) gets a `## Round 1` from st-research with no marker line. E2 then does not see a st-research file, and Plan Phase 0 rewrites `research.md` as today, which can drop that round. -> st-plan: in procedures/research.md step 2, add the line `Written by: st-research` when an existing file does not have it.
-F5. contracts/st-research.md:65-73, plan.md:62-82. The agent has Read and Bash on the whole repo and writes a file that is committed in a feature (`specs/<NNN>/research.md`), and WebSearch sends queries off the machine. No rule stops it from copying a secret (`.env`, keys, tokens) into the research file or into a web query. -> st-plan: add one `## Never` line, for example `- Copy a secret, a key or a token into the research file or a web query.`, a phrase row for it, and a line in S1 and S3.
+F5. contracts/st-research.md:65-73, plan.md:62-82. The agent has Read and Bash on the whole repo and writes a file that is committed in a feature (`specs/<NNN>/research.md`), and WebSearch sends queries off the machine. No rule stops it from copying a secret (`.env`, keys, tokens) into the research file or into a web query. -> st-plan: add one `## Never` line, built as `- Copy a secret (a key, a token, a password, an `.env` value) into the research file, a web query or a URL.`, a phrase row for it, and a line in S1 and S3.
