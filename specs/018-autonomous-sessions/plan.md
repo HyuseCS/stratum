@@ -88,6 +88,9 @@ tests/test_harness_model.sh        # run only, no edit expected
 4. Skills: the turn-on line at `skills/st/SKILL.md:89` runs `autonomous-on` (D1). `skills/st/SKILL.md:90` text says it removes only this session's entry. `:93` adds "or will continue some other time". `skills/st-handoff/SKILL.md` gets a turn-off step in the main-session branch, before "Write it". `skills/st-worker/SKILL.md:43` names the entry.
 5. Harness docs (D2 = A): `data.c4` summary describes the folder of entries; `hooks.c4` `st-approve-py` summary says "the autonomous folder" in place of "the autonomous flag". Atlas: `data.mjs` node `S` names `autonomous/`, then rebuild with `META.buildCmd`.
 6. Tests: change only lines that build or check the old single file (FR-013), and add the two-session cases (FR-012).
+7. D21 fixes (FR-014, FR-015):
+   - `scripts/st-worker.sh` `question()` (line 172): also true when the visible pane has `Ready to submit your answers?`. The permission check (`! grep -qaE "$PERM"`) stays first and unchanged. The other callers (`followup` at 375, `wait` at 423, `watch` at 554 and 617) then also see that screen as an open question, which is the wanted result.
+   - `skills/st-worker/SKILL.md` step 6 (line 28): the sentence "The dialog must show the whole command or path. Else send no key and tell the user." is replaced by the FR-015 sentence in tasks.md T022. The never list (line 34) does not change.
 
 `skills/st-build/SKILL.md` needs no change: it has no autonomous text, and `skills/st/SKILL.md:90` already ends the mode at the end of a Build. `README.md:293` names the old layout ("the main checkout's `.stratum/autonomous` and the worker's session file must match", row W15 in `tests/test_worker_rules.sh`). It changes to the entry rule. This corrects finding F3 of the first Plan report.
 
@@ -103,6 +106,7 @@ tests/test_harness_model.sh        # run only, no edit expected
 
 - Every roster machine needs this plugin version. A saved machine with an older version reads the old single-file flag, finds a folder, and counts as off: it fails safe, and its workers' prompts wait for the user.
 - Rollback: to go back to an older plugin, remove `.stratum/autonomous/` in each main checkout, here and on each saved machine.
+- Merge-time item (not a task now): if #80 (st-research) is on origin/main when this branch merges it before the PR, update st-research's autonomous flag check to the per-session layout (contract C1), with its test.
 
 ## Decisions (answered 2026-11-08)
 

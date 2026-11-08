@@ -89,11 +89,29 @@ description: "Tasks for 018-autonomous-sessions"
 
 ---
 
+## Phase 6b: D21 fixes, tests (FR-014, FR-015)
+
+**Goal**: failing tests for the "Ready to submit your answers?" screen and the new step-6 wording.
+
+**Independent Test**: `answer T004 --keys 1` on that screen while herdr says `done` sends `1`, and the worker skill has the FR-015 sentence.
+
+- [ ] T021 [P] In `tests/test_st_worker.sh`, next to the AQ cases (around line 722), add a helper `reviewpane` that prints the AskUserQuestion review screen: ` Review your answers`, ` ● Which folder holds the brief.md? → Newest brief.md folder`, an empty line, `Ready to submit your answers?`, an empty line, `❯ 1. Submit answers`, `  2. Cancel` (no `Enter to select` line). Add: AQ6 `mk; states done working; reviewpane > "$tmp/pane.txt"`, `answer T004 --keys 1`: exit 0 and `agent<TAB>send-keys<TAB>worker-t004<TAB>1` sent once; AQ7 state `done` with a pane of plain output and no question (no `Enter to select`, no `Ready to submit your answers?`), `answer T004 --keys 1`: exit 1, `not blocked: done`, no send-keys; AQ8 the review screen with a permission line `Do you want to proceed?` above it still gives `not blocked: done` and nothing sent. Use the existing herdr stub, `states`, `run`, `hascall` and `cnt` helpers. Owns: `tests/test_st_worker.sh`. Test: bash tests/test_st_worker.sh.
+- [ ] T022 [P] In `tests/test_worker_rules.sh`: in the phrase of row W1 and in row W28, replace `The dialog must show the whole command or path. Else send no key and tell the user.` with `Approve a one-time yes only when what the dialog shows is safe and any part it cuts off can only be inside the worker's own worktree or its scratchpad. Else send no key and tell the user.` Add the gone row G12 for `skills/st-worker/SKILL.md` with the phrase `The dialog must show the whole command or path.` Keep W5 (the never list) and O1 (`Never approve a push` once) as they are. Owns: `tests/test_worker_rules.sh`. Test: bash tests/test_worker_rules.sh.
+
+---
+
+## Phase 6c: D21 fixes, build
+
+- [ ] T023 [P] In `scripts/st-worker.sh` `question()` (line 172), keep `readpane && ! grep -qaE "$PERM" "$t"` first, and match `Enter to select` or `Ready to submit your answers?` after it (one `grep -qaE` with both, or two greps joined by `||` inside braces). Change nothing in `answer`, `perm()` or `PERM`. Owns: `scripts/st-worker.sh`. Test: bash tests/test_st_worker.sh.
+- [ ] T024 [P] In `skills/st-worker/SKILL.md` step 6 (line 28), replace `The dialog must show the whole command or path. Else send no key and tell the user.` with the exact new sentence from T022. Leave the never list (line 34) as it is. Owns: `skills/st-worker/SKILL.md`. Test: bash tests/test_worker_rules.sh && bash tests/test_lane_steps.sh && bash tests/test_on_demand.sh && bash tests/test_state.sh && bash tests/test_harness_model.sh coverage missing.
+
+---
+
 ## Phase 7: Polish (harness docs and the quickstart run)
 
 - [ ] T018 [P] In `docs/harness/model/data.c4`, set the `stratum.autonomous` summary to `One empty entry per session in this folder of the main checkout, named with the session id. st-worker.sh makes and removes it, st-worker.sh, st-approve.py and the statusline read it.` (one or two sentences, at most 200 characters). In `docs/harness/model/hooks.c4` line 46, change "the autonomous flag" to "the autonomous folder". Change no relationship label (D2 = A). In `DESIGN.md` line 194, change "Only the main checkout holds the flag" to "Only the main checkout holds the mode folder, one entry per session" and keep the row's table format (`tests/test_local_files.sh` reads it). Owns: `docs/harness/model/data.c4`, `docs/harness/model/hooks.c4`, `DESIGN.md`. Test: bash tests/test_harness_model.sh coverage missing summaries links validate rebuild && bash tests/test_local_files.sh && bash tests/test_design_lane.sh && bash tests/test_inspect.sh && bash tests/test_screen_rules.sh && bash tests/test_on_demand.sh && bash tests/test_triage_rules.sh && python3 tests/test_model_hook.py.
 - [ ] T019 [P] In `docs/harness/atlas/data.mjs`, node `S` `how`, change `<code>autonomous</code>` to `<code>autonomous/</code>`. Then rebuild `docs/harness/atlas/atlas.html` and `docs/harness/atlas/SYSTEM.md` with the exact `META.buildCmd` from `data.mjs` line 6, run from the repo root. Owns: `docs/harness/atlas/data.mjs`, `docs/harness/atlas/atlas.html`, `docs/harness/atlas/SYSTEM.md`. Test: bash tests/test_harness_model.sh atlas nomcp readme.
-- [ ] T020 Run the five checks of `quickstart.md` "Automated" one by one and fix only what this feature broke (needs T001-T019). Test: bash tests/test_statusline.sh && python3 tests/test_approve_hook.py && bash tests/test_st_worker.sh && bash tests/test_worker_rules.sh && bash tests/test_harness_model.sh.
+- [ ] T020 Run the five checks of `quickstart.md` "Automated" one by one and fix only what this feature broke (needs T001-T019 and T021-T024). Test: bash tests/test_statusline.sh && python3 tests/test_approve_hook.py && bash tests/test_st_worker.sh && bash tests/test_worker_rules.sh && bash tests/test_harness_model.sh.
 
 ---
 
@@ -101,7 +119,7 @@ description: "Tasks for 018-autonomous-sessions"
 
 ### Phase Dependencies
 
-- Phase 1 has no dependency. Each build phase needs its test phase. Phase 3 needs Phase 2, Phase 5 needs Phase 4. Phase 7 needs Phase 6.
+- Phase 1 has no dependency. Each build phase needs its test phase. Phase 3 needs Phase 2, Phase 5 needs Phase 4, Phase 6b needs Phase 6 (T021 and T023 share `tests/test_st_worker.sh` and `scripts/st-worker.sh` with US1, T022 and T024 share `tests/test_worker_rules.sh` and `skills/st-worker/SKILL.md` with US2 and US3). Phase 6c needs Phase 6b. T020 needs Phase 6c.
 - Inside each phase every task is `[P]`: no two own the same file and none needs another's result.
 
 ### User Story Dependencies
@@ -129,11 +147,13 @@ description: "Tasks for 018-autonomous-sessions"
 | FR-011 | T010 (W17), T015 (W5) | T013, T017 |
 | FR-012 | T001 (a), T002 (a)(b), T003 LW5, OF1 | T005, T006, T007 |
 | FR-013 | T020 | all |
+| FR-014 | T021 AQ6-AQ8 | T023 |
+| FR-015 | T022 (W1, W28, G12) | T024 |
 
 ### Parallel Opportunities
 
 - Phase 1: T001, T002, T003, T004 at once. Phase 2: T005-T009 at once.
-- Phase 4: T011, T012, T013. Phase 5: T014, T015. Phase 6: T016, T017.
+- Phase 4: T011, T012, T013. Phase 5: T014, T015. Phase 6: T016, T017. Phase 6b: T021, T022. Phase 6c: T023, T024.
 - T018 and T019 can run beside any phase.
 
 ---
