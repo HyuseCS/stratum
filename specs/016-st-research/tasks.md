@@ -138,7 +138,7 @@ fixed sections and rounds. The agent is listed everywhere the other agents are.
 
 ## Phase 7: Polish
 
-- [ ] T010 Run each test the feature touched once more, then `git status --porcelain --untracked-files=all`: only the files named in T001 to T009 changed, and no test left a file. Do quickstart section 2 (N1 to N5) on a scratch copy.
+- [X] T010 Run each test the feature touched once more, then `git status --porcelain --untracked-files=all`: only the files named in T001 to T009 changed, and no test left a file. Do quickstart section 2 (N1 to N5) on a scratch copy.
   - Test: `bash tests/test_research.sh; bash tests/test_inspect.sh; bash tests/test_model_files.sh; python3 -B -m unittest tests/test_model_hook.py; bash tests/test_session_hooks.sh; bash tests/test_local_files.sh; bash tests/test_on_demand.sh; bash tests/test_test_scope.sh; bash tests/test_state.sh; bash tests/test_plan_rules.sh; bash tests/test_lane_steps.sh; bash tests/test_advisor_rules.sh; bash tests/test_triage_rules.sh; bash tests/test_harness_model.sh; bash tests/test_no_frontend_design.sh; python3 -B tests/test_phase_hook.py`.
 
 ## Dependencies
