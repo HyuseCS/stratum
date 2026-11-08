@@ -76,6 +76,14 @@ FR-007 marker	procedures/research.md	If the file exists without the line `Writte
 readme	README.md	| `st-research <words>` |
 readme	README.md	| `st-research` | Opus |
 readme	README.md	bash tests/test_research.sh
+FR-014 grill	skills/st-grill/SKILL.md	When a question needs facts from the code that a quick look cannot find, run `/stratum:st-research` (Skill tool)
+FR-014 grill	skills/st-grill/SKILL.md	Show its findings to the user, then go on with the grill.
+FR-015 define	skills/st-define/SKILL.md	When the grill needs `/stratum:st-research`, make the feature folder first
+FR-015 define	skills/st-define/SKILL.md	Pass `<folder>/research.md` as the research path.
+FR-015 define	skills/st-define/SKILL.md	Never use the feature in `.stratum/state.json` for it.
+FR-016 define	skills/st-define/SKILL.md	If step 1 made a feature folder, put its path in the input.
+FR-016 specify	procedures/specify.md	If the input names a feature folder that Define made in this run
+FR-016 specify	procedures/specify.md	Make no second folder.
 EOF
 
 check "FR-002 auto cmd" 'grep -qF -- "$auto" "$s"'

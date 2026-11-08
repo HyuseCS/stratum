@@ -21,9 +21,11 @@ In every procedure file, `<PLUGIN_ROOT>` means this plugin root.
 
 1. **Grill.** Run the `st-grill` skill on the description. One question at a time, each with
    your recommended answer. Stop when scope, users, data, privacy, and done-criteria are clear.
+   When the grill needs `/stratum:st-research`, make the feature folder first: `specs/<NNN>-<short-name>`, with the next free number and the short-name rule of `<plugin root>/procedures/specify.md` steps 1 and 2, made with `mkdir -p`. Pass `<folder>/research.md` as the research path. Never use the feature in `.stratum/state.json` for it.
 2. **Specify.** Follow `<plugin root>/procedures/specify.md`. Input: the description plus a short
    summary of the grilling answers. It creates `specs/NNN-short-name/spec.md` and the
    `checklists/requirements.md` quality checklist.
+   If step 1 made a feature folder, put its path in the input.
    The Stratum hook records the new folder as `feature_directory` in `.stratum/state.json`.
 3. **Clarify, only if gaps remain.** If the spec still has `[NEEDS CLARIFICATION]` markers or
    failing items in `checklists/requirements.md`, follow `<plugin root>/procedures/clarify.md`.

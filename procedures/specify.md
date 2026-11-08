@@ -32,6 +32,7 @@ Given that feature description, do this:
 
 2. **Create the spec feature directory**:
 
+   - If the input names a feature folder that Define made in this run for research during the grill, set `FEATURE_DIRECTORY` to it, keep its files, and skip the next three bullets. Make no second folder.
    - Scan `specs/` for directories named `NNN-*`. The prefix is the next free 3-digit number (`001` if none exist).
    - Set `FEATURE_DIRECTORY` to `specs/<NNN>-<short-name>` (e.g., `specs/003-user-auth`).
    - `mkdir -p FEATURE_DIRECTORY`

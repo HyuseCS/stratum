@@ -84,12 +84,12 @@ fixed sections and rounds. The agent is listed everywhere the other agents are.
 
 ### Tests for User Story 2
 
-- [ ] T004 [US2] In `tests/test_research.sh`, add the contracts section 6 US2 rows at the end of the phrase heredoc (FR-014 to FR-016). Red: US2 rows only.
+- [X] T004 [US2] In `tests/test_research.sh`, add the contracts section 6 US2 rows at the end of the phrase heredoc (FR-014 to FR-016). Red: US2 rows only.
   - Test: `bash tests/test_research.sh`.
 
 ### Implementation for User Story 2
 
-- [ ] T005 [US2] Apply contracts section 4 E3 to `skills/st-grill/SKILL.md`, E4 (both lines) to `skills/st-define/SKILL.md`, E5 to `procedures/specify.md` (FR-014 to FR-016). Keep the `tests/test_state.sh` S4 and S9 phrases whole.
+- [X] T005 [US2] Apply contracts section 4 E3 to `skills/st-grill/SKILL.md`, E4 (both lines) to `skills/st-define/SKILL.md`, E5 to `procedures/specify.md` (FR-014 to FR-016). Keep the `tests/test_state.sh` S4 and S9 phrases whole.
   - Test: `bash tests/test_research.sh; bash tests/test_state.sh`.
 
 **Checkpoint**: US1 and US2 green.
