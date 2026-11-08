@@ -104,12 +104,12 @@ fixed sections and rounds. The agent is listed everywhere the other agents are.
 
 ### Tests for User Story 3
 
-- [ ] T006 [US3] In `tests/test_research.sh`, add the contracts section 6 US3 rows at the end of the phrase heredoc (FR-012, FR-013). Red: US3 rows only.
+- [X] T006 [US3] In `tests/test_research.sh`, add the contracts section 6 US3 rows at the end of the phrase heredoc (FR-012, FR-013). Red: US3 rows only.
   - Test: `bash tests/test_research.sh`.
 
 ### Implementation for User Story 3
 
-- [ ] T007 [US3] Apply contracts section 4 E1 to `skills/st-plan/SKILL.md` and E2 to `procedures/plan.md` (FR-012, FR-013).
+- [X] T007 [US3] Apply contracts section 4 E1 to `skills/st-plan/SKILL.md` and E2 to `procedures/plan.md` (FR-012, FR-013).
   - Test: `bash tests/test_research.sh; bash tests/test_plan_rules.sh; bash tests/test_lane_steps.sh; bash tests/test_advisor_rules.sh; bash tests/test_inspect.sh; bash tests/test_triage_rules.sh; bash tests/test_on_demand.sh`.
 
 **Checkpoint**: US1 to US3 green.

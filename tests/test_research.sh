@@ -84,6 +84,13 @@ FR-015 define	skills/st-define/SKILL.md	Never use the feature in `.stratum/state
 FR-016 define	skills/st-define/SKILL.md	If step 1 made a feature folder, put its path in the input.
 FR-016 specify	procedures/specify.md	If the input names a feature folder that Define made in this run
 FR-016 specify	procedures/specify.md	Make no second folder.
+FR-012 plan skill	skills/st-plan/SKILL.md	If the spec leaves facts about the code unclear, or the user asks for research first
+FR-012 plan skill	skills/st-plan/SKILL.md	run `/stratum:st-research` (Skill tool) with the feature dir before step 1 of "Steps"
+FR-012 plan skill	skills/st-plan/SKILL.md	give its file to the `st-plan` subagent as input
+FR-013 plan proc	procedures/plan.md	has the line `Written by: st-research`, keep all its rounds and sections as they are and use its facts
+FR-013 plan proc	procedures/plan.md	Research only the unknowns it does not cover
+FR-013 plan proc	procedures/plan.md	under a `## Decisions` heading at the end of the file
+FR-013 plan proc	procedures/plan.md	With no such file, follow steps 1 to 3.
 EOF
 
 check "FR-002 auto cmd" 'grep -qF -- "$auto" "$s"'
