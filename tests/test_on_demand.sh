@@ -374,6 +374,9 @@ phrases <<'EOF'
 #79 FR-011 plan file	skills/st-advisor/SKILL.md	A second argument: the plan file. Make it an absolute path.
 #79 FR-011 plan file	skills/st-advisor/SKILL.md	Cannot read <file>.
 #79 FR-011 plan file	skills/st-advisor/SKILL.md	st-advisor.sh review <base> [<plan file>]
+#79 D19 bad json	skills/st-advisor/SKILL.md	not a JSON object with only the keys `mode`, `model` and `effort`
+#79 D19 bad json	skills/st-advisor/SKILL.md	say `BLOCKED: bad advisor.json` and stop before step 6
+#79 PR tab elsewhere	skills/st-advisor/SKILL.md	A Codex tab already open at another folder makes the review run headless. To watch it in a tab, close that tab first.
 EOF
 
 exit $fail

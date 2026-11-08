@@ -8,6 +8,7 @@ File: `<main checkout>/.stratum/advisor/<slug>.md`.
 - `<slug>`: `git symbolic-ref -q --short HEAD` with each `/` as `-`. Detached HEAD: `git rev-parse --short HEAD`.
 - The folder `.stratum/advisor` or the file is a symlink: the point stops with the usage line and writes nothing.
 - Append only. A new entry starts with a blank line when the file is not empty. Earlier entries stay.
+- Branches `feat/x` and `feat-x` share one record file, `feat-x.md`. Their entries mix in it; nothing is lost, because the file is append only.
 
 Codex entry (written by `st-advisor.sh review`, same line format as `advisor.md`):
 
