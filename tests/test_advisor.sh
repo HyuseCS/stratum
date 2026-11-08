@@ -589,7 +589,6 @@ rm -rf "$rdir"
 printf 'do x\n' > "$tmp/plan.md"
 printf 'secret\n' > "$tmp/plan000.md"
 chmod 000 "$tmp/plan000.md"
-rm -rf "$rdir"
 rm -f "$tmp/argv" "$tmp/prompt"
 rrun "$c1" "$tmp/plan.md"
 check "FR-010 review with plan file: prompt has the Plan line" '[ $rc = 0 ] && grep -qxF "Plan: $tmp/plan.md. Also check whether the diff does what this file says. A gap is a finding." "$tmp/prompt"'

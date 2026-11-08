@@ -11,8 +11,8 @@ Run from the review folder. No feature folder, no `spec.md`.
 | Case | Output | Exit | Record |
 |------|--------|------|--------|
 | wrong argument count | `usage: st-advisor.sh plan\|test\|diff\|decisions\|change\|review\|round\|check\|continued\|waive\|note\|talk\|count\|answer\|watch ...` | 2 | none |
-| `<base>` not a commit | usage line | 2 | none |
 | `<plan file>` missing or not readable | usage line | 2 | none |
+| `<base>` not a commit | usage line | 2 | none |
 | no change between `<base>` and HEAD | `no change since <base>: skip` | 0 | none |
 | `.stratum/advisor` or the record file in the main checkout is a symlink (checked right after the main checkout is found) | usage line | 2 | none |
 | no `.stratum/advisor.json` here or in the main checkout | `no advisor: mode not set. Write .stratum/advisor.json with "mode": "auto", "codex", "both" or "off".` | 0 | none |
