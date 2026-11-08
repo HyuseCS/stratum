@@ -253,8 +253,12 @@ def request(data, cwd):
     common = git(["rev-parse", "--path-format=absolute", "--git-common-dir"], root)
     if not common:
         return
-    flag = first_line(os.path.join(os.path.dirname(common), ".stratum", "autonomous"))
-    if not flag or flag != first_line(os.path.join(approve, "session")):
+    sid = first_line(os.path.join(approve, "session"))
+    if not re.fullmatch(r"[A-Za-z0-9-]+", sid):
+        return
+    folder = os.path.join(os.path.dirname(common), ".stratum", "autonomous")
+    entry = os.path.join(folder, sid)
+    if not os.path.isdir(folder) or os.path.islink(folder) or not os.path.isfile(entry) or os.path.islink(entry):
         return
     tool = data.get("tool_name")
     ti = data.get("tool_input")
