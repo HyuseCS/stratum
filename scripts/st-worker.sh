@@ -458,7 +458,10 @@ answer)
     w=$(tail -n 15 <<<"$SC")
     n=$(sed -nE "/$HEAD/=" <<<"$w" | tail -n 1)
     o="^([[:space:]]|│)*(❯[[:space:]]*)?$k\.[[:space:]]"
-    [ -n "$n" ] && [ "$(sed -nE "/$HEAD/=" <<<"$w" | wc -l)" -eq 1 ] && b=$(tail -n "+$((n + 1))" <<<"$w") && [ "$(grep -caE "$o" <<<"$b")" -eq 1 ] && l=$(grep -naE "$o" <<<"$b") && grep -qaE "^([[:space:]]|│)*(❯[[:space:]]*)?$k\. (Yes|Yes, proceed|Yes, just this once)( \([a-z0-9]\))?[[:space:]]*\$" <<<"${l#*:}" && ! sed -n "$((${l%%:*} + 1))p" <<<"$b" | grep -qavE '^[[:space:]]*$|^([[:space:]]|│)*(❯[[:space:]]*)?[0-9]+\.[[:space:]]' || fail "Option $k is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt."
+    [ -n "$n" ] && [ "$(sed -nE "/$HEAD/=" <<<"$w" | wc -l)" -eq 1 ] && b=$(tail -n "+$((n + 1))" <<<"$w") && [ "$(grep -caE "$o" <<<"$b")" -eq 1 ] && l=$(grep -naE "$o" <<<"$b") && {
+      grep -qaE "^([[:space:]]|│)*(❯[[:space:]]*)?$k\. (Yes|Yes, proceed|Yes, just this once)( \([a-z0-9]\))?[[:space:]]*\$" <<<"${l#*:}" ||
+        { grep -qaE "^([[:space:]]|│)*(❯[[:space:]]*)?$k\. No([,[:space:]].*)?\$" <<<"${l#*:}" && ! grep -qaiE "don'?t ask|always|this session|in the future|[a-z0-9-]\.[a-z]{2,}" <<<"${l#*:}"; }
+    } && ! sed -n "$((${l%%:*} + 1))p" <<<"$b" | grep -qavE '^[[:space:]]*$|^([[:space:]]|│)*(❯[[:space:]]*)?[0-9]+\.[[:space:]]' || fail "Option $k is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt."
   fi
   if [ -n "${keys+x}" ]; then
     h agent send-keys "$N" "${keys[@]}"

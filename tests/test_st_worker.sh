@@ -1502,6 +1502,22 @@ mk; states blocked; printf '%s\n' 'Do you want to proceed?' '❯ 1. Yes' "  2. Y
 run bash "$script" wait T004; h=$(shash); states blocked
 run bash "$script" answer T004 --screen "$h" --keys 4
 check "AN8 --keys 4, the pane has no option 4: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 4 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+for no in '  2. No, and tell Claude what to do differently (esc)' '  2. No'; do
+  mk; states blocked working; printf '%s\n' 'Bash command: very-long-command ...' 'Do you want to proceed?' '❯ 1. Yes' "$no" > "$tmp/pane.txt"
+  run bash "$script" wait T004; h=$(shash); states blocked working
+  run bash "$script" answer T004 --screen "$h" --keys 2
+  check "NO1 cut-off dialog, option 2 '$no' with a matching hash: exit 0, the key sent" '[ $rc = 0 ] && hascall "agent\tsend-keys\tworker-t004\t2"'
+done
+mk; states blocked; printf '%s\n' 'Bash command: very-long-command ...' 'Do you want to proceed?' '❯ 1. Yes' '  2. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
+run bash "$script" wait T004; states blocked
+run bash "$script" answer T004 --screen 000000000000 --keys 2
+check "NO2 option 2 No with a wrong hash: exit 1, the other-prompt line, nothing sent" '[ $rc = 1 ] && [ "$out" = "The pane shows another prompt. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+for ao in '  2. Yes, and always allow access to other/ from this project' "  2. No, and don't ask again" '  2. No, always deny git commands' '  2. No, deny for this session' '  2. No, and deny this in the future' '  2. No, block example.com' '  2. Nope'; do
+  mk; states blocked; printf '%s\n' 'Do you want to proceed?' '❯ 1. Yes' "$ao" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
+  run bash "$script" wait T004; h=$(shash); states blocked
+  run bash "$script" answer T004 --screen "$h" --keys 2
+  check "NO3 option 2 '$ao' is refused: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 2 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+done
 mk; states blocked; printf '%s\n' 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
 run bash "$script" wait T004; h=$(shash)
 check "AN9 permission dialog: wait prints one screen line with a 12 hex hash, after the state line and before pane text:" '[ $rc = 4 ] && [ "$(grep -c "^screen" <<<"$out")" = 1 ] && hasline "screen\t%s" "$h" && [[ "$h" =~ ^[0-9a-f]{12}$ ]] && [ "$(grep -oP "^(state(?=\t)|screen(?=\t)|pane text:$)" <<<"$out")" = "$(printf "state\nscreen\npane text:")" ]'
