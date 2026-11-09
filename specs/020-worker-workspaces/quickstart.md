@@ -27,6 +27,7 @@ The user runs this. Prerequisite: an orchestrator session in a herdr workspace l
 5. After both workers finish and merge, run `close f77` and `close f79`.
    Expect: both worker workspaces are gone with their `Codex` tabs. `stratum` is still open. Each `folder ... ready to remove` path still exists.
 6. Saved machine (laptop): start one worker with `--machine laptop --repo <path>`.
+   First run `locale -a | grep -i c.utf` on the laptop once. Expect a line. No line: the task-word cut counts bytes, not characters.
    Expect: on the laptop, a new workspace `stratum / <id>: <words>` with the worktree as folder. No `st-workers` workspace is made, and the laptop's main checkout workspace gets no tab. `close <id> --machine laptop` removes that workspace.
 
 Notes for the user (by hand, once):

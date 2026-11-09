@@ -7,7 +7,7 @@ No stored data. These are the herdr names the scripts make and match.
 - `label`: `<O> / <id>: <W>`, or `<O> / <id>` when `<W>` is empty.
   - `<O>`: the `label` of the workspace whose `workspace_id` is `$HERDR_WORKSPACE_ID`, from a local `herdr workspace list` (no `--machine`). Looked up only when `HERDR_ENV=1` and `HERDR_WORKSPACE_ID` is set. Empty or failed lookup: `basename` of the repo path (main checkout locally, resolved absolute `--repo` on a saved machine).
   - `<id>`: the id as passed to `start`, not lowercased.
-  - `<W>`: the first line of the task file that matches `^#{1,6}[[:space:]]`. Remove the leading `#` marks and spaces, every `*` and backtick, every control character, and trailing spaces and `#`. Cut to 30 characters, then remove trailing spaces. No such line: empty.
+  - `<W>`: the first line of the task file that matches `^#{1,6}[[:space:]]`. Remove the leading `#` marks and spaces, every `*` and backtick, every control character, and trailing spaces and `#`. Cut to 30 characters (counted in characters: the cut runs with `LC_ALL=C.UTF-8`), then remove trailing spaces. No such line: empty.
 - `cwd`: the worker's worktree path.
 - Made with `--no-focus`.
 - Tabs: one tab, the default tab of `workspace create`, renamed to `worker-<id lowercased>`. Later the advisor may add one tab labelled `Codex`.
@@ -27,7 +27,9 @@ No stored data. These are the herdr names the scripts make and match.
 
 | Tabs in the worker's workspace | `close` does |
 |---|---|
-| only `worker-<id>` and `Codex` tabs, and (local) workspace is not `$HERDR_WORKSPACE_ID` | `workspace close <ws>` |
-| any other tab, or (local) workspace is `$HERDR_WORKSPACE_ID` | `tab close <worker tab>` |
+| the worker tab is in the list, only `worker-<id>` and `Codex` tabs, and (local) `$HERDR_WORKSPACE_ID` is set and differs from the workspace | `workspace close <ws>` |
+| any other tab, or (local) `$HERDR_WORKSPACE_ID` is empty or equals the workspace | `tab close <worker tab>` |
+
+An unreadable tab list stops with `no .result.tabs in the herdr answer`.
 
 Every existing refusal runs first. No `--group`.

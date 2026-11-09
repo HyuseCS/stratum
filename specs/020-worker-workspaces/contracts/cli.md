@@ -9,12 +9,13 @@ herdr calls (local, or each with `--machine <m>`):
 1. `tab list` (duplicate check, unchanged).
 2. Local only, when `HERDR_ENV=1`: `workspace list` with no `--machine` (orchestrator label).
 3. `workspace create --cwd <worktree> --label <label> --no-focus` (label rule: [data-model.md](../data-model.md)).
+   A `workspace create` answer without a workspace, tab or pane id goes to the failure path below with `no <key> in the herdr answer`.
 4. `tab rename <tab_id from step 3> worker-<id>`.
 5. `pane split`, `pane run`, `agent start`, `agent prompt`: unchanged.
 
 Gone: `tab create`, `worktree list --cwd <repo>` in `start`, any `st-workers` workspace.
 
-Failure at step 3: `git worktree remove` and `git branch -D` as today, then `stopped: <herdr message>`, then the `worker` line with `-` in fields 4 to 7.
+Failure at step 3 (or a missing id in its answer): `git worktree remove` and `git branch -D` as today, then `stopped: <herdr message>`, then the `worker` line with `-` in fields 4 to 7.
 Failure at step 4: `workspace close <new ws>` (`.result.workspace.workspace_id` of step 3; its failure does not stop the undo), then the same undo, `stopped: <rename message>`, and the `worker` line with `-` in fields 4 to 7.
 
 `worker` line: unchanged (`worker	<N>	<machine>	<tab>	<pane>	<branch>	<path>`).
@@ -23,21 +24,21 @@ Failure at step 4: `workspace close <new ws>` (`.result.workspace.workspace_id` 
 
 After every existing refusal:
 
-1. `tab list --workspace <ws>`.
-2. `workspace close <ws>` when all labels are `worker-<id>` or `Codex` and (local only) `<ws>` is not `$HERDR_WORKSPACE_ID`. Otherwise `tab close <tab>`.
+1. `tab list --workspace <ws>`. An answer with no `.result.tabs` stops with `stopped: no .result.tabs in the herdr answer`.
+2. `workspace close <ws>` when the worker tab is in the list, every label is `worker-<id>` or `Codex`, and (local only) `HERDR_WORKSPACE_ID` is not empty and differs from `<ws>`. Otherwise `tab close <tab>`. A local close with an empty `HERDR_WORKSPACE_ID` closes only the tab.
 3. `agent list`, `tab list` check loop: unchanged.
 
 Output: unchanged (`closed	<N>`, `folder	<path>	ready to remove`).
 
 ## list
 
-One extra call: `workspace list`. Line:
+One extra call: `workspace list`. An answer with no `.result.workspaces` array stops with `stopped: no .result.workspaces in the herdr answer`. Line:
 
 ```text
 found	<N>	<machine>	<tab>	<pane or ->	<status>	<path or ->	<workspace label or ->
 ```
 
-The workspace label is the new last field. Control characters in it are replaced with a space.
+The workspace label is the new last field. It is `-` when the workspace is not found or its label is empty or missing. Control characters in it are replaced with a space.
 
 ## st-advisor.sh tabname
 

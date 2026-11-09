@@ -44,21 +44,21 @@ Build code rules (from the brief):
 
 1. After the `--repo ~` resolution (line 275), build the label `L` (rules in [data-model.md](data-model.md)). The orchestrator part comes from a plain `herdr workspace list` (never `"${H[@]}"`: the orchestrator is local) only when `HERDR_ENV=1` and `HERDR_WORKSPACE_ID` is set. A failed or empty lookup falls back to `basename "$repo"`, with no stop.
 2. Delete the `if [ -z "$m" ]; then WS=... else ... st-workers ... fi` block (lines 281-294).
-3. Replace `tab create` (line 301) with `workspace create --cwd "$path" --label "$L" --no-focus`, read `WS`, `TAB` (`.result.tab.tab_id`) and `PANE` (`.result.root_pane.pane_id`), then `tab rename "$TAB" "$N"`. Neither call goes through `h`: `h` stops on failure and overwrites `$r`. Use the `if ! r=$("${H[@]}" ... 2>"$e")` form of today's `tab create`.
+3. Replace `tab create` (line 301) with `workspace create --cwd "$path" --label "$L" --no-focus`, read `WS`, `TAB` (`.result.tab.tab_id`) and `PANE` (`.result.root_pane.pane_id`), then `tab rename "$TAB" "$N"`. Neither call goes through `h`: `h` stops on failure and overwrites `$r`. The task-word cut runs with `LC_ALL=C.UTF-8` so it counts characters. A `workspace create` answer without a workspace, tab or pane id goes to the undo below with `no <key> in the herdr answer`. Use the `if ! r=$("${H[@]}" ... 2>"$e")` form of today's `tab create`.
 4. FR-008: if `workspace create` fails, undo the worktree and branch as today. If `tab rename` fails, also run `"${H[@]}" workspace close "$WS"` (not through `h`) before the undo, and go on to the undo even if that close fails. `WS` comes from `.result.workspace.workspace_id`. Clear `TAB= PANE=` with `BR= WT=` before the stop. The `stopped:` line keeps the herdr message, and the worktree undo failure keeps its `; left <path> and branch <N>` text.
 
 ### close (`scripts/st-worker.sh` lines 520-530)
 
 Replace `h tab close "$TAB"` and the `st-workers` block with:
 
-- `h tab list --workspace "$WS"`.
-- If every tab label there is `$N` or `Codex`, and (with no `--machine`) `$WS` is not `$HERDR_WORKSPACE_ID`: `h workspace close "$WS"`. Otherwise: `h tab close "$TAB"`.
+- `h tab list --workspace "$WS"` stops with `no .result.tabs in the herdr answer` when the answer has no tabs array.
+- If the worker tab `$N` is in the list, every tab label there is `$N` or `Codex`, and (with no `--machine`) `$HERDR_WORKSPACE_ID` is not empty and `$WS` differs from it: `h workspace close "$WS"`. Otherwise: `h tab close "$TAB"`. A local close with an empty `HERDR_WORKSPACE_ID` closes only the tab.
 - With `--machine` the id guard is skipped: workspace ids are per server, so a remote id can equal the local one.
 - The agent and tab check loop after it stays as is.
 
 ### list (`scripts/st-worker.sh` lines 540-565)
 
-One `h workspace list` before the loop. Each `found` line gets the label of the tab's workspace as a new last field, `-` when not found, with control characters replaced by a space (jq `gsub("[[:cntrl:]]"; " ")`) so a tab in a user label cannot shift the fields.
+One `h workspace list` before the loop. An answer with no `.result.workspaces` array stops with `no .result.workspaces in the herdr answer`. Each `found` line gets the label of the tab's workspace as a new last field, `-` when not found or when the label is empty or missing, with control characters replaced by a space (jq `gsub("[[:cntrl:]]"; " ")`) so a tab in a user label cannot shift the fields.
 
 ### tabname (`scripts/st-advisor.sh` lines 6-22)
 

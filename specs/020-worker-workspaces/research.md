@@ -15,6 +15,9 @@
   - The label matches ` / <id>`: rejected. A user label can hold ` / `, and the user can rename the workspace.
   - `workspace create --env ST_WORKER=<N>`: not probed. It needs a change in `start` and a live probe that makes a real workspace. The branch gives the same answer with neither.
 - Limit: a worker that checks out another branch mid-task gets the label slug name, and its point goes headless ("in use elsewhere"). Accepted: the brief tells workers to commit on their branch.
+- Limit: two live workers with the same id in two projects on one herdr server share the name `st-codex-worker-<id>`, and the second runs headless.
+- Limit: an orchestrator checkout on a `worker-*` branch (for example the user testing a worker branch before merge) takes the worker's Codex name.
+- Limit: on a host without the `C.UTF-8` locale, the 30-character cut of the task words falls back to bytes.
 - Effect on old-layout workers: a worker tab in the orchestrator's workspace now gets its own `st-codex-worker-<id>` agent in a second `Codex` tab there, not the headless fallback. That `Codex` tab and its agent stay after `close`, because `close` closes only the worker tab in a shared workspace. The user closes it by hand.
 - Effect on saved machines: a leftover `st-workers` workspace from before this feature is no longer closed by `close`. The user closes it by hand.
 

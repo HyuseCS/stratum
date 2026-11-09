@@ -95,4 +95,5 @@ FR-001, FR-002, FR-003: T002, T004. FR-004: the unchanged mk-based cases in T002
 - No `[screen]` tasks: CLI only.
 - No `[lock]` tasks: each test file runs in its own `mktemp -d`.
 - No open decisions. D14 and D15 are in decisions.md.
+- Review fixes added cases after the plan: WS8, S13d, CW5, CW6, CW7, L4, L5.
 - MVP: T001 to T006 (US1, US4 start, US2).

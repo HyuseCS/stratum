@@ -6,3 +6,6 @@ reason: Inspect fixes F2-F10 and the D16 spec exception only; no task added or r
 
 ## decisions | 2026-11-09T15:48:34Z | /advisor
 summary: advisor approves all 13 small decisions; record at Close: tabname on an orchestrator checkout of a worker branch takes the worker name, and C.UTF-8 may be missing on a host (laptop by-hand step); 6cf29a5 needs a review
+
+## diff | 2026-11-09T15:54:54Z | /advisor
+summary: advisor approves 1efed67: close needs the worker tab, list stops on no workspaces array and prints - for an empty label
