@@ -40,7 +40,7 @@ case "$1 $2" in
   upd ws.json --arg w "$w" --arg l "$l" '. + [{workspace_id:$w,label:$l}]'
   upd tabs.json --arg w "$w" --arg t "$t" '. + [{tab_id:$t,label:"1",workspace_id:$w}]'
   upd panes.json --arg w "$w" --arg t "$t" --arg p "$rp" --arg c "$c" '. + [{pane_id:$p,tab_id:$t,workspace_id:$w,cwd:$c}]'
-  jq -nc --arg w "$w" --arg t "$t" --arg p "$rp" --arg c "$c" '{result:{type:"workspace_created",workspace:{workspace_id:$w},tab:{tab_id:$t,workspace_id:$w},root_pane:{pane_id:$p,cwd:$c}}}' | tee "$T/tc.json" ;;
+  jq -nc --arg w "$w" --arg t "$t" --arg p "$rp" --arg c "$c" '{result:{type:"workspace_created",workspace:{workspace_id:$w},tab:{tab_id:$t,workspace_id:$w},root_pane:{pane_id:$p,cwd:$c}}} | if $ENV.STUB_CREATE_NOTAB then del(.result.tab) else . end' | tee "$T/tc.json" ;;
 "machine list")
   case "${STUB_ML:-}" in fail) exit 1 ;; junk) echo 'not json'; exit 0 ;; esac
   printf '%s\n' '[{"id":"stubid0001","label":"laptop","target":"u@stubhost","session":"default","enabled":true,"selected":false}]' ;;
@@ -488,12 +488,22 @@ check "S13c one stopped line with the stub message" '[ "$(grep -c "^stopped:" <<
 check "S13c worker line has - in fields 4 to 7" 'hasline "worker\tworker-t004\tlocal\t-\t-\t-\t-"'
 check "S13c the new workspace is gone from ws.json" 'w=$(wsid) && [ -n "$w" ] && jq -e --arg w "$w" "all(.[]; .workspace_id != \$w)" "$tmp/ws.json" >/dev/null'
 
+fresh; STUB_CREATE_NOTAB=1 run bash "$script" start "${sargs[@]}"
+check "S13d exit 1" '[ $rc = 1 ]'
+check "S13d git log in order: worktree add, worktree remove, branch -D" '[ "$(grep -c . "$tmp/gitlog")" = 3 ] && [ "$(sed -n 1p "$tmp/gitlog" | cut -f4)" = add ] && ghascall "-C\t%s\tworktree\tremove\t%s" "$repo" "$tmp/repo-worker-t004" && ghascall "-C\t%s\tbranch\t-D\tworker-t004" "$repo"'
+check "S13d one workspace close of the new workspace" '[ "$(cnt "^workspace\tclose\t")" = 1 ] && hascall "workspace\tclose\t%s" "$(jq -r .result.workspace.workspace_id "$tmp/tc.json")"'
+check "S13d one stopped line naming the missing tab id" '[ "$(grep -c "^stopped:" <<<"$out")" = 1 ] && hasline "stopped: no .result.tab.tab_id in the herdr answer"'
+check "S13d worker line has - in fields 4 to 7" 'hasline "worker\tworker-t004\tlocal\t-\t-\t-\t-"'
+
 fresh; printf '# **Autonomous** `sessions`\nbody\n' > "$task"; run bash "$script" start "${sargs[@]}"
 check "WS1 heading marks, stars and backticks are removed from the label" 'hascall "workspace\tcreate\t--cwd\t%s\t--label\torchestrator / T004: Autonomous sessions\t--no-focus" "$tmp/repo-worker-t004"'
 
 l40=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMN
 fresh; printf '# %s\nbody\n' "$l40" > "$task"; run bash "$script" start "${sargs[@]}"
 check "WS2 a 40 letter heading is cut to 30 characters" 'hascall "workspace\tcreate\t--cwd\t%s\t--label\torchestrator / T004: %s\t--no-focus" "$tmp/repo-worker-t004" "${l40:0:30}"'
+
+fresh; printf '# abcdefghijklmnopqrstuvwxyzABC€ rest\nbody\n' > "$task"; LC_ALL=C run bash "$script" start "${sargs[@]}"
+check "WS8 a heading whose 30th character is € keeps the whole € in a POSIX locale" 'hascall "workspace\tcreate\t--cwd\t%s\t--label\torchestrator / T004: abcdefghijklmnopqrstuvwxyzABC€\t--no-focus" "$tmp/repo-worker-t004" && grep -P "^workspace\tcreate\t" "$tmp/calls" | cut -f6 | iconv -f UTF-8 -t UTF-8 >/dev/null'
 
 fresh; printf 'intro\n\n# Real Title\nmore\n' > "$task"; run bash "$script" start "${sargs[@]}"
 check "WS3 the first heading is used, not the first line" 'hascall "workspace\tcreate\t--cwd\t%s\t--label\torchestrator / T004: Real Title\t--no-focus" "$tmp/repo-worker-t004"'

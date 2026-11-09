@@ -277,7 +277,7 @@ start)
   L=
   [ "${HERDR_ENV:-}" != 1 ] || [ -z "${HERDR_WORKSPACE_ID:-}" ] || L=$(herdr workspace list 2>/dev/null | jq -r --arg w "$HERDR_WORKSPACE_ID" 'first(.result.workspaces[] | select(.workspace_id == $w) | .label | strings) // empty' 2>/dev/null) || L=
   [ -n "$L" ] || L=$(basename "$repo")
-  W=$(grep -m1 -E '^#{1,6}[[:space:]]' -- "$task" | sed -E 's/^[#[:space:]]+//; s/[*`[:cntrl:]]//g; s/[[:space:]#]+$//; s/^(.{30}).*/\1/; s/[[:space:]]+$//' || true) # ponytail: task words cut at a fixed 30 characters, make the length an option if users ask for longer workspace names
+  W=$(grep -m1 -E '^#{1,6}[[:space:]]' -- "$task" | LC_ALL=C.UTF-8 sed -E 's/^[#[:space:]]+//; s/[*`[:cntrl:]]//g; s/[[:space:]#]+$//; s/^(.{30}).*/\1/; s/[[:space:]]+$//' || true) # ponytail: task words cut at a fixed 30 characters, make the length an option if users ask for longer workspace names
   L="$L / $id${W:+: $W}"
   if [ -n "$auto" ] && [ -n "$m" ]; then
     quote "$repo"
@@ -288,14 +288,15 @@ start)
   quote "$path"
   qp=$Q
   rx "[ ! -e $qp ] || { echo \"$qp already exists\" >&2; exit 1; }; git -C $qr worktree add -q -b $N $qp $sha || exit 1" || stop "$(head -1 "$e")"
-  BR=$N WT=$path
-  if ! r=$("${H[@]}" workspace create --cwd "$path" --label "$L" --no-focus 2>"$e") || {
-    get WS .result.workspace.workspace_id
-    get TAB .result.tab.tab_id
-    get PANE .result.root_pane.pane_id
-    ! "${H[@]}" tab rename "$TAB" "$N" >/dev/null 2>"$e"
+  BR=$N WT=$path need=
+  if ! r=$("${H[@]}" workspace create --cwd "$path" --label "$L" --no-focus 2>"$e") || ! {
+    need=.result.workspace.workspace_id && WS=$(jq -er "$need // empty" <<<"$r") &&
+    need=.result.tab.tab_id && TAB=$(jq -er "$need // empty" <<<"$r") &&
+    need=.result.root_pane.pane_id && PANE=$(jq -er "$need // empty" <<<"$r") &&
+    need= && "${H[@]}" tab rename "$TAB" "$N" >/dev/null 2>"$e"
   }; then
     msg=$(head -1 "$e")
+    [ -z "$need" ] || msg="no $need in the herdr answer"
     [ -z "$WS" ] || "${H[@]}" workspace close "$WS" >/dev/null 2>&1 || true
     TAB= PANE=
     rx "git -C $qr worktree remove $qp && git -C $qr branch -D $N >/dev/null" || stop "$msg; left $path and branch $N"
