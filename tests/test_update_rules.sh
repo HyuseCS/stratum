@@ -45,6 +45,18 @@ R13b|README.md|claude plugin update stratum@stratum -s project
 R13c|README.md|bash tests/test_st_update.sh
 R13d|README.md|bash tests/test_update_rules.sh
 R13e|README.md|bash tests/test_update_items.sh
+GI1|skills/st-init/SKILL.md|12. **Git instructions.**
+GI2|skills/st-init/SKILL.md|with jq into only that file. Keep every other key.
+GI3|skills/st-init/SKILL.md|`CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS` is set
+GI4|skills/st-init/SKILL.md|13. **Report**
+GI4b|skills/st-init/SKILL.md|Not at all: write no settings file, and write the empty file `.stratum/git-instructions-kept` so the question is not asked again.
+GI4c|skills/st-init/SKILL.md|`.stratum/advisor.json`, `.stratum/git-instructions-kept`,
+GI5|skills/st-update/SKILL.md|Built-in git instructions, once per run:
+GI5b|skills/st-update/SKILL.md|or for "not at all" the marker in each listed folder
+GI6|skills/st-update/SKILL.md|ponytail: one-time step for checkouts set up before 019, remove it when every Stratum checkout on the PC and the laptop has run this update
+GI7|skills/st-update/SKILL.md|and `.claude/settings.json` or `.stratum/git-instructions-kept` when the git instructions paragraph wrote it,
+GI8|agents/st-git.md|Run it as `git commit -m 'subject' -m 'body'`: single quotes, no heredoc, no backticks, no `$(`, no `-F`.
+GI9|agents/st-git.md|Exception: a deny that starts with `Commit form denied:`.
 ROWS
 
 check "front matter skills/st-update/SKILL.md" 'head -n 5 "$root/skills/st-update/SKILL.md" | grep -qx "name: st-update"'

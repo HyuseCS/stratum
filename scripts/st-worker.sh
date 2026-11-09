@@ -157,6 +157,7 @@ st() {
   printf 'state\t%s\t%s\t%s\n' "$1" "$N" "$PANE"
   case $1 in
     blocked)
+      if [ -n "$m" ]; then rsh "head -n 1 -- $Q/.stratum/approve/dropped" >"$t"; else head -n 1 -- "$WT/.stratum/approve/dropped" >"$t" 2>/dev/null; fi && { DL=$(LC_ALL=C tr -cd '[:print:]\t' <"$t"); printf 'dropped\t%s\n' "${DL:0:400}"; }
       ! screen || ! perm || { block; [ -z "$BM" ] || printf 'screen\t%s\n' "$SH"; }
       echo 'pane text:'
       [ -z "$SC" ] || printf '%s\n' "$SC"
@@ -266,7 +267,7 @@ brief() {
     "2. Before you build on a teammate's work, merge its branch: \`git log <branch>\`, \`git merge <branch>\`. A teammate on another machine shares no commits with you: send it messages only, and do not build on its work." \
     '3. Ask a teammate by name: on your machine, SendMessage to its name; on another machine, `herdr --machine <label> agent prompt <name> "<text>"`, with `<label>` from `herdr machine list` on your machine.' \
     "4. Never merge into the base branch and never push. Merging a teammate's branch into your own (rule 2) is fine. When your task says to run /stratum:st-pr, run it: it pushes your branch and opens the PR, and that is the only push allowed. The orchestrator reviews every branch and is the only one who merges into the base." \
-    '5. Commit from the worktree root with `git add <path> <path> && git commit -m "<subject>" -m "<body>"`. Use no `cd`, no `git -C`, no pipe, no shell variable, no `$(...)`, no heredoc and no `-F` file: the orchestrator approves only this form. Give this rule word for word to the st-git agent.'
+    '5. Commit from the worktree root with `git add <path> <path> && git commit -m '"'"'<subject>'"'"' -m '"'"'<body>'"'"'`. Use no `cd`, no `git -C`, no pipe, no shell variable, no `$(...)`, no heredoc and no `-F` file: the orchestrator approves only this form. Give this rule word for word to the st-git agent.'
   printf '\n%s\n\n%s\n%s\n' '## Questions' 'Ask a question only with the AskUserQuestion tool, then wait for the answer. Do not ask in plain text and do not guess.' 'Do not edit tasks.md or .stratum/state.json. The orchestrator ticks the task after the merge.'
   printf '\n%s\n\n%s\n' '## When done' 'Write the result file with four lines:'
   printf '%s\n' 'Built: <what you built>' 'Tests: <test command> exit <code>' 'Commit: <sha>' 'Open: <open points, or none>'
@@ -722,6 +723,12 @@ autonomous-on)
   [ ! -L "$D/$SID" ] || fail "cannot turn on autonomous mode: $D/$SID is a symlink"
   [ -f "$D/$SID" ] || : >"$D/$SID" 2>/dev/null || fail "cannot turn on autonomous mode: cannot write $D/$SID"
   printf 'autonomous on\t%s\n' local
+  off=${CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS+1}
+  top=$(git rev-parse --show-toplevel 2>/dev/null) || top=
+  for f in "$top/.claude/settings.json" "$top/.claude/settings.local.json" "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/settings.json"; do
+    [ -n "$off" ] || ! jq -e '.includeGitInstructions == false' "$f" >/dev/null 2>&1 || off=1
+  done
+  [ -n "$off" ] || printf 'hint\t%s\n' "Autonomous build mode works better with Claude Code's built-in git instructions off: add \"includeGitInstructions\": false to .claude/settings.json (this project) or ~/.claude/settings.json (all projects), then start new sessions."
   ;;
 autonomous-off)
   [ -z "${roster+x}" ] || [ -f "$roster" ] || fail "Roster not found: $roster"
