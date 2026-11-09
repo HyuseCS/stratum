@@ -69,6 +69,7 @@ case "$1 $2" in
   s=$(sed -n "${n}p" "$T/states"); [ -n "$s" ] || s=$(tail -n1 "$T/states")
   jq -nc --arg s "$s" --arg n "$3" --slurpfile c "$T/tc.json" '{result:{agent:{agent_status:$s,name:$n,pane_id:$c[0].result.root_pane.pane_id,workspace_id:$c[0].result.tab.workspace_id}}}' ;;
 "agent list")
+  [ -z "${STUB_AGLIST_JUNK:-}" ] || { echo '{}'; exit 0; }
   jq -c '{result:{agents:.}}' "$T/agents.json" ;;
 "tab create")
   w= c= l=
@@ -279,6 +280,7 @@ shash() { awk -F'\t' '$1=="screen"{print $2; exit}' <<<"$out"; }
 ghascall() { grep -qxF -- "$(printf -- "$@")" "$tmp/gitlog"; }
 lazypane() { awk -F'\t' '$1=="pane"{print $2; exit}' "$tmp/made" 2>/dev/null; }
 addtab() { jq -c --arg t "$1" --arg l "$2" --arg w "$3" '. + [{tab_id:$t,label:$l,workspace_id:$w}]' "$tmp/tabs.json" > "$tmp/tabs.new" && mv "$tmp/tabs.new" "$tmp/tabs.json"; }
+addagent() { jq -c --arg n "$1" --arg p "$2" --arg t "$3" --arg w "$4" '. + [{name:$n,pane_id:$p,tab_id:$t,workspace_id:$w,agent_status:"idle"}]' "$tmp/agents.json" > "$tmp/agents.new" && mv "$tmp/agents.new" "$tmp/agents.json"; }
 never() {
   ! grep -qx BARE "$tmp/calls" && ! grep -qP '(^|\t)w1P:(t1|p1)(\t|$)' "$tmp/calls" &&
   awk -F'\t' '{ for (i = 1; i <= NF; i++) if ($i ~ /w1P/) { ok = ($i ~ /^w1P:[tp][0-9]+$/ && $i != "w1P:t1" && $i != "w1P:p1") || ($i == "w1P" && $(i - 1) == "--workspace" && (($1 == "tab" && ($2 == "create" || $2 == "list")) || ($1 == "pane" && $2 == "list"))); if (!ok) bad = 1 } } END { exit bad }' "$tmp/calls" &&
@@ -724,7 +726,7 @@ check "C16 exit 1, the more-than-one line, no tab close" '[ $rc = 1 ] && [ "$out
 mk; states done
 w=$(wsid)
 addtab "$w:t8" Codex "$w"
-jq -c --arg w "$w" '. + [{name:"st-codex-worker-t004",pane_id:($w+":p8"),workspace_id:$w,agent_status:"idle"}]' "$tmp/agents.json" > "$tmp/agents.new" && mv "$tmp/agents.new" "$tmp/agents.json"
+addagent st-codex-worker-t004 "$w:p8" "$w:t8" "$w"
 run bash "$script" close T004
 check "CW1 exit 0" '[ $rc = 0 ]'
 check "CW1 one workspace close of the worker's workspace, zero tab close" 'hascall "workspace\tclose\t%s" "$w" && never 0 0 1'
@@ -762,6 +764,29 @@ check "CW6 tab list --workspace answers {}: zero tab close, zero workspace close
 mk; states done
 STUB_TABWS_EMPTY=1 run bash "$script" close T004
 check "CW7 tab list --workspace answers no tabs: exit 0, one tab close, zero workspace close" '[ $rc = 0 ] && hascall "tab\tclose\t%s" "$(tabid)" && never 1 0'
+
+mk; states done
+w=$(wsid)
+addtab "$w:t8" Codex "$w"
+addagent st-codex-worker-t004 "$w:p8" "$w:t8" "$w"
+addtab "$w:t9" Codex "$w"
+addagent st-codex-stratum "$w:p9" "$w:t9" "$w"
+run bash "$script" close T004
+check "CW8 two Codex tabs: exit 0, one tab close on the worker tab, zero workspace close" '[ $rc = 0 ] && hascall "tab\tclose\t%s" "$(tabid)" && never 1 0'
+check "CW8 two Codex tabs: both Codex tabs stay" 'jq -e --arg w "$w" "[.[] | select(.workspace_id == \$w and .label == \"Codex\")] | length == 2" "$tmp/tabs.json" >/dev/null'
+
+mk; states done
+w=$(wsid)
+addtab "$w:t8" Codex "$w"
+addagent st-codex-stratum "$w:p8" "$w:t8" "$w"
+run bash "$script" close T004
+check "CW9 foreign Codex tab: exit 0, one tab close on the worker tab, zero workspace close" '[ $rc = 0 ] && hascall "tab\tclose\t%s" "$(tabid)" && never 1 0'
+check "CW9 foreign Codex tab and its agent stay" 'jq -e --arg w "$w" "any(.[]; .tab_id == (\$w + \":t8\"))" "$tmp/tabs.json" >/dev/null && jq -e "any(.[]; .name == \"st-codex-stratum\")" "$tmp/agents.json" >/dev/null'
+
+mk; states done
+STUB_AGLIST_JUNK=1 run bash "$script" close T004
+check "CW10 agent list answers {}: exit 1, the stopped line" '[ $rc = 1 ] && [ "$out" = "stopped: no .result.agents in the herdr answer" ]'
+check "CW10 agent list answers {}: zero tab close, zero workspace close" 'never 0 0'
 
 fresh
 x=$(rnd)

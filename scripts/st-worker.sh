@@ -514,10 +514,12 @@ close)
     rm -f "$WT/.stratum/git-guard.json" || fail "Worker $N: cannot remove .stratum/git-guard.json. Close refused."
     rm -rf "$WT/.stratum/approve" || fail "Worker $N: cannot remove .stratum/approve. Close refused."
   fi
+  h agent list
+  k=st-codex-$N
+  k=$(jq -er --arg n "${k:0:32}" --arg w "$WS" '.result.agents | arrays | first(.[] | select(.name == $n and .workspace_id == $w) | .tab_id | strings) // ""' <<<"$r" 2>/dev/null) || stop "no .result.agents in the herdr answer"
   h tab list --workspace "$WS"
   c=0
-  # ponytail: Codex is the label scripts/st-codex-agent.sh sets, match its tab id from the codex-tabs record if that label changes
-  jq -e --arg n "$N" 'any(.result.tabs[]; .label == $n) and all(.result.tabs[]; .label == $n or .label == "Codex")' <<<"$r" >/dev/null 2>&1 || c=$?
+  jq -e --arg n "$N" --arg k "$k" 'any(.result.tabs[]; .label == $n) and all(.result.tabs[]; .label == $n or .tab_id == $k)' <<<"$r" >/dev/null 2>&1 || c=$?
   [ $c -le 1 ] || stop "no .result.tabs in the herdr answer"
   if [ $c = 0 ] && { [ -n "$m" ] || { [ -n "${HERDR_WORKSPACE_ID:-}" ] && [ "$WS" != "$HERDR_WORKSPACE_ID" ]; }; }; then
     h workspace close "$WS"

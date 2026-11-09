@@ -24,9 +24,10 @@ Failure at step 4: `workspace close <new ws>` (`.result.workspace.workspace_id` 
 
 After every existing refusal:
 
-1. `tab list --workspace <ws>`. An answer with no `.result.tabs` stops with `stopped: no .result.tabs in the herdr answer`.
-2. `workspace close <ws>` when the worker tab is in the list, every label is `worker-<id>` or `Codex`, and (local only) `HERDR_WORKSPACE_ID` is not empty and differs from `<ws>`. Otherwise `tab close <tab>`. A local close with an empty `HERDR_WORKSPACE_ID` closes only the tab.
-3. `agent list`, `tab list` check loop: unchanged.
+1. `agent list`. An answer with no `.result.agents` array stops with `stopped: no .result.agents in the herdr answer`. The worker's Codex tab is the `tab_id` of the agent whose name is `st-codex-worker-<id>` (cut to 32 characters) and whose `workspace_id` is `<ws>`.
+2. `tab list --workspace <ws>`. An answer with no `.result.tabs` stops with `stopped: no .result.tabs in the herdr answer`.
+3. `workspace close <ws>` when the worker tab is in the list, every tab is the worker tab (label `worker-<id>`) or the worker's Codex tab from step 1, and (local only) `HERDR_WORKSPACE_ID` is not empty and differs from `<ws>`. Otherwise `tab close <tab>`. A local close with an empty `HERDR_WORKSPACE_ID` closes only the tab.
+4. `agent list`, `tab list` check loop: unchanged.
 
 Output: unchanged (`closed	<N>`, `folder	<path>	ready to remove`).
 
