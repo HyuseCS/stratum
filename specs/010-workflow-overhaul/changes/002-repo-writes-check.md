@@ -18,9 +18,9 @@ No other check failed in any run. So the commit (or the staging) is the full cau
 ## Files
 
 The same two-line edit in each file:
-- tests/test_advisor_matrix.sh:9 and :531
-- tests/test_advisor.sh:9 and :618
-- tests/test_advisor_waive.sh:9 and :205
+- tests/test_advisor_matrix.sh:9 and :532
+- tests/test_advisor.sh:9 and :619
+- tests/test_advisor_waive.sh:9 and :206
 
 Line 9 becomes:
 ```
