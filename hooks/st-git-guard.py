@@ -345,26 +345,27 @@ def main():
                     start = end + 1
         if runs or not clean:
             quiet = set()
-        buf = ""
-        for n, line in enumerate(lines + [""]):
-            if n in quiet:
-                continue
-            if JOIN.search(line + "\n"):
-                buf += line[:-1]
-                continue
-            line, buf = buf + line, ""
-            if not GIT_WORD.search(line.translate(UNQUOTE)):
-                continue
-            try:
-                segs = list(segments(line))
-            except ValueError:
-                note("ask", "The git guard could not parse the command.")
-                commit = commit or bool(re.search(r"\bcommit\b", line))
-                continue
-            for seg in segs:
-                if not check(seg, True) and GIT_WORD.search(" ".join(seg).translate(UNQUOTE)):
-                    note("ask", "The git guard could not read a git command on this line.")
+        for join in (False, True):
+            here, left, buf = cwd, False, ""
+            for n, line in enumerate(lines + [""]):
+                if n in quiet:
+                    continue
+                if join and JOIN.search(line + "\n"):
+                    buf += line[:-1]
+                    continue
+                line, buf = buf + line, ""
+                if not GIT_WORD.search(line.translate(UNQUOTE)):
+                    continue
+                try:
+                    segs = list(segments(line))
+                except ValueError:
+                    note("ask", "The git guard could not parse the command.")
                     commit = commit or bool(re.search(r"\bcommit\b", line))
+                    continue
+                for seg in segs:
+                    if not check(seg, True) and GIT_WORD.search(" ".join(seg).translate(UNQUOTE)):
+                        note("ask", "The git guard could not read a git command on this line.")
+                        commit = commit or bool(re.search(r"\bcommit\b", line))
     if unjudgeable is None:
         if any(GIT_WORD.search(t.translate(UNQUOTE)) for t in (command, joined)):
             note("ask", f"The git guard could not load hooks/st-approve.py ({LOAD_ERROR}). "
@@ -375,7 +376,7 @@ def main():
         print(json.dumps({"hookSpecificOutput": {
             "hookEventName": "PreToolUse",
             "permissionDecision": decision,
-            "permissionDecisionReason": "\n\n".join(reasons),
+            "permissionDecisionReason": "\n\n".join(dict.fromkeys(reasons)),
         }}))
 
 

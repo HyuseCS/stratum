@@ -518,6 +518,29 @@ class GitGuardTest(unittest.TestCase):
             with self.subTest(cmd=cmd):
                 self.assertEqual(self.run_guard(cmd), want)
 
+    def test_unparsed_continuation_judges_raw_lines_too(self):
+        p = "printf %s $'it\\'s'; \\\n"
+        force = "DESTRUCTIVE (force_push: ask): force push can overwrite remote history."
+        delete = "DESTRUCTIVE (branch_delete: ask)"
+        for cmd, opts, want, reason in ((p + "git push --delete origin main", {}, "deny", None),
+                                        (p + "git commit --no-verify -m x", {}, "deny", None),
+                                        (p + "git push --force origin main", {}, "ask", force),
+                                        (p + "git push --force origin main", {"force_push": "deny"},
+                                         "deny", None),
+                                        (p + "git branch -D old", {}, "ask", delete),
+                                        (p + "git branch -D old", {"branch_delete": "deny"},
+                                         "deny", None)):
+            with self.subTest(cmd=cmd, opts=opts):
+                self.options = {}
+                for key, mode in opts.items():
+                    self.set_mode(mode, key)
+                d, r = self.run_guard(cmd)
+                self.assertEqual(d, want)
+                if reason:
+                    self.assertIn(reason, r)
+        self.options = {}
+        self.assertEqual(self.run_guard("printf %s $'it\\'s'\ngit push --force"), ("ask", force))
+
     def test_commit_with_double_angle_in_message_is_denied(self):
         self.assertEqual(self.run_guard("git commit -m 'a << b'"), ("deny", COMMIT_DENY))
 
