@@ -13,7 +13,7 @@ Exit codes:
 | 6 | `codex: no session log` | no log record holds this review's answer after 15 tries |
 | 4 | `BLOCKED: the review was stopped in the Codex tab` | D14: this review's turn ended with `turn_aborted` (Esc in the tab). No headless run. |
 
-Poll: up to 15 tries. Between tries, `sleep 1`. Count tries, not seconds (the tests use a no-op `sleep`). `ponytail:` note on the loop: fixed 15 tries; raise it if quickstart L3 measures a longer lag from tab idle to the `task_complete` line.
+Poll: up to 15 tries. After each failed try, `sleep 1`, so 15 failed tries make 15 `sleep 1` calls. Count tries, not seconds (the tests use a no-op `sleep`). `ponytail:` note on the loop: fixed 15 tries; raise it if quickstart L3 measures a longer lag from tab idle to the `task_complete` line.
 
 ## 2. The reader (inline `python3 -I`, like the other inline readers)
 
