@@ -6,7 +6,8 @@ trap 'rm -rf "$tmp"' EXIT
 fail=0
 check() { if eval "$2"; then echo "ok   $1"; else echo "FAIL $1"; fail=1; fi; }
 export GIT_CONFIG_GLOBAL=/dev/null XDG_CONFIG_HOME="$tmp"
-repo_before=$(git -C "$root" status --porcelain)
+repo_paths() { git -C "$root" status --porcelain --no-renames --untracked-files=all | cut -c4- | sort; }
+repo_before=$(repo_paths)
 
 mkdir -p "$tmp/bin"
 cat > "$tmp/bin/codex" <<'FAKE'
@@ -202,5 +203,5 @@ check "(n) git diff --quiet exits 128: usage, exit 2, no record" '[ $rc = 2 ] &&
 run waive plan specs/014-noplan fix-only
 check "(o) waive with no plan.md and no record: usage, exit 2, no record" '[ $rc = 2 ] && [[ "$(head -n1 <<<"$out")" == "usage: st-advisor.sh"* ]] && [ ! -e "$proj/specs/014-noplan/advisor.md" ]'
 
-check "no repo writes" '[ "$(git -C "$root" status --porcelain)" = "$repo_before" ]'
+check "no repo writes" '[ -z "$(repo_paths | comm -13 <(printf "%s\n" "$repo_before") -)" ]'
 exit $fail

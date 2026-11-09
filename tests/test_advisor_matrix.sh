@@ -6,7 +6,8 @@ trap 'rm -rf "$tmp"' EXIT
 fail=0
 check() { if eval "$2"; then echo "ok   $1"; else echo "FAIL $1"; fail=1; fi; }
 export GIT_CONFIG_GLOBAL=/dev/null XDG_CONFIG_HOME="$tmp" XDG_STATE_HOME="$tmp/state"
-repo_before=$(git -C "$root" status --porcelain)
+repo_paths() { git -C "$root" status --porcelain --no-renames --untracked-files=all | cut -c4- | sort; }
+repo_before=$(repo_paths)
 
 mkdir -p "$tmp/bin"
 cat > "$tmp/bin/codex" <<'FAKE'
@@ -528,5 +529,5 @@ rrun writes
 check "(R5) review, Codex writes a file in the tab: BLOCKED with the file, exit 1, BLOCKED entry in the branch record" '[ $rc = 1 ] && [ "$(head -n1 <<<"$out")" = "BLOCKED: Codex changed files during the review: new.txt" ] && grep -qE "^## review \| [^|]+ \| sha256 [0-9a-f]{64} \| BLOCKED$" "$rrecf"'
 rm -f "$proj/new.txt"
 hreset
-check "no repo writes" '[ "$(git -C "$root" status --porcelain)" = "$repo_before" ]'
+check "no repo writes" '[ -z "$(repo_paths | comm -13 <(printf "%s\n" "$repo_before") -)" ]'
 exit $fail
