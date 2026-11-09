@@ -46,6 +46,7 @@ case "$1 $2" in
   printf '%s\n' '[{"id":"stubid0001","label":"laptop","target":"u@stubhost","session":"default","enabled":true,"selected":false}]' ;;
 "workspace list")
   if [ -n "${STUB_DOWN:-}" ] && [ -n "$M" ]; then echo 'Error: stub machine down' >&2; exit 1; fi
+  [ -z "${STUB_WSLIST_JUNK:-}" ] || { echo '{}'; exit 0; }
   jq -c '{result:{workspaces:.}}' "$T/ws.json" ;;
 "workspace close")
   : > "$T/closed"
@@ -83,6 +84,7 @@ case "$1 $2" in
 "tab list")
   w=; while [ $# -gt 0 ]; do case "$1" in --workspace) w=$2 ;; esac; shift; done
   [ -z "${STUB_TABWS_JUNK:-}" ] || [ -z "$w" ] || { echo '{}'; exit 0; }
+  [ -z "${STUB_TABWS_EMPTY:-}" ] || [ -z "$w" ] || { echo '{"result":{"tabs":[]}}'; exit 0; }
   jq -c --arg w "$w" '{result:{tabs:(if $w == "" then . else map(select(.workspace_id == $w)) end)}}' "$T/tabs.json" ;;
 "tab close")
   : > "$T/closed"
@@ -757,6 +759,10 @@ STUB_TABWS_JUNK=1 run bash "$script" close T004
 check "CW6 tab list --workspace answers {}: exit 1, the stopped line" '[ $rc = 1 ] && [ "$out" = "stopped: no .result.tabs in the herdr answer" ]'
 check "CW6 tab list --workspace answers {}: zero tab close, zero workspace close" 'never 0 0'
 
+mk; states done
+STUB_TABWS_EMPTY=1 run bash "$script" close T004
+check "CW7 tab list --workspace answers no tabs: exit 0, one tab close, zero workspace close" '[ $rc = 0 ] && hascall "tab\tclose\t%s" "$(tabid)" && never 1 0'
+
 fresh
 x=$(rnd)
 jq -nc --arg x "$x" '[{tab_id:("stubA"+$x+":t1"),label:"worker-t004",workspace_id:("stubA"+$x)},{tab_id:("stubB"+$x+":t1"),label:"worker-t005",workspace_id:("stubB"+$x)},{tab_id:("stubC"+$x+":t1"),label:"notaworker",workspace_id:("stubC"+$x)}]' > "$tmp/tabs.json"
@@ -778,6 +784,13 @@ check "L2 idle worker with an open question shows blocked" '[ $rc = 0 ] && hasli
 jq -c --arg x "$x" --arg l $'orch\tx' 'map(if .workspace_id == ("stubA"+$x) then .label = $l else . end)' "$tmp/ws.json" > "$tmp/ws.new" && mv "$tmp/ws.new" "$tmp/ws.json"
 run bash "$script" list
 check "L3 a TAB in the workspace label is printed as a space, the worker line keeps 8 fields" '[ $rc = 0 ] && hasline "found\tworker-t004\tlocal\tstubA%s:t1\tstubA%s:p1\tblocked\t/stub/a%s\torch x" "$x" "$x" "$x" && [ "$(grep -P "^found\tworker-t004\t" <<<"$out" | awk -F"\t" "{print NF}")" = 8 ]'
+
+STUB_WSLIST_JUNK=1 run bash "$script" list
+check "L4 workspace list answers {}: exit 1, the stopped line" '[ $rc = 1 ] && [ "$out" = "stopped: no .result.workspaces in the herdr answer" ]'
+
+jq -c --arg x "$x" 'map(if .workspace_id == ("stubA"+$x) then .label = "" else . end)' "$tmp/ws.json" > "$tmp/ws.new" && mv "$tmp/ws.new" "$tmp/ws.json"
+run bash "$script" list
+check "L5 an empty workspace label prints -" '[ $rc = 0 ] && hasline "found\tworker-t004\tlocal\tstubA%s:t1\tstubA%s:p1\tblocked\t/stub/a%s\t-" "$x" "$x" "$x"'
 
 sendlog() { grep -P '^(agent\t(get|send-keys|wait)|pane\tsend-text)\t' "$tmp/calls"; }
 a1() {

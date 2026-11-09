@@ -3,3 +3,6 @@ summary: The plan is appropriately scoped: it unifies local and saved-machine st
 
 ## plan | 2026-11-09T15:04:35Z | sha256 7754d531eec5651a5d49e2f4cee3d419d29686e5e0fa333dac1dc99debc9f67d | WAIVED
 reason: Inspect fixes F2-F10 and the D16 spec exception only; no task added or removed, no approach change
+
+## decisions | 2026-11-09T15:48:34Z | /advisor
+summary: advisor approves all 13 small decisions; record at Close: tabname on an orchestrator checkout of a worker branch takes the worker name, and C.UTF-8 may be missing on a host (laptop by-hand step); 6cf29a5 needs a review

@@ -517,7 +517,7 @@ close)
   h tab list --workspace "$WS"
   c=0
   # ponytail: Codex is the label scripts/st-codex-agent.sh sets, match its tab id from the codex-tabs record if that label changes
-  jq -e --arg n "$N" 'all(.result.tabs[]; .label == $n or .label == "Codex")' <<<"$r" >/dev/null 2>&1 || c=$?
+  jq -e --arg n "$N" 'any(.result.tabs[]; .label == $n) and all(.result.tabs[]; .label == $n or .label == "Codex")' <<<"$r" >/dev/null 2>&1 || c=$?
   [ $c -le 1 ] || stop "no .result.tabs in the herdr answer"
   if [ $c = 0 ] && { [ -n "$m" ] || { [ -n "${HERDR_WORKSPACE_ID:-}" ] && [ "$WS" != "$HERDR_WORKSPACE_ID" ]; }; }; then
     h workspace close "$WS"
@@ -540,6 +540,7 @@ list)
   ag=$r
   h workspace list
   ws=$r
+  jq -e '.result.workspaces | arrays' <<<"$ws" >/dev/null || stop "no .result.workspaces in the herdr answer"
   n=0
   while IFS=$'\t' read -r -u 3 tb w l; do
     [ -n "$tb" ] || continue
@@ -557,7 +558,7 @@ list)
         if question; then a=${a%$'\t'*}$'\tblocked'; elif unsent; then a=${a%$'\t'*}$'\tunsent'; fi
         ;;
     esac
-    s=$(jq -r --arg w "$w" 'first(.result.workspaces[] | select(.workspace_id == $w) | .label | strings | gsub("[[:cntrl:]]"; " ")) // "-"' <<<"$ws")
+    s=$(jq -r --arg w "$w" 'first(.result.workspaces[] | select(.workspace_id == $w) | .label | strings | select(. != "") | gsub("[[:cntrl:]]"; " ")) // "-"' <<<"$ws")
     printf 'found\t%s\t%s\t%s\t%s\t%s\t%s\n' "$l" "${m:-local}" "$tb" "$a" "$p" "$s"
     n=$((n + 1))
   done 3<<<"$x"
