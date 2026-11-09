@@ -50,6 +50,7 @@ Tasks that touch access rules, the approve channel, settings files, personal dat
 | Area | Story | What changes | Note |
 |------|-------|--------------|------|
 | Dialog answers (access) | US1 | The hash that binds the judged dialog to the answered dialog covers the block, not the screen. | Fails closed: two HEAD lines, no option line, or a changed block line gives no answer. A dialog with no visible top rule keeps the whole-screen hash and may get only a No, never a yes (D15). The option allow list (one-time yes, plain No with no lasting or host words) does not change. Command lines carry the `│ ` prefix, so a command cannot draw a fake top rule (P1). The orchestrator still reads the whole 40-line pane text. |
+| Drop reason (diagnostic) | US2 hook, US3 print (D20, FR-018) | The approve hook writes one `dropped` line in the worker's `.stratum/approve/` when it drops a commit; `wait` and `watch` print it. | Diagnostic only: no approve or refuse result changes. The line holds part of the worker's command (control characters replaced, 300 characters), written by the hook, not the worker (lock 2 keeps worker Bash out of that folder; a text match, as today). `wait` strips non-printable bytes before it prints. |
 | Approve call (access) | US1 (D17) | `approve` binds the judged request to the approved one by a hash of the rendered text, not by the text on stdin. | Full 64-hex sha256: the worker writes the request text, so a 12-hex hash would let it search for a colliding second request. Mismatch refuses with today's line; the 4000-character limit and the record line stay. |
 | Commit approval (access) | US2 | The guard denies the forms the approve channel cannot judge, in every session. | The deny is stricter only. The approve channel's other refusals stay (CHK007). `git push` stays `ask` in the guard and on the `NEVER` list (FR-007, CHK008). The guard loads code from `hooks/st-approve.py` by its real path next to the guard, not from `sys.path`. The load fails closed: on any load error the guard does not crash, and every git command gets `ask` with a reason that names the error (`contracts/commit-form.md` §1). The approve hook drops its heredoc-message whitelist (D13), so it refuses more, never less. |
 | Settings files | US3 | `st-init` and `st-update` write `includeGitInstructions: false` into one file the user picks. | The user scope writes the global `${CLAUDE_CONFIG_DIR:-~/.claude}/settings.json`, only on the user's answer. Every write merges one key with jq and keeps every other key (CHK015). "Not at all" writes no settings file, only the empty marker `.stratum/git-instructions-kept` (CHK014, D16). The `autonomous-on` hint only reads the three settings files and the env var. No secret is read or written. |
@@ -82,7 +83,7 @@ specs/019-autonomous-prompts/
 ```text
 scripts/st-worker.sh             # US1: HEAD :168, screen() :170, st blocked :161, answer :445-484; D17: approval() :214-223, approve :675-680, option parse :17. US3: brief rule 5 :253, autonomous-on hint :695-705
 hooks/st-git-guard.py            # US2: commit seen in check() :279-302 and the fallback :336-343, deny before the output :344-349
-hooks/st-approve.py              # US2: new unjudgeable() next to SUBSTITUTION :41; HEREDOC_MESSAGE :40 deleted; commit_check :194-195 (D13)
+hooks/st-approve.py              # US2: new unjudgeable() next to SUBSTITUTION :41; HEREDOC_MESSAGE :40 deleted; commit_check :194-195 (D13); dropped-reason file at each commit drop :193-245, :270 (D20)
 skills/st-init/SKILL.md          # US3: new step 12, Report becomes step 13
 skills/st-update/SKILL.md        # US3: one-time paragraph at the end of step 6, path in step 7
 agents/st-git.md                 # US3: step 6 form, Rules exception for the form deny
@@ -106,7 +107,7 @@ tests/test_advisor_matrix.sh     # US4 fake herdr writes a log; no-log case
 ## Story dependencies
 
 - US1, US2 and US4 share no file. They can be built at the same time. D2 sets the merge order: US1, US2, US4. Keep US1's T002 (D17) merged before US2's T005 as order hygiene: both change how commits reach the orchestrator, and live check L1 tests them together.
-- US3 shares `scripts/st-worker.sh` (brief rule 5, the `autonomous-on` hint) and `tests/test_st_worker.sh` with US1. Build it after US1.
+- US3 shares `scripts/st-worker.sh` (brief rule 5, the `autonomous-on` hint, the `dropped` line of D20) and `tests/test_st_worker.sh` with US1. Build it after US1. The `dropped` print needs no US2 code to pass its own tests (DR1-DR4 write the file themselves); the line shows up live only once US2's hook writes it.
 - Phases 6 and 8 end with one integration task that runs the shared suites once; each build task in them runs only its own narrow check.
 - US3 does not need US2 to pass its own tests. Its text names the deny reason prefix `Commit form denied:` from `contracts/commit-form.md`.
 

@@ -66,6 +66,35 @@ D18: this change stands on its own. The orchestrator's approve call no longer ca
 
 Test cases (`tests/test_st_worker.sh`): every existing `approve ... --input-stdin <<'ST_INPUT_END'` call (the helper `apv` at `:1172` and its nine calls: eight `apv <<'ST_INPUT_END'` at `:1336`, `:1343`, `:1371`, `:1381`, `:1386`, `:1395`, `:1415`, `:1420`, and AP6 `apv < <(printf ...)` at `:1392`, which keeps its too-long line because the length check runs before the hash compare; plus the direct calls at `:1220`, `:1283`, `:1296`, `:1361`, `:1376`) becomes `--input-hash <the 64-hex sha256 of the expected rendered text>`, each case keeping its meaning (a text mismatch becomes a hash mismatch). New: IH1 `wait` on a request prints `inputhash` right after `input`, and its value equals `sha256sum` of the printed `input` text; IH2 `approve` with that hash writes `.ok` and the same record line as today; IH3 a hash of other text gives the mismatch line, exit 1, no `.ok`; IH4 a 12-hex or upper-case hash gives the usage line, exit 2; IH5 `--input-stdin` gives the usage line, exit 2.
 
+## 4c. Why a commit was dropped (D20, FR-018)
+
+Diagnostic only: nothing about what is approved or refused changes.
+
+Hook (`hooks/st-approve.py`, `request()` and `commit_check()`), only in an autonomous worker session (where `request()` gets past its first checks today):
+- When a Bash command that has a `git commit` part (the test at `:273`) gets no request, write one line to `<worker root>/.stratum/approve/dropped`, replacing the file: `<rule><TAB><detail><TAB><command>`. `<command>` is the command with every control character (newline included) replaced by `?`, cut to 300 characters. Write it with a temp file and `os.rename`, as the `.req` file is written.
+- When the hook writes a `.req` file, it removes `dropped`, so a stale reason never sits next to a sent request.
+- Rules and details, one per place that drops a commit today:
+
+| Rule | Detail | Where today |
+|------|--------|-------------|
+| `never-list` | empty | `bash_ok` refuses the command (`:270`), for a command with a `git commit` part |
+| `commit-never` | empty | `COMMIT_NEVER` matches (`cd`, `pushd`, `eval`, `sh -c`, `GIT_*=`) (`:194`) |
+| `unjudgeable` | empty | `unjudgeable(command)` (heredoc or substitution) (`:195`, after D13) |
+| `git-word` | the word after `git` | a git part that is not `add` or `commit` (`:200-201`) |
+| `flag` | the option | an option not in the lists, or `-F -` (`:206-226`) |
+| `branch` | `<HEAD branch> vs <git-guard.json branch>` | no branch, no or bad guard file, or a mismatch (`:228-237`) |
+| `owns-missing` | empty | the owns file is missing or empty (`:232-237`) |
+| `outside-owns` | the first staged path not in owns | `staged <= owns` fails (`:243-244`) |
+| `git-error` | empty | `git diff --cached` failed (`:239-240`) |
+
+The write itself never raises: a failed write is ignored, as `main()` already ignores errors.
+
+Orchestrator (`scripts/st-worker.sh`, `st blocked`): when `wait` or `watch` reports a worker as `blocked` with no request (`approval()` found none), and `<worktree>/.stratum/approve/dropped` exists (on a saved machine, read with the existing `rsh` path), print right after the `state` line: `dropped<TAB><the file's first line>`, with every byte that is not printable or TAB removed, cut to 400 characters. No file: no line. The script never writes or removes `dropped`.
+
+Test cases:
+- `tests/test_approve_hook.py`: for each rule row above, one command in the commit setup that hits it gives no request and a `dropped` file whose first field is that rule (and, for `git-word`, `flag`, `outside-owns`, the detail). A plain `-m` commit that is sent leaves no `dropped` file, and removes one that was there. The approve and refuse results of every existing test stay as they are.
+- `tests/test_st_worker.sh`: DR1 a blocked worker with a `dropped` file prints `dropped<TAB><line>` after the `state` line and before `pane text:`; DR2 no file, no `dropped` line; DR3 a line with an ESC byte prints without it; DR4 a remote worker (`rmk`, `--machine laptop`) prints the line from the saved machine.
+
 ## 5. Test table
 
 One table, `COMMIT_FORMS`, in `tests/test_approve_hook.py`. Each row runs through both hooks: the guard as a subprocess with the fixture root as `cwd` (as `tests/test_git_guard.py:33-46` does), and the channel as a `PermissionRequest` with the commit setup of `test_own_commit_is_sent_with_branch_and_staged`. `src/a.py` is staged and owned in every row.

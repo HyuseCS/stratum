@@ -139,6 +139,7 @@ and says so.
 - **FR-015**: `quickstart.md` MUST hold a live check before merge with a real herdr worker and a real Codex tab: a heredoc commit is denied and retried with `-m` and reaches the orchestrator in full; `answer` works on a worker whose screen keeps changing; a Codex answer with backticks and `"` comes back exact.
 - **FR-016**: When the user turns on autonomous build mode and the built-in git instructions are still on at every level, the turn-on output MUST include a one-line hint that autonomous mode works better with them off, and how to turn them off. It MUST NOT block the turn-on.
 - **FR-017**: The orchestrator's `approve` call MUST name the request by a hash of its rendered text, not pass the text in a heredoc, and `approve` MUST refuse when the hash does not match the request (D17).
+- **FR-018**: When the approve hook drops a worker's commit (writes no request), it MUST record one line naming the rule that dropped it, where the orchestrator can show it with the dialog. It MUST NOT change what is approved or refused (D20).
 
 ### Key Entities
 

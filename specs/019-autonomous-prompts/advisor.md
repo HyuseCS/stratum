@@ -27,3 +27,6 @@ summary: The approach remains focused. Grouping the hash-based approve change wi
 
 ## plan | 2026-11-09T15:12:16Z | /advisor
 summary: /advisor: APPROVED on approach; 11-08 part-1 cause unproven (brief already asks for -m at st-worker.sh:253; owns mismatch at st-approve.py:243-245 is the other candidate); optional drop-reason line offered to the user
+
+## plan | 2026-11-09T15:30:17Z | sha256 68384e0dcadf3e79614b9ed15361c90dadb6f9c54175b1749cb65d2e0b63e9f2 | APPROVED
+summary: The added drop-reason diagnostic follows D20 and fits the existing file ownership: US2 records it, and US3 displays it alongside its worker-script edits. The plan retains shared integration checks and avoids unnecessary new modules or tasks. No further approach changes recommended; correctness, coverage and risks remain for Inspect.
