@@ -6,7 +6,7 @@ trap 'rm -rf "$tmp"' EXIT
 fail=0
 check() { if eval "$2"; then echo "ok   $1"; else echo "FAIL $1"; fail=1; fi; }
 export GIT_CONFIG_GLOBAL=/dev/null XDG_CONFIG_HOME="$tmp"
-repo_paths() { git -C "$root" status --porcelain --no-renames --untracked-files=all | cut -c4- | sort; }
+repo_paths() { git -C "$root" status --porcelain --no-renames --untracked-files=all | cut -c4- | while IFS= read -r p; do echo "$(git -C "$root" hash-object -- "$p" 2>/dev/null) $p"; done | sort; }
 repo_before=$(repo_paths)
 
 mkdir -p "$tmp/bin"
