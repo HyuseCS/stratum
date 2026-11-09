@@ -121,7 +121,7 @@ Each build task runs only its own narrow check. T019 runs the shared advisor sui
 
 ## Phase 9: Polish
 
-- [ ] T020 Run the live check of `quickstart.md` §2 (L1-L4) with the user before merge, and write each step's result, and the L3 lag in seconds, in the PR body. The user drives it; no file changes. Test: bash tests/test_st_worker.sh && python3 tests/test_git_guard.py && python3 tests/test_approve_hook.py && bash tests/test_update_rules.sh && bash tests/test_session_hooks.sh && bash tests/test_codex_agent.sh && bash tests/test_advisor_matrix.sh.
+- [X] T020 Run the live check of `quickstart.md` §2 (L1-L4) with the user before merge, and write each step's result, and the L3 lag in seconds, in the PR body. The user drives it; no file changes. Test: bash tests/test_st_worker.sh && python3 tests/test_git_guard.py && python3 tests/test_approve_hook.py && bash tests/test_update_rules.sh && bash tests/test_session_hooks.sh && bash tests/test_codex_agent.sh && bash tests/test_advisor_matrix.sh.
 
 ---
 

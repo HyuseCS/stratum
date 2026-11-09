@@ -89,6 +89,7 @@ This keeps the cut-off-dialog No flow of 837282c (`skills/st-worker/SKILL.md` st
 | DB9 | REAL with a second ` Do you want to proceed?` line between options 2 and 3 | same | `wait`, then `--screen 0123456789ab --keys 4` | `wait`: exit 4, no `screen` line (CHK003). `answer`: exit 1, another-prompt line, nothing sent |
 | DB10 | REAL | | `watch --roster <roster>` | its `screen` hash equals DB1's (CHK002) |
 | DB11 | REAL | REAL | `--screen <hash> --keys 2`; `--screen <hash> --keys 3`; `--screen <hash> --keys 4` | keys 2 and 3: exit 1, `Option <k> is not a one-time yes. ...`, nothing sent. Key 4 (`No`): exit 0, key sent (scenario 4, unchanged rule) |
+| DB12 | REAL with the description line ` Create empty file p.txt` replaced by ` ─────` (one space and five `─`, not at column 0) | same | `wait`, then `--screen <hash> --keys 1` with the header line ` Bash command` changed to ` Bash command (unsandboxed)` | `wait`: its hash = first 12 hex of `sha256sum` of the 12 block lines from the real rule through ` 4. No` (as DB1), so the stray `─` line does not start the block. `answer`: exit 1, another-prompt line, nothing sent |
 
 Existing cases:
 

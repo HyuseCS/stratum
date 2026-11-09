@@ -28,6 +28,8 @@ Pass for SC-001: in steps L1 and L2 the user presses no key in any worker tab. A
 
 Pass: steps 2-4 as written, no key press in the worker tab.
 
+Result: pass. Deny, `-m` retry, approve by `--input-hash`, commit landed.
+
 ### L2. `answer` works on a worker whose screen keeps changing
 
 0. Check the commit mode first: the worker's git guard must ask for a commit. `jq -r .commit .stratum/git-guard.json` (or the plugin option when that file has no `commit` key) must print `ask`. If it prints `auto`, set it to `ask` for this check, else no commit dialog shows.
@@ -35,7 +37,9 @@ Pass: steps 2-4 as written, no key press in the worker tab.
 2. Expect: `wait` prints a `screen` line. Between `wait` and `answer`, lines above the dialog change (the background agent's status).
 3. The orchestrator runs `answer <id> --screen <hash> --keys <one-time yes>`.
 
-Pass: `answer` exits 0 or 4 with the `state` line and the dialog closes. It does not print `The pane shows another prompt` or `The top of the dialog is not on the screen, so only its No can be sent`. If it prints either, copy the 40-line pane text into the PR: the dialog may have no `─` top rule in this Claude Code version (research P1 then falls back to mode `cut`, which allows only a No).
+Pass: `answer` exits 0 or 4 with the `state` line and the dialog closes. It does not print `The pane shows another prompt` or `The top of the dialog is not on the screen, so only its No can be sent`. If it prints either, copy the 40-line pane text into the PR: the dialog may have no `─` top rule at column 0 in this Claude Code version (research P1 then falls back to mode `cut`, which allows only a No).
+
+Result: pass with note. The first `answer` was refused because the dialog was still drawing; the second, with the fresh hash, worked. A dialog answered while lines above it keep changing was not observed.
 
 ### L3. A Codex answer with backticks and `"` comes back exact
 
@@ -46,6 +50,8 @@ The no-log path is not run live: pointing `CODEX_HOME` at an empty folder would 
 
 Pass: step 2 has 0 changed characters (SC-004), step 3 is under 15 s.
 
+Result: pass. Backticks, `"` and `\` came back exact from the log; lag about 1 s.
+
 ### L4. Settings scope (US3)
 
 1. In a temp project, run `/stratum:st-init` four times from a clean copy and pick each scope in turn (project, user, local, not at all). Use a temp `CLAUDE_CONFIG_DIR` for the user pick.
@@ -54,3 +60,5 @@ Pass: step 2 has 0 changed characters (SC-004), step 3 is under 15 s.
 4. In a project with no setting, run `bash <plugin root>/scripts/st-worker.sh autonomous-on`: the on line and the `hint` line print, exit 0. Set the project pick and run it again: only the on line. Run `autonomous-off` after each.
 
 Pass: as written.
+
+Result: step 4 pass (the hint shows; it does not show with the setting off). Steps 1-3 not run: skipped by the user.

@@ -36,3 +36,6 @@ summary: /advisor: no blocking regression; A1 dropped line has no skill text so 
 
 ## decisions | 2026-11-09T16:58:13Z | /advisor
 summary: /advisor: 18 small, none to the user; report 8, 11, 13, 14 at Build done; A1 gets the same-command clause; note builder-written review tests and contract edits
+
+## change | 2026-11-09T17:01:25Z | sha256 345e67749d1dd345d48e00dd45918a5c65f55470083b1dd6dd8943352f92e27c | BLOCKED
+reason: APPROVED with findings

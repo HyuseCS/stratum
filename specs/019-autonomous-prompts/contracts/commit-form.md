@@ -5,10 +5,10 @@
 One function in `hooks/st-approve.py`, next to `SUBSTITUTION` (`:41`):
 
 ```text
-unjudgeable(command) is true when "<<" is in command, or SUBSTITUTION.search(command) matches.
+unjudgeable(command) first joins each backslash-newline (`JOIN` in `hooks/st-approve.py`: a backslash at a line end, not itself escaped, is removed with the line break). It is true when "<<" is in the joined command, or SUBSTITUTION.search(joined) matches.
 ```
 
-`SUBSTITUTION` stays as it is: `` ` ``, `$(`, `${` followed by a space or `|`, `<(`, `>(`. It matches inside quotes too. `<<` also covers `<<-` and `<<<`.
+`SUBSTITUTION` stays as it is: `` ` ``, `$(`, `${` followed by whitespace or `|`, `<(`, `>(`. It matches inside quotes too. `<<` also covers `<<-` and `<<<`.
 
 As FR-004 says, `${` counts only when a whitespace character or `|` follows it (`${ cmd; }`, `${| cmd; }`, the forms that run a command), which is what `SUBSTITUTION` matches. A plain `${VAR}` is not refused by either hook.
 
@@ -34,7 +34,9 @@ Deny when both are true (research P3):
 - `check()` parsed a segment to sub `commit` (normal path `:305-306`, or fallback path `:341`). This covers `git`, a path to git (`/usr/bin/git`, basename rule of `parse_git`), the prefixes `command`, `builtin`, `exec`, env assignments (`FOO=1 git ...`), and options before the subcommand (`-C <dir>`, `-c k=v`, `--git-dir=...`) (CHK006).
 - Or, on the fallback path, a line that the guard notes as unparseable (`:339`) or unreadable (`:343`) holds the word `commit`.
 
-(b) `unjudgeable(command)` on the whole raw command.
+The scan of (a) runs on the raw command and on its joined form (§1), and the stricter decision wins.
+
+(b) `unjudgeable(command)` on the whole raw command (it joins first, §1).
 
 Then the output is `permissionDecision: "deny"` with `permissionDecisionReason` exactly the deny text in §3, alone. Other reasons found for the same command are dropped from the output (the agent fixes the form first, and the next run shows any other reason). This holds for every commit mode (`auto`, `ask`, `deny`) and every session, worker or not (D6).
 
@@ -77,7 +79,7 @@ Hook (`hooks/st-approve.py`, `request()` and `commit_check()`), only in an auton
 
 | Rule | Detail | Where today |
 |------|--------|-------------|
-| `never-list` | empty | `bash_ok` refuses the command (`:270`), for a command with a `git commit` part |
+| `never-list` | empty | `bash_ok` refuses the raw or the joined command (`request()` in `hooks/st-approve.py`), for a command with a `git commit` part |
 | `commit-never` | empty | `COMMIT_NEVER` matches (`cd`, `pushd`, `eval`, `sh -c`, `GIT_*=`) (`:194`) |
 | `unjudgeable` | empty | `unjudgeable(command)` (heredoc or substitution) (`:195`, after D13) |
 | `git-word` | the word after `git` | a git part that is not `add` or `commit` (`:200-201`) |
@@ -87,13 +89,13 @@ Hook (`hooks/st-approve.py`, `request()` and `commit_check()`), only in an auton
 | `outside-owns` | the first staged path not in owns | `staged <= owns` fails (`:243-244`) |
 | `git-error` | empty | `git diff --cached` failed (`:239-240`) |
 
-The write itself never raises: a failed write is ignored, as `main()` already ignores errors.
+The write itself never raises: a failed write removes its temp file and is ignored, as `main()` already ignores errors.
 
-Orchestrator (`scripts/st-worker.sh`, `st blocked`): when `wait` or `watch` reports a worker as `blocked` with no request (`approval()` found none), and `<worktree>/.stratum/approve/dropped` exists (on a saved machine, read with the existing `rsh` path), print right after the `state` line: `dropped<TAB><the file's first line>`, with every byte that is not printable or TAB removed, cut to 400 characters. No file: no line. The script never writes or removes `dropped`.
+Orchestrator (`scripts/st-worker.sh`, `st blocked`): when `wait` or `watch` reports a worker as `blocked` with no request (`approval()` found none), and `<worktree>/.stratum/approve/dropped` exists (on a saved machine, read with the existing `rsh` path), print right after the `state` line: `dropped<TAB><the file's first line>`, with every byte that is not printable or TAB removed, cut to 400 characters. No file: no line. Only a regular file is read: a symlink, a FIFO or a failed remote read gives no line. The script never writes or removes `dropped`. `skills/st-worker/SKILL.md` step 6 tells the orchestrator to include the `dropped` line when it brings to the user a dialog that shows the same command.
 
 Test cases:
 - `tests/test_approve_hook.py`: for each rule row above, one command in the commit setup that hits it gives no request and a `dropped` file whose first field is that rule (and, for `git-word`, `flag`, `outside-owns`, the detail). A plain `-m` commit that is sent leaves no `dropped` file, and removes one that was there. The approve and refuse results of every existing test stay as they are.
-- `tests/test_st_worker.sh`: DR1 a blocked worker with a `dropped` file prints `dropped<TAB><line>` after the `state` line and before `pane text:`; DR2 no file, no `dropped` line; DR3 a line with an ESC byte prints without it; DR4 a remote worker (`rmk`, `--machine laptop`) prints the line from the saved machine.
+- `tests/test_st_worker.sh`: DR1 a blocked worker with a `dropped` file prints `dropped<TAB><line>` after the `state` line and before `pane text:`; DR2 no file, no `dropped` line; DR3 a line with an ESC byte prints without it; DR4 a remote worker (`rmk`, `--machine laptop`) prints the line from the saved machine; DR5 and DR6 a symlink and a FIFO as the file, DR7 and DR8 the same two on a saved machine, DR9 ssh fails at the read: each of DR5-DR9 gives exit 4 and no `dropped` line.
 
 ## 5. Test table
 
