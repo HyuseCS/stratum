@@ -45,7 +45,7 @@ No deny under this rule when (a) or (b) is false. Then the guard decides as toda
 Exactly, on one line:
 
 ```text
-Commit form denied: a commit with a heredoc, a backtick or $( cannot be judged by the approve channel. Run it again as git commit -m 'subject' -m 'body': single quotes, no heredoc, no backticks, no $(. Write an apostrophe as '\''.
+Commit form denied: a commit with a heredoc, <<, a backtick or $( cannot be judged by the approve channel. Run it again as git commit -m 'subject' -m 'body': single quotes, and no <<, backticks or $( anywhere, not even in the message. Write an apostrophe as '\''.
 ```
 
 `agents/st-git.md` keys its retry on the prefix `Commit form denied:`.

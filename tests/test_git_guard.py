@@ -9,9 +9,9 @@ import unittest
 
 GUARD = os.environ.get("ST_GIT_GUARD") or os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "..", "hooks", "st-git-guard.py")
-COMMIT_DENY = (r"Commit form denied: a commit with a heredoc, a backtick or $( cannot be judged by the approve "
-               r"channel. Run it again as git commit -m 'subject' -m 'body': single quotes, no heredoc, no "
-               r"backticks, no $(. Write an apostrophe as '\''.")
+COMMIT_DENY = (r"Commit form denied: a commit with a heredoc, <<, a backtick or $( cannot be judged by the "
+               r"approve channel. Run it again as git commit -m 'subject' -m 'body': single quotes, and no <<, "
+               r"backticks or $( anywhere, not even in the message. Write an apostrophe as '\''.")
 FORM_DENIED = [
     'git commit -m "$(cat <<\'EOF\'\nfeat: x\n\nbody\nEOF\n)"',
     'git commit -m "$(cat <<\'EOF\'\nfeat: say "hi\n\nbody\nEOF\n)"',
@@ -508,6 +508,19 @@ class GitGuardTest(unittest.TestCase):
             with self.subTest(cmd=cmd):
                 self.assertEqual(self.run_guard(cmd), (None, ""))
 
+    def test_backslash_newline_is_joined_as_bash_joins_it(self):
+        force = ("ask", "DESTRUCTIVE (force_push: ask): force push can overwrite remote history.")
+        for cmd, want in (('git \\\ncommit -m "$(x)"', ("deny", COMMIT_DENY)),
+                          ("git \\\npush --force origin main", force),
+                          ("gi\\\nt push --force origin main", force),
+                          ("# note \\\ngit push --force origin main", force),
+                          ("cat > t.txt <<EOF\nit's here\nEOF\ngi\\\nt push --force", force)):
+            with self.subTest(cmd=cmd):
+                self.assertEqual(self.run_guard(cmd), want)
+
+    def test_commit_with_double_angle_in_message_is_denied(self):
+        self.assertEqual(self.run_guard("git commit -m 'a << b'"), ("deny", COMMIT_DENY))
+
     def test_git_push_asks_with_its_reason(self):
         self.assertEqual(self.run_guard("git push"), ("ask", "git push sends commits to the remote."))
 
@@ -521,7 +534,7 @@ class GitGuardTest(unittest.TestCase):
                 f.write("def broken(:\n")
             for folder, error in ((broken, "SyntaxError"), (missing, "FileNotFoundError")):
                 guard = os.path.join(folder, "st-git-guard.py")
-                for cmd in ("git status", 'git commit -m "$(x)"'):
+                for cmd in ("git status", 'git commit -m "$(x)"', "gi\\\nt status"):
                     with self.subTest(folder=folder, cmd=cmd):
                         d, reason = self.run_guard(cmd, guard)
                         self.assertEqual(d, "ask")

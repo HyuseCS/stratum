@@ -19,9 +19,10 @@ TOKEN = re.compile(r"""[ \t]*(?:(\d*(?:<<-|<<<|<>|>\||[<>][<>&]?)|&>>?)|([;&|]+)
 COMPOUND = {"{", "if", "then", "else", "elif", "do", "while", "until", "for", "case", "select", "function",
             "coproc"}
 INERT = {"cat", "tee", "cd", "echo", "printf", "ls", "mkdir", "true", ":", "wc", "pwd"}
-FORM_DENY = (r"Commit form denied: a commit with a heredoc, a backtick or $( cannot be judged by the approve "
-             r"channel. Run it again as git commit -m 'subject' -m 'body': single quotes, no heredoc, no "
-             r"backticks, no $(. Write an apostrophe as '\''.")
+FORM_DENY = (r"Commit form denied: a commit with a heredoc, <<, a backtick or $( cannot be judged by the "
+             r"approve channel. Run it again as git commit -m 'subject' -m 'body': single quotes, and no <<, "
+             r"backticks or $( anywhere, not even in the message. Write an apostrophe as '\''.")
+JOIN = re.compile(r"(?<!\\)((?:\\\\)*)\\\n")
 try:
     _spec = importlib.util.spec_from_file_location(
         "st_approve", os.path.join(os.path.dirname(os.path.realpath(__file__)), "st-approve.py"))
@@ -314,9 +315,12 @@ def main():
             left = left or sub in ("switch", "checkout")
         return bool(parsed and re.fullmatch(r"[a-z][a-z0-9-]*", parsed[0]))
 
+    joined = JOIN.sub(r"\1", command)
     try:
-        for seg in segments(command):
-            check(seg)
+        for text in dict.fromkeys((command, joined)):
+            here, left = cwd, False
+            for seg in segments(text):
+                check(seg)
     except ValueError:
         decision, reasons, here, left = None, [], cwd, False
         lines, bodies, clean, runs, quiet = command.split("\n"), [], True, False, set()
@@ -341,9 +345,14 @@ def main():
                     start = end + 1
         if runs or not clean:
             quiet = set()
-        for n, line in enumerate(lines):
+        buf = ""
+        for n, line in enumerate(lines + [""]):
             if n in quiet:
                 continue
+            if JOIN.search(line + "\n"):
+                buf += line[:-1]
+                continue
+            line, buf = buf + line, ""
             if not GIT_WORD.search(line.translate(UNQUOTE)):
                 continue
             try:
@@ -357,7 +366,7 @@ def main():
                     note("ask", "The git guard could not read a git command on this line.")
                     commit = commit or bool(re.search(r"\bcommit\b", line))
     if unjudgeable is None:
-        if GIT_WORD.search(command.translate(UNQUOTE)):
+        if any(GIT_WORD.search(t.translate(UNQUOTE)) for t in (command, joined)):
             note("ask", f"The git guard could not load hooks/st-approve.py ({LOAD_ERROR}). "
                         "Every git command asks until it loads.")
     elif commit and unjudgeable(command):

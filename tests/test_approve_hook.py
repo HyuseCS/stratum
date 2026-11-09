@@ -16,9 +16,9 @@ HOOK = os.path.join(PLUGIN, "hooks", "st-approve.py")
 GUARD = os.path.join(PLUGIN, "hooks", "st-git-guard.py")
 ALLOW = '{"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"allow"}}}'
 DENY_REASON = ".stratum/approve/ and .stratum/autonomous are written only by the orchestrator."
-COMMIT_DENY = (r"Commit form denied: a commit with a heredoc, a backtick or $( cannot be judged by the approve "
-               r"channel. Run it again as git commit -m 'subject' -m 'body': single quotes, no heredoc, no "
-               r"backticks, no $(. Write an apostrophe as '\''.")
+COMMIT_DENY = (r"Commit form denied: a commit with a heredoc, <<, a backtick or $( cannot be judged by the "
+               r"approve channel. Run it again as git commit -m 'subject' -m 'body': single quotes, and no <<, "
+               r"backticks or $( anywhere, not even in the message. Write an apostrophe as '\''.")
 CMD = 'python3 "${CLAUDE_PLUGIN_ROOT}/hooks/st-approve.py"'
 MATCHER = "Bash|Edit|Write|MultiEdit|NotebookEdit|Read|Grep|Glob"
 RID_FILE = re.compile(r"[0-9]+-[0-9]+\.(req|ok|user)")
@@ -42,6 +42,9 @@ NEVER_BASH = [
     "sudo ls",
     "git clean -fd",
     "git update-ref -d refs/heads/main",
+    "git \\\npush --force origin main",
+    "cat .\\\n./other/f",
+    "# x\\\ngit push --force origin main",
 ]
 
 REFUSED_COMMITS = [
@@ -174,6 +177,8 @@ DROPS = [
     ("owns-missing", None, "git add src/a.py && git commit -m x", {"owns": None}),
     ("owns-missing", None, "git add src/a.py && git commit -m x", {"owns": ""}),
     ("outside-owns", "src/b.py", "git add src/b.py && git commit -m x", {}),
+    ("unjudgeable", None, 'git \\\ncommit -m "$(x)"', {}, 'git \\?commit -m "$(x)"'),
+    ("flag", "-a", "git commit -a -m 'a\tb\nc' " + "x" * 300, {}, "git commit -a -m 'a?b?c' " + "x" * 275),
 ]
 
 
@@ -694,6 +699,7 @@ class ApproveHookTest(unittest.TestCase):
         br = self.make_branch_repo("br", "worker-t1")
         with self.subTest("branch only, no .stratum/approve"):
             self.assertDenied(self.pre_bash("echo x > .stratum/autonomous", cwd=br))
+            self.assertDenied(self.pre_bash("echo x > .stratum/auto\\\nnomous", cwd=br))
             self.assertSilent(self.pre("Edit", {"file_path": "src/a.py", "old_string": "a", "new_string": "b"}, br))
             self.assertSilent(self.pre_bash("bash tests/x.sh", cwd=br))
 
@@ -739,7 +745,7 @@ class ApproveHookTest(unittest.TestCase):
                     self.assertEqual(unjudgeable(command), row[0] in ("F", "H"))
 
     def test_dropped_names_the_rule_that_refused_a_commit(self):
-        for rule, detail, command, options in DROPS:
+        for rule, detail, command, options, *shown in DROPS:
             with self.subTest(rule=rule, command=command, options=options):
                 self.staged_setup(**options)
                 remove(os.path.join(self.approve, "dropped"))
@@ -748,7 +754,13 @@ class ApproveHookTest(unittest.TestCase):
                 self.assertEqual(fields[0], rule)
                 if detail is not None:
                     self.assertEqual(fields[1], detail)
-                self.assertEqual(fields[2], command)
+                self.assertEqual(fields[2], shown[0] if shown else command)
+
+    def test_failed_drop_leaves_no_tmp_file(self):
+        self.staged_setup()
+        os.makedirs(os.path.join(self.approve, "dropped", "x"))
+        self.assertSilent(self.bash("git commit -a -m x"))
+        self.assertEqual([n for n in listing(self.approve) if n.endswith(".tmp")], [])
 
     def test_dropped_git_error_when_git_cannot_read_the_index(self):
         self.staged_setup()

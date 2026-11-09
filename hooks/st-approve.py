@@ -39,9 +39,11 @@ NEVER = re.compile("|".join([
 COMMIT_NEVER = re.compile(r"\b(?:sh|bash|zsh)\s+-c\b|\beval\b|\bGIT_[A-Z0-9_]*=|\b(?:cd|pushd)\b")
 SUBSTITUTION = re.compile(r"`|\$\(|\$\{[\s|]|[<>]\(")
 CONTROL = re.compile(r"[\x00-\x1f\x7f]")
+JOIN = re.compile(r"(?<!\\)((?:\\\\)*)\\\n")
 
 
 def unjudgeable(command):
+    command = JOIN.sub(r"\1", command)
     return "<<" in command or bool(SUBSTITUTION.search(command))
 
 
@@ -102,7 +104,9 @@ def lock2(data, cwd):
     tool = data.get("tool_name")
     ti = data.get("tool_input") or {}
     if tool == "Bash":
-        words = [posixpath.normpath(w) for w in re.split(r"[\s;&|()<>`]+", strip_quotes(str(ti.get("command") or ""))) if w]
+        command = str(ti.get("command") or "")
+        words = [posixpath.normpath(w) for w in re.split(r"[\s;&|()<>`]+",
+                                                          strip_quotes(command + "\n" + JOIN.sub(r"\1", command))) if w]
         if any(".stratum/approve" in w or ".stratum/autonomous" in w for w in words):
             return True
         return any((w == "st-worker.sh" or w.endswith("/st-worker.sh")) and nxt.replace("$", "") in RISKY
@@ -160,7 +164,7 @@ def bash_ok(root, cwd, command):
 
 
 def split_commands(command):
-    lex = shlex.shlex(command.replace("\n", " ; "), posix=True, punctuation_chars=True)
+    lex = shlex.shlex(JOIN.sub(r"\1", command).replace("\n", " ; "), posix=True, punctuation_chars=True)
     lex.whitespace_split = True
     lex.commenters = ""
     tokens = list(lex)
@@ -204,7 +208,10 @@ def drop(root, rule, detail, command):
             f.write("\t".join((rule, CONTROL.sub("?", detail), CONTROL.sub("?", command)[:300])) + "\n")
         os.rename(tmp, path)
     except (OSError, ValueError):
-        pass
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
 
 
 def commit_check(root, cwd, command, commands):
@@ -295,7 +302,7 @@ def request(data, cwd):
             return
         commands = commit_words(command)
         commit = any(is_git(w) and "commit" in words[i + 1:] for words, _ in commands for i, w in enumerate(words))
-        if not bash_ok(root, cwd, command):
+        if not (bash_ok(root, cwd, command) and bash_ok(root, cwd, JOIN.sub(r"\1", command))):
             if commit:
                 drop(root, "never-list", "", command)
             return
