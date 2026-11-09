@@ -12,7 +12,7 @@ Terms (F9): the block starts at the top rule line. "Title line" in the spec mean
 |------|------|
 | Window | lines `max(1, n-14)` to `n` (the last 15, as today) |
 | HEAD | `^([[:space:]]\|│)*Do you want to (proceed\|make this edit\|create\|allow\|run)` (today's `HEAD`, `:168`) |
-| Top rule | `^[[:space:]]*(─)+[[:space:]]*$`, where `─` is U+2500 only. The group keeps all three bytes of `─` together, so the rule holds under the `C` locale too. `╌` (U+254C, the command box lines) does not match. |
+| Top rule | `^(─)+[[:space:]]*$`, where `─` is U+2500 only. The rule starts at column 0, so a tool-controlled line such as a description of only `─` after its leading space is not a rule. The group keeps all three bytes of `─` together, so the rule holds under the `C` locale too. `╌` (U+254C, the command box lines) does not match. |
 | Option line | `^([[:space:]]\|│)*(❯[[:space:]]*)?[0-9]+\.[[:space:]]` (today's option prefix, `:465`) |
 | Blank | `^[[:space:]]*$` |
 

@@ -169,19 +169,19 @@ PERM="$HEAD|don.t ask again|tell Claude what to do differently"
 screen() { SC=$("${H[@]}" agent read "$N" --source recent-unwrapped --lines 40 2>/dev/null | sed $'s/\e\\[[0-9;]*[A-Za-z]//g') || return; }
 perm() { tail -n 15 <<<"$SC" | grep -qaE "$PERM"; }
 block() {
-  local n w h e t
+  local n w hd en tr
   BM= SH=
   n=$(wc -l <<<"$SC")
   w=$((n > 15 ? n - 14 : 1))
-  h=$(tail -n "+$w" <<<"$SC" | grep -naE "$HEAD" | cut -d: -f1) || :
-  [[ $h =~ ^[0-9]+$ ]] || return 0
-  h=$((h + w - 1))
-  e=$(tail -n "+$((h + 1))" <<<"$SC" | grep -naE '^([[:space:]]|│)*(❯[[:space:]]*)?[0-9]+\.[[:space:]]' | tail -n 1 | cut -d: -f1) || :
-  [ -n "$e" ] || return 0
-  e=$((e + h))
-  while [ "$e" -lt "$n" ] && sed -n "$((e + 1))p" <<<"$SC" | grep -qav '^[[:space:]]*$'; do e=$((e + 1)); done
-  t=$(head -n "$((h - 1))" <<<"$SC" | grep -naE '^[[:space:]]*(─)+[[:space:]]*$' | tail -n 1 | cut -d: -f1) || :
-  if [ -n "$t" ]; then BM=block SH=$(sed -n "$t,${e}p" <<<"$SC" | sha256sum); else BM=cut SH=$(sha256sum <<<"$SC"); fi
+  hd=$(tail -n "+$w" <<<"$SC" | grep -naE "$HEAD" | cut -d: -f1) || :
+  [[ $hd =~ ^[0-9]+$ ]] || return 0
+  hd=$((hd + w - 1))
+  en=$(tail -n "+$((hd + 1))" <<<"$SC" | grep -naE '^([[:space:]]|│)*(❯[[:space:]]*)?[0-9]+\.[[:space:]]' | tail -n 1 | cut -d: -f1) || :
+  [ -n "$en" ] || return 0
+  en=$((en + hd))
+  while [ "$en" -lt "$n" ] && sed -n "$((en + 1))p" <<<"$SC" | grep -qav '^[[:space:]]*$'; do en=$((en + 1)); done
+  tr=$(head -n "$((hd - 1))" <<<"$SC" | grep -naE '^(─)+[[:space:]]*$' | tail -n 1 | cut -d: -f1) || :
+  if [ -n "$tr" ]; then BM=block SH=$(sed -n "$tr,${en}p" <<<"$SC" | sha256sum); else BM=cut SH=$(sha256sum <<<"$SC"); fi
   SH=${SH:0:12}
 }
 readpane() { "${H[@]}" agent read "$N" --source visible >"$t" 2>/dev/null; }

@@ -1776,6 +1776,10 @@ dbans 3
 check "DB11 option 3 (a yes that switches mode) refused: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 3 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
 dbans 4
 check "DB11 option 4 (No) sent: exit 0, key 4" '[ $rc = 0 ] && hascall "agent\tsend-keys\tworker-t004\t4"'
+fake=("${REAL[@]:0:6}" ' ─────' "${REAL[@]:7}")
+fh=$(printf '%s\n' "${fake[@]:3:12}" | sha256sum | cut -c1-12)
+dbwait "${fake[@]}"; dbput "${fake[@]:0:4}" ' Bash command (unsandboxed)' "${fake[@]:5}"; dbans 1
+check "DB12 a description of only ─ after a space is not the top rule: the hash starts at the real rule, a header change refused, nothing sent" '[ "$h" = "$fh" ] && [ $rc = 1 ] && [ "$out" = "The pane shows another prompt. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
 
 su="$repo/.stratum/worker-setup.sh"
 printf '%s\n' 'printf "%s\n%s\n" "$PWD" "$1" > setup.ran' 'echo setup >> "$STUB_T/order"' 'echo SETUP RAN' > "$su"

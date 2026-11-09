@@ -22,7 +22,7 @@ Inputs: the log root `${CODEX_HOME:-$HOME/.codex}/sessions`, the prompt file `$p
 1. Files: every `rollout-*.jsonl` under the root (any depth) whose mtime is not older than the mtime of `$pf`. No root folder: no file.
 2. Each file is opened read-only. Each line is parsed as JSON. A line that is not JSON, or not an object, is skipped (a partial last line, research F37).
 3. A record counts when `type == "event_msg"`, `payload.type == "task_complete"` and `payload.last_agent_message` is a string. Split it on `\n`. `e` = the last line whose text, with trailing spaces and `\r` cut, equals `ST-ADVISOR-END-<nonce>`. `b` = the last line before `e` that equals `ST-ADVISOR-BEGIN-<nonce>` the same way. Both found: the answer is lines `b+1` to `e-1`, joined with `\n`, unchanged.
-4. More than one record found: take the one with the latest `timestamp` (the nonce is new for each review, so this happens only on a replayed log).
+4. More than one record found: take the last one read. The nonce is new for each review, so two records can only hold the same answer.
 5. Found: write the answer to `$af` as UTF-8, exactly, and exit 0. Not found: exit 1 (the script tries again).
 6. D14: a file that has a `response_item` user `message` whose `content[].text` holds `Read the review request in <pf> and follow it.` (a substring match; `<pf>` is unique per review), followed later in the same file by an `event_msg` with `payload.type == "turn_aborted"`, and no answer per step 3 after that message: exit 2. The script then prints `BLOCKED: the review was stopped in the Codex tab` and exits 4 at once (no more tries). `scripts/st-advisor.sh` already turns exit 4 into a BLOCKED record (`:252`), so it does not run headless.
 

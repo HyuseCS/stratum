@@ -154,18 +154,17 @@ for p in glob.glob(os.path.join(glob.escape(root), "**", "rollout-*.jsonl"), rec
                     k = [x.rstrip(" \r") for x in ls]
                     e = max((i for i, x in enumerate(k) if x == "ST-ADVISOR-END-" + n), default=-1)
                     b = max((i for i, x in enumerate(k[:e]) if x == "ST-ADVISOR-BEGIN-" + n), default=-1) if e > 0 else -1
-                    ts = d.get("timestamp") if isinstance(d.get("timestamp"), str) else ""
-                    if b >= 0 and (best is None or ts >= best[0]):
-                        best = (ts, "\n".join(ls[b + 1:e]))
+                    if b >= 0:
+                        best = "\n".join(ls[b + 1:e])
                 elif d.get("type") == "response_item" and q.get("type") == "message" and q.get("role") == "user" and isinstance(q.get("content"), list):
                     asked = asked or any(isinstance(c, dict) and isinstance(c.get("text"), str) and ask in c["text"] for c in q["content"])
                 elif asked and d.get("type") == "event_msg" and q.get("type") == "turn_aborted":
                     stop = True
     except OSError:
         continue
-if best:
+if best is not None:
     with open(af, "w", encoding="utf-8", newline="") as f:
-        f.write(best[1])
+        f.write(best)
     sys.exit(0)
 sys.exit(2 if stop else 1)' "${CODEX_HOME:-$HOME/.codex}/sessions" "$pf" "$nonce" "$af"
   case $? in
