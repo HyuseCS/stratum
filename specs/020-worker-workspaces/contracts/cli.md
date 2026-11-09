@@ -15,7 +15,7 @@ herdr calls (local, or each with `--machine <m>`):
 Gone: `tab create`, `worktree list --cwd <repo>` in `start`, any `st-workers` workspace.
 
 Failure at step 3: `git worktree remove` and `git branch -D` as today, then `stopped: <herdr message>`, then the `worker` line with `-` in fields 4 to 7.
-Failure at step 4: `workspace close <new ws>`, then the same undo and lines.
+Failure at step 4: `workspace close <new ws>` (`.result.workspace.workspace_id` of step 3; its failure does not stop the undo), then the same undo, `stopped: <rename message>`, and the `worker` line with `-` in fields 4 to 7.
 
 `worker` line: unchanged (`worker	<N>	<machine>	<tab>	<pane>	<branch>	<path>`).
 

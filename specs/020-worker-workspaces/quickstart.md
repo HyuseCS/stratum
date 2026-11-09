@@ -28,3 +28,8 @@ The user runs this. Prerequisite: an orchestrator session in a herdr workspace l
    Expect: both worker workspaces are gone with their `Codex` tabs. `stratum` is still open. Each `folder ... ready to remove` path still exists.
 6. Saved machine (laptop): start one worker with `--machine laptop --repo <path>`.
    Expect: on the laptop, a new workspace `stratum / <id>: <words>` with the worktree as folder. No `st-workers` workspace is made, and the laptop's main checkout workspace gets no tab. `close <id> --machine laptop` removes that workspace.
+
+Notes for the user (by hand, once):
+
+- A worker started before this feature has its tab in the orchestrator's workspace. If it ran the advisor after the update, its `Codex` tab (`st-codex-worker-<id>`) stays there after `close`. Close that tab by hand.
+- A leftover `st-workers` workspace on a saved machine is no longer closed by `close`. Close it by hand.

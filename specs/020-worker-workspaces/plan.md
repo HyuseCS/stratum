@@ -45,7 +45,7 @@ Build code rules (from the brief):
 1. After the `--repo ~` resolution (line 275), build the label `L` (rules in [data-model.md](data-model.md)). The orchestrator part comes from a plain `herdr workspace list` (never `"${H[@]}"`: the orchestrator is local) only when `HERDR_ENV=1` and `HERDR_WORKSPACE_ID` is set. A failed or empty lookup falls back to `basename "$repo"`, with no stop.
 2. Delete the `if [ -z "$m" ]; then WS=... else ... st-workers ... fi` block (lines 281-294).
 3. Replace `tab create` (line 301) with `workspace create --cwd "$path" --label "$L" --no-focus`, read `WS`, `TAB` (`.result.tab.tab_id`) and `PANE` (`.result.root_pane.pane_id`), then `tab rename "$TAB" "$N"`. Neither call goes through `h`: `h` stops on failure and overwrites `$r`. Use the `if ! r=$("${H[@]}" ... 2>"$e")` form of today's `tab create`.
-4. FR-008: if `workspace create` fails, undo the worktree and branch as today. If `tab rename` fails, also `workspace close "$WS"` before the undo. The `stopped:` line keeps the herdr message, and the worktree undo failure keeps its `; left <path> and branch <N>` text.
+4. FR-008: if `workspace create` fails, undo the worktree and branch as today. If `tab rename` fails, also run `"${H[@]}" workspace close "$WS"` (not through `h`) before the undo, and go on to the undo even if that close fails. `WS` comes from `.result.workspace.workspace_id`. Clear `TAB= PANE=` with `BR= WT=` before the stop. The `stopped:` line keeps the herdr message, and the worktree undo failure keeps its `; left <path> and branch <N>` text.
 
 ### close (`scripts/st-worker.sh` lines 520-530)
 
@@ -122,3 +122,21 @@ tests/test_worker_rules.sh    # W14 phrase, st-workers gone row
 ## Complexity Tracking
 
 None.
+
+## Validate
+
+Date: 2026-11-09. Verdict: CONDITIONAL
+
+| Check | Verdict | Findings |
+|-------|---------|----------|
+| 1. Setup and dependencies | PASS | Local only. herdr 0.9.4 client and server (`herdr status`). `workspace create --cwd --label --no-focus`, `tab rename <TAB_ID> <LABEL>` and `workspace close <workspace_id>` exist (`--help`). `herdr --skill` line 89: `workspace create` returns `.result.workspace`, `.result.tab` and `.result.root_pane`. Line 57: agent names match `[a-z][a-z0-9_-]{0,31}`. jq 1.8.2, bash 5.3.20, git and python3 are installed. No new dependency. Baseline: test_st_worker, test_advisor_matrix, test_worker_rules, test_risk_rules, test_on_demand, test_state and test_lane_steps exit 0 with no FAIL line. Not checked: the laptop (ssh timed out), so the remote herdr version and remote `tab rename` are not proven. Quickstart step 6 is the proof. |
+| 2. Test coverage per requirement | CONCERN | F2, F3, F4, F5 |
+| 3. Breaking changes | CONCERN | F6, F7. The `list` line gets a new last field. Only the skill (step 12) and the tests L1, L2 and R12 read it, and T010 and T012 change them. No stored data, no migration. |
+| 4. Security and privacy | PASS | `workspace close` runs only after every refusal of `close`. It runs only when every tab label is `worker-<id>` or `Codex`, and locally never on `$HERDR_WORKSPACE_ID`. NC8 (T007) proves that guard can fail. No `--group`. The label goes to herdr as one argv element, never into `rx`/`rsh`. `list` replaces control characters in the label (L3). No secrets and no personal data. |
+
+F2. tasks.md:77 (T014), spec.md:145 (FR-012). FR-012 says all existing tests must pass, but T014 and T012 run only 7 suites. `tests/test_advisor.sh` and `tests/test_advisor_waive.sh` load the changed `scripts/st-advisor.sh`, and no task runs them. Low risk: both unset `HERDR_ENV` (line 39), so `tabname` does not run. -> st-plan: add both suites to the T014 test command.
+F3. tasks.md:33 (T004), plan.md:47-48. The `tab rename` failure path has three gaps. (1) T004 reads `TAB` and `PANE` before the rename. "Today's undo" (`scripts/st-worker.sh:304`) clears only `BR= WT=`, but S13c (tasks.md:31) and contracts/cli.md:17-18 expect `-` in fields 4 to 7. (2) T004 does not say what to do when the cleanup `workspace close` fails. Through `h`, `stop` runs before the worktree undo. (3) T004 names no jq path for `WS`. -> st-plan: add `TAB= PANE=` to the undo. Run `workspace close` without `h`, and on failure continue to the worktree undo. Read `WS` from `.result.workspace.workspace_id`, as `scripts/st-worker.sh:292` does.
+F4. spec.md:122, spec.md:126, tasks.md:31 (WS4). Two spec edge cases have no test. (1) The orchestrator's workspace exists but has an empty label. WS4 tests only a missing workspace (`HWS=wNone`). (2) A leftover workspace with the same label but no `worker-<id>` tab does not block `start`. -> st-plan: add both cases to T002.
+F5. tasks.md:56 (T007), tests/test_st_worker.sh:1564. T007 adds CL1 to CL4, but `CL1` already exists in that file ("CL1 close: exit 0, the approve folder is gone"). -> st-plan: use new ids, for example WC1 to WC4.
+F6. tasks.md:45 (T005), branch `093-autonomous-prompts` specs/019-autonomous-prompts/tasks.md:104 (T016). Issue #93 adds M25, M26 and M27 to `tests/test_advisor_matrix.sh`, and T005 adds M25a to M25d to the same file. Both features also change `scripts/st-worker.sh`, `tests/test_st_worker.sh` and `tests/test_worker_rules.sh`. The hunks are in different regions (#93: `:168-170`, `:253`, `answer`, autonomous-on). -> st-plan: give T005 ids that #93 does not use, for example M30a to M30d. Whichever branch merges second rebases and runs test_st_worker, test_advisor_matrix and test_worker_rules again.
+F7. research.md:18, data-model.md:31, scripts/st-worker.sh:291. Two transition leftovers. (1) research.md:18 says the extra Codex tab of an old-layout worker "ends when those workers close". It does not end: an old-layout worker sits in the orchestrator's workspace, so `close` takes the tab-only path. Its `Codex` tab and its `st-codex-worker-<id>` agent stay there. (2) An `st-workers` workspace on the laptop keeps the first tab that its own `workspace create` made. The new rule never closes it after its last old worker closes, but the old rule did. -> st-plan: correct R2 and add a one-time by-hand note to skill step 11 or to quickstart.

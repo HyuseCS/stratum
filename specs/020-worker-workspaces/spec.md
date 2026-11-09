@@ -14,7 +14,7 @@
 
 The orchestrator starts one or more workers. Each worker opens in a new herdr workspace of its
 own, with its worktree as the folder. The workspace is a separate sidebar entry, named
-`<orchestrator> / <id>: <task words>`, for example `stratum / f77: autonomous sessions`, so the
+`<orchestrator> / <id>: <task words>`, for example `stratum / f77: Autonomous sessions`, so the
 user sees at a glance which worker it is and which orchestrator started it. Inside it, one tab
 labelled `worker-<id>` holds the worker agent and lazygit side by side, as today. The new
 workspace does not take the focus. The orchestrator's own workspace gets no new tab.
@@ -30,30 +30,30 @@ the orchestrator's workspace has no new tab.
 1. **Given** the orchestrator runs in a workspace labelled `stratum`, **When** it starts worker `f77` for a task whose first heading is `Autonomous sessions`, **Then** a new workspace named `stratum / f77: Autonomous sessions` opens with the worker's worktree as its folder, and it does not take the focus.
 2. **Given** that new workspace, **When** the user looks inside it, **Then** it has one tab labelled `worker-f77` with the worker agent and lazygit side by side.
 3. **Given** two workers started from the same orchestrator, **When** the user looks at the sidebar, **Then** both workspace names start with the orchestrator's name, so they sort together.
-4. **Given** a task whose first heading is longer than about 30 characters, **When** the worker starts, **Then** the task words in the workspace name are cut to about 30 characters.
+4. **Given** a task whose first heading is longer than 30 characters, **When** the worker starts, **Then** the task words in the workspace name are cut to 30 characters.
 5. **Given** a worker in its own workspace, **When** the orchestrator runs `wait`, `watch`, `answer`, `followup`, `goal`, `resend` or `result` with its id, **Then** each finds the worker by its `worker-<id>` tab as today.
 
 ---
 
 ### User Story 2 - Each worker gets its own Codex tab (Priority: P1)
 
-A worker runs a lane that calls the Codex advisor. The advisor opens its Codex tab in the
-worker's own workspace, named `st-codex-worker-<id>`. Two or more workers each get their own
+A worker runs a lane that calls the Codex advisor. The advisor opens its Codex tab (label `Codex`) in the
+worker's own workspace, with the Codex agent name `st-codex-worker-<id>`. Two or more workers each get their own
 Codex tab at the same time, and none falls back to headless because the name is in use.
-The orchestrator's Codex tab name does not change.
+The orchestrator's Codex agent name does not change.
 
 **Why this priority**: This is the defect that #94 reports: today only one worker gets the
 Codex tab, the others run headless.
 
-**Independent Test**: In a worker workspace for worker `f77`, compute the Codex tab name and
+**Independent Test**: In a worker workspace for worker `f77`, compute the Codex agent name and
 check it is `st-codex-worker-f77`. In the orchestrator's workspace, check the name is the same
 as before.
 
 **Acceptance Scenarios**:
 
-1. **Given** worker `f77` in its own workspace, **When** it runs the advisor, **Then** the Codex tab is named `st-codex-worker-f77` and opens in that workspace.
+1. **Given** worker `f77` in its own workspace, **When** it runs the advisor, **Then** the Codex agent name is `st-codex-worker-f77` and its `Codex` tab opens in that workspace.
 2. **Given** workers `f77` and `f79` from the same orchestrator, **When** both run the advisor, **Then** each gets its own Codex tab, and neither reports the name as in use elsewhere.
-3. **Given** the orchestrator's workspace labelled `stratum`, **When** the orchestrator runs the advisor, **Then** the Codex tab name is `st-codex-stratum`, as today.
+3. **Given** the orchestrator's workspace labelled `stratum`, **When** the orchestrator runs the advisor, **Then** the Codex agent name is `st-codex-stratum`, as today.
 4. **Given** a workspace whose name has a long orchestrator part, **When** a worker in it runs the advisor, **Then** the worker part is not cut off: the name is still `st-codex-worker-<id>`.
 
 ---
@@ -132,10 +132,10 @@ names the worker's workspace, so the orchestrator can tell the user where to loo
 ### Functional Requirements
 
 - **FR-001**: `start` MUST make a new herdr workspace for each worker, with the worker's worktree as its folder, and with `--no-focus`. It MUST NOT add a tab to the orchestrator's workspace.
-- **FR-002**: The workspace MUST be named `<orchestrator> / <id>: <task words>`. The orchestrator part is the label of the workspace that runs `start` (`HERDR_WORKSPACE_ID`), else the repo folder name. The task words are the plain text of the first Markdown heading of the task file, on one line, cut to about 30 characters. With no heading, the name is `<orchestrator> / <id>`.
+- **FR-002**: The workspace MUST be named `<orchestrator> / <id>: <task words>`. The orchestrator part is the label of the workspace that runs `start` (`HERDR_WORKSPACE_ID`), else the repo folder name. The task words are the plain text of the first Markdown heading of the task file, on one line, cut to 30 characters. With no heading, the name is `<orchestrator> / <id>`.
 - **FR-003**: Inside the workspace, the worker MUST have one tab labelled `worker-<id>` with the worker agent and lazygit side by side, as today.
 - **FR-004**: `wait`, `watch`, `answer`, `followup`, `goal`, `resend` and `result` MUST keep finding the worker by its `worker-<id>` tab, with no change to their behaviour.
-- **FR-005**: The advisor MUST name a worker's Codex tab `st-codex-worker-<id>` and open it in the worker's own workspace. The orchestrator's Codex tab name MUST stay as it is today.
+- **FR-005**: The advisor MUST name a worker's Codex agent `st-codex-worker-<id>` and open its `Codex` tab in the worker's own workspace. The orchestrator's Codex agent name MUST stay as it is today. Exception (D14, D16): herdr agent names are at most 32 characters, so the name is cut to 32 characters; two ids over 16 characters that share their first 16 get the same name, and the second worker's Codex runs headless.
 - **FR-006**: `close` MUST close the worker's whole workspace when it holds no tab other than the worker's own tab and its Codex tab. Otherwise it MUST close only the worker's tab. It MUST never close the workspace that runs `close`. All existing refusals and checks of `close` stay.
 - **FR-007**: On a saved machine, `start` MUST make the same per-worker workspace on that machine. It MUST NOT use or make an `st-workers` workspace, and MUST NOT use the main checkout's open workspace.
 - **FR-008**: If making the workspace or the worker tab fails, `start` MUST remove what it made (workspace, worktree, branch) and stop with the herdr message, as it does today for a failed tab.
@@ -146,14 +146,14 @@ names the worker's workspace, so the orchestrator can tell the user where to loo
 
 ### Key Entities
 
-- **Worker workspace**: one herdr workspace per worker, named `<orchestrator> / <id>: <task words>`, with the worker's worktree as its folder. It holds the `worker-<id>` tab and, once the advisor runs, the `st-codex-worker-<id>` tab.
+- **Worker workspace**: one herdr workspace per worker, named `<orchestrator> / <id>: <task words>`, with the worker's worktree as its folder. It holds the `worker-<id>` tab and, once the advisor runs, the `Codex` tab with the Codex agent `st-codex-worker-<id>`.
 - **Worker id**: the task id the orchestrator passes to `start`. Every command finds the worker by the tab label `worker-<id>`.
 
 ## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes
 
-- **SC-001**: With three workers started from one orchestrator, all three get their own Codex tab, and 0 fall back to headless because the tab name is in use.
+- **SC-001**: With three workers started from one orchestrator, all three get their own Codex tab, and 0 fall back to headless because the agent name is in use (worker ids of 16 characters or fewer, see the FR-005 exception).
 - **SC-002**: Starting N workers adds N sidebar entries and 0 tabs to the orchestrator's workspace.
 - **SC-003**: After `close` of every worker, 0 worker workspaces and 0 worker Codex tabs are left, and the orchestrator's workspace is still open.
 - **SC-004**: The user can tell from the sidebar alone which worker and which orchestrator each worker workspace belongs to.
