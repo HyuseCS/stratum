@@ -278,7 +278,7 @@ lazypane() { awk -F'\t' '$1=="pane"{print $2; exit}' "$tmp/made" 2>/dev/null; }
 addtab() { jq -c --arg t "$1" --arg l "$2" --arg w "$3" '. + [{tab_id:$t,label:$l,workspace_id:$w}]' "$tmp/tabs.json" > "$tmp/tabs.new" && mv "$tmp/tabs.new" "$tmp/tabs.json"; }
 never() {
   ! grep -qx BARE "$tmp/calls" && ! grep -qP '(^|\t)w1P:(t1|p1)(\t|$)' "$tmp/calls" &&
-  awk -F'\t' '{ for (i = 1; i <= NF; i++) if ($i ~ /w1P/) { ok = ($i ~ /^w1P:[tp][0-9]+$/ && $i != "w1P:t1" && $i != "w1P:p1") || ($i == "w1P" && $(i - 1) == "--workspace" && (($1 == "tab" && $2 == "create") || ($1 == "pane" && $2 == "list"))); if (!ok) bad = 1 } } END { exit bad }' "$tmp/calls" &&
+  awk -F'\t' '{ for (i = 1; i <= NF; i++) if ($i ~ /w1P/) { ok = ($i ~ /^w1P:[tp][0-9]+$/ && $i != "w1P:t1" && $i != "w1P:p1") || ($i == "w1P" && $(i - 1) == "--workspace" && (($1 == "tab" && ($2 == "create" || $2 == "list")) || ($1 == "pane" && $2 == "list"))); if (!ok) bad = 1 } } END { exit bad }' "$tmp/calls" &&
   ! grep -qP '^workspace\tclose\t.*w1P' "$tmp/calls" &&
   ! grep -qP '(^|\t)(--current|--session|--remote|--trust-repository|--group|--machine)(\t|$)' "$tmp/calls" &&
   ! grep -qP '^(pane\tclose|worktree\tremove|server\t|machine\t(reconnect|add|remove|enable|disable)(\t|$))' "$tmp/calls" &&
@@ -623,7 +623,7 @@ check "C1b guard file present before close" '[ -e "$(wt)/.stratum/git-guard.json
 run bash "$script" close T004
 check "C1b guard file gone after close" '[ ! -e "$(wt)/.stratum/git-guard.json" ]'
 check "C1 exit 0" '[ $rc = 0 ]'
-check "C1 one tab close on the worker tab, zero workspace close" 'hascall "tab\tclose\t%s" "$(tabid)" && never 1 0'
+check "C1 one workspace close of the worker's workspace, zero tab close" 'hascall "workspace\tclose\t%s" "$(wsid)" && never 0 0 1'
 check "C1 closed and folder lines" 'hasline "closed\tworker-t004" && hasline "folder\t%s\tready to remove" "$(wt)"'
 check "C1 one gh call: pr list --head worker-t004 --state open" '[ "$(cat "$tmp/gh_calls")" = "$(printf "pr\tlist\t--head\tworker-t004\t--state\topen\t--json\tnumber\t-q\tlength")" ]'
 
@@ -637,7 +637,7 @@ mk; states done
 STUB_KEEP_AGENT=1 run bash "$script" close T004
 check "C3 exit 1" '[ $rc = 1 ]'
 check "C3 close left agent line" 'grep -qxF "close left agent worker-t004" <<<"$out"'
-check "C3 one tab close on the worker tab, zero workspace close" 'hascall "tab\tclose\t%s" "$(tabid)" && never 1 0'
+check "C3 one workspace close of the worker's workspace, zero tab close" 'hascall "workspace\tclose\t%s" "$(wsid)" && never 0 0 1'
 
 fresh
 run bash "$script" close T004
@@ -647,7 +647,7 @@ check "C4 no worker line, no workspace close" 'grep -qxF "No worker worker-t004 
 mk; states done
 STUB_FAIL="agent get" STUB_FAIL_CODE=agent_not_found run bash "$script" close T004
 check "C5 exit 0" '[ $rc = 0 ]'
-check "C5 one tab close on the worker tab, zero workspace close" 'hascall "tab\tclose\t%s" "$(tabid)" && never 1 0'
+check "C5 one workspace close of the worker's workspace, zero tab close" 'hascall "workspace\tclose\t%s" "$(wsid)" && never 0 0 1'
 check "C5 closed and folder lines" 'hasline "closed\tworker-t004" && hasline "folder\t%s\tready to remove" "$(wt)"'
 
 mk; states done
@@ -665,7 +665,7 @@ for k in agent:'{}' agent:'not json' tab:'{}' tab:'not json'; do
   STUB_LIST_JUNK="${k%%:*} list" STUB_JUNK_BODY="${k#*:}" run bash "$script" close T004
   check "C8 ${k%%:*} list answers ${k#*:} after the close: exit 1" '[ $rc = 1 ]'
   check "C8 ${k%%:*} list answers ${k#*:} after the close: one cannot-read line" '[ "$out" = "close left ${k%%:*} worker-t004: cannot read the list" ]'
-  check "C8 ${k%%:*} list answers ${k#*:} after the close: one tab close" 'hascall "tab\tclose\t%s" "$(tabid)" && never 1 0'
+  check "C8 ${k%%:*} list answers ${k#*:} after the close: one workspace close, zero tab close" 'hascall "workspace\tclose\t%s" "$(wsid)" && never 0 0 1'
 done
 
 mk; states done
@@ -684,7 +684,7 @@ git -C "$repo" remote set-url origin https://gitlab.com/stub/stub.git
 STUB_GH_FAIL=1 run bash "$script" close T004
 git -C "$repo" remote set-url origin https://github.com/stub/stub.git
 check "C11 no GitHub remote: exit 0" '[ $rc = 0 ]'
-check "C11 no GitHub remote: closed and folder lines, one tab close" 'hasline "closed\tworker-t004" && hasline "folder\t%s\tready to remove" "$(wt)" && hascall "tab\tclose\t%s" "$(tabid)" && never 1 0'
+check "C11 no GitHub remote: closed and folder lines, one workspace close, zero tab close" 'hasline "closed\tworker-t004" && hasline "folder\t%s\tready to remove" "$(wt)" && hascall "workspace\tclose\t%s" "$(wsid)" && never 0 0 1'
 check "C11 no GitHub remote: no gh call" '[ ! -s "$tmp/gh_calls" ]'
 
 mk; states done
@@ -696,11 +696,11 @@ check "C12 the symlink refuse line, no closed line, no workspace close" '[ "$out
 check "C12 the symlink target keeps git-guard.json" '[ -e "$tmp/guard-target/git-guard.json" ]'
 
 mk; states done
-addtab "w1P:t9" worker-t005 w1P
+addtab "$(wsid):t9" worker-t005 "$(wsid)"
 run bash "$script" close T004
 check "C13 exit 0" '[ $rc = 0 ]'
-check "C13 one tab close, on worker-t004's tab" 'hascall "tab\tclose\t%s" "$(tabid)" && [ "$(cnt "^tab\tclose\t")" = 1 ] && never 1 0'
-check "C13 worker-t005 and the orchestrator tab are still in tab list" 'jq -e "any(.[]; .label == \"worker-t005\") and any(.[]; .label == \"orchestrator\")" "$tmp/tabs.json" >/dev/null'
+check "C13 one tab close, on worker-t004's tab, zero workspace close" 'hascall "tab\tclose\t%s" "$(tabid)" && [ "$(cnt "^tab\tclose\t")" = 1 ] && never 1 0'
+check "C13 worker-t005 is still in tab list, the workspace is not closed" 'jq -e "any(.[]; .label == \"worker-t005\")" "$tmp/tabs.json" >/dev/null && ! hascall "workspace\tclose\t%s" "$(wsid)"'
 
 fresh
 addtab "w1P:t7" worker-t004 w1P
@@ -709,9 +709,32 @@ run bash "$script" close T004
 check "C16 exit 1, the more-than-one line, no tab close" '[ $rc = 1 ] && [ "$out" = "More than one tab is labelled worker-t004." ] && never 0 0'
 
 mk; states done
-jq -c 'map(if .workspace_id == "w1P" then .label = "st-workers" else . end)' "$tmp/ws.json" > "$tmp/ws.new" && mv "$tmp/ws.new" "$tmp/ws.json"
+w=$(wsid)
+addtab "$w:t8" Codex "$w"
+jq -c --arg w "$w" '. + [{name:"st-codex-worker-t004",pane_id:($w+":p8"),workspace_id:$w,agent_status:"idle"}]' "$tmp/agents.json" > "$tmp/agents.new" && mv "$tmp/agents.new" "$tmp/agents.json"
 run bash "$script" close T004
-check "C18 exit 0, one tab close, zero workspace close (a local close never closes a workspace)" '[ $rc = 0 ] && hascall "tab\tclose\t%s" "$(tabid)" && never 1 0'
+check "CW1 exit 0" '[ $rc = 0 ]'
+check "CW1 one workspace close of the worker's workspace, zero tab close" 'hascall "workspace\tclose\t%s" "$w" && never 0 0 1'
+check "CW1 the workspace, both tabs and the Codex agent are gone" '! jq -e --arg w "$w" "any(.[]; .workspace_id == \$w)" "$tmp/ws.json" >/dev/null && ! jq -e --arg w "$w" "any(.[]; .workspace_id == \$w)" "$tmp/tabs.json" >/dev/null && ! jq -e "any(.[]; .name == \"st-codex-worker-t004\")" "$tmp/agents.json" >/dev/null'
+check "CW1 closed and folder lines, the folder still exists" 'hasline "closed\tworker-t004" && hasline "folder\t%s\tready to remove" "$(wt)" && [ -d "$(wt)" ]'
+
+mk; states done
+t=$(tabid); w=$(wsid)
+jq -c --arg t "$t" 'map(if .tab_id == $t then .workspace_id = "w1P" else . end)' "$tmp/tabs.json" > "$tmp/tabs.new" && mv "$tmp/tabs.new" "$tmp/tabs.json"
+jq -c --arg t "$t" 'map(if .tab_id == $t then .workspace_id = "w1P" else . end)' "$tmp/panes.json" > "$tmp/panes.new" && mv "$tmp/panes.new" "$tmp/panes.json"
+jq -c 'map(if .name == "worker-t004" then .workspace_id = "w1P" else . end)' "$tmp/agents.json" > "$tmp/agents.new" && mv "$tmp/agents.new" "$tmp/agents.json"
+run bash "$script" close T004
+check "CW2 old layout exit 0" '[ $rc = 0 ]'
+check "CW2 old layout: one tab close on the worker tab, zero workspace close" 'hascall "tab\tclose\t%s" "$t" && never 1 0'
+check "CW2 old layout: w1P and its orchestrator tab stay" 'jq -e "any(.[]; .workspace_id == \"w1P\")" "$tmp/ws.json" >/dev/null && jq -e "any(.[]; .label == \"orchestrator\")" "$tmp/tabs.json" >/dev/null'
+
+cw3() {
+  mk; states done
+  HWS=$(wsid) run bash "$1" close T004
+  check "CW3 exit 0" '[ $rc = 0 ]'
+  check "CW3 the worker's workspace is the caller's workspace: one tab close, zero workspace close" 'hascall "tab\tclose\t%s" "$(tabid)" && never 1 0'
+}
+cw3 "$script"
 
 fresh
 x=$(rnd)
@@ -913,32 +936,34 @@ r9() {
   states done
   rrun bash "$1" close T004 --machine laptop
   check "R9 exit 0" '[ $rc = 0 ]'
-  check "R9 one tab close on the worker tab, zero workspace close, the main checkout tab stays, --machine rule" 'rcall "tab\tclose\t%s" "$(tabid)" && rnever 1 0 && jq -e "any(.[]; .tab_id == \"stubMainWS:t1\")" "$tmp/tabs.json" >/dev/null'
+  check "R9 one workspace close of the worker's workspace, zero tab close, the main checkout tab stays, --machine rule" 'rcall "workspace\tclose\t%s" "$(wsid)" && rnever 0 0 1 && jq -e "any(.[]; .tab_id == \"stubMainWS:t1\")" "$tmp/tabs.json" >/dev/null'
   check "R9 closed and folder lines" 'hasline "closed\tworker-t004" && hasline "folder\t%s\tready to remove" "$(wt)"'
   check "R9b ssh rm -f of the quoted git-guard.json path" 'sshs | grep -qF -- "rm -f $(wt)/.stratum/git-guard.json"'
   check "R9c ssh tests .stratum is not a symlink before the rm" 'c=$(sshs); t=${c%%rm -f *}; [ "$t" != "$c" ] && [[ $t == *"[ ! -L $(wt)/.stratum ]"* ]]'
 }
 r9 "$script"
 
-rfresh; STUB_NO_MAIN_WS=1 rrun bash "$script" start "${rsargs[@]}"
-reset; states done
-STUB_NO_MAIN_WS=1 rrun bash "$script" close T004 --machine laptop
+rmk; states done
+rrun bash "$script" close T004 --machine laptop
 check "C14 exit 0" '[ $rc = 0 ]'
-check "C14 one tab close, then one workspace close of the st-workers workspace, no --group" 'rcall "tab\tclose\t%s" "$(tabid)" && rcall "workspace\tclose\t%s" "$(wsid)" && rnever 1 0 1'
+check "C14 one workspace close of the worker's workspace, zero tab close, no --group" 'rcall "workspace\tclose\t%s" "$(wsid)" && rnever 0 0 1'
 check "C14 closed and folder lines" 'hasline "closed\tworker-t004" && hasline "folder\t%s\tready to remove" "$(wt)"'
 
-rfresh; STUB_NO_MAIN_WS=1 rrun bash "$script" start "${rsargs[@]}"
-jq -c 'map(select(.label != "1"))' "$tmp/tabs.json" > "$tmp/tabs.new" && mv "$tmp/tabs.new" "$tmp/tabs.json"
-reset; states done
-STUB_NO_MAIN_WS=1 STUB_TABCLOSE_WS=1 rrun bash "$script" close T004 --machine laptop
+rmk; states done
+addtab "$(wsid):t9" notes "$(wsid)"
+rrun bash "$script" close T004 --machine laptop
 check "C15 exit 0, one tab close, zero workspace close, closed and folder lines" '[ $rc = 0 ] && rcall "tab\tclose\t%s" "$(tabid)" && rnever 1 0 && hasline "closed\tworker-t004" && hasline "folder\t%s\tready to remove" "$(wt)"'
 
-rfresh; STUB_NO_MAIN_WS=1 rrun bash "$script" start T005 --task "$task" --test "$testcmd" --lane "$lane" --roster "$rroster" --machine laptop --repo '~/proj'
-STUB_NO_MAIN_WS=1 rrun bash "$script" start "${rsargs[@]}"
+rfresh; rrun bash "$script" start T005 --task "$task" --test "$testcmd" --lane "$lane" --roster "$rroster" --machine laptop --repo '~/proj'
+rrun bash "$script" start "${rsargs[@]}"
 reset; states done
-STUB_NO_MAIN_WS=1 rrun bash "$script" close T004 --machine laptop
-check "C17 exit 0, one tab close on worker-t004's tab, zero workspace close" '[ $rc = 0 ] && rcall "tab\tclose\t%s" "$(tabid)" && rnever 1 0'
+rrun bash "$script" close T004 --machine laptop
+check "C17 exit 0, one workspace close of worker-t004's workspace, zero tab close" '[ $rc = 0 ] && rcall "workspace\tclose\t%s" "$(wsid)" && rnever 0 0 1'
 check "C17 worker-t005 still in tab list" 'jq -e "any(.[]; .label == \"worker-t005\")" "$tmp/tabs.json" >/dev/null'
+
+rmk; states done
+HWS=$(wsid) rrun bash "$script" close T004 --machine laptop
+check "CW4 --machine close with the caller's workspace id equal to the worker's: exit 0, the workspace is still closed" '[ $rc = 0 ] && rcall "workspace\tclose\t%s" "$(wsid)" && rnever 0 0 1'
 
 rmk; states blocked working
 rrun bash "$script" answer T004 --machine laptop --keys 1
@@ -1180,8 +1205,9 @@ sed -E '/H\+=\(--machine/d' "$script" > "$tmp/NC1.sh" 2>/dev/null
 check "NC1 sed deletes exactly one line" '[ "$(diff "$script" "$tmp/NC1.sh" | grep -c "^<")" = 1 ]'
 nc NC1 r1
 
-sed -E '/h tab close "\$TAB"/a h workspace close "$WS"' "$script" > "$tmp/NC8.sh" 2>/dev/null
-nc NC8 r9
+sed -E 's/"?\$WS"? != "?\$\{HERDR_WORKSPACE_ID(:-)?\}"?/true/' "$script" > "$tmp/NC8.sh" 2>/dev/null
+check "NC8 sed changes exactly one line" '[ "$(diff "$script" "$tmp/NC8.sh" | grep -c "^<")" = 1 ]'
+nc NC8 cw3
 
 sed -E 's/ worktree remove / worktree noop /; s/ branch -D / branch noop /' "$script" > "$tmp/NC9.sh" 2>/dev/null
 nc NC9 s13

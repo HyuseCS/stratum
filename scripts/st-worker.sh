@@ -513,16 +513,13 @@ close)
     rm -f "$WT/.stratum/git-guard.json" || fail "Worker $N: cannot remove .stratum/git-guard.json. Close refused."
     rm -rf "$WT/.stratum/approve" || fail "Worker $N: cannot remove .stratum/approve. Close refused."
   fi
-  h tab close "$TAB"
-  if [ -n "$m" ]; then
-    h workspace list
-    if jq -e --arg w "$WS" 'any(.result.workspaces[]; .workspace_id == $w and .label == "st-workers")' <<<"$r" >/dev/null 2>&1; then
-      h tab list --workspace "$WS"
-      c=0
-      jq -e 'any(.result.tabs[]; .label | strings | startswith("worker-"))' <<<"$r" >/dev/null 2>&1 || c=$?
-      [ $c != 1 ] || h workspace close "$WS"
-      [ $c -le 1 ] || stop "no .result.tabs in the herdr answer"
-    fi
+  h tab list --workspace "$WS"
+  # ponytail: Codex is the label scripts/st-codex-agent.sh sets, match its tab id from the codex-tabs record if that label changes
+  if jq -e --arg n "$N" 'all(.result.tabs[]; .label == $n or .label == "Codex")' <<<"$r" >/dev/null 2>&1 &&
+    { [ -n "$m" ] || [ "$WS" != "${HERDR_WORKSPACE_ID:-}" ]; }; then
+    h workspace close "$WS"
+  else
+    h tab close "$TAB"
   fi
   for k in agent:name tab:label; do
     h "${k%:*}" list
