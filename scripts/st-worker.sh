@@ -538,6 +538,8 @@ list)
   x=$(jq -er '[.result.tabs[] | select(.label | strings | startswith("worker-")) | "\(.tab_id)\t\(.workspace_id)\t\(.label)"] | join("\n")' <<<"$r") || stop "no .result.tabs in the herdr answer"
   h agent list
   ag=$r
+  h workspace list
+  ws=$r
   n=0
   while IFS=$'\t' read -r -u 3 tb w l; do
     [ -n "$tb" ] || continue
@@ -555,7 +557,8 @@ list)
         if question; then a=${a%$'\t'*}$'\tblocked'; elif unsent; then a=${a%$'\t'*}$'\tunsent'; fi
         ;;
     esac
-    printf 'found\t%s\t%s\t%s\t%s\t%s\n' "$l" "${m:-local}" "$tb" "$a" "$p"
+    s=$(jq -r --arg w "$w" 'first(.result.workspaces[] | select(.workspace_id == $w) | .label | strings | gsub("[[:cntrl:]]"; " ")) // "-"' <<<"$ws")
+    printf 'found\t%s\t%s\t%s\t%s\t%s\t%s\n' "$l" "${m:-local}" "$tb" "$a" "$p" "$s"
     n=$((n + 1))
   done 3<<<"$x"
   [ "$n" != 0 ] || echo "no workers on ${m:-local}"

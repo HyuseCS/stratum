@@ -763,16 +763,21 @@ jq -nc --arg x "$x" '[{tab_id:("stubA"+$x+":t1"),label:"worker-t004",workspace_i
 jq -nc --arg x "$x" '[{pane_id:("stubA"+$x+":p1"),tab_id:("stubA"+$x+":t1"),workspace_id:("stubA"+$x),cwd:("/stub/a"+$x)},{pane_id:("stubB"+$x+":p1"),tab_id:("stubB"+$x+":t1"),workspace_id:("stubB"+$x),cwd:("/stub/b"+$x)},{pane_id:("stubC"+$x+":p1"),tab_id:("stubC"+$x+":t1"),workspace_id:("stubC"+$x),cwd:("/stub/c"+$x)}]' > "$tmp/panes.json"
 jq -nc --arg x "$x" '[{path:("/stub/a"+$x),branch:"worker-t004"},{path:("/stub/b"+$x),branch:"worker-t005"},{path:("/stub/c"+$x),branch:"notaworker"}]' > "$tmp/wt.json"
 jq -nc --arg x "$x" '[{name:"worker-t004",pane_id:("stubA"+$x+":p1"),workspace_id:("stubA"+$x),agent_status:"blocked"},{name:"other-agent",pane_id:("stubC"+$x+":p1"),workspace_id:("stubC"+$x),agent_status:"idle"}]' > "$tmp/agents.json"
+jq -c --arg x "$x" '. + [{workspace_id:("stubA"+$x),label:"orchestrator / T004: x"}]' "$tmp/ws.json" > "$tmp/ws.new" && mv "$tmp/ws.new" "$tmp/ws.json"
 run bash "$script" list
 check "L1 exit 0" '[ $rc = 0 ]'
-check "L1 two found lines, states from the stub" '[ "$(grep -cP "^found\t" <<<"$out")" = 2 ] && hasline "found\tworker-t004\tlocal\tstubA%s:t1\tstubA%s:p1\tblocked\t/stub/a%s" "$x" "$x" "$x" && hasline "found\tworker-t005\tlocal\tstubB%s:t1\t-\tgone\t/stub/b%s" "$x" "$x"'
+check "L1 two found lines, states from the stub" '[ "$(grep -cP "^found\t" <<<"$out")" = 2 ] && hasline "found\tworker-t004\tlocal\tstubA%s:t1\tstubA%s:p1\tblocked\t/stub/a%s\torchestrator / T004: x" "$x" "$x" "$x" && hasline "found\tworker-t005\tlocal\tstubB%s:t1\t-\tgone\t/stub/b%s\t-" "$x" "$x"'
 check "L1 the other workspace is absent" '! grep -q notaworker <<<"$out" && ! grep -q "stubC" <<<"$out"'
 check "L1 never-list, no prompt, no close" 'never 0 0'
 jq '.[0].agent_status = "idle"' "$tmp/agents.json" > "$tmp/a.new" && mv "$tmp/a.new" "$tmp/agents.json"
 unsentpane > "$tmp/pane.txt"; run bash "$script" list
-check "L2 idle worker with the prompt in the box shows unsent" '[ $rc = 0 ] && hasline "found\tworker-t004\tlocal\tstubA%s:t1\tstubA%s:p1\tunsent\t/stub/a%s" "$x" "$x" "$x"'
+check "L2 idle worker with the prompt in the box shows unsent" '[ $rc = 0 ] && hasline "found\tworker-t004\tlocal\tstubA%s:t1\tstubA%s:p1\tunsent\t/stub/a%s\torchestrator / T004: x" "$x" "$x" "$x"'
 dialogpane > "$tmp/pane.txt"; run bash "$script" list
-check "L2 idle worker with an open question shows blocked" '[ $rc = 0 ] && hasline "found\tworker-t004\tlocal\tstubA%s:t1\tstubA%s:p1\tblocked\t/stub/a%s" "$x" "$x" "$x"'
+check "L2 idle worker with an open question shows blocked" '[ $rc = 0 ] && hasline "found\tworker-t004\tlocal\tstubA%s:t1\tstubA%s:p1\tblocked\t/stub/a%s\torchestrator / T004: x" "$x" "$x" "$x"'
+
+jq -c --arg x "$x" --arg l $'orch\tx' 'map(if .workspace_id == ("stubA"+$x) then .label = $l else . end)' "$tmp/ws.json" > "$tmp/ws.new" && mv "$tmp/ws.new" "$tmp/ws.json"
+run bash "$script" list
+check "L3 a TAB in the workspace label is printed as a space, the worker line keeps 8 fields" '[ $rc = 0 ] && hasline "found\tworker-t004\tlocal\tstubA%s:t1\tstubA%s:p1\tblocked\t/stub/a%s\torch x" "$x" "$x" "$x" && [ "$(grep -P "^found\tworker-t004\t" <<<"$out" | awk -F"\t" "{print NF}")" = 8 ]'
 
 sendlog() { grep -P '^(agent\t(get|send-keys|wait)|pane\tsend-text)\t' "$tmp/calls"; }
 a1() {
@@ -1002,9 +1007,10 @@ jq -nc --arg x "$x" '[{tab_id:("stubA"+$x+":t1"),label:"worker-t004",workspace_i
 jq -nc --arg x "$x" '[{pane_id:("stubA"+$x+":p1"),tab_id:("stubA"+$x+":t1"),workspace_id:("stubA"+$x),cwd:("/stub/a"+$x)},{pane_id:("stubB"+$x+":p1"),tab_id:("stubB"+$x+":t1"),workspace_id:("stubB"+$x),cwd:("/stub/b"+$x)},{pane_id:("stubC"+$x+":p1"),tab_id:("stubC"+$x+":t1"),workspace_id:("stubC"+$x),cwd:("/stub/c"+$x)}]' > "$tmp/panes.json"
 jq -nc --arg x "$x" '[{path:("/stub/a"+$x),branch:"worker-t004"},{path:("/stub/b"+$x),branch:"worker-t005"},{path:("/stub/c"+$x),branch:"notaworker"}]' > "$tmp/wt.json"
 jq -nc --arg x "$x" '[{name:"worker-t004",pane_id:("stubA"+$x+":p1"),workspace_id:("stubA"+$x),agent_status:"blocked"}]' > "$tmp/agents.json"
+jq -c --arg x "$x" '. + [{workspace_id:("stubA"+$x),label:"orchestrator / T004: x"}]' "$tmp/ws.json" > "$tmp/ws.new" && mv "$tmp/ws.new" "$tmp/ws.json"
 rrun bash "$script" list --machine laptop
 check "R12 exit 0" '[ $rc = 0 ]'
-check "R12 found lines name laptop, the other tab is absent" '[ "$(grep -cP "^found\t" <<<"$out")" = 2 ] && hasline "found\tworker-t004\tlaptop\tstubA%s:t1\tstubA%s:p1\tblocked\t/stub/a%s" "$x" "$x" "$x" && hasline "found\tworker-t005\tlaptop\tstubB%s:t1\t-\tgone\t/stub/b%s" "$x" "$x" && ! grep -q notaworker <<<"$out"'
+check "R12 found lines name laptop, the other tab is absent" '[ "$(grep -cP "^found\t" <<<"$out")" = 2 ] && hasline "found\tworker-t004\tlaptop\tstubA%s:t1\tstubA%s:p1\tblocked\t/stub/a%s\torchestrator / T004: x" "$x" "$x" "$x" && hasline "found\tworker-t005\tlaptop\tstubB%s:t1\t-\tgone\t/stub/b%s\t-" "$x" "$x" && ! grep -q notaworker <<<"$out"'
 check "R12 --machine rule, never-list" 'rnever 0 0'
 
 rfresh; rrun bash "$script" start "${rsargs[@]}"

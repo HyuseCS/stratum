@@ -65,8 +65,8 @@ Line numbers below are from commit `2471ee0`. They move as tasks land: find the 
 
 **Independent Test**: T010 cases pass.
 
-- [ ] T010 [US5] List tests in tests/test_st_worker.sh, red until T011. L1: add `ws.json` entries `stubA<x>` with label `orchestrator / T004: x` and none for `stubB<x>`; expect `...\t/stub/a<x>\torchestrator / T004: x` and `...\t/stub/b<x>\t-`. L2 lines gain the same last field. R12 lines gain the last field on the machine. Add L3: a label with a TAB in it is printed with a space there. Test: bash tests/test_st_worker.sh.
-- [ ] T011 [US5] Build list in scripts/st-worker.sh (lines 540-565): one `h workspace list` before the loop, kept in its own variable; each `found` line gets `first(.result.workspaces[] | select(.workspace_id == $w) | .label | strings | gsub("[[:cntrl:]]"; " ")) // "-"` as the last field. Test: bash tests/test_st_worker.sh.
+- [X] T010 [US5] List tests in tests/test_st_worker.sh, red until T011. L1: add `ws.json` entries `stubA<x>` with label `orchestrator / T004: x` and none for `stubB<x>`; expect `...\t/stub/a<x>\torchestrator / T004: x` and `...\t/stub/b<x>\t-`. L2 lines gain the same last field. R12 lines gain the last field on the machine. Add L3: a label with a TAB in it is printed with a space there. Test: bash tests/test_st_worker.sh.
+- [X] T011 [US5] Build list in scripts/st-worker.sh (lines 540-565): one `h workspace list` before the loop, kept in its own variable; each `found` line gets `first(.result.workspaces[] | select(.workspace_id == $w) | .label | strings | gsub("[[:cntrl:]]"; " ")) // "-"` as the last field. Test: bash tests/test_st_worker.sh.
 
 ---
 
