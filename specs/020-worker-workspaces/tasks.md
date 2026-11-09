@@ -18,7 +18,7 @@ Line numbers below are from commit `2471ee0`. They move as tasks land: find the 
 
 ## Phase 1: Setup
 
-- [ ] T001 Stub rework in tests/test_st_worker.sh. In the herdr stub: `workspace create` also writes `$T/tc.json` in the `tab create` shape, `{result:{tab:{tab_id,workspace_id},root_pane:{pane_id,cwd}}}` with `cwd` = the `--cwd` value (pipe its answer through `tee "$T/tc.json"`, as `tab create` does). Add a `"tab rename")` case: set `.label` of tab `$3` to `$4` in `tabs.json`, answer `{"result":{}}`. Add one self-check right after the stub is made (call the stub directly with `STUB_T` set): after `workspace create --cwd /x --label L --no-focus` and `tab rename <its tab> worker-z`, `tc.json` has `root_pane.cwd == "/x"` and `tabs.json` has a tab `worker-z` in the new workspace. All current cases still pass (start still uses `tab create`). Test: bash tests/test_st_worker.sh.
+- [X] T001 Stub rework in tests/test_st_worker.sh. In the herdr stub: `workspace create` also writes `$T/tc.json` in the `tab create` shape, `{result:{tab:{tab_id,workspace_id},root_pane:{pane_id,cwd}}}` with `cwd` = the `--cwd` value (pipe its answer through `tee "$T/tc.json"`, as `tab create` does). Add a `"tab rename")` case: set `.label` of tab `$3` to `$4` in `tabs.json`, answer `{"result":{}}`. Add one self-check right after the stub is made (call the stub directly with `STUB_T` set): after `workspace create --cwd /x --label L --no-focus` and `tab rename <its tab> worker-z`, `tc.json` has `root_pane.cwd == "/x"` and `tabs.json` has a tab `worker-z` in the new workspace. All current cases still pass (start still uses `tab create`). Test: bash tests/test_st_worker.sh.
 
 ---
 

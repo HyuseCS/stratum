@@ -40,7 +40,7 @@ case "$1 $2" in
   upd ws.json --arg w "$w" --arg l "$l" '. + [{workspace_id:$w,label:$l}]'
   upd tabs.json --arg w "$w" --arg t "$t" '. + [{tab_id:$t,label:"1",workspace_id:$w}]'
   upd panes.json --arg w "$w" --arg t "$t" --arg p "$rp" --arg c "$c" '. + [{pane_id:$p,tab_id:$t,workspace_id:$w,cwd:$c}]'
-  jq -nc --arg w "$w" --arg t "$t" --arg p "$rp" '{result:{type:"workspace_created",workspace:{workspace_id:$w},tab:{tab_id:$t},root_pane:{pane_id:$p}}}' ;;
+  jq -nc --arg w "$w" --arg t "$t" --arg p "$rp" --arg c "$c" '{result:{type:"workspace_created",workspace:{workspace_id:$w},tab:{tab_id:$t,workspace_id:$w},root_pane:{pane_id:$p,cwd:$c}}}' | tee "$T/tc.json" ;;
 "machine list")
   case "${STUB_ML:-}" in fail) exit 1 ;; junk) echo 'not json'; exit 0 ;; esac
   printf '%s\n' '[{"id":"stubid0001","label":"laptop","target":"u@stubhost","session":"default","enabled":true,"selected":false}]' ;;
@@ -77,6 +77,9 @@ case "$1 $2" in
   upd tabs.json --arg w "$w" --arg t "$t" --arg l "$l" '. + [{tab_id:$t,label:$l,workspace_id:$w}]'
   upd panes.json --arg w "$w" --arg t "$t" --arg p "$rp" --arg c "$c" '. + [{pane_id:$p,tab_id:$t,workspace_id:$w,cwd:$c}]'
   jq -nc --arg w "$w" --arg t "$t" --arg l "$l" --arg p "$rp" --arg c "$c" '{result:{type:"tab_created",tab:{tab_id:$t,workspace_id:$w,label:$l},root_pane:{pane_id:$p,cwd:$c}}}' | tee "$T/tc.json" ;;
+"tab rename")
+  upd tabs.json --arg t "$3" --arg l "$4" 'map(if .tab_id == $t then .label = $l else . end)'
+  echo '{"result":{}}' ;;
 "tab list")
   w=; while [ $# -gt 0 ]; do case "$1" in --workspace) w=$2 ;; esac; shift; done
   jq -c --arg w "$w" '{result:{tabs:(if $w == "" then . else map(select(.workspace_id == $w)) end)}}' "$T/tabs.json" ;;
@@ -176,6 +179,10 @@ exec "$@"
 EOF
 chmod +x "$tmp/bin/herdr" "$tmp/bin/ssh" "$tmp/bin/git" "$tmp/bin/sleep" "$tmp/bin/timeout"
 export STUB_T="$tmp" STUB_REAL_GIT="$(command -v git)"
+sc="$tmp/stubcheck"; mkdir -p "$sc"; : > "$sc/x"; for f in ws tabs panes; do echo '[]' > "$sc/$f.json"; done
+STUB_T=$sc "$tmp/bin/herdr" workspace create --cwd /x --label L --no-focus > /dev/null
+STUB_T=$sc "$tmp/bin/herdr" tab rename "$(jq -r .result.tab.tab_id "$sc/tc.json" 2>/dev/null)" worker-z > /dev/null
+check "STUB workspace create writes tc.json with root_pane.cwd /x, tab rename sets worker-z on a tab in the new workspace" '[ "$(jq -r .result.root_pane.cwd "$sc/tc.json" 2>/dev/null)" = /x ] && jq -e --slurpfile c "$sc/tc.json" "any(.[]; .label == \"worker-z\" and .workspace_id == \$c[0].result.workspace.workspace_id)" "$sc/tabs.json" > /dev/null'
 
 cat > "$tmp/bin/claude" <<'EOF'
 #!/usr/bin/env bash
