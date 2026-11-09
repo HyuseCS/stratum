@@ -10,3 +10,10 @@ summary: Simplify task ownership and consolidate repeated verification. Findings
 ## plan | 2026-10-31T07:57:47Z | sha256 5bbc28c43ea73b0d6fee68fdc0841d087e1f06b8b2d1114bed15eae82f330cbf | REVISE
 summary: Simplify the task breakdown to reduce repeated edits and handoffs. Review limited to implementation approach; no correctness, coverage or risk checks performed.
 - [MEDIUM] specs/010-workflow-overhaul/tasks.md:706: Group the post-MVP instruction edits by owned files instead of repeatedly handing the same files between story tasks. Evidence: The plan explicitly identifies a serial text-edit chain through T015, T038, T039, T020, T022, T033 and T043. Several tasks repeatedly edit skills/st-build/SKILL.md and skills/st/SKILL.md and rerun overlapping checks. Keep T006/T007 for the early MVP, then consolidate the remaining edits into file-owned integration tasks, retaining the story-specific assertions. This reduces handoffs and intermediate states without cutting requirements.
+
+## change | 2026-11-09T09:45:20Z | sha256 713d2972d0340b6e9cf9d30a2f91f39cf62b9cafaa714242c70796b1beb58af7 | REVISE
+summary: The change is small and targeted, but the proposed path extraction still reports some staging operations as repo writes.
+- [MEDIUM] specs/010-workflow-overhaul/changes/002-repo-writes-check.md:27: Normalize untracked directories before comparing paths, and add a staging regression case for them. Evidence: The proposed git status --porcelain | cut -c4- retains Git's default collapsed untracked-directory entries. Before staging, a new directory can appear as ?? newdir/; after another process stages its contents, it appears as A  newdir/file.txt. The proposed comparison treats that file as a new path and fails despite no filesystem write. The harness only stages a top-level untracked file, so it misses this case. Enumerating all untracked files in both snapshots would address this mismatch.
+
+## diff | 2026-11-09T11:37:18Z | /advisor
+summary: /advisor on #95 diff: no hidden regression; asked for a clean-repo check (done: ok clean, FAIL on a write during the run)
