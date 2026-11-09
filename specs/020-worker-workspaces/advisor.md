@@ -1,0 +1,2 @@
+## plan | 2026-11-09T14:32:51Z | sha256 550dfbd47405f5bf0ea41fe4112a86730f1033858d62e19798ae890e16c8ff07 | APPROVED
+summary: The plan is appropriately scoped: it unifies local and saved-machine startup, reuses the default workspace tab, preserves existing worker lookup, and combines related implementation work. No material simplification or task consolidation is needed. Correctness, coverage, and risks were outside this review.
