@@ -125,15 +125,53 @@ after=$(snap) || die "BLOCKED: cannot read git status in $root" 4
   ended
 }
 
-out=$(herdr agent read "$name" --source recent-unwrapped --lines 400 2>&1) || ended
-python3 -I -c '
-import sys
-n, af = sys.argv[1:]
-ls = [l.rstrip().lstrip("• ") for l in sys.stdin.read().split("\n")]
-e = max((i for i, l in enumerate(ls) if l == "ST-ADVISOR-END-" + n), default=-1)
-b = max((i for i, l in enumerate(ls[:e]) if l == "ST-ADVISOR-BEGIN-" + n), default=-1) if e > 0 else -1
-if b < 0:
-    sys.exit(1)
-with open(af, "w", encoding="utf-8") as f:
-    f.write(" ".join(ls[b + 1:e]))' "$nonce" "$af" <<<"$out" || die "BLOCKED: no answer between the markers" 4
-echo "codex: tab $name"
+# ponytail: fixed 15 tries for the log to show the answer, raise it if quickstart L3 measures a longer lag
+for _ in {1..15}; do
+  python3 -I -c '
+import glob, json, os, sys
+root, pf, n, af = sys.argv[1:]
+t0 = os.stat(pf).st_mtime_ns
+ask = "Read the review request in " + pf + " and follow it."
+best = None
+stop = False
+for p in glob.glob(os.path.join(glob.escape(root), "**", "rollout-*.jsonl"), recursive=True):
+    asked = False
+    try:
+        if os.stat(p).st_mtime_ns < t0:
+            continue
+        with open(p, encoding="utf-8", errors="replace") as f:
+            for l in f:
+                try:
+                    d = json.loads(l)
+                except (ValueError, RecursionError):
+                    continue
+                q = d.get("payload") if isinstance(d, dict) else None
+                if not isinstance(q, dict):
+                    continue
+                m = q.get("last_agent_message")
+                if d.get("type") == "event_msg" and q.get("type") == "task_complete" and isinstance(m, str):
+                    ls = m.split("\n")
+                    k = [x.rstrip(" \r") for x in ls]
+                    e = max((i for i, x in enumerate(k) if x == "ST-ADVISOR-END-" + n), default=-1)
+                    b = max((i for i, x in enumerate(k[:e]) if x == "ST-ADVISOR-BEGIN-" + n), default=-1) if e > 0 else -1
+                    ts = d.get("timestamp") if isinstance(d.get("timestamp"), str) else ""
+                    if b >= 0 and (best is None or ts >= best[0]):
+                        best = (ts, "\n".join(ls[b + 1:e]))
+                elif d.get("type") == "response_item" and q.get("type") == "message" and q.get("role") == "user" and isinstance(q.get("content"), list):
+                    asked = asked or any(isinstance(c, dict) and isinstance(c.get("text"), str) and ask in c["text"] for c in q["content"])
+                elif asked and d.get("type") == "event_msg" and q.get("type") == "turn_aborted":
+                    stop = True
+    except OSError:
+        continue
+if best:
+    with open(af, "w", encoding="utf-8", newline="") as f:
+        f.write(best[1])
+    sys.exit(0)
+sys.exit(2 if stop else 1)' "${CODEX_HOME:-$HOME/.codex}/sessions" "$pf" "$nonce" "$af"
+  case $? in
+    0) echo "codex: tab $name"; exit 0 ;;
+    2) die "BLOCKED: the review was stopped in the Codex tab" 4 ;;
+  esac
+  sleep 1
+done
+die "codex: no session log" 6
