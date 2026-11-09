@@ -119,3 +119,76 @@ Scratch file outside the project: the `strings` dump of the Claude binary was wr
 - WebFetch https://raw.githubusercontent.com/anthropics/claude-code/main/CHANGELOG.md (three prompts, first 100 000 chars)
 - WebFetch https://developers.openai.com/codex/cli/features (308 redirect, not followed)
 - WebSearch x5 (PreToolUse ask and PermissionRequest issues, changelog, Codex rollout format, Codex session path, Codex rollout source)
+
+## Decisions
+
+Added by st-plan on 2026-11-09. Facts in this section that are not in Round 1 have their source on the line.
+
+### P1. Where the dialog block starts and ends (FR-001, FR-002, US1)
+
+- Fact (live probe, 2026-11-09, `claude` 2.1.319, `--permission-mode default --model haiku`, in a temporary herdr tab, read with `herdr agent read --source recent-unwrapped --lines 40` and the ANSI strip of `scripts/st-worker.sh:170`): a Bash permission dialog is drawn as below. Line kinds were checked by code point.
+  ```text
+  ❯ Run this exact Bash command and nothing else: touch …/p.txt          (transcript)
+    ⎿  $ touch …/p.txt                                                    (transcript)
+                                                                          (blank)
+  ─────────────────────────────────── (161 x U+2500, nothing else)      top rule
+   Bash command                                                           title
+   Tip: auto mode handles these prompts for you — choose "switch to auto mode" below
+   Create empty file p.txt at the given scratchpad path                   description
+  ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ (161 x U+254C)
+   │ touch …/p.txt                                                        command, prefixed "│ "
+  ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ (161 x U+254C)
+   Do you want to proceed?                                                HEAD
+   ❯ 1. Yes
+     2. Yes, and always allow access to …/probe from this project
+     3. Yes, and switch to auto mode · auto mode handles these prompts for you
+     4. No
+                                                                          (blank)
+   Esc to cancel · Tab to amend
+  ```
+- Fact (`strings /opt/claude-code/bin/claude`, 2.1.319): dialog titles are built at run time (`"Bash command"`, `` `Bash command (${cr})` ``, `"Run command"`, `` `${...?"Read":"Edit"} file` ``, `"Edit file"`, `"Edit notebook"`, `"Tool use"` and more). A list of titles would go stale.
+- Decision: the block starts at the nearest line above the HEAD line that holds only U+2500 characters (with optional spaces around them): the dialog's top rule. It ends at the last option line after HEAD, plus the lines right after it up to the first blank line. The HEAD and option rules of `answer` stay as they are (last 15 lines, exactly one HEAD).
+- Rationale: the rule line is the one line that marks the top of every dialog and is not text that the tool call controls. Command lines carry the `│ ` prefix, so a command cannot draw a line of only `─`. The title, the description and the command are inside the block, so a changed command changes the hash (US1 scenario 2). No rule line in the 40-line read means the top of the dialog is cut off: per D15 the whole-screen hash of today is kept, and `answer` may send only an allowed No (the cut-off No flow of 837282c), never a yes (scenario 3).
+- Fails closed: if a later Claude Code drops the rule line, every dialog falls to the cut-off mode: a yes goes to the user, a No still works with the whole-screen hash. The quickstart live check (step L2) shows it.
+- Alternatives considered: a list of title words (stale, see the fact above); a fixed number of lines above HEAD (cuts a long command or takes in transcript lines that change).
+- Probe side effects: one temporary herdr tab (`w4B:t5`, closed), one Haiku turn, the dialog cancelled with Esc, no file made. Claude Code saved the folder trust for the scratchpad folder `…/scratchpad/plan019/probe`.
+
+### P2. The approve hook already accepts Claude's standard heredoc commit (US2)
+
+- Fact (run on this checkout, `python3 -I` with `hooks/st-approve.py` loaded): for `git commit -m "$(cat <<'EOF'\nfeat: x\n\nbody line\nEOF\n)"`, `HEREDOC_MESSAGE.sub("", …)` gives `git commit -m ""` (`hooks/st-approve.py:40`), so `SUBSTITUTION` (`:41`) does not match at `:195`, and `split_commands` gives `heredoc=False` (the `<<` is inside the quoted word). `commit_check` sends this commit. `tests/test_approve_hook.py:87` (`OWN_COMMITS`) and `:424-433` assert it.
+- So D4's cause is true only for the other heredoc forms (`-F - <<'EOF'`, an unquoted `<<EOF` inside `$(...)`, a body with a `$(`) and for every `$(` or backtick message. Which form kept the 2026-11-08 dialogs in the pane is not recorded. The guard deny of D4 and D6 covers all of them, so the fix does not depend on it.
+- Consequence: with the guard deny, the `HEREDOC_MESSAGE` path in the approve hook is never reached in a Stratum session (the guard denies first, at PreToolUse). User decision D13 (`decisions.md`): delete `HEREDOC_MESSAGE`; both hooks call one shared check.
+
+### P3. How the guard finds a commit (FR-004, US2)
+
+- Decision: the guard denies when (a) at least one part of the command is a `git commit` and (b) the shared text test matches the whole command. (a) is true when `parse_git` returns `commit` for a segment, on the normal path or on the line-by-line fallback path. It is also true when the fallback path cannot parse a line (`"The git guard could not parse the command."`, `hooks/st-git-guard.py:339`) or cannot read a git command on it (`:343`) and that line holds the word `commit`.
+- Fact (run on this checkout, 2026-11-09): `git commit -m "$(cat <<'EOF'\nfeat: say "hi\nEOF\n)"` (one `"` in the body) gives `ask` with `The git guard could not parse the command.` only: no part is read as a commit. With `it's` in the body the guard still reads line 1 as a commit (`ask`, `git commit (commit: ask)`), because the apostrophe sits inside double quotes.
+- Rationale: without the second half of (a), a heredoc message with an odd `"` would get `ask`, not `deny`. A command with no `git commit` part (`cat > a.txt <<'EOF'`, `python3 - <<'PY'`, `echo "git commit <<EOF"`) is not denied (US2 scenario 6).
+- Known over-match, accepted: an unquoted heredoc body line that reads `git commit …`, or an unreadable line with the word `commit`, in a command that also has `<<`, is denied. Agents write files with Write or Edit (session rule), so this is rare, and the deny reason says what to do.
+- The deny reason is exactly the text in `contracts/commit-form.md`, alone (no staged list), so a test can compare it in full (CHK009).
+
+### P4. Codex session log reader (FR-011 to FR-013, US4)
+
+- Fact (`~/.codex/sessions`, 47 files, read-only): `event_msg` payload types seen are `item_completed`, `token_count`, `task_started`, `task_complete`, `thread_settings_applied` and `turn_aborted` (6 times). A `turn_aborted` payload has `turn_id`, `reason: "interrupted"`, `started_at`, `completed_at`, `duration_ms`.
+- Fact: the review prompt that `scripts/st-codex-agent.sh:118` sends is stored word for word as a `response_item` user `message` (`content[].text`): `Read the review request in /tmp/tmp.zzKiqUtYtC/prompt.tab and follow it. Change no file.` (file `rollout-2026-11-06T06-38-45-01a1addd-…jsonl`). The prompt file path is in a fresh `mktemp -d` folder per review, so this line is unique per review.
+- Decision: root `${CODEX_HOME:-$HOME/.codex}/sessions`. Read only files named `rollout-*.jsonl` whose mtime is not older than the prompt file (the prompt file gets its last write just before the prompt, `scripts/st-codex-agent.sh:115-117`). Skip a line that is not JSON (a partial last line, Round 1 F37). The answer is the text of a `task_complete.last_agent_message` that has the line `ST-ADVISOR-END-<nonce>` and, before it, the line `ST-ADVISOR-BEGIN-<nonce>`: the lines between the last such pair, joined with `\n`, written to the answer file byte for byte. The screen is not read.
+- Poll: up to 15 tries, one `sleep 1` between tries (a count of tries, not `SECONDS`, so the test's no-op `sleep` keeps the test fast). Then exit 6, and `scripts/st-advisor.sh` prints `codex: headless (no session log)` and goes to its existing headless path, with its existing 60 s floor (`:264`).
+- Rationale for a fixed 15 s and not the remaining budget: a review in the tab has no time limit (`README.md:268`), so the tab path has no budget of its own to pass down. When the tab review used up the 540 s, the 60 s floor makes the point `BLOCKED (timed out)` as the spec edge case says. The quickstart live check measures the real lag (step L3).
+- The reader never writes, moves or locks a log file (CHK013). It opens each file read-only.
+- Esc in the tab (a `turn_aborted` after this review's prompt line): user decision D14. The point ends `BLOCKED: the review was stopped in the Codex tab`, with no headless run.
+
+### P5. Built-in git instructions setting (FR-008, FR-009, US3)
+
+- Fact (`strings /opt/claude-code/bin/claude`, 2.1.319): the settings key is `includeGitInstructions` ("Include built-in commit and PR workflow instructions in Claude's system prompt (default: true)"). The reader is `function Odt(){let e=i.CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS;if(e!==void 0)return!e;return yt().includeGitInstructions??!0}`: the env var `CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS` wins over every settings file when it is set.
+- Fact: on this machine none of `~/.claude/settings.json`, `.claude/settings.json`, `.claude/settings.local.json` sets the key (jq, 2026-11-09).
+- Decision: "set at any level" (FR-009, CHK016) means the env var is set, or one of `${CLAUDE_CONFIG_DIR:-~/.claude}/settings.json`, `<checkout>/.claude/settings.json`, `<checkout>/.claude/settings.local.json` has the key `includeGitInstructions` (any value: the user already chose). The write merges the one key with jq and keeps every other key (CHK015).
+
+### P6. Worker brief rule 5 (FR-010)
+
+- Decision: brief rule 5 (`scripts/st-worker.sh:253`) changes `-m "<subject>" -m "<body>"` to `-m '<subject>' -m '<body>'`. The brief tells the worker to give this rule word for word to `st-git`, and `agents/st-git.md` will say single quotes. `tests/test_st_worker.sh:237` holds the rule word for word and changes with it.
+- Alternative considered: leave rule 5. Rejected: two "word for word" forms that differ.
+
+### P7. `agents/st-git.md` retry rule
+
+- Fact: `agents/st-git.md:49-50` says "A commit hook fails or the commit guard denies: stop and report its exact text. Do not retry around it." US2 needs the agent to run the commit once more with `-m` after the form deny.
+- Decision: one exception line: on the deny whose reason starts with `Commit form denied:`, write the same message with `-m 'subject' -m 'body'` and run it once more. Any other deny: stop and report, as today.

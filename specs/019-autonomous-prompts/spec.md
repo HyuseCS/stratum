@@ -28,7 +28,7 @@ the hash from `wait`. Then change one character inside the dialog and answer wit
 
 1. **Given** a dialog judged with hash H, **When** lines outside the dialog change and the orchestrator answers with H, **Then** the answer is sent.
 2. **Given** a dialog judged with hash H, **When** the command, the title or an option in the dialog changes, **Then** the answer is refused and nothing is sent.
-3. **Given** a dialog whose title line is cut off at the top of the screen, **When** the orchestrator answers, **Then** the answer is refused and the dialog goes to the user, as today.
+3. **Given** a dialog whose top is cut off at the top of the screen, with one title line and one allowed No option visible, **When** the orchestrator answers its No with the whole-screen hash, **Then** the No is sent, as today; a yes on such a dialog is refused.
 4. **Given** a dialog, **When** the chosen option is not a one-time yes or a plain No, **Then** the answer is refused, as today.
 
 ---
@@ -124,13 +124,14 @@ and says so.
 
 - **FR-001**: `st-worker.sh answer` MUST compare only the dialog block (title line through the last option line) with the hash the orchestrator judged, not the whole screen.
 - **FR-002**: `wait` and `watch` MUST print the hash of that same dialog block on their `screen` line.
-- **FR-003**: `answer` MUST refuse when the dialog block differs from the judged hash, when no single title line is visible, or when the option is not a one-time yes or a plain No.
-- **FR-004**: The git guard MUST deny a `git commit` whose command holds a heredoc (`<<`) or any text the approve channel refuses as a substitution (a backtick, `$(`, `${`, `<(` or `>(`, also inside quotes), in every session, with a reason that tells the agent to use `git commit -m 'subject' -m 'body'` with no backticks or `$(`. The guard and the approve channel MUST use the same test, so every commit the guard lets through can be judged.
+- **FR-003**: `answer` MUST refuse when the dialog block differs from the judged hash, when no single title line is visible, or when the option is not a one-time yes or a plain No. When the dialog's top is cut off but one title line and one allowed No option are visible, `wait` and `watch` MUST print the whole-screen hash, and `answer` MUST send only that No after the hash matches, never a yes.
+- **FR-004**: The git guard MUST deny a `git commit` whose command holds a heredoc (`<<`) or any text the approve channel refuses as a substitution (a backtick, `$(`, `${` followed by whitespace or `|`, `<(` or `>(`, also inside quotes; a plain `${VAR}` is not refused), in every session, with a reason that tells the agent to use `git commit -m 'subject' -m 'body'` with no backticks or `$(`. The guard and the approve channel MUST use the same test, so every commit the guard lets through can be judged.
 - **FR-005**: The git guard MUST NOT deny a `git commit` that uses only `-m` messages, including messages with line breaks, under this rule.
 - **FR-006**: A plain `-m` commit by a worker in autonomous mode MUST reach the orchestrator through the approve channel with the full command, the branch and the staged files.
 - **FR-007**: `git push` MUST stay with the user.
 - **FR-008**: `st-init` MUST ask the user once where to set `includeGitInstructions: false`: project, user, local, or not at all, and write it only there.
-- **FR-009**: `st-update` MUST ask the same question once for a project that does not have the setting at any level. This step MUST carry a `ponytail:` note naming its removal trigger: every Stratum checkout on the PC and the laptop has run the update.
+- **FR-009**: `st-update` MUST ask the same question once for a project that does not have the setting at any level and has no "not at all" marker. The answer "not at all" MUST leave that marker in the project's `.stratum/` folder. This step MUST carry a `ponytail:` note naming its removal trigger: every Stratum checkout on the PC and the laptop has run the update.
+- **FR-016**: When the user turns on autonomous build mode and the built-in git instructions are still on at every level, the turn-on output MUST include a one-line hint that autonomous mode works better with them off, and how to turn them off. It MUST NOT block the turn-on.
 - **FR-010**: The Stratum session text and `agents/st-git.md` MUST tell agents to commit with `-m 'subject' -m 'body'`.
 - **FR-011**: The advisor MUST read the Codex tab's answer from Codex's session log, picked by the review's nonce, and MUST NOT read the answer from the screen.
 - **FR-012**: When no session log holds the answer within the time budget, the advisor MUST run the review headless and print `codex: headless (no session log)`.
