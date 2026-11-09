@@ -30,7 +30,7 @@ The reader never writes, moves, renames, locks or deletes a file under the log r
 
 ## 3. `scripts/st-advisor.sh`
 
-In the tab result case (`:253-258`) add `6) via="codex: headless (no session log)" ;;`. Then today's code runs: the 60 s floor (`:264`, `BLOCKED: timed out`), the headless `codex exec ... -o "$tmp/answer.json"`, and the same answer checks (FR-012, FR-013). Nothing else in `st-advisor.sh` changes.
+In the tab result case (`:253-258`) add `6) via="codex: headless (no session log)" ;;`. Remove the `ponytail:` note at `:263` (the 60 s floor now has test M27). Then today's code runs: the 60 s floor (`:264`, `BLOCKED: timed out`), the headless `codex exec ... -o "$tmp/answer.json"`, and the same answer checks (FR-012, FR-013). Nothing else in `st-advisor.sh` changes.
 
 ## 4. Test cases
 
@@ -55,7 +55,10 @@ Existing cases that change: C19b (agent read fails) goes, since there is no read
 
 `tests/test_advisor_matrix.sh` (real `st-advisor.sh` and `st-codex-agent.sh`, fake herdr and codex):
 - Set `CODEX_HOME` to a temp folder for the whole file. The fake `agent prompt` writes the log record with the answer from `$d/answer`. Remove the `agent read ... 400` branch of the fake.
-- New M24: the fake `agent prompt` writes no log: the fake `codex exec` runs, the verdict comes from it, and the last line is `codex: headless (no session log)` (scenario 3).
-- New M25: no log and the fake `codex exec` exits 1: the point ends `BLOCKED: codex exited 1`, exit 1 (scenario 4).
-- New M26: no log and less than 60 s left (run the copied `st-advisor.sh` with `lim=540` changed to `lim=59`, the way the test already copies `scripts/` for k5): `BLOCKED: timed out`, the fake `codex exec` does not run (spec edge case).
+- M1-M24 exist. New cases start at M25.
+- New M25: the fake `agent prompt` writes no log: the fake `codex exec` runs, the verdict comes from it, and the last line is `codex: headless (no session log)` (scenario 3).
+- New M26: no log and the fake `codex exec` exits 1: the point ends `BLOCKED: codex exited 1`, exit 1 (scenario 4).
+- New M27: no log and less than 60 s left (run the copied `st-advisor.sh` with `lim=540` changed to `lim=59`, the way the test already copies `scripts/` for k5): `BLOCKED: timed out`, the fake `codex exec` does not run (spec edge case).
+- New M28 (D14): the fake writes this review's prompt line and a `turn_aborted` after it: `BLOCKED: the review was stopped in the Codex tab`, exit 1, the fake `codex exec` does not run.
+- Changed M19 (`:501-502`, mode `nomarkers`): the fake `agent prompt` writes a log record whose `last_agent_message` has no marker pair. The reader finds no answer, `st-codex-agent.sh` exits 6, and the review runs headless. New expectation: exit 0, the fake `codex exec` runs (`$tmp/argv` exists), the verdict comes from the fake `codex exec` as in M4, and the last line is `codex: headless (no session log)`. The old line `BLOCKED: no answer between the markers` no longer exists.
 - k8 (severity URGENT in the tab answer) keeps `BLOCKED: malformed answer` with no `codex exec`: the answer came from the log and was parsed.

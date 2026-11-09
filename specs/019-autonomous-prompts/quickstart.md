@@ -11,7 +11,7 @@ Run from the repo root. Each must exit 0.
 | US3 | `bash tests/test_update_rules.sh`, `bash tests/test_session_hooks.sh`, `bash tests/test_st_worker.sh` |
 | US4 | `bash tests/test_codex_agent.sh` and `bash tests/test_advisor_matrix.sh` |
 
-Cases: `contracts/dialog-block.md` §4, `contracts/commit-form.md` §5, `contracts/git-instructions.md` §6, `contracts/codex-log.md` §4.
+Cases: `contracts/dialog-block.md` §4, `contracts/commit-form.md` §4b and §5, `contracts/git-instructions.md` §7, `contracts/codex-log.md` §4.
 
 ## 2. Live check before merge (FR-015, D7)
 
@@ -24,12 +24,13 @@ Pass for SC-001: in steps L1 and L2 the user presses no key in any worker tab. A
 1. Start one worker in autonomous mode with a task that edits one owned file and commits it. In the task text, tell the worker to commit with a heredoc message: `git commit -m "$(cat <<'EOF'` ... `EOF` `)"`.
 2. Expect in the worker pane: the git guard deny with the text of `contracts/commit-form.md` §3, then a new commit call of the form `git commit -m '<subject>' -m '<body>'`.
 3. Expect in the orchestrator: `wait` exits 6 with `state approval`, an `input` line that holds the whole `-m` command, a `branch` line `worker-<id>` and a `staged` line with the owned file. Nothing about the commit is cut off.
-4. The orchestrator approves it. Expect: the commit exists on the worker branch (`git log -1 --format=%s worker-<id>` shows the subject).
+4. Expect `wait` to print an `inputhash` line right after the `input` line. The orchestrator approves it with `approve <id> --request <rid> --input-hash <that hash> --record <file>` (no heredoc, D17), and the git guard does not deny that call. Expect: the commit exists on the worker branch (`git log -1 --format=%s worker-<id>` shows the subject).
 
 Pass: steps 2-4 as written, no key press in the worker tab.
 
 ### L2. `answer` works on a worker whose screen keeps changing
 
+0. Check the commit mode first: the worker's git guard must ask for a commit. `jq -r .commit .stratum/git-guard.json` (or the plugin option when that file has no `commit` key) must print `ask`. If it prints `auto`, set it to `ask` for this check, else no commit dialog shows.
 1. Start one worker in normal mode (no `--autonomous`, so every dialog stays in the pane). Its task: start a background agent that works for some minutes (its status lines keep changing), then commit one owned file with `git commit -m '<subject>' -m '<body>'`. The git guard asks, so the commit dialog shows in the pane.
 2. Expect: `wait` prints a `screen` line. Between `wait` and `answer`, lines above the dialog change (the background agent's status).
 3. The orchestrator runs `answer <id> --screen <hash> --keys <one-time yes>`.
@@ -41,7 +42,7 @@ Pass: `answer` exits 0 or 4 with the `state` line and the dialog closes. It does
 1. Run a Codex advisor point in the tab (for example `bash <plugin root>/scripts/st-advisor.sh change specs/019-autonomous-prompts <a change file>`) whose review is likely to quote code: put a line with `` `x` ``, a `"` and a `\` in the change file and ask Codex to quote it in a finding.
 2. Expect: the last line `codex: tab st-codex-<workspace label>`, and the recorded finding in `advisor.md` holds the backticks, the `"` and the `\` exactly as in the `task_complete.last_agent_message` of the newest rollout file (compare with `python3 -I` reading that file, read-only).
 3. Measure: the time from the tab going idle to the `task_complete` line's `timestamp`. It must be under 15 s (the reader's tries). Write it in the PR.
-The no-log path is not run live: pointing `CODEX_HOME` at an empty folder would also log the headless `codex exec` out, and copying `auth.json` to a temp folder copies a credential. `tests/test_advisor_matrix.sh` M24-M26 cover it.
+The no-log path is not run live: pointing `CODEX_HOME` at an empty folder would also log the headless `codex exec` out, and copying `auth.json` to a temp folder copies a credential. `tests/test_advisor_matrix.sh` M19 and M25-M27 cover it.
 
 Pass: step 2 has 0 changed characters (SC-004), step 3 is under 15 s.
 

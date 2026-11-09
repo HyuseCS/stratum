@@ -6,6 +6,8 @@ Changes the screen-hash rule of `specs/014-prompt-answers/contracts/answer.md` �
 
 Input: `SC`, the 40-line read. Line numbers below count in `SC`, from 1 to `n`.
 
+Terms (F9): the block starts at the top rule line. "Title line" in the spec means the HEAD line only (`Do you want to ...`). The line under the top rule (` Bash command`) is the header line.
+
 | Name | Rule |
 |------|------|
 | Window | lines `max(1, n-14)` to `n` (the last 15, as today) |
@@ -16,7 +18,7 @@ Input: `SC`, the 40-line read. Line numbers below count in `SC`, from 1 to `n`.
 
 Steps. The result is a mode (`block`, `cut` or none) and a hash `SH`:
 
-1. The window holds exactly one HEAD line, at `h`. Zero or two or more: mode none, no hash (ambiguous title, D15).
+1. The window holds exactly one HEAD line, at `h`. Zero or two or more: mode none, no hash (no single title line, D15).
 2. `e` = the last option line after `h` (`h+1` to `n`). None: mode none, no hash.
 3. While line `e+1` exists and is not blank, `e = e+1` (a wrapped option text stays in the block).
 4. `t` = the last line above `h` (1 to `h-1`) that is a top rule.
@@ -27,7 +29,7 @@ The top rule line is as wide as the terminal, and it is inside the hash. A pane 
 
 One function computes the mode and `SH`. `st blocked` (`wait` and `watch`) and `answer` both call it on their own `SC` (CHK002).
 
-For the captured dialog (research P1) the block is the 12 lines from the `─` rule through ` 4. No`. It holds the title, the tip, the description, both `╌` lines, the command line and the four options. It leaves out the transcript above the rule, the blank line and the `Esc to cancel · Tab to amend` footer.
+For the captured dialog (research P1) the block is the 12 lines from the `─` rule through ` 4. No`. It holds the header line, the tip, the description, both `╌` lines, the command line and the four options. It leaves out the transcript above the rule, the blank line and the `Esc to cancel · Tab to amend` footer.
 
 ## 2. `wait` and `watch` (`st blocked`, `:157-166`)
 
@@ -77,7 +79,7 @@ This keeps the cut-off-dialog No flow of 837282c (`skills/st-worker/SKILL.md` st
 | DB1 | REAL | | `wait` | one `screen` line; its hash = first 12 hex of `sha256sum` of the 12 block lines (rule through ` 4. No`) |
 | DB2 | REAL | REAL with the `⎿` line changed to `  ⎿  Running… (12s)` and 3 new transcript lines on top | `--screen <hash> --keys 1` | exit 0, key 1 sent (scenario 1) |
 | DB3 | REAL | REAL with ` │ touch /tmp/q.txt` | `--screen <hash> --keys 1` | exit 1, another-prompt line, nothing sent (scenario 2) |
-| DB4 | REAL | REAL with title ` Bash command (unsandboxed)` | same | exit 1, another-prompt line, nothing sent |
+| DB4 | REAL | REAL with header line ` Bash command (unsandboxed)` | same | exit 1, another-prompt line, nothing sent |
 | DB5 | REAL | REAL with option 2 `... access to / from this project` | same | exit 1, another-prompt line, nothing sent |
 | DB6 | REAL | REAL with the footer ` Esc to cancel` | same | exit 0, key 1 sent (footer is outside the block) |
 | DB7 | `CUT` = REAL with 45 lines ` │ line <i>` in place of the one command line (the rule is more than 40 lines up) | CUT | `wait`, then `--screen <hash> --keys 1` | `wait`: exit 4, one `screen` line whose hash = first 12 hex of `sha256sum` of the printed 40-line pane text. `answer`: exit 1, exactly the cut-off line of §3 step 5, nothing sent (scenario 3: never a yes) |

@@ -21,3 +21,9 @@ calls: 3
 
 ## plan | 2026-11-09T14:01:55Z | sha256 15a5974002d9be06d0dc2f6b69dab91c125bceca8a0780a185a558cdb3ca910c | APPROVED
 summary: The revised plan addresses the earlier approach feedback with shared integration checks, explicit file ownership and clear dependencies. The added behavior follows decisions D15 and D16. No further simplification is warranted at this plan review; correctness, coverage and risks remain for Inspect.
+
+## plan | 2026-11-09T15:09:54Z | sha256 a18d574c6db86de814705c2c90529e7012986cda56268bea90b91df95533b5f0 | APPROVED
+summary: The approach remains focused. Grouping the hash-based approve change with US1 avoids competing edits to the worker script and follows D18. Shared integration checks and explicit task ownership keep the build straightforward. No further approach changes recommended; correctness, coverage and risks remain for Inspect.
+
+## plan | 2026-11-09T15:12:16Z | /advisor
+summary: /advisor: APPROVED on approach; 11-08 part-1 cause unproven (brief already asks for -m at st-worker.sh:253; owns mismatch at st-approve.py:243-245 is the other candidate); optional drop-reason line offered to the user

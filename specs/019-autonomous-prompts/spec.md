@@ -122,7 +122,7 @@ and says so.
 
 ### Functional Requirements
 
-- **FR-001**: `st-worker.sh answer` MUST compare only the dialog block (title line through the last option line) with the hash the orchestrator judged, not the whole screen.
+- **FR-001**: `st-worker.sh answer` MUST compare only the dialog block (the dialog's top rule line through its last option line) with the hash the orchestrator judged, not the whole screen.
 - **FR-002**: `wait` and `watch` MUST print the hash of that same dialog block on their `screen` line.
 - **FR-003**: `answer` MUST refuse when the dialog block differs from the judged hash, when no single title line is visible, or when the option is not a one-time yes or a plain No. When the dialog's top is cut off but one title line and one allowed No option are visible, `wait` and `watch` MUST print the whole-screen hash, and `answer` MUST send only that No after the hash matches, never a yes.
 - **FR-004**: The git guard MUST deny a `git commit` whose command holds a heredoc (`<<`) or any text the approve channel refuses as a substitution (a backtick, `$(`, `${` followed by whitespace or `|`, `<(` or `>(`, also inside quotes; a plain `${VAR}` is not refused), in every session, with a reason that tells the agent to use `git commit -m 'subject' -m 'body'` with no backticks or `$(`. The guard and the approve channel MUST use the same test, so every commit the guard lets through can be judged.
@@ -131,19 +131,21 @@ and says so.
 - **FR-007**: `git push` MUST stay with the user.
 - **FR-008**: `st-init` MUST ask the user once where to set `includeGitInstructions: false`: project, user, local, or not at all, and write it only there.
 - **FR-009**: `st-update` MUST ask the same question once for a project that does not have the setting at any level and has no "not at all" marker. The answer "not at all" MUST leave that marker in the project's `.stratum/` folder. This step MUST carry a `ponytail:` note naming its removal trigger: every Stratum checkout on the PC and the laptop has run the update.
-- **FR-016**: When the user turns on autonomous build mode and the built-in git instructions are still on at every level, the turn-on output MUST include a one-line hint that autonomous mode works better with them off, and how to turn them off. It MUST NOT block the turn-on.
 - **FR-010**: The Stratum session text and `agents/st-git.md` MUST tell agents to commit with `-m 'subject' -m 'body'`.
 - **FR-011**: The advisor MUST read the Codex tab's answer from Codex's session log, picked by the review's nonce, and MUST NOT read the answer from the screen.
 - **FR-012**: When no session log holds the answer within the time budget, the advisor MUST run the review headless and print `codex: headless (no session log)`.
 - **FR-013**: When the headless run also fails, the advisor MUST block the point, as today.
 - **FR-014**: Each story MUST have tests for its negative cases: a changed dialog is refused, a persistent option is refused, a heredoc or `$(` commit is denied, a non-commit heredoc is not denied, and a missing log falls back to headless.
 - **FR-015**: `quickstart.md` MUST hold a live check before merge with a real herdr worker and a real Codex tab: a heredoc commit is denied and retried with `-m` and reaches the orchestrator in full; `answer` works on a worker whose screen keeps changing; a Codex answer with backticks and `"` comes back exact.
+- **FR-016**: When the user turns on autonomous build mode and the built-in git instructions are still on at every level, the turn-on output MUST include a one-line hint that autonomous mode works better with them off, and how to turn them off. It MUST NOT block the turn-on.
+- **FR-017**: The orchestrator's `approve` call MUST name the request by a hash of its rendered text, not pass the text in a heredoc, and `approve` MUST refuse when the hash does not match the request (D17).
 
 ### Key Entities
 
-- **Dialog block**: the lines of one permission dialog on the worker screen, from its title line to its last option line. Its hash is what the orchestrator judges and answers.
+- **Dialog block**: the lines of one permission dialog on the worker screen, from its top rule line to its last option line. Its title line is the "Do you want to ..." line inside it. Its hash is what the orchestrator judges and answers.
 - **Commit request**: what the approve channel gives the orchestrator for a commit: the full command, the branch and the staged files.
 - **Codex session log**: Codex's own record of a session, one JSON record per line, with the exact final answer of each turn.
+- **Approve input hash**: the hash of the rendered text of one worker request. The orchestrator passes it to `approve` in place of the text; `approve` refuses when it does not match the request.
 - **Review nonce**: the unique marker each advisor review puts in its prompt, used to find its own answer in the log.
 
 ## Success Criteria *(mandatory)*

@@ -42,7 +42,7 @@ At the end of step 6, one paragraph. Exact text:
    <!-- ponytail: one-time step for checkouts set up before 019, remove it when every Stratum checkout on the PC and the laptop has run this update (check: no checkout prints a folder in this list) -->
 ```
 
-Step 7 (Commit): exact addition after `and .stratum/advisor.json when step 6 wrote it,`: ` and .claude/settings.json or .stratum/git-instructions-kept when the git instructions paragraph wrote it,`.
+Step 7 (Commit): the line at `skills/st-update/SKILL.md:52` reads ``   and `.stratum/advisor.json` when step 6 wrote it, minus each file that `git check-ignore` ignores.`` Insert after ``when step 6 wrote it,`` the text `` and `.claude/settings.json` or `.stratum/git-instructions-kept` when the git instructions paragraph wrote it,`` so the line reads ``   and `.stratum/advisor.json` when step 6 wrote it, and `.claude/settings.json` or `.stratum/git-instructions-kept` when the git instructions paragraph wrote it, minus each file that `git check-ignore` ignores.``
 
 A later run finds the key at some level, or the marker, and does not ask again (US3 scenario 3, FR-009).
 
@@ -95,7 +95,7 @@ Commit with git commit -m 'subject' -m 'body': single quotes, no heredoc, no bac
 | GI5 | `skills/st-update/SKILL.md` | `Built-in git instructions, once per run:` |
 | GI5b | `skills/st-update/SKILL.md` | `or for "not at all" the marker in each listed folder` |
 | GI6 | `skills/st-update/SKILL.md` | `ponytail: one-time step for checkouts set up before 019, remove it when every Stratum checkout on the PC and the laptop has run this update` |
-| GI7 | `skills/st-update/SKILL.md` | `and .claude/settings.json or .stratum/git-instructions-kept when the git instructions paragraph wrote it,` |
+| GI7 | `skills/st-update/SKILL.md` | ``and `.claude/settings.json` or `.stratum/git-instructions-kept` when the git instructions paragraph wrote it,`` |
 | GI8 | `agents/st-git.md` | ``Run it as `git commit -m 'subject' -m 'body'`: single quotes, no heredoc, no backticks, no `$(`, no `-F`.`` |
 | GI9 | `agents/st-git.md` | ``Exception: a deny that starts with `Commit form denied:`.`` |
 

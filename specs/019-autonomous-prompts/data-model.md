@@ -28,6 +28,15 @@ Relations: `wait` and `watch` print `screen\t<hash>`. `answer --screen <hash>` m
 
 The approve request file (`hooks/st-approve.py:267`, `:277`): `tool_name`, `tool_input.command` (full text), `time`, `branch`, `staged` (sorted list). No new field.
 
+## Approve input hash (D17, FR-017)
+
+| Field | Value |
+|-------|-------|
+| source | the rendered request `in` (`hooks/st-approve.py --render`, the text of the `input` line) |
+| hash | full `sha256sum <<<"$in"`, `^[0-9a-f]{64}$` |
+| printed | `inputhash\t<hash>`, right after the `input` line of `wait` and `watch` |
+| checked | `approve --input-hash <hash>` renders again and refuses on a mismatch with today's line |
+
 ## Codex session log record (US4)
 
 | Field | Value | Use |
