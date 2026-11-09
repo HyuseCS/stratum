@@ -30,3 +30,9 @@ summary: /advisor: APPROVED on approach; 11-08 part-1 cause unproven (brief alre
 
 ## plan | 2026-11-09T15:30:17Z | sha256 68384e0dcadf3e79614b9ed15361c90dadb6f9c54175b1749cb65d2e0b63e9f2 | APPROVED
 summary: The added drop-reason diagnostic follows D20 and fits the existing file ownership: US2 records it, and US3 displays it alongside its worker-script edits. The plan retains shared integration checks and avoids unnecessary new modules or tasks. No further approach changes recommended; correctness, coverage and risks remain for Inspect.
+
+## diff | 2026-11-09T16:55:15Z | /advisor
+summary: /advisor: no blocking regression; A1 dropped line has no skill text so FR-018 never reaches the user; A2 check JOIN keeps group 1
+
+## decisions | 2026-11-09T16:58:13Z | /advisor
+summary: /advisor: 18 small, none to the user; report 8, 11, 13, 14 at Build done; A1 gets the same-command clause; note builder-written review tests and contract edits
