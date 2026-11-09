@@ -1815,6 +1815,22 @@ check "DR3 an ESC byte in the dropped line: the line prints without it" '[ "$(se
 rfresh; xsetup; STUB_SSH_EXEC=1 rrun bash "$script" start "${rxargs[@]}"
 drop "$rw" "$drl"; states blocked; STUB_SSH_EXEC=1 rrun bash "$script" wait T004 --machine laptop
 check "DR4 saved machine: exit 4, the dropped line read from the machine, right after the state line" '[ $rc = 4 ] && [ "$(sed -n 2p <<<"$out")" = "$(printf "dropped\t%s" "$drl")" ] && [ "$(sed -n 3p <<<"$out")" = "pane text:" ]'
+rto=$(command -v timeout)
+printf '%s\n' "$drl" > "$tmp/outside-dropped"
+droplink() { mkdir -p "$1/.stratum/approve"; ln -s "$tmp/outside-dropped" "$1/.stratum/approve/dropped"; }
+dropfifo() { mkdir -p "$1/.stratum/approve"; mkfifo "$1/.stratum/approve/dropped"; }
+nodrop() { [ $rc = 4 ] && [ "$(sed -n 2p <<<"$out")" = "pane text:" ] && ! grep -qP "^dropped\t" <<<"$out"; }
+mk; states blocked; droplink "$(wt)"; run bash "$script" wait T004
+check "DR5 a symlinked dropped file: exit 4, no dropped line" 'nodrop'
+mk; states blocked; dropfifo "$(wt)"; run "$rto" 10 bash "$script" wait T004
+check "DR6 a FIFO as the dropped file: no hang, exit 4, no dropped line" 'nodrop'
+rxstart() { rfresh; xsetup; STUB_SSH_EXEC=1 rrun bash "$script" start "${rxargs[@]}"; }
+rxstart; droplink "$rw"; states blocked; STUB_SSH_EXEC=1 rrun bash "$script" wait T004 --machine laptop
+check "DR7 saved machine, a symlinked dropped file: exit 4, no dropped line" 'nodrop'
+rxstart; dropfifo "$rw"; states blocked; STUB_SSH_EXEC=1 rrun "$rto" 10 bash "$script" wait T004 --machine laptop
+check "DR8 saved machine, a FIFO as the dropped file: no hang, exit 4, no dropped line" 'nodrop'
+rxstart; drop "$rw" "$drl"; states blocked; STUB_SSH_EXEC=1 STUB_SSH_RC=255 STUB_SSH_ON=approve/dropped rrun bash "$script" wait T004 --machine laptop
+check "DR9 saved machine, ssh fails at the dropped read: still the blocked report, exit 4, no dropped line" 'nodrop'
 
 su="$repo/.stratum/worker-setup.sh"
 printf '%s\n' 'printf "%s\n%s\n" "$PWD" "$1" > setup.ran' 'echo setup >> "$STUB_T/order"' 'echo SETUP RAN' > "$su"

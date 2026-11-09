@@ -47,6 +47,7 @@ R13d|README.md|bash tests/test_update_rules.sh
 R13e|README.md|bash tests/test_update_items.sh
 GI1|skills/st-init/SKILL.md|12. **Git instructions.**
 GI2|skills/st-init/SKILL.md|with jq into only that file. Keep every other key.
+GI2b|skills/st-init/SKILL.md|A missing file is made as `{"includeGitInstructions": false}`. A file that is not valid JSON: write nothing, and name the file in the report.
 GI3|skills/st-init/SKILL.md|`CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS` is set
 GI4|skills/st-init/SKILL.md|13. **Report**
 GI4b|skills/st-init/SKILL.md|Not at all: write no settings file, and write the empty file `.stratum/git-instructions-kept` so the question is not asked again.

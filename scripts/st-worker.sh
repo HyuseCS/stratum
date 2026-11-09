@@ -157,7 +157,8 @@ st() {
   printf 'state\t%s\t%s\t%s\n' "$1" "$N" "$PANE"
   case $1 in
     blocked)
-      if [ -n "$m" ]; then rsh "head -n 1 -- $Q/.stratum/approve/dropped" >"$t"; else head -n 1 -- "$WT/.stratum/approve/dropped" >"$t" 2>/dev/null; fi && { DL=$(LC_ALL=C tr -cd '[:print:]\t' <"$t"); printf 'dropped\t%s\n' "${DL:0:400}"; }
+      local d
+      if [ -n "$m" ]; then d=$Q/.stratum/approve/dropped; sshq "[ -f $d ] && [ ! -L $d ] && head -c 4096 -- $d | head -n 1" >"$t"; else d=$WT/.stratum/approve/dropped; [ -f "$d" ] && [ ! -L "$d" ] && head -c 4096 -- "$d" | head -n 1 >"$t"; fi && { DL=$(LC_ALL=C tr -cd '[:print:]\t' <"$t"); printf 'dropped\t%s\n' "${DL:0:400}"; }
       ! screen || ! perm || { block; [ -z "$BM" ] || printf 'screen\t%s\n' "$SH"; }
       echo 'pane text:'
       [ -z "$SC" ] || printf '%s\n' "$SC"
