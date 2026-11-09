@@ -60,6 +60,12 @@ model {
         data '.stratum/git-guard.json'
       }
     }
+    git-instructions-kept = datafile '.stratum/git-instructions-kept' {
+      summary 'An empty marker for the "not at all" answer to turning off the built-in git instructions. st-init and st-update write it and skip the question when it exists.'
+      metadata {
+        data '.stratum/git-instructions-kept'
+      }
+    }
     handoff-md = datafile '.stratum/handoff.md' {
       summary 'The session handoff for the next session. /st-handoff writes it and the session start hook prints it.'
       metadata {
