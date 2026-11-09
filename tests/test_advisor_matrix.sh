@@ -487,6 +487,18 @@ for pair in 'stratum|st-codex-stratum' 'Stratum Main!|st-codex-stratum-main-' 'a
   got=$(sed -n 's/^agent start \([^ ]*\) .*/\1/p' "$tmp/herdr.log" 2>/dev/null | head -n1)
   check "(M16) label ${pair%%|*}: agent start ${pair#*|}" '[ "$got" = "${pair#*|}" ]'
 done
+mbr=$(git -C "$proj" symbolic-ref --short HEAD)
+for c in 'M30a|stratum|worker-f77|st-codex-worker-f77' 'M30b|abcdefghijklmnopqrstuvwxyz0123456789ABCD|worker-f77|st-codex-worker-f77' 'M30c|stratum|worker-Foo|st-codex-stratum' 'M30d|stratum|worker-abcdefghijklmnopqrstuvwxy|st-codex-worker-abcdefghijklmnop'; do
+  IFS='|' read -r cid clab cbr cexp <<<"$c"
+  git -C "$proj" checkout -q -b "$cbr"
+  printf '%s' "$clab" > "$tmp/hlabel"
+  hrun nofolder
+  got=$(sed -n 's/^agent start \([^ ]*\) .*/\1/p' "$tmp/herdr.log" 2>/dev/null | head -n1)
+  git -C "$proj" checkout -q "$mbr"
+  git -C "$proj" branch -q -D "$cbr"
+  check "($cid) branch $cbr, label $clab: agent start $cexp" '[ "$got" = "$cexp" ]'
+done
+printf '%s' '~' > "$tmp/hlabel"
 touch "$tmp/hnows"
 hrun nofolder
 got=$(sed -n 's/^agent start \([^ ]*\) .*/\1/p' "$tmp/herdr.log" 2>/dev/null | head -n1)
