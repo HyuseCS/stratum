@@ -274,23 +274,14 @@ start)
     [[ $repo == /* && $repo != *$'\n'* ]] || stop "no absolute path for --repo on $m"
   fi
   path="$(dirname "$repo")/$(basename "$repo")-$N"
+  L=
+  [ "${HERDR_ENV:-}" != 1 ] || [ -z "${HERDR_WORKSPACE_ID:-}" ] || L=$(herdr workspace list 2>/dev/null | jq -r --arg w "$HERDR_WORKSPACE_ID" 'first(.result.workspaces[] | select(.workspace_id == $w) | .label | strings) // empty' 2>/dev/null) || L=
+  [ -n "$L" ] || L=$(basename "$repo")
+  W=$(grep -m1 -E '^#{1,6}[[:space:]]' -- "$task" | sed -E 's/^[#[:space:]]+//; s/[*`[:cntrl:]]//g; s/[[:space:]#]+$//; s/^(.{30}).*/\1/; s/[[:space:]]+$//' || true) # ponytail: task words cut at a fixed 30 characters, make the length an option if users ask for longer workspace names
+  L="$L / $id${W:+: $W}"
   if [ -n "$auto" ] && [ -n "$m" ]; then
     quote "$repo"
     sshq "[ ! -L $Q/.stratum ] || { echo \"$Q/.stratum is a symlink\" >&2; exit 3; }; [ ! -L $Q/.stratum/autonomous ] || { echo \"$Q/.stratum/autonomous is a symlink\" >&2; exit 3; }; [ ! -f $Q/.stratum/autonomous ] || rm -f -- $Q/.stratum/autonomous || :; mkdir -p $Q/.stratum/autonomous 2>/dev/null; [ -d $Q/.stratum/autonomous ] || { echo \"$Q/.stratum/autonomous is not a folder\" >&2; exit 3; }; [ ! -L $Q/.stratum/autonomous/$SID ] || { echo \"$Q/.stratum/autonomous/$SID is a symlink\" >&2; exit 3; }; [ -f $Q/.stratum/autonomous/$SID ] || : > $Q/.stratum/autonomous/$SID" </dev/null || { rc=$? msg=$(head -1 "$e"); fail "cannot write .stratum/autonomous on $m: ${msg:-exit $rc}"; }
-  fi
-  if [ -z "$m" ]; then
-    WS=$HERDR_WORKSPACE_ID
-  else
-    h worktree list --cwd "$repo"
-    WS=$(jq -r 'first(.result.worktrees[] | select(.is_linked_worktree == false) | .open_workspace_id | strings) // empty' <<<"$r") || stop "no .result.worktrees in the herdr answer"
-    if [ -z "$WS" ]; then
-      h workspace list
-      WS=$(jq -r 'first(.result.workspaces[] | select(.label == "st-workers") | .workspace_id | strings) // empty' <<<"$r") || stop "no .result.workspaces in the herdr answer"
-    fi
-    if [ -z "$WS" ]; then
-      h workspace create --cwd "$repo" --label st-workers --no-focus
-      get WS .result.workspace.workspace_id
-    fi
   fi
   quote "$repo"
   qr=$Q
@@ -298,14 +289,19 @@ start)
   qp=$Q
   rx "[ ! -e $qp ] || { echo \"$qp already exists\" >&2; exit 1; }; git -C $qr worktree add -q -b $N $qp $sha || exit 1" || stop "$(head -1 "$e")"
   BR=$N WT=$path
-  if ! r=$("${H[@]}" tab create --workspace "$WS" --cwd "$path" --label "$N" --no-focus 2>"$e"); then
+  if ! r=$("${H[@]}" workspace create --cwd "$path" --label "$L" --no-focus 2>"$e") || {
+    get WS .result.workspace.workspace_id
+    get TAB .result.tab.tab_id
+    get PANE .result.root_pane.pane_id
+    ! "${H[@]}" tab rename "$TAB" "$N" >/dev/null 2>"$e"
+  }; then
     msg=$(head -1 "$e")
+    [ -z "$WS" ] || "${H[@]}" workspace close "$WS" >/dev/null 2>&1 || true
+    TAB= PANE=
     rx "git -C $qr worktree remove $qp && git -C $qr branch -D $N >/dev/null" || stop "$msg; left $path and branch $N"
     BR= WT=
     stop "$msg"
   fi
-  get TAB .result.tab.tab_id
-  get PANE .result.root_pane.pane_id
   if [ -z "$m" ]; then
     [ ! -L "$WT/.stratum" ] || stop "$WT/.stratum is a symlink"
     for p in "$WT/brief.md" "$WT/result.md" "$WT/.stratum/git-guard.json" ${auto:+"$WT/.stratum/approve"}; do [ ! -L "$p" ] || stop "$p is a symlink"; [ ! -e "$p" ] || stop "$p already exists"; done

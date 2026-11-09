@@ -304,7 +304,7 @@ s1() {
   local b pr sd; b="$(wt)/brief.md"; pr=$(cd "$(dirname "$1")/.." && pwd); sd=$(dirname "$1")
   check "S1 exit 0" '[ $rc = 0 ]'
   check "S1 one git worktree add from the main checkout, base is HEAD" '[ "$(grep -c . "$tmp/gitlog")" = 1 ] && ghascall "-C\t%s\tworktree\tadd\t-q\t-b\tworker-t004\t%s\t%s" "$repo" "$tmp/repo-worker-t004" "$sha"'
-  check "S1 one tab create in the orchestrator workspace, one split, lazygit, no rename, no Dev Servers or VM" '[ "$(cnt "^tab\tcreate\t")" = 1 ] && hascall "tab\tcreate\t--workspace\tw1P\t--cwd\t%s\t--label\tworker-t004\t--no-focus" "$tmp/repo-worker-t004" && [ "$(cnt "^pane\tsplit\t")" = 1 ] && hascall "pane\tsplit\t%s\t--direction\tright\t--cwd\t%s\t--no-focus" "$(pane)" "$(wt)" && hascall "pane\trun\t%s\tlazygit" "$(lazypane)" && [ "$(cnt "^tab\trename\t")" = 0 ] && ! grep -qP "Dev Servers|\tVM(\t|\$)" "$tmp/calls"'
+  check "S1 one workspace create, one rename, no tab create, one split, lazygit, no Dev Servers or VM" '[ "$(cnt "^workspace\tcreate\t")" = 1 ] && hascall "workspace\tcreate\t--cwd\t%s\t--label\torchestrator / T004\t--no-focus" "$tmp/repo-worker-t004" && [ "$(cnt "^tab\trename\t")" = 1 ] && hascall "tab\trename\t%s\tworker-t004" "$(tabid)" && [ "$(cnt "^tab\tcreate\t")" = 0 ] && [ "$(cnt "^pane\tsplit\t")" = 1 ] && hascall "pane\tsplit\t%s\t--direction\tright\t--cwd\t%s\t--no-focus" "$(pane)" "$(wt)" && hascall "pane\trun\t%s\tlazygit" "$(lazypane)" && ! grep -qP "Dev Servers|\tVM(\t|\$)" "$tmp/calls"'
   check "S1 brief has the task text" 'grep -qxF "TASK BODY $(rnd)" "$b"'
   check "S1 brief heading, test, lane, branch, machine, result path" 'grep -qxF "# Brief: worker-t004" "$b" && grep -qxF -- "- Test command: \`$testcmd\`" "$b" && grep -qxF -- "- Lane: $lane. If it names a skill, start it with the Skill tool. Run only task T004; skip every other task, ticked or not." "$b" && grep -qxF -- "- Branch: worker-t004" "$b" && grep -qxF -- "- Your machine: local. \`local\` is the orchestrator'"'"'s machine." "$b" && grep -qxF -- "- Result file: $(wt)/result.md" "$b"'
   check "S1 brief holds the whole B1 line" 'grep -qxF -- "- Test lock: if your task is marked [lock], run its test command as \`bash <plugin root>/scripts/st-lock.sh -- <test command>\`, with the plugin root of the Stratum plugin. Never write a wait loop of your own." "$b"'
@@ -364,11 +364,11 @@ STUB_GIT_FAIL=add run bash "$script" start "${sargs[@]}"
 check "S4 exit 1" '[ $rc = 1 ]'
 check "S4 stopped line with the git message" 'grep -q "^stopped: .*stub git refused" <<<"$out"'
 check "S4 worker line has - ids" 'hasline "worker\tworker-t004\tlocal\t-\t-\t-\t-"'
-check "S4 no tab create, no undo, no agent start, no prompt" '[ "$(cnt "^tab\tcreate\t")" = 0 ] && [ "$(cnt "^agent\tstart\t")" = 0 ] && ! grep -qP "worktree\tremove|branch\t-D" "$tmp/gitlog" && never 0 0'
+check "S4 no workspace create, no undo, no agent start, no prompt" '[ "$(cnt "^workspace\tcreate\t")" = 0 ] && [ "$(cnt "^agent\tstart\t")" = 0 ] && ! grep -qP "worktree\tremove|branch\t-D" "$tmp/gitlog" && never 0 0'
 
 fresh; mkdir "$tmp/repo-worker-t004"
 run bash "$script" start "${sargs[@]}"
-check "S4b folder exists: exit 1, the already-exists stop line, worker line with -, no git worktree add, no tab create" '[ $rc = 1 ] && [ "$(grep -c "^stopped:" <<<"$out")" = 1 ] && hasline "stopped: %s already exists" "$tmp/repo-worker-t004" && hasline "worker\tworker-t004\tlocal\t-\t-\t-\t-" && [ ! -s "$tmp/gitlog" ] && [ "$(cnt "^tab\tcreate\t")" = 0 ] && never 0 0'
+check "S4b folder exists: exit 1, the already-exists stop line, worker line with -, no git worktree add, no workspace create" '[ $rc = 1 ] && [ "$(grep -c "^stopped:" <<<"$out")" = 1 ] && hasline "stopped: %s already exists" "$tmp/repo-worker-t004" && hasline "worker\tworker-t004\tlocal\t-\t-\t-\t-" && [ ! -s "$tmp/gitlog" ] && [ "$(cnt "^workspace\tcreate\t")" = 0 ] && never 0 0'
 
 fresh
 STUB_FAIL="agent prompt" STUB_FAIL_CODE=agent_prompt_stalled run bash "$script" start "${sargs[@]}"
@@ -463,7 +463,7 @@ for k in brieffile:brief.md:BRIEF resultfile:result.md:RESULT; do
 done
 
 s13() {
-  fresh; STUB_FAIL="tab create" run bash "$1" start "${sargs[@]}"
+  fresh; STUB_FAIL="workspace create" run bash "$1" start "${sargs[@]}"
   check "S13 exit 1" '[ $rc = 1 ]'
   check "S13 git log in order: worktree add, worktree remove, branch -D" '[ "$(grep -c . "$tmp/gitlog")" = 3 ] && [ "$(sed -n 1p "$tmp/gitlog" | cut -f4)" = add ] && [ "$(sed -n 2p "$tmp/gitlog" | cut -f4)" = remove ] && [ "$(sed -n 3p "$tmp/gitlog" | cut -f4)" = -D ] && ghascall "-C\t%s\tworktree\tremove\t%s" "$repo" "$tmp/repo-worker-t004" && ghascall "-C\t%s\tbranch\t-D\tworker-t004" "$repo"'
   check "S13 folder gone" '[ ! -e "$tmp/repo-worker-t004" ]'
@@ -475,10 +475,40 @@ s13() {
 }
 s13 "$script"
 
-fresh; STUB_FAIL="tab create" STUB_GIT_FAIL=remove run bash "$script" start "${sargs[@]}"
+fresh; STUB_FAIL="workspace create" STUB_GIT_FAIL=remove run bash "$script" start "${sargs[@]}"
 check "S13b exit 1" '[ $rc = 1 ]'
 check "S13b one stopped line: the stub message, then the left path and branch" '[ "$(grep -c "^stopped:" <<<"$out")" = 1 ] && grep -qF "stub refused\"}}; left $tmp/repo-worker-t004 and branch worker-t004" <<<"$out"'
 check "S13b worker line keeps the branch and the path" 'hasline "worker\tworker-t004\tlocal\t-\t-\tworker-t004\t%s" "$tmp/repo-worker-t004"'
+
+fresh; STUB_FAIL="tab rename" run bash "$script" start "${sargs[@]}"
+check "S13c exit 1" '[ $rc = 1 ]'
+check "S13c one workspace close of the new workspace" '[ "$(cnt "^workspace\tclose\t")" = 1 ] && hascall "workspace\tclose\t%s" "$(wsid)"'
+check "S13c git log in order: worktree add, worktree remove, branch -D" '[ "$(grep -c . "$tmp/gitlog")" = 3 ] && [ "$(sed -n 1p "$tmp/gitlog" | cut -f4)" = add ] && [ "$(sed -n 2p "$tmp/gitlog" | cut -f4)" = remove ] && [ "$(sed -n 3p "$tmp/gitlog" | cut -f4)" = -D ]'
+check "S13c one stopped line with the stub message" '[ "$(grep -c "^stopped:" <<<"$out")" = 1 ] && grep -q "^stopped: .*stub refused" <<<"$out"'
+check "S13c worker line has - in fields 4 to 7" 'hasline "worker\tworker-t004\tlocal\t-\t-\t-\t-"'
+check "S13c the new workspace is gone from ws.json" 'w=$(wsid) && [ -n "$w" ] && jq -e --arg w "$w" "all(.[]; .workspace_id != \$w)" "$tmp/ws.json" >/dev/null'
+
+fresh; printf '# **Autonomous** `sessions`\nbody\n' > "$task"; run bash "$script" start "${sargs[@]}"
+check "WS1 heading marks, stars and backticks are removed from the label" 'hascall "workspace\tcreate\t--cwd\t%s\t--label\torchestrator / T004: Autonomous sessions\t--no-focus" "$tmp/repo-worker-t004"'
+
+l40=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMN
+fresh; printf '# %s\nbody\n' "$l40" > "$task"; run bash "$script" start "${sargs[@]}"
+check "WS2 a 40 letter heading is cut to 30 characters" 'hascall "workspace\tcreate\t--cwd\t%s\t--label\torchestrator / T004: %s\t--no-focus" "$tmp/repo-worker-t004" "${l40:0:30}"'
+
+fresh; printf 'intro\n\n# Real Title\nmore\n' > "$task"; run bash "$script" start "${sargs[@]}"
+check "WS3 the first heading is used, not the first line" 'hascall "workspace\tcreate\t--cwd\t%s\t--label\torchestrator / T004: Real Title\t--no-focus" "$tmp/repo-worker-t004"'
+
+fresh; HWS=wNone run bash "$script" start "${sargs[@]}"
+check "WS4 no workspace with that id: label falls back to the repo basename" 'hascall "workspace\tcreate\t--cwd\t%s\t--label\trepo / T004\t--no-focus" "$tmp/repo-worker-t004"'
+
+fresh; jq -c 'map(select(.workspace_id == "w1P"))' "$tmp/tabs.json" > "$tmp/w1p.before"; run bash "$script" start "${sargs[@]}"
+check "WS5 the orchestrator workspace keeps its tabs and no herdr call names it" '[ "$(jq -c "map(select(.workspace_id == \"w1P\"))" "$tmp/tabs.json")" = "$(cat "$tmp/w1p.before")" ] && ! grep -q w1P "$tmp/calls"'
+
+fresh; jq -c 'map(if .workspace_id == "w1P" then .label = "" else . end)' "$tmp/ws.json" > "$tmp/ws.new" && mv "$tmp/ws.new" "$tmp/ws.json"; run bash "$script" start "${sargs[@]}"
+check "WS6 an empty orchestrator label falls back to the repo basename" 'hascall "workspace\tcreate\t--cwd\t%s\t--label\trepo / T004\t--no-focus" "$tmp/repo-worker-t004"'
+
+fresh; jq -c '. + [{workspace_id:"stubLeftWS",label:"orchestrator / T004"}]' "$tmp/ws.json" > "$tmp/ws.new" && mv "$tmp/ws.new" "$tmp/ws.json"; run bash "$script" start "${sargs[@]}"
+check "WS7 a leftover workspace with the same label is not touched: exit 0, one workspace create, no call names it" '[ $rc = 0 ] && [ "$(cnt "^workspace\tcreate\t")" = 1 ] && ! grep -q stubLeftWS "$tmp/calls" && jq -e "any(.[]; .workspace_id == \"stubLeftWS\")" "$tmp/ws.json" >/dev/null'
 
 fresh; run bash "$script" start 'bad id' --task "$task" --test "$testcmd" --lane "$lane" --roster "$roster"
 prej P1 "Task id must be letters, digits or dash, start with a letter or digit, and be at most 25 characters."
@@ -816,7 +846,7 @@ r1() {
   local in="$tmp/ssh_in.3" g; g=$(printf '%q' '{"commit":"auto","branch":"worker-t004"}')
   check "R1 exit 0" '[ $rc = 0 ]'
   check "R1 machine list, every other call starts --machine laptop, never-list, one prompt" 'rnever 0 1'
-  check "R1 tab create on the machine in the main checkout workspace, no w1P" 'rcall "tab\tcreate\t--workspace\tstubMainWS\t--cwd\t%s\t--label\tworker-t004\t--no-focus" "/stubhome/proj-worker-t004"'
+  check "R1 one workspace create and one tab rename on the machine, no call names stubMainWS, no worktree list" '[ "$(rcnt "workspace\tcreate\t")" = 1 ] && rcall "workspace\tcreate\t--cwd\t%s\t--label\tproj / T004\t--no-focus" "/stubhome/proj-worker-t004" && [ "$(rcnt "tab\trename\t")" = 1 ] && rcall "tab\trename\t%s\tworker-t004" "$(tabid)" && ! grep -q stubMainWS "$tmp/calls" && ! grep -qP "worktree\tlist" "$tmp/calls"'
   check "R1 first ssh resolves ~/proj, the second is the git worktree add, the third writes the brief, all with BatchMode" '[ "$(grep -c . "$tmp/ssh")" = 3 ] && [ "$(sed -n 1p "$tmp/ssh")" = "$(printf -- "-o\tBatchMode=yes\t--\tu@stubhost\tcd ~/proj && pwd")" ] && [ "$(sed -n 2p "$tmp/ssh")" = "$(printf -- "-o\tBatchMode=yes\t--\tu@stubhost\t[ ! -e /stubhome/proj-worker-t004 ] || { echo \"/stubhome/proj-worker-t004 already exists\" >&2; exit 1; }; git -C /stubhome/proj worktree add -q -b worker-t004 /stubhome/proj-worker-t004 %s || exit 1" "$sha")" ] && grep -qP "^-o\tBatchMode=yes\t--\tu@stubhost\t" "$tmp/ssh"'
   check "R1 brief ssh writes brief.md and git-guard.json under /stubhome/proj-worker-t004, no \\~" 'c=$(sed -n 3p "$tmp/ssh"); grep -qF -- "cat > /stubhome/proj-worker-t004/brief.md" <<<"$c" && grep -qF -- "mkdir -p /stubhome/proj-worker-t004/.stratum" <<<"$c" && grep -qF -- "> /stubhome/proj-worker-t004/.stratum/git-guard.json" <<<"$c" && grep -qF -- "$g" <<<"$c" && ! grep -qF -- "\\~" "$tmp/ssh"'
   check "R1 brief on ssh stdin: heading, task, machine, result path" 'grep -qxF "# Brief: worker-t004" "$in" && grep -qxF "TASK BODY $(rnd)" "$in" && grep -qxF -- "- Your machine: laptop. \`local\` is the orchestrator'"'"'s machine." "$in" && grep -qxF -- "- Result file: /stubhome/proj-worker-t004/result.md" "$in"'
@@ -942,17 +972,17 @@ check "R14 nothing written on this machine: the sibling folder does not exist" '
 
 rfresh; STUB_NO_MAIN_WS=1 rrun bash "$script" start "${rsargs[@]}"
 check "R15 exit 0" '[ $rc = 0 ]'
-check "R15 one workspace create --cwd /stubhome/proj --label st-workers --no-focus, on the machine" 'rcall "workspace\tcreate\t--cwd\t%s\t--label\tst-workers\t--no-focus" "/stubhome/proj" && [ "$(rcnt "workspace\tcreate\t")" = 1 ]'
-check "R15 tab create in the workspace the create answered, --machine rule" 'rcall "tab\tcreate\t--workspace\t%s\t--cwd\t%s\t--label\tworker-t004\t--no-focus" "$(wsid)" "/stubhome/proj-worker-t004" && rnever 0 1'
+check "R15 exactly one workspace create, the worker's, on the machine, no st-workers" '[ "$(rcnt "workspace\tcreate\t")" = 1 ] && rcall "workspace\tcreate\t--cwd\t%s\t--label\tproj / T004\t--no-focus" "/stubhome/proj-worker-t004" && ! grep -q st-workers "$tmp/calls"'
+check "R15 no tab create, --machine rule" '[ "$(rcnt "tab\tcreate\t")" = 0 ] && rnever 0 1'
 
 rfresh; x=$(rnd); jq -c --arg x "$x" '. + [{workspace_id:("stubSW"+$x),label:"st-workers"}]' "$tmp/ws.json" > "$tmp/ws.new" && mv "$tmp/ws.new" "$tmp/ws.json"
 STUB_NO_MAIN_WS=1 rrun bash "$script" start "${rsargs[@]}"
-check "R15b exit 0, no workspace create, tab create in the st-workers workspace that exists" '[ $rc = 0 ] && [ "$(rcnt "workspace\tcreate\t")" = 0 ] && rcall "tab\tcreate\t--workspace\tstubSW%s\t--cwd\t%s\t--label\tworker-t004\t--no-focus" "$x" "/stubhome/proj-worker-t004" && rnever 0 1'
+check "R15b exit 0, one workspace create, no call names stubSW or stubMainWS" '[ $rc = 0 ] && [ "$(rcnt "workspace\tcreate\t")" = 1 ] && ! grep -qE "stubSW|stubMainWS" "$tmp/calls" && rnever 0 1'
 
 rfresh; STUB_NO_MAIN_WS=1 rrun bash "$script" start "${rsargs[@]}"
-check "R17 --repo ~/proj on a saved machine: exit 0, workspace create, tab create and pane split get absolute --cwd values, no herdr call has a --cwd starting with ~" '[ $rc = 0 ] && rcall "workspace\tcreate\t--cwd\t%s\t--label\tst-workers\t--no-focus" "/stubhome/proj" && rcall "tab\tcreate\t--workspace\t%s\t--cwd\t%s\t--label\tworker-t004\t--no-focus" "$(wsid)" "/stubhome/proj-worker-t004" && rcall "pane\tsplit\t%s\t--direction\tright\t--cwd\t%s\t--no-focus" "$(pane)" "/stubhome/proj-worker-t004" && ! grep -qP "\t--cwd\t[^/]" "$tmp/calls"'
+check "R17 --repo ~/proj on a saved machine: exit 0, workspace create and pane split get absolute --cwd values, no herdr call has a --cwd starting with ~" '[ $rc = 0 ] && rcall "workspace\tcreate\t--cwd\t%s\t--label\tproj / T004\t--no-focus" "/stubhome/proj-worker-t004" && rcall "pane\tsplit\t%s\t--direction\tright\t--cwd\t%s\t--no-focus" "$(pane)" "/stubhome/proj-worker-t004" && ! grep -qP "\t--cwd\t[^/]" "$tmp/calls"'
 
-rfresh; STUB_FAIL="tab create" rrun bash "$script" start "${rsargs[@]}"
+rfresh; STUB_FAIL="workspace create" rrun bash "$script" start "${rsargs[@]}"
 check "R16 exit 1, stopped line with the stub message" '[ $rc = 1 ] && grep -q "^stopped: .*stub refused" <<<"$out"'
 check "R16 third ssh is the git undo, no brief write" '[ "$(grep -c . "$tmp/ssh")" = 3 ] && [ "$(sed -n 3p "$tmp/ssh")" = "$(printf -- "-o\tBatchMode=yes\t--\tu@stubhost\tgit -C /stubhome/proj worktree remove /stubhome/proj-worker-t004 && git -C /stubhome/proj branch -D worker-t004 >/dev/null")" ] && ! grep -q "cat > " "$tmp/ssh" && rnever 0 0'
 
@@ -1666,7 +1696,7 @@ axrun
 check "AM7 an existing repo entry on the machine: exit 0, the entry is not truncated" '[ $rc = 0 ] && [ "$(cat "$rrepo/.stratum/autonomous/$sid")" = keep ]'
 autoclr
 rfresh; xsetup; STUB_SSH_EXEC=1 STUB_GIT_FAIL=add255 rrun bash "$script" start "${rxargs[@]}"
-check "R16b saved machine, git worktree add exits 255: exit 1, git's fatal line, not ssh failed, no tab create" '[ $rc = 1 ] && [ "$(grep -c "^stopped:" <<<"$out")" = 1 ] && hasline "stopped: fatal: stub git refused 255" && ! grep -q "ssh to" <<<"$out" && hasline "worker\tworker-t004\tlaptop\t-\t-\t-\t-" && [ "$(rcnt "tab\tcreate\t")" = 0 ]'
+check "R16b saved machine, git worktree add exits 255: exit 1, git's fatal line, not ssh failed, no workspace create" '[ $rc = 1 ] && [ "$(grep -c "^stopped:" <<<"$out")" = 1 ] && hasline "stopped: fatal: stub git refused 255" && ! grep -q "ssh to" <<<"$out" && hasline "worker\tworker-t004\tlaptop\t-\t-\t-\t-" && [ "$(rcnt "workspace\tcreate\t")" = 0 ]'
 
 wr="$tmp/wroster"; printf 'worker-t004\tlocal\tworker-t004\tT004\n' > "$wr"
 sleeps() { grep -c '^sleep' "$tmp/calls"; }
@@ -1772,18 +1802,22 @@ check "FU9 saved machine: exit 0, the brief and result change on the machine, pr
 
 fresh; run bash "$script" start "${sargs[@]}"
 check "LY1 exit 0" '[ $rc = 0 ]'
-check "LY1 layout calls in order: tab create, pane split, pane run, agent start" '[ "$(grep -P "^(tab\tcreate\t|pane\tsplit\t|pane\trun\t|agent\tstart\t)" "$tmp/calls" | cut -f1-2)" = "$(printf "tab\tcreate\npane\tsplit\npane\trun\nagent\tstart")" ]'
-check "LY1 one tab create, in the orchestrator workspace" '[ "$(cnt "^tab\tcreate\t")" = 1 ] && hascall "tab\tcreate\t--workspace\tw1P\t--cwd\t%s\t--label\tworker-t004\t--no-focus" "$(wt)"'
+check "LY1 layout calls in order: workspace create, tab rename, pane split, pane run, agent start" '[ "$(grep -P "^(workspace\tcreate\t|tab\trename\t|pane\tsplit\t|pane\trun\t|agent\tstart\t)" "$tmp/calls" | cut -f1-2)" = "$(printf "workspace\tcreate\ntab\trename\npane\tsplit\npane\trun\nagent\tstart")" ]'
+check "LY1 one workspace create, no tab create" '[ "$(cnt "^workspace\tcreate\t")" = 1 ] && [ "$(cnt "^tab\tcreate\t")" = 0 ] && hascall "workspace\tcreate\t--cwd\t%s\t--label\torchestrator / T004\t--no-focus" "$(wt)"'
 check "LY1 split the root pane right, no focus" 'hascall "pane\tsplit\t%s\t--direction\tright\t--cwd\t%s\t--no-focus" "$(pane)" "$(wt)"'
 check "LY1 lazygit in the new pane" 'hascall "pane\trun\t%s\tlazygit" "$(lazypane)"'
-check "LY1 no tab rename, no Dev Servers or VM tab" '[ "$(cnt "^tab\trename\t")" = 0 ] && ! grep -qP "Dev Servers|\tVM(\t|\$)" "$tmp/calls"'
+check "LY1 no Dev Servers or VM tab" '! grep -qP "Dev Servers|\tVM(\t|\$)" "$tmp/calls"'
 
 rfresh; rrun bash "$script" start "${rsargs[@]}"
 check "LY2 exit 0" '[ $rc = 0 ]'
-check "LY2 layout calls on the machine, in order" '[ "$(grep -P "^--machine\tlaptop\t(tab\tcreate\t|pane\tsplit\t|pane\trun\t|agent\tstart\t)" "$tmp/calls" | cut -f3-4)" = "$(printf "tab\tcreate\npane\tsplit\npane\trun\nagent\tstart")" ]'
-check "LY2 tab create in the main checkout workspace, on the machine" 'rcall "tab\tcreate\t--workspace\tstubMainWS\t--cwd\t%s\t--label\tworker-t004\t--no-focus" "/stubhome/proj-worker-t004"'
+check "LY2 layout calls on the machine, in order" '[ "$(grep -P "^--machine\tlaptop\t(workspace\tcreate\t|tab\trename\t|pane\tsplit\t|pane\trun\t|agent\tstart\t)" "$tmp/calls" | cut -f3-4)" = "$(printf "workspace\tcreate\ntab\trename\npane\tsplit\npane\trun\nagent\tstart")" ]'
+check "LY2 one workspace create on the machine, no call names stubMainWS, no worktree list" '[ "$(rcnt "workspace\tcreate\t")" = 1 ] && rcall "workspace\tcreate\t--cwd\t%s\t--label\tproj / T004\t--no-focus" "/stubhome/proj-worker-t004" && ! grep -q stubMainWS "$tmp/calls" && ! grep -qP "worktree\tlist" "$tmp/calls"'
 check "LY2 split the root pane right, no focus, on the machine" 'rcall "pane\tsplit\t%s\t--direction\tright\t--cwd\t%s\t--no-focus" "$(pane)" "$(wt)"'
 check "LY2 lazygit in the new pane, on the machine" 'rcall "pane\trun\t%s\tlazygit" "$(lazypane)"'
-check "LY2 no tab rename, no Dev Servers or VM, on the machine" '[ "$(rcnt "tab\trename\t")" = 0 ] && ! grep -qP "Dev Servers|\tVM(\t|\$)" "$tmp/calls"'
+check "LY2 no Dev Servers or VM, on the machine" '! grep -qP "Dev Servers|\tVM(\t|\$)" "$tmp/calls"'
+
+rfresh; HENV=1 run bash "$script" start "${rsargs[@]}"
+check "R18 exit 0, label from the local orchestrator workspace" '[ $rc = 0 ] && rcall "workspace\tcreate\t--cwd\t%s\t--label\torchestrator / T004\t--no-focus" "/stubhome/proj-worker-t004"'
+check "R18 exactly one local workspace list, with no --machine" '[ "$(grep -cP "^workspace\tlist(\t|\$)" "$tmp/calls")" = 1 ]'
 
 exit $fail
