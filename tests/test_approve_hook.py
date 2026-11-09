@@ -179,6 +179,13 @@ DROPS = [
     ("outside-owns", "src/b.py", "git add src/b.py && git commit -m x", {}),
     ("unjudgeable", None, 'git \\\ncommit -m "$(x)"', {}, 'git \\?commit -m "$(x)"'),
     ("flag", "-a", "git commit -a -m 'a\tb\nc' " + "x" * 300, {}, "git commit -a -m 'a?b?c' " + "x" * 275),
+    ("commit-never", None, "GIT_IN\\\nDEX_FILE=alternate-index git commit -\\\nm x", {},
+     "GIT_IN\\?DEX_FILE=alternate-index git commit -\\?m x"),
+    ("never-list", None, "ev\\\nal git commit -m x", {}, "ev\\?al git commit -m x"),
+    ("never-list", None, "c\\\nd .. && git commit -m x", {}, "c\\?d .. && git commit -m x"),
+    ("commit-never", None, "c\\\nd src && git commit -m x", {}, "c\\?d src && git commit -m x"),
+    ("commit-never", None, "bash -\\\nc true; git commit -m x", {}, "bash -\\?c true; git commit -m x"),
+    ("flag", "-a", "gi\\\nt commit -a -m $'x\\'y'", {}, "gi\\?t commit -a -m $'x\\'y'"),
 ]
 
 

@@ -193,7 +193,7 @@ def commit_words(command):
     try:
         return split_commands(command)
     except ValueError:
-        return split_commands(strip_quotes(command))
+        return split_commands(strip_quotes(JOIN.sub(r"\1", command)))
 
 
 def is_git(word):
@@ -215,7 +215,7 @@ def drop(root, rule, detail, command):
 
 
 def commit_check(root, cwd, command, commands):
-    if COMMIT_NEVER.search(command) or COMMIT_NEVER.search(strip_quotes(command)):
+    if any(COMMIT_NEVER.search(t) or COMMIT_NEVER.search(strip_quotes(t)) for t in (command, JOIN.sub(r"\1", command))):
         return drop(root, "commit-never", "", command)
     if unjudgeable(command):
         return drop(root, "unjudgeable", "", command)
