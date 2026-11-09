@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-usage() { echo "usage: st-worker.sh start <id> --task <file> --test <cmd> --lane <text> --roster <file> [--machine <m> --repo <path>] [--model <name>] [--autonomous] | goal <id> --test <cmd> [--machine <m>] | resend <id> [--machine <m>] | followup <id> --task <file> --test <cmd> [--machine <m>] | wait <id> [--machine <m>] | answer <id> [--machine <m>] [--screen <hash>] --keys <key>... | --text <text> | result <id> [--machine <m>] | close <id> [--machine <m>] | list [--machine <m>] | headless <id> --task <file> --test <cmd> [--model <name>] | approve <id> --request <rid> --input-stdin --record <file> [--machine <m>] | pass <id> --request <rid> [--machine <m>] | autonomous-on | autonomous-off [--roster <file>] | watch --roster <file>" >&2; exit 2; }
+usage() { echo "usage: st-worker.sh start <id> --task <file> --test <cmd> --lane <text> --roster <file> [--machine <m> --repo <path>] [--model <name>] [--autonomous] | goal <id> --test <cmd> [--machine <m>] | resend <id> [--machine <m>] | followup <id> --task <file> --test <cmd> [--machine <m>] | wait <id> [--machine <m>] | answer <id> [--machine <m>] [--screen <hash>] --keys <key>... | --text <text> | result <id> [--machine <m>] | close <id> [--machine <m>] | list [--machine <m>] | headless <id> --task <file> --test <cmd> [--model <name>] | approve <id> --request <rid> --input-hash <hash> --record <file> [--machine <m>] | pass <id> --request <rid> [--machine <m>] | autonomous-on | autonomous-off [--roster <file>] | watch --roster <file>" >&2; exit 2; }
 fail() { echo "$1" >&2; exit 1; }
 [ $# -gt 0 ] || usage
 cmd=$1; shift
@@ -10,11 +10,10 @@ case $cmd in
   autonomous-on) [ $# = 0 ] || usage ;;
   *) usage ;;
 esac
-m= repo= auto= instdin=
+m= repo= auto=
 while [ $# -gt 0 ]; do
   case "$cmd $1" in
     "start --autonomous") auto=1; shift; continue ;;
-    "approve --input-stdin") instdin=1; shift; continue ;;
   esac
   [ $# -ge 2 ] || usage
   case "$cmd $1" in
@@ -24,6 +23,10 @@ while [ $# -gt 0 ]; do
     "start --roster" | "autonomous-off --roster" | "watch --roster") roster=$2 ;;
     "approve --request" | "pass --request") rid=$2 ;;
     "approve --record") record=$2 ;;
+    "approve --input-hash")
+      [[ $2 =~ ^[0-9a-f]{64}$ ]] || usage
+      ihash=$2
+      ;;
     "start --repo") repo=$2 ;;
     "start --model" | "headless --model")
       [ -z "${model+x}" ] && [ -n "$2" ] || usage
@@ -49,7 +52,7 @@ case $cmd in
   goal) [ -n "${test+x}" ] || usage ;;
   headless | followup) [ -n "${task+x}" ] && [ -n "${test+x}" ] || usage ;;
   answer) [ "${text+x}${keys+x}" = x ] || usage ;;
-  approve) [ -n "${rid+x}" ] && [ -n "${record+x}" ] && [ -n "$instdin" ] || usage ;;
+  approve) [ -n "${rid+x}" ] && [ -n "${record+x}" ] && [ -n "${ihash+x}" ] || usage ;;
   pass) [ -n "${rid+x}" ] || usage ;;
   watch) [ -n "${roster+x}" ] || usage ;;
 esac
@@ -71,10 +74,6 @@ if [ "$cmd" = approve ] || [ "$cmd" = pass ] || [ "$cmd" = autonomous-off ] || [
 fi
 if [ "$cmd" = approve ] || [ "$cmd" = pass ]; then
   [[ $rid =~ ^[0-9]+-[0-9]+$ ]] || fail "No request $rid for $N."
-fi
-if [ "$cmd" = approve ]; then
-  IFS= read -r -d '' input || true
-  input=${input%$'\n'}
 fi
 if [ "$cmd" = start ] || [ "$cmd" = followup ] || [ "$cmd" = headless ]; then
   [ -f "$task" ] && [ -s "$task" ] || fail "Task file not found or empty: $task"
@@ -158,7 +157,7 @@ st() {
   printf 'state\t%s\t%s\t%s\n' "$1" "$N" "$PANE"
   case $1 in
     blocked)
-      ! screen || ! perm || printf 'screen\t%s\n' "$SH"
+      ! screen || ! perm || { block; [ -z "$BM" ] || printf 'screen\t%s\n' "$SH"; }
       echo 'pane text:'
       [ -z "$SC" ] || printf '%s\n' "$SC"
       ;;
@@ -167,8 +166,24 @@ st() {
 }
 HEAD='^([[:space:]]|│)*Do you want to (proceed|make this edit|create|allow|run)'
 PERM="$HEAD|don.t ask again|tell Claude what to do differently"
-screen() { SC=$("${H[@]}" agent read "$N" --source recent-unwrapped --lines 40 2>/dev/null | sed $'s/\e\\[[0-9;]*[A-Za-z]//g') || return; SH=$(sha256sum <<<"$SC"); SH=${SH:0:12}; }
+screen() { SC=$("${H[@]}" agent read "$N" --source recent-unwrapped --lines 40 2>/dev/null | sed $'s/\e\\[[0-9;]*[A-Za-z]//g') || return; }
 perm() { tail -n 15 <<<"$SC" | grep -qaE "$PERM"; }
+block() {
+  local n w h e t
+  BM= SH=
+  n=$(wc -l <<<"$SC")
+  w=$((n > 15 ? n - 14 : 1))
+  h=$(tail -n "+$w" <<<"$SC" | grep -naE "$HEAD" | cut -d: -f1) || :
+  [[ $h =~ ^[0-9]+$ ]] || return 0
+  h=$((h + w - 1))
+  e=$(tail -n "+$((h + 1))" <<<"$SC" | grep -naE '^([[:space:]]|│)*(❯[[:space:]]*)?[0-9]+\.[[:space:]]' | tail -n 1 | cut -d: -f1) || :
+  [ -n "$e" ] || return 0
+  e=$((e + h))
+  while [ "$e" -lt "$n" ] && sed -n "$((e + 1))p" <<<"$SC" | grep -qav '^[[:space:]]*$'; do e=$((e + 1)); done
+  t=$(head -n "$((h - 1))" <<<"$SC" | grep -naE '^[[:space:]]*(─)+[[:space:]]*$' | tail -n 1 | cut -d: -f1) || :
+  if [ -n "$t" ]; then BM=block SH=$(sed -n "$t,${e}p" <<<"$SC" | sha256sum); else BM=cut SH=$(sha256sum <<<"$SC"); fi
+  SH=${SH:0:12}
+}
 readpane() { "${H[@]}" agent read "$N" --source visible >"$t" 2>/dev/null; }
 unsent() { readpane && grep -a '^❯' "$t" | tail -n 1 | grep -qaE '^❯.{0,2}/goal '; }
 question() { readpane && ! grep -qaE "$PERM" "$t" && { grep -qa 'Enter to select' "$t" || { grep -qa 'Ready to submit your answers?' "$t" && grep -qaE '^([[:space:]]|❯)*1\. Submit answers[[:space:]]*$' "$t"; }; }; }
@@ -212,11 +227,12 @@ reqid() {
   rq=$(grep -m1 -xE '[0-9]+-[0-9]+\.req' "$t")
 }
 approval() {
-  local f=$WT/.stratum/approve/ in
+  local f=$WT/.stratum/approve/ in s
   reqid || return 0
   if [ -n "$m" ]; then rsh "cat -- $Q/.stratum/approve/$rq" >"$t" || return 0; f=$t; else f=$f$rq; fi
   in=$(render "$f") || return 0
-  printf 'state\tapproval\t%s\t%s\nrequest\t%s\ntab\ttab %s\ninput\t%s\n' "$N" "$PANE" "${rq%.req}" "$N" "$in"
+  s=$(sha256sum <<<"$in")
+  printf 'state\tapproval\t%s\t%s\nrequest\t%s\ntab\ttab %s\ninput\t%s\ninputhash\t%s\n' "$N" "$PANE" "${rq%.req}" "$N" "$in" "${s:0:64}"
   jq -r '(.branch | strings | "branch\t\(gsub("[[:cntrl:]]"; "?"))"), (.staged | arrays | "staged\t\(map(tostring | gsub("[[:cntrl:]]"; "?")) | join(" "))")' "$f" 2>/dev/null || true
   panetext
   exit 6
@@ -452,16 +468,19 @@ answer)
   if perm; then
     [ -n "${keys+x}" ] || fail "$p"
     [ -n "${scr+x}" ] || fail "A permission prompt needs --screen <hash> from the screen line of wait or watch. Nothing sent."
-    [ "$SH" = "$scr" ] || fail "The pane shows another prompt. Nothing sent. Tell the user the workspace, the tab and the prompt." # ponytail: the whole 40-line screen must match, add --expect <text> if a real worker pane redraws so its hash never matches
+    block
+    [ -n "$BM" ] && [ "$SH" = "$scr" ] || fail "The pane shows another prompt. Nothing sent. Tell the user the workspace, the tab and the prompt."
     [ ${#keys[@]} = 1 ] && [[ ${keys[0]} =~ ^[1-9]$ ]] || fail "A permission prompt takes one option number. Nothing sent."
     k=${keys[0]}
     w=$(tail -n 15 <<<"$SC")
     n=$(sed -nE "/$HEAD/=" <<<"$w" | tail -n 1)
     o="^([[:space:]]|│)*(❯[[:space:]]*)?$k\.[[:space:]]"
+    y=
     [ -n "$n" ] && [ "$(sed -nE "/$HEAD/=" <<<"$w" | wc -l)" -eq 1 ] && b=$(tail -n "+$((n + 1))" <<<"$w") && [ "$(grep -caE "$o" <<<"$b")" -eq 1 ] && l=$(grep -naE "$o" <<<"$b") && {
-      grep -qaE "^([[:space:]]|│)*(❯[[:space:]]*)?$k\. (Yes|Yes, proceed|Yes, just this once)( \([a-z0-9]\))?[[:space:]]*\$" <<<"${l#*:}" ||
+      { grep -qaE "^([[:space:]]|│)*(❯[[:space:]]*)?$k\. (Yes|Yes, proceed|Yes, just this once)( \([a-z0-9]\))?[[:space:]]*\$" <<<"${l#*:}" && y=1; } ||
         { grep -qaE "^([[:space:]]|│)*(❯[[:space:]]*)?$k\. No([,[:space:]].*)?\$" <<<"${l#*:}" && ! grep -qaiE "don'?t ask|always|this session|in the future|[a-z0-9-]\.[a-z]{2,}" <<<"${l#*:}"; }
     } && ! sed -n "$((${l%%:*} + 1))p" <<<"$b" | grep -qavE '^[[:space:]]*$|^([[:space:]]|│)*(❯[[:space:]]*)?[0-9]+\.[[:space:]]' || fail "Option $k is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt."
+    [ "$BM" = block ] || [ -z "$y" ] || fail "The top of the dialog is not on the screen, so only its No can be sent. Nothing sent. Tell the user the workspace, the tab and the prompt."
   fi
   if [ -n "${keys+x}" ]; then
     h agent send-keys "$N" "${keys[@]}"
@@ -677,7 +696,8 @@ approve | pass)
     x=ok
     want=$(render "$F") || fail "The input does not match request $rid. Approve nothing."
     [ ${#want} -le 4000 ] || fail "Request $rid is too long to approve. Pass it to the user."
-    [ "$input" = "$want" ] || fail "The input does not match request $rid. Approve nothing."
+    s=$(sha256sum <<<"$want")
+    [ "${s:0:64}" = "$ihash" ] || fail "The input does not match request $rid. Approve nothing."
     printf '%s\t%s\t%s\t%s\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$N" "tab $N" "${want%%: *}" "${want#*: }" >>"$record" || fail "Cannot write the record file $record. Approve nothing."
   fi
   if [ -n "$m" ]; then

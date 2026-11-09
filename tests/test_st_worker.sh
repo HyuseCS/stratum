@@ -1169,8 +1169,9 @@ rautoset() { mkdir -p "$1/.stratum/autonomous"; : > "$1/.stratum/autonomous/$2";
 apd() { mkdir -p "$lw/.stratum/approve"; }
 mkreq() { apd; jq -nc --arg c "$2" '{tool_name:"Bash",tool_input:{command:$c},time:"2026-10-31T00:00:00Z"}' > "$lw/.stratum/approve/$1.req"; }
 apx() { mk; apd; printf '%s\n' "$sid" > "$lw/.stratum/approve/session"; autoset "$sid"; rm -f "$rec" "$repo/pwned" "$tmp/pwned"; }
-apv() { CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" approve T004 --request "$rid" --input-stdin --record "$rec" "$@"; }
-recok() { [ "$(grep -c . "$rec")" = 1 ] && awk -F'\t' 'NF==5 && $2=="worker-t004" && $3=="tab worker-t004" && $4=="Bash" && index($5,"touch pwned"){f=1} END{exit !f}' "$rec"; }
+ih() { sha256sum <<<"$1" | cut -c1-64; }
+apv() { CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" approve T004 --request "$rid" --input-hash "$(ih "$(cat)")" --record "$rec" "$@"; }
+recok() { [ "$(grep -c . "$rec")" = 1 ] && awk -F'\t' -v t="$1" 'NF==5 && $2=="worker-t004" && $3=="tab worker-t004" && $4=="Bash" && index($5,t){f=1} END{exit !f}' "$rec"; }
 xsetup() { rm -rf "$rrepo" "$rw" "$tmp/rlink" "$tmp/rtarget"; mkdir -p "$rrepo/.stratum"; }
 ax() { rfresh; xsetup; printf 'worker-t004\tlaptop\tworker-t004\tT004\t%s\nworker-t005\tlocal\tworker-t005\tT005\n' "$rrepo" > "$aroster"; }
 axrun() { STUB_SSH_EXEC=1 CLAUDE_CODE_SESSION_ID="$sid" rrun bash "$script" start T004 --task "$task" --test "$testcmd" --lane "$lane" --roster "$aroster" --machine laptop --repo "$rrepo" --autonomous; }
@@ -1217,9 +1218,7 @@ autoset "$sid"
 for d in "$wk" "$tmp/repo-w9"; do
   fresh; RUNDIR="$d" CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" start "${oargs[@]}"
   wtchk "WT1 start from $d: exit 1, one line, no call"
-  fresh; RUNDIR="$d" CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" approve T004 --request "$rid" --input-stdin --record "$rec" <<'ST_INPUT_END'
-Bash: {"command":"echo hi"}
-ST_INPUT_END
+  fresh; RUNDIR="$d" CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" approve T004 --request "$rid" --input-hash "$(ih 'Bash: {"command":"echo hi"}')" --record "$rec"
   wtchk "WT2 approve from $d: exit 1, one line, no call"
   fresh; RUNDIR="$d" CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" pass T004 --request "$rid"
   wtchk "WT3 pass from $d: exit 1, one line, no call"
@@ -1280,9 +1279,7 @@ check "ON2 nothing is made in the worktree for this id, its own folder is left a
 fresh; RUNDIR="$tmp/repo-feat2" CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" start "${oargs[@]}"
 check "LW1 start from a feature's linked worktree: exit 0, session holds the main checkout's id" '[ $rc = 0 ] && [ "$(cat "$lw/.stratum/approve/session")" = "$sid" ]'
 mkreq "$rid" 'echo hi'
-RUNDIR="$tmp/repo-feat2" CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" approve T004 --request "$rid" --input-stdin --record "$rec" <<'ST_INPUT_END'
-Bash: {"command":"echo hi"}
-ST_INPUT_END
+RUNDIR="$tmp/repo-feat2" CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" approve T004 --request "$rid" --input-hash "$(ih 'Bash: {"command":"echo hi"}')" --record "$rec"
 check "LW2 approve from the linked worktree: exit 0, approved line, .ok written" '[ $rc = 0 ] && hasline "approved\tworker-t004\t%s" "$rid" && [ -e "$lw/.stratum/approve/$rid.ok" ]'
 rid2=1700000000000000002-4242
 mkreq "$rid2" 'echo hi'
@@ -1293,9 +1290,7 @@ autoset "$sid2"
 fresh; RUNDIR="$tmp/repo-feat3" CLAUDE_CODE_SESSION_ID="$sid2" run bash "$script" start "${oargs[@]}"
 check "LW5 start from a second linked worktree with session 2: exit 0, session holds the second id" '[ $rc = 0 ] && [ "$(cat "$lw/.stratum/approve/session")" = "$sid2" ]'
 mkreq "$rid" 'echo hi'
-RUNDIR="$tmp/repo-feat2" CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" approve T004 --request "$rid" --input-stdin --record "$rec" <<'ST_INPUT_END'
-Bash: {"command":"echo hi"}
-ST_INPUT_END
+RUNDIR="$tmp/repo-feat2" CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" approve T004 --request "$rid" --input-hash "$(ih 'Bash: {"command":"echo hi"}')" --record "$rec"
 check "LW5 approve from session 1 on session 2's worker: exit 1, the not-in-run line, no .ok" '[ $rc = 1 ] && [ "$out" = "Worker worker-t004 is not in this autonomous run." ] && [ ! -e "$lw/.stratum/approve/$rid.ok" ]'
 RUNDIR="$tmp/repo-feat2" CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-off --roster "$roster"
 check "LW4 autonomous-off from the linked worktree removes only this session's entry" '[ $rc = 0 ] && hasline "autonomous off\tlocal" && [ ! -e "$repo/.stratum/autonomous/$sid" ] && [ -e "$repo/.stratum/autonomous/$sid2" ] && [ -e "$tmp/repo-feat2/.stratum/autonomous/other-session" ]'
@@ -1313,7 +1308,7 @@ check "WA1 request line" 'hasline "request\t%s" "$rid"'
 check "WA1 tab line" 'hasline "tab\ttab worker-t004"'
 check "WA1 input line: the tool and one-line JSON" 'hasline "input\tBash: {\"command\":\"echo hi\"}"'
 check "WA1 pane text block with the stub pane" 'grep -qxF "pane text:" <<<"$out" && paneshown'
-check "WA1 input line comes before pane text" '[ "$(grep -n "^input" <<<"$out" | cut -d: -f1)" -lt "$(grep -n "^pane text:" <<<"$out" | cut -d: -f1)" ]'
+check "WA1 input line comes before pane text" '[ "$(grep -nP "^input\t" <<<"$out" | cut -d: -f1)" -lt "$(grep -n "^pane text:" <<<"$out" | cut -d: -f1)" ]'
 check "WA1 no branch or staged line for a Bash request" '! grep -qP "^(branch|staged)\t" <<<"$out"'
 check "WA1 never-list" 'never 0 0'
 mk; states blocked; mkdir -p "$lw/.stratum/approve"
@@ -1347,7 +1342,7 @@ check "AP1 pwned text: exit 0, approved line" '[ $rc = 0 ] && hasline "approved\
 check "AP1 pwned text: .ok written" '[ -e "$lw/.stratum/approve/$rid.ok" ]'
 check "AP1 pwned text: no pwned file here, in the worker folder or in tmp" '[ ! -e "$repo/pwned" ] && [ ! -e "$lw/pwned" ] && [ ! -e "$tmp/pwned" ]'
 check "AP1 pwned text: agent wait until working, 5 s" 'hascall "agent\twait\tworker-t004\t--until\tworking\t--timeout\t5000"'
-check "AP1 pwned text: one record line with time, worker, tab, tool and input" 'recok'
+check "AP1 pwned text: one record line with time, worker, tab, tool and input" 'recok "touch pwned"'
 autoclr
 
 rfresh; STUB_SSH_EXEC=1 rrun bash "$script" start "${rxargs[@]}"
@@ -1358,9 +1353,7 @@ states blocked; : > "$tmp/ssh"
 STUB_SSH_EXEC=1 rrun bash "$script" wait T004 --machine laptop
 check "AP1m wait on laptop: exit 6, approval state and the input line" '[ $rc = 6 ] && hasline "state\tapproval\tworker-t004\t%s" "$(pane)" && hasline "input\t%s" "$exp2"'
 : > "$tmp/ssh"; rm -f "$rec"
-STUB_SSH_EXEC=1 CLAUDE_CODE_SESSION_ID="$sid" rrun bash "$script" approve T004 --request "$rid" --input-stdin --record "$rec" --machine laptop <<'ST_INPUT_END'
-Bash: {"command":"echo $(touch pwned) `touch pwned`"}
-ST_INPUT_END
+STUB_SSH_EXEC=1 CLAUDE_CODE_SESSION_ID="$sid" rrun bash "$script" approve T004 --request "$rid" --input-hash "$(ih 'Bash: {"command":"echo $(touch pwned) `touch pwned`"}')" --record "$rec" --machine laptop
 check "AP1m approve on laptop: exit 0, approved line, .ok written in the worker folder" '[ $rc = 0 ] && hasline "approved\tworker-t004\t%s" "$rid" && [ -e "$rw/.stratum/approve/$rid.ok" ]'
 check "AP1m the .req is read over ssh, and the ssh log has no pwned text" 'grep -qF -- "$rid.req" "$tmp/ssh" && ! grep -q pwned "$tmp/ssh"'
 check "AP1m ssh carries only the reads and the .ok write" '[ -s "$tmp/ssh" ] && ! grep -vE "$rid\.(req|ok)|approve/session" "$tmp/ssh" | grep -q .'
@@ -1373,9 +1366,7 @@ Bash: {"command":"echo hi"}
 ST_INPUT_END
 check "AP2 flag off: exit 1, the off line, no .ok, no agent wait" '[ $rc = 1 ] && [ "$out" = "Autonomous build mode is off for this session." ] && [ ! -e "$lw/.stratum/approve/$rid.ok" ] && [ "$(cnt "^agent\twait\t")" = 0 ]'
 apx; mkreq "$rid" 'echo hi'; printf '{}\n' > "$lw/.stratum/x.req"
-CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" approve T004 --request ../x --input-stdin --record "$rec" <<'ST_INPUT_END'
-Bash: {"command":"echo hi"}
-ST_INPUT_END
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" approve T004 --request ../x --input-hash "$(ih 'Bash: {"command":"echo hi"}')" --record "$rec"
 check "AP3 --request ../x: exit 1, no .ok in the worker folder, no agent wait" '[ $rc = 1 ] && [ -z "$(find "$lw" -name "*.ok")" ] && [ "$(cnt "^agent\twait\t")" = 0 ]'
 apx
 apv <<'ST_INPUT_END'
@@ -1396,6 +1387,31 @@ apv <<'ST_INPUT_END'
 Bash: {"command":"echo hi"}
 ST_INPUT_END
 check "AP7 session differs: exit 1, the not-in-run line, no .ok" '[ $rc = 1 ] && [ "$out" = "Worker worker-t004 is not in this autonomous run." ] && [ ! -e "$lw/.stratum/approve/$rid.ok" ]'
+apx; mkreq "$rid" 'echo hi'; states blocked
+run bash "$script" wait T004
+nxt=$(awk -F'\t' 'p { print $1; exit } $1 == "input" { p = 1 }' <<<"$out")
+ihv=$(awk -F'\t' '$1 == "inputhash" { print $2; exit }' <<<"$out")
+inv=$(awk -F'\t' '$1 == "input" { print substr($0, 7); exit }' <<<"$out")
+check "IH1 wait: an inputhash line right after the input line, 64 lower-case hex, the sha256 of the printed input text" '[ $rc = 6 ] && [ "$nxt" = inputhash ] && [[ "$ihv" =~ ^[0-9a-f]{64}$ ]] && [ "$ihv" = "$(ih "$inv")" ]'
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" approve T004 --request "$rid" --input-hash "$ihv" --record "$rec"
+check "IH2 approve with that hash: exit 0, approved line, .ok written, the same record line" '[ $rc = 0 ] && hasline "approved\tworker-t004\t%s" "$rid" && [ -e "$lw/.stratum/approve/$rid.ok" ] && recok "{\"command\":\"echo hi\"}"'
+apx; mkreq "$rid" 'echo hi'
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" approve T004 --request "$rid" --input-hash "$(ih 'Bash: {"command":"echo ho"}')" --record "$rec"
+check "IH3 a hash of other text: exit 1, the mismatch line, no .ok" '[ $rc = 1 ] && [ "$out" = "The input does not match request $rid. Approve nothing." ] && [ ! -e "$lw/.stratum/approve/$rid.ok" ]'
+h64=$(ih 'Bash: {"command":"echo hi"}')
+apx; mkreq "$rid" 'echo hi'
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" approve T004 --request "$rid" --input-hash "$h64" --record "$rec"
+check "IH4 the 64-hex lower-case hash: exit 0, .ok written" '[ $rc = 0 ] && [ -e "$lw/.stratum/approve/$rid.ok" ]'
+for bad in "${h64:0:12}" "${h64^^}"; do
+  apx; mkreq "$rid" 'echo hi'
+  CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" approve T004 --request "$rid" --input-hash "$bad" --record "$rec"
+  check "IH4 hash $bad is not 64 lower-case hex: exit 2, the usage line, no .ok" '[ $rc = 2 ] && grep -q "^usage: st-worker.sh" <<<"$out" && [ ! -e "$lw/.stratum/approve/$rid.ok" ]'
+done
+apx; mkreq "$rid" 'echo hi'
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" approve T004 --request "$rid" --input-stdin --record "$rec" <<'ST_INPUT_END'
+Bash: {"command":"echo hi"}
+ST_INPUT_END
+check "IH5 --input-stdin is gone: exit 2, the usage line, no .ok" '[ $rc = 2 ] && grep -q "^usage: st-worker.sh" <<<"$out" && [ ! -e "$lw/.stratum/approve/$rid.ok" ]'
 autoclr
 
 apx; mkreq "$rid" 'echo hi'
@@ -1431,7 +1447,7 @@ rm -rf "$tmp/aptarget"
 autoclr
 
 for pl in 'Do you want to proceed?' 'Do you want to make this edit to a.py?' 'Do you want to create b.py?' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)'; do
-  mk; states blocked; printf '%s\n' "$pl" > "$tmp/pane.txt"
+  mk; states blocked; printf '%s\n' "$rule" "$pl" > "$tmp/pane.txt"
   run bash "$script" answer T004 --text hi
   check "AN1 pane line '$pl': exit 1, the permission line, no key sent" '[ $rc = 1 ] && [ "$out" = "This is a permission prompt. Tell the user the workspace, the tab and the prompt; do not answer it." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
 done
@@ -1443,62 +1459,64 @@ for pq in 'Should the helper be named normalizeInput?' 'Do you want to rename it
   run bash "$script" answer T004 --keys 1
   check "AN3 ordinary question '$pq': exit 0, the key sent" '[ $rc = 0 ] && hascall "agent\tsend-keys\tworker-t004\t1"'
 done
-mk; states blocked working; { printf '%s\n' ' Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)'; seq -f 'line %g' 15; printf '%s\n' 'Should the helper be named normalizeInput?' '❯ 1. Yes' '  2. No'; } > "$tmp/pane.txt"
+mk; states blocked working; { printf '%s\n' "$rule" ' Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)'; seq -f 'line %g' 15; printf '%s\n' 'Should the helper be named normalizeInput?' '❯ 1. Yes' '  2. No'; } > "$tmp/pane.txt"
 run bash "$script" answer T004 --keys 1
 check "AN4 permission dialog more than 15 lines up: exit 0, the key sent" '[ $rc = 0 ] && hascall "agent\tsend-keys\tworker-t004\t1"'
-mk; states blocked; printf '%s\n' 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
+mk; states blocked; printf '%s\n' "$rule" 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
 run bash "$script" wait T004; h=$(shash); states blocked working
 run bash "$script" answer T004 --screen "$h" --keys 1
 check "AN5 permission dialog, option 1 is the one-time yes: exit 0, the key sent" '[ $rc = 0 ] && hascall "agent\tsend-keys\tworker-t004\t1"'
-mk; states blocked; printf '%s\n' 'Do you want to make this edit to a.py?' '❯ 1. Yes' '  2. Yes, allow all edits during this session (shift+tab)' '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
+mk; states blocked; printf '%s\n' "$rule" 'Do you want to make this edit to a.py?' '❯ 1. Yes' '  2. Yes, allow all edits during this session (shift+tab)' '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
 run bash "$script" wait T004; h=$(shash); states blocked working
 run bash "$script" answer T004 --screen "$h" --keys 1
 check "AN5b edit dialog, option 1 is the one-time yes: exit 0, the key sent" '[ $rc = 0 ] && hascall "agent\tsend-keys\tworker-t004\t1"'
 for ao in "  2. Yes, and don't ask again for git commands" "  2. Yes, and don’t ask again for git commands" '  2. Yes, allow reads for this session' '  2. Yes, allow all edits during this session (shift+tab)' '  2. Yes, and allow this in the future' '  2. Yes, and always allow access to other/ from this project'; do
-  mk; states blocked; printf '%s\n' 'Do you want to proceed?' '❯ 1. Yes' "$ao" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
+  mk; states blocked; printf '%s\n' "$rule" 'Do you want to proceed?' '❯ 1. Yes' "$ao" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
   run bash "$script" wait T004; h=$(shash); states blocked
   run bash "$script" answer T004 --screen "$h" --keys 2
   check "AN6 option 2 '$ao' is not a one-time yes: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 2 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
 done
-mk; states blocked; printf '%s\n' 'Do you want to proceed?' '❯ 1. Yes' '  2. Yes, allow reading from other-project/secrets/' '     during this session' '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
+mk; states blocked; printf '%s\n' "$rule" 'Do you want to proceed?' '❯ 1. Yes' '  2. Yes, allow reading from other-project/secrets/' '     during this session' '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
 run bash "$script" wait T004; h=$(shash); states blocked
 run bash "$script" answer T004 --screen "$h" --keys 2
 check "AN6b option 2 wraps, 'during this session' on the next line: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 2 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
-mk; states blocked; printf '%s\n' 'Bash command' '  printf "3. step three"' 'Do you want to proceed?' '❯ 1. Yes' '  2. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
+mk; states blocked; printf '%s\n' "$rule" 'Bash command' '  printf "3. step three"' 'Do you want to proceed?' '❯ 1. Yes' '  2. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
 run bash "$script" wait T004; h=$(shash); states blocked
 run bash "$script" answer T004 --screen "$h" --keys 3
 check "AN6c a command line with 3. is not option 3: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 3 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
-mk; states blocked; printf '%s\n' 'Bash command' '  2. Yes' 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
+mk; states blocked; printf '%s\n' "$rule" 'Bash command' '  2. Yes' 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
 run bash "$script" wait T004; h=$(shash); states blocked
 run bash "$script" answer T004 --screen "$h" --keys 2
 check "AN6d a command line 2. Yes above the dialog is not option 2: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 2 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
-mk; states blocked; printf '%s\n' 'Bash command' '  3. Yes' 'Do you want to proceed?' '❯ 1. Yes' '  2. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
+mk; states blocked; printf '%s\n' "$rule" 'Bash command' '  3. Yes' 'Do you want to proceed?' '❯ 1. Yes' '  2. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
 run bash "$script" wait T004; h=$(shash); states blocked
 run bash "$script" answer T004 --screen "$h" --keys 3
 check "AN6e a command line 3. Yes above the dialog is not option 3: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 3 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
-mk; states blocked; printf '%s\n' 'Read file' 'Do you want to proceed?' '❯ 1. Yes' '  2. Yes, allow reading from evil/' 'Do you want to proceed?' '  2. Yes' '/ during this session' '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
-run bash "$script" wait T004; h=$(shash); states blocked working
-run bash "$script" answer T004 --screen "$h" --keys 2
-check "AN6f option 2 under a fake dialog head below the real head is not a one-time yes: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 2 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
-mk; states blocked; printf '%s\n' 'Read file' 'Do you want to proceed?' '❯ 1. Yes' '  2. Yes, allow reading from evil/' '  2. Yes' '/ during this session' '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
+mk; states blocked; printf '%s\n' "$rule" 'Read file' 'Do you want to proceed?' '❯ 1. Yes' '  2. Yes, allow reading from evil/' 'Do you want to proceed?' '  2. Yes' '/ during this session' '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
+run bash "$script" wait T004
+check "AN6f two dialog heads in the window: wait exits 4 and prints no screen line" '[ $rc = 4 ] && ! grep -q "^screen" <<<"$out"'
+states blocked working
+run bash "$script" answer T004 --screen 0123456789ab --keys 2
+check "AN6f option 2 under a second dialog head, any hash: exit 1, the another-prompt line, nothing sent" '[ $rc = 1 ] && [ "$out" = "The pane shows another prompt. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+mk; states blocked; printf '%s\n' "$rule" 'Read file' 'Do you want to proceed?' '❯ 1. Yes' '  2. Yes, allow reading from evil/' '  2. Yes' '/ during this session' '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
 run bash "$script" wait T004; h=$(shash); states blocked working
 run bash "$script" answer T004 --screen "$h" --keys 2
 check "AN6g a second 2. Yes line under the lasting option 2 is not a one-time yes: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 2 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
-mk; states blocked; printf '%s\n' 'Read file' 'Do you want to proceed?' '❯ 1. Yes' '  2. Yes' '/ during this session' '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
+mk; states blocked; printf '%s\n' "$rule" 'Read file' 'Do you want to proceed?' '❯ 1. Yes' '  2. Yes' '/ during this session' '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
 run bash "$script" wait T004; h=$(shash); states blocked working
 run bash "$script" answer T004 --screen "$h" --keys 2
 check "AN6h option 2 reads 'Yes' and 'during this session' is on the next line: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 2 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
-mk; states blocked; printf '%s\n' 'Read file' 'Do you want to proceed?' '❯ 1. Yes' '  2. Yes' '  2. Yes, allow reading from evil/' '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
+mk; states blocked; printf '%s\n' "$rule" 'Read file' 'Do you want to proceed?' '❯ 1. Yes' '  2. Yes' '  2. Yes, allow reading from evil/' '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
 run bash "$script" wait T004; h=$(shash); states blocked working
 run bash "$script" answer T004 --screen "$h" --keys 2
 check "AN6i two option 2 lines, the first '2. Yes', the second lasting: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 2 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
 for ka in '1 enter' 'enter' 'down'; do
-  mk; states blocked; printf '%s\n' 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
+  mk; states blocked; printf '%s\n' "$rule" 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
   run bash "$script" wait T004; h=$(shash); states blocked
   run bash "$script" answer T004 --screen "$h" --keys $ka
   check "AN7 --keys $ka: exit 1, the one-option line, nothing sent" '[ $rc = 1 ] && [ "$out" = "A permission prompt takes one option number. Nothing sent." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
 done
-mk; states blocked; printf '%s\n' 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
+mk; states blocked; printf '%s\n' "$rule" 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
 run bash "$script" wait T004; h=$(shash); states blocked
 run bash "$script" answer T004 --screen "$h" --keys 4
 check "AN8 --keys 4, the pane has no option 4: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 4 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
@@ -1518,43 +1536,44 @@ for ao in '  2. Yes, and always allow access to other/ from this project' "  2. 
   run bash "$script" answer T004 --screen "$h" --keys 2
   check "NO3 option 2 '$ao' is refused: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 2 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
 done
-mk; states blocked; printf '%s\n' 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
+mk; states blocked; printf '%s\n' "$rule" 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
 run bash "$script" wait T004; h=$(shash)
 check "AN9 permission dialog: wait prints one screen line with a 12 hex hash, after the state line and before pane text:" '[ $rc = 4 ] && [ "$(grep -c "^screen" <<<"$out")" = 1 ] && hasline "screen\t%s" "$h" && [[ "$h" =~ ^[0-9a-f]{12}$ ]] && [ "$(grep -oP "^(state(?=\t)|screen(?=\t)|pane text:$)" <<<"$out")" = "$(printf "state\nscreen\npane text:")" ]'
 mk; states blocked; printf '%s\n' 'Should the helper be named normalizeInput?' '❯ 1. Yes' '  2. No' > "$tmp/pane.txt"
 run bash "$script" wait T004
 check "AN9 question pane: wait prints the state line and no screen line" '[ $rc = 4 ] && hasline "state\tblocked\tworker-t004\t%s" "$(pane)" && ! grep -q "^screen" <<<"$out"'
-mk; states blocked; { seq -f 'line %g' 25; printf '%s\n' 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)'; } > "$tmp/pane.txt"
+mk; states blocked; { seq -f 'line %g' 25; printf '%s\n' "$rule" 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)'; } > "$tmp/pane.txt"
 run bash "$script" wait T004; txt=$(sed -n '/^pane text:$/,$p' <<<"$out" | tail -n +2)
-check "AN9b a 29-line dialog: the screen hash is the hash of the printed pane text, which holds line 5 (the 40-line read)" '[ $rc = 4 ] && [ "$(shash)" = "$(sha256sum <<<"$txt" | cut -c1-12)" ] && grep -qxF "line 5" <<<"$txt"'
+bb=$(printf '%s\n' "$rule" 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)' | sha256sum | cut -c1-12)
+check "AN9b a 30-line dialog: the screen hash is the hash of the 5 block lines (rule through option 3), and the pane text holds line 5 (the 40-line read)" '[ $rc = 4 ] && [ "$(shash)" = "$bb" ] && grep -qxF "line 5" <<<"$txt"'
 for p1 in '❯ 1. Yes' '  1. Yes' '│ 1. Yes' '❯ 1. Yes, proceed' '❯ 1. Yes, proceed (y)' '❯ 1. Yes, just this once'; do
-  mk; states blocked; printf '%s\n' 'Do you want to proceed?' "$p1" "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
+  mk; states blocked; printf '%s\n' "$rule" 'Do you want to proceed?' "$p1" "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
   run bash "$script" wait T004; h=$(shash); states blocked working
   run bash "$script" answer T004 --screen "$h" --keys 1
   check "AN10 option 1 '$p1' is a one-time yes: exit 0, the key sent" '[ $rc = 0 ] && hascall "agent\tsend-keys\tworker-t004\t1"'
 done
-mk; states blocked; printf '%s\n' 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
+mk; states blocked; printf '%s\n' "$rule" 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
 run bash "$script" wait T004; h=$(shash)
-printf '%s\n' 'Bash command' '  git push' 'Do you want to proceed?' '❯ 1. Yes' '  2. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
+printf '%s\n' "$rule" 'Bash command' '  git push' 'Do you want to proceed?' '❯ 1. Yes' '  2. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
 states blocked
 run bash "$script" answer T004 --screen "$h" --keys 1
 check "AN11 the pane changed after wait: exit 1, the another-prompt line, nothing sent" '[ $rc = 1 ] && [ "$out" = "The pane shows another prompt. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
-mk; states blocked; { seq -f 'line %g' 25; printf '%s\n' 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)'; } > "$tmp/pane.txt"
+mk; states blocked; { seq -f 'line %g' 25; printf '%s\n' "$rule" 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)'; } > "$tmp/pane.txt"
 run bash "$script" wait T004; h=$(shash)
 sed -i 's/^line 5$/line five/' "$tmp/pane.txt"
-states blocked
+states blocked working
 run bash "$script" answer T004 --screen "$h" --keys 1
-check "AN11b line 5 changes, outside a 20-line read but inside the 40-line read: exit 1, the another-prompt line, nothing sent" '[ $rc = 1 ] && [ "$out" = "The pane shows another prompt. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
-mk; states blocked; printf '%s\n' 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
+check "AN11b line 5 changes, outside the block (the 40-line read holds it): exit 0, key 1 sent" '[ $rc = 0 ] && hascall "agent\tsend-keys\tworker-t004\t1"'
+mk; states blocked; printf '%s\n' "$rule" 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
 run bash "$script" answer T004 --keys 1
 check "AN12 no --screen on a permission dialog: exit 1, the needs-screen line, nothing sent" '[ $rc = 1 ] && [ "$out" = "A permission prompt needs --screen <hash> from the screen line of wait or watch. Nothing sent." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
 for bh in abc 0123456789abc 0123456789AB; do
-  mk; states blocked; printf '%s\n' 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
+  mk; states blocked; printf '%s\n' "$rule" 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
   run bash "$script" answer T004 --screen "$bh" --keys 1
   check "AN13 --screen '$bh' is not 12 lower-case hex: exit 2, the usage line, no herdr call" '[ $rc = 2 ] && grep -q "^usage: st-worker.sh" <<<"$out" && [ ! -s "$tmp/calls" ]'
 done
 
-rmk; states blocked; printf '%s\n' 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
+rmk; states blocked; printf '%s\n' "$rule" 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
 rrun bash "$script" wait T004 --machine laptop; h=$(shash); states blocked working
 rrun bash "$script" answer T004 --machine laptop --screen "$h" --keys 1
 check "AN14 remote worker, permission dialog, --machine before --screen and --keys: exit 0, key 1 sent on laptop" '[ $rc = 0 ] && [ "$(rcnt "agent\tsend-keys\t")" = 1 ] && rcall "agent\tsend-keys\tworker-t004\t1" && rnever 0 0'
@@ -1707,6 +1726,56 @@ check "WC12 a finished worker that is gone (closed) is skipped: only the other w
 printf 'worker-t004\tnowhere\tworker-t004\tT004\n' > "$tmp/wbad"
 fresh; run bash "$script" watch --roster "$tmp/wbad"
 check "WC10 unknown machine: exit 1, the line, no agent call" '[ $rc = 1 ] && [ "$out" = "Unknown machine: nowhere." ] && [ "$(cnt "^agent\t")" = 0 ]'
+
+box=$(printf '╌%.0s' {1..40})
+REAL=('❯ Run this exact Bash command and nothing else: touch /tmp/p.txt' '  ⎿  $ touch /tmp/p.txt' '' "$rule" ' Bash command' ' Tip: auto mode handles these prompts for you — choose "switch to auto mode" below' ' Create empty file p.txt' "$box" ' │ touch /tmp/p.txt' "$box" ' Do you want to proceed?' ' ❯ 1. Yes' '   2. Yes, and always allow access to /tmp from this project' '   3. Yes, and switch to auto mode · auto mode handles these prompts for you' '   4. No' '' ' Esc to cancel · Tab to amend')
+bh=$(printf '%s\n' "${REAL[@]:3:12}" | sha256sum | cut -c1-12)
+dbput() { printf '%s\n' "$@" > "$tmp/pane.txt"; }
+dbwait() { mk; states blocked; dbput "$@"; run bash "$script" wait T004; h=$(shash); }
+dbans() { states blocked working; run bash "$script" answer T004 --screen "$h" --keys "$1"; }
+
+dbwait "${REAL[@]}"
+check "DB1 wait: one screen line, its hash is the first 12 hex of the 12 block lines (rule through 4. No)" '[ $rc = 4 ] && [ "$(grep -c "^screen" <<<"$out")" = 1 ] && [ "$h" = "$bh" ]'
+dbwait "${REAL[@]}"; dbput 'step a' 'step b' 'step c' "${REAL[@]:0:1}" '  ⎿  Running… (12s)' "${REAL[@]:2}"; dbans 1
+check "DB2 lines above the dialog and the ⎿ line change: exit 0, key 1 sent" '[ "$h" = "$bh" ] && [ $rc = 0 ] && hascall "agent\tsend-keys\tworker-t004\t1"'
+dbwait "${REAL[@]}"; dbput "${REAL[@]:0:8}" ' │ touch /tmp/q.txt' "${REAL[@]:9}"; dbans 1
+check "DB3 the command line changed: exit 1, the another-prompt line, nothing sent" '[ "$h" = "$bh" ] && [ $rc = 1 ] && [ "$out" = "The pane shows another prompt. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+dbwait "${REAL[@]}"; dbput "${REAL[@]:0:4}" ' Bash command (unsandboxed)' "${REAL[@]:5}"; dbans 1
+check "DB4 the header line changed: exit 1, the another-prompt line, nothing sent" '[ "$h" = "$bh" ] && [ $rc = 1 ] && [ "$out" = "The pane shows another prompt. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+dbwait "${REAL[@]}"; dbput "${REAL[@]:0:12}" '   2. Yes, and always allow access to / from this project' "${REAL[@]:13}"; dbans 1
+check "DB5 option 2 changed: exit 1, the another-prompt line, nothing sent" '[ "$h" = "$bh" ] && [ $rc = 1 ] && [ "$out" = "The pane shows another prompt. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+dbwait "${REAL[@]}"; dbput "${REAL[@]:0:16}" ' Esc to cancel · Tab to amend · changed'; dbans 1
+check "DB6 the footer changed (outside the block): exit 0, key 1 sent" '[ "$h" = "$bh" ] && [ $rc = 0 ] && hascall "agent\tsend-keys\tworker-t004\t1"'
+cut=("${REAL[@]:0:8}"); for i in $(seq 45); do cut+=(" │ line $i"); done; cut+=("${REAL[@]:9}")
+dbwait "${cut[@]}"; txt=$(sed -n '/^pane text:$/,$p' <<<"$out" | tail -n +2)
+check "DB7 cut: wait exits 4, one screen line, its hash is the first 12 hex of the printed 40-line pane text" '[ $rc = 4 ] && [ "$(grep -c "^screen" <<<"$out")" = 1 ] && [ "$h" = "$(sha256sum <<<"$txt" | cut -c1-12)" ] && [ "$(awk "END{print NR}" <<<"$txt")" = 40 ]'
+dbans 1
+check "DB7 cut: --keys 1 (a yes) refused with the cut-off line, nothing sent" '[ $rc = 1 ] && [ "$out" = "The top of the dialog is not on the screen, so only its No can be sent. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+dbans 4
+check "DB7b cut: --keys 4 (No) sent: exit 0, key 4" '[ $rc = 0 ] && hascall "agent\tsend-keys\tworker-t004\t4"'
+dbwait "${cut[@]}"; dbput "${cut[@]:0:37}" ' │ changed' "${cut[@]:38}"; dbans 4
+check "DB7c cut: a transcript line inside the 40 lines changed: --keys 4 refused with the another-prompt line, nothing sent" '[ $rc = 1 ] && [ "$out" = "The pane shows another prompt. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+norule=("${REAL[@]:0:3}" "${REAL[@]:4}")
+dbwait "${norule[@]}"; txt=$(sed -n '/^pane text:$/,$p' <<<"$out" | tail -n +2)
+check "DB8 no top rule in the pane: wait exits 4, one screen line, its hash is the first 12 hex of the printed pane text" '[ $rc = 4 ] && [ "$(grep -c "^screen" <<<"$out")" = 1 ] && [ "$h" = "$(sha256sum <<<"$txt" | cut -c1-12)" ]'
+dbans 1
+check "DB8 --keys 1 (a yes) refused with the cut-off line, nothing sent" '[ $rc = 1 ] && [ "$out" = "The top of the dialog is not on the screen, so only its No can be sent. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+dbans 4
+check "DB8 --keys 4 (No) sent: exit 0, key 4" '[ $rc = 0 ] && hascall "agent\tsend-keys\tworker-t004\t4"'
+dbwait "${REAL[@]:0:13}" ' Do you want to proceed?' "${REAL[@]:13}"
+check "DB9 a second dialog head between options 2 and 3: wait exits 4 and prints no screen line" '[ $rc = 4 ] && ! grep -q "^screen" <<<"$out"'
+states blocked working; run bash "$script" answer T004 --screen 0123456789ab --keys 4
+check "DB9 answer with hash 0123456789ab: exit 1, the another-prompt line, nothing sent" '[ $rc = 1 ] && [ "$out" = "The pane shows another prompt. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+mk; rm -f "$wr.seen"; states blocked; dbput "${REAL[@]}"
+wrun
+check "DB10 watch --roster: the screen hash is the block hash, the same as DB1" '[ $rc = 4 ] && [ "$(shash)" = "$bh" ]'
+dbwait "${REAL[@]}"
+dbans 2
+check "DB11 the block hash holds; option 2 (a lasting yes) refused: exit 1, the not-one-time-yes line, nothing sent" '[ "$h" = "$bh" ] && [ $rc = 1 ] && [ "$out" = "Option 2 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+dbans 3
+check "DB11 option 3 (a yes that switches mode) refused: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 3 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+dbans 4
+check "DB11 option 4 (No) sent: exit 0, key 4" '[ $rc = 0 ] && hascall "agent\tsend-keys\tworker-t004\t4"'
 
 su="$repo/.stratum/worker-setup.sh"
 printf '%s\n' 'printf "%s\n%s\n" "$PWD" "$1" > setup.ran' 'echo setup >> "$STUB_T/order"' 'echo SETUP RAN' > "$su"
