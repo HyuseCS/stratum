@@ -36,6 +36,8 @@ marker=$(grep -m1 -v '^\s*$' "$root/sr-opus-5.md")
 out=$(HOME="$tmp/home" bash "$root/hooks/st-session-start.sh")
 check "handoff printed" 'grep -q "Session handoff" <<<"$out" && grep -q "Next step: write tests." <<<"$out"'
 check "orchestrator label rule" 'grep -qF "Stratum rule: begin every reply with the label [Orchestrator]." <<<"$out"'
+commitline="Commit with git commit -m 'subject' -m 'body': single quotes, no heredoc, no backticks and no \$(. The git guard denies other forms."
+check "session text names the commit form" 'grep -qF -- "$commitline" <<<"$out"'
 check "agent description is the task only" 'grep -qF "Set each Agent call'"'"'s description to only the task, like \"US1 review\" or \"T004 test\"." <<<"$out" && ! grep -qF "Full lane | Build ·" <<<"$out" && grep -qF "keep its [tag]" <<<"$out"'
 for a in "$root"/agents/*.md; do
   n=$(basename "$a" .md)
