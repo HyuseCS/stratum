@@ -102,7 +102,7 @@ One table, `COMMIT_FORMS`, in `tests/test_approve_hook.py`. Each row runs throug
 | Row | Command | Guard | Channel |
 |-----|---------|-------|---------|
 | F1 | `git commit -m "$(cat <<'EOF'\nfeat: x\n\nbody\nEOF\n)"` | deny, §3 text | refused (D13; sent today) |
-| F2 | same as F1 with body `feat: say "hi` (one `"`: the guard cannot parse the command or its first line; today it gives `ask` with `The git guard could not parse the command.`) | deny, §3 text | refused (today too) |
+| F2 | same as F1 with body `feat: say "hi` (one `"`: the guard cannot parse the command or its first line; today it gives `ask` with `The git guard could not parse the command.`) | deny, §3 text | refused (D13; sent today) |
 | F3 | `git commit -F - <<'EOF'\nfix it\nEOF` | deny | refused |
 | F4 | `git commit -m "$(echo m)"` | deny | refused |
 | F5 | ``git commit -m 'use `x` here'`` | deny | refused |
@@ -130,4 +130,4 @@ Guard-only cases in `tests/test_git_guard.py` (the guard needs no worker setup):
 - `/usr/bin/git commit -m "$(x)"`, `command git commit -m "$(x)"`, `FOO=1 git commit -m "$(x)"`, `git -c a.b=c commit -m "$(x)"`: deny.
 - P1-P4: the decision is the one of today (`None` in `auto`, `ask` in `ask`).
 - N1-N3: no decision. N4: `ask`.
-- Existing cases that flip to the §3 deny: `test_stray_quote_commit_asks` (`:313`, `cat > t.txt <<EOF ... git commit -m x`) and `test_quoted_heredoc_commit_opener_judged` (`:395-397`, `git commit -F - <<'EOF'`). Change only their expected decision and reason.
+- Existing cases that flip to the §3 deny: `test_stray_quote_commit_asks` (`:313`, `cat > t.txt <<EOF ... git commit -m x`) and `test_quoted_heredoc_commit_opener_judged` (`:395-397`, `git commit -F - <<'EOF'`) and `test_stray_quote_python_heredoc_git_line_asks` (`:362-367`, `python3 - <<'PY'` with a `subprocess.run(["git", "commit", ...])` body line, a hidden commit). Change only their expected decision and reason.
