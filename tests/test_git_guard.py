@@ -1,6 +1,7 @@
 import json
 import os
 import shlex
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -8,6 +9,36 @@ import unittest
 
 GUARD = os.environ.get("ST_GIT_GUARD") or os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "..", "hooks", "st-git-guard.py")
+COMMIT_DENY = (r"Commit form denied: a commit with a heredoc, a backtick or $( cannot be judged by the approve "
+               r"channel. Run it again as git commit -m 'subject' -m 'body': single quotes, no heredoc, no "
+               r"backticks, no $(. Write an apostrophe as '\''.")
+FORM_DENIED = [
+    'git commit -m "$(cat <<\'EOF\'\nfeat: x\n\nbody\nEOF\n)"',
+    'git commit -m "$(cat <<\'EOF\'\nfeat: say "hi\n\nbody\nEOF\n)"',
+    "git commit -F - <<'EOF'\nfix it\nEOF",
+    'git commit -m "$(echo m)"',
+    "git commit -m 'use `x` here'",
+    'git commit -m "${ echo m; }"',
+    "git commit -F <(echo m)",
+    "git commit -m 'a' -m 'b' > >(cat)",
+    'git add src/a.py && git -C . commit -m "$(echo m)"',
+    "cat > a.md <<'EOF'\ngit commit -m x\nEOF",
+    '/usr/bin/git commit -m "$(x)"',
+    'command git commit -m "$(x)"',
+    'FOO=1 git commit -m "$(x)"',
+    'git -c a.b=c commit -m "$(x)"',
+]
+PLAIN_COMMITS = [
+    "git commit -m 'feat(a): b' -m 'why it changed'",
+    "git commit -m 'subject' -m 'line one\nline two'",
+    r"git commit -m 'it'\''s fine'",
+    'git add src/a.py && git commit -m "fix: b"',
+]
+NON_COMMITS = [
+    "cat > a.txt <<'EOF'\nhello\nEOF",
+    "python3 - <<'PY'\nprint(1)\nPY",
+    'echo "git commit -m x <<EOF"',
+]
 
 
 class GitGuardTest(unittest.TestCase):
@@ -30,12 +61,12 @@ class GitGuardTest(unittest.TestCase):
     def set_mode(self, mode, key="commit"):
         self.options = {**self.options, f"CLAUDE_PLUGIN_OPTION_{key.upper()}": mode}
 
-    def run_guard(self, command):
+    def run_guard(self, command, guard=GUARD):
         env = {k: v for k, v in os.environ.items() if not k.startswith("CLAUDE_PLUGIN_OPTION_")}
         env.update(self.options)
         payload = json.dumps({"tool_name": "Bash", "cwd": self.repo,
                               "tool_input": {"command": command}})
-        r = subprocess.run([sys.executable, GUARD], input=payload, env=env,
+        r = subprocess.run([sys.executable, guard], input=payload, env=env,
                            capture_output=True, text=True)
         self.assertEqual(r.returncode, 0, r.stderr)
         if not r.stdout.strip():
@@ -312,12 +343,12 @@ class GitGuardTest(unittest.TestCase):
     def test_stray_quote_commit_asks(self):
         cmd = "cat > t.txt <<EOF\nit's here\nEOF\ngit commit -m x"
         d, reason = self.run_guard(cmd)
-        self.assertEqual(d, "ask")
-        self.assertIn("git commit (commit: ask)", reason)
+        self.assertEqual(d, "deny")
+        self.assertEqual(reason, COMMIT_DENY)
         self.set_mode("auto")
         d, reason = self.run_guard(cmd)
-        self.assertEqual(d, "ask")
-        self.assertIn("may target another folder or branch", reason)
+        self.assertEqual(d, "deny")
+        self.assertEqual(reason, COMMIT_DENY)
 
     def test_stray_quote_force_push_asks(self):
         d, reason = self.run_guard("cat > t.txt <<EOF\nit's here\nEOF\ngit push --force")
@@ -332,8 +363,8 @@ class GitGuardTest(unittest.TestCase):
         cmd = ("python3 - <<'PY'\nsubprocess.run([\"git\", \"commit\", \"-m\", \"x\"])\n"
                "# it's a test\nPY")
         d, reason = self.run_guard(cmd)
-        self.assertEqual(d, "ask")
-        self.assertIn("The git guard could not read a git command on this line.", reason)
+        self.assertEqual(d, "deny")
+        self.assertEqual(reason, COMMIT_DENY)
 
     def test_stray_quote_quoted_git_text_asks(self):
         d, reason = self.run_guard("echo \"run git status\"\necho it's")
@@ -395,8 +426,8 @@ class GitGuardTest(unittest.TestCase):
     def test_quoted_heredoc_commit_opener_judged(self):
         self.set_mode("ask")
         d, reason = self.run_guard("git commit -F - <<'EOF'\nmsg it's\nEOF")
-        self.assertEqual(d, "ask")
-        self.assertIn("git commit (commit: ask)", reason)
+        self.assertEqual(d, "deny")
+        self.assertEqual(reason, COMMIT_DENY)
 
     def test_heredoc_must_ask_reader_after_redirect_or_keyword(self):
         for opener in ("<<'EOF' bash", "time bash <<'EOF'", "if bash <<'EOF'", "! bash <<'EOF'"):
@@ -454,6 +485,52 @@ class GitGuardTest(unittest.TestCase):
                     "cd /tmp && cat > a/b.md <<'EOF'\ngit push text\n# it's\nEOF\nls a"):
             with self.subTest(cmd=cmd):
                 self.assertEqual(self.run_guard(cmd), (None, ""))
+
+    def test_form_denied_in_every_mode(self):
+        for mode in ("auto", "ask", "deny", None):
+            self.options = {}
+            if mode:
+                self.set_mode(mode)
+            for cmd in FORM_DENIED:
+                with self.subTest(mode=mode, cmd=cmd):
+                    self.assertEqual(self.run_guard(cmd), ("deny", COMMIT_DENY))
+
+    def test_plain_m_commits_keep_today_decision(self):
+        for cmd in PLAIN_COMMITS:
+            with self.subTest(cmd=cmd):
+                self.set_mode("auto")
+                self.assertEqual(self.run_guard(cmd), (None, ""))
+                self.set_mode("ask")
+                self.assertEqual(self.run_guard(cmd)[0], "ask")
+
+    def test_non_commit_heredoc_and_quoted_text_get_no_decision(self):
+        for cmd in NON_COMMITS:
+            with self.subTest(cmd=cmd):
+                self.assertEqual(self.run_guard(cmd), (None, ""))
+
+    def test_git_push_asks_with_its_reason(self):
+        self.assertEqual(self.run_guard("git push"), ("ask", "git push sends commits to the remote."))
+
+    def test_guard_fails_closed_without_the_approve_module(self):
+        with tempfile.TemporaryDirectory() as top:
+            broken, missing = os.path.join(top, "broken"), os.path.join(top, "missing")
+            for folder in (broken, missing):
+                os.makedirs(folder)
+                shutil.copy(GUARD, folder)
+            with open(os.path.join(broken, "st-approve.py"), "w") as f:
+                f.write("def broken(:\n")
+            for folder, error in ((broken, "SyntaxError"), (missing, "FileNotFoundError")):
+                guard = os.path.join(folder, "st-git-guard.py")
+                for cmd in ("git status", 'git commit -m "$(x)"'):
+                    with self.subTest(folder=folder, cmd=cmd):
+                        d, reason = self.run_guard(cmd, guard)
+                        self.assertEqual(d, "ask")
+                        self.assertIn("The git guard could not load hooks/st-approve.py (", reason)
+                        self.assertIn(error, reason)
+                with self.subTest(folder=folder, cmd="git push --delete origin b"):
+                    self.assertEqual(self.run_guard("git push --delete origin b", guard)[0], "deny")
+                with self.subTest(folder=folder, cmd="echo hi"):
+                    self.assertEqual(self.run_guard("echo hi", guard), (None, ""))
 
 
 if __name__ == "__main__":

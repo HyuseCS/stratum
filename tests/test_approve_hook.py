@@ -1,4 +1,5 @@
 import collections
+import importlib.util
 import json
 import os
 import re
@@ -12,8 +13,12 @@ import unittest
 
 PLUGIN = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HOOK = os.path.join(PLUGIN, "hooks", "st-approve.py")
+GUARD = os.path.join(PLUGIN, "hooks", "st-git-guard.py")
 ALLOW = '{"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"allow"}}}'
 DENY_REASON = ".stratum/approve/ and .stratum/autonomous are written only by the orchestrator."
+COMMIT_DENY = (r"Commit form denied: a commit with a heredoc, a backtick or $( cannot be judged by the approve "
+               r"channel. Run it again as git commit -m 'subject' -m 'body': single quotes, no heredoc, no "
+               r"backticks, no $(. Write an apostrophe as '\''.")
 CMD = 'python3 "${CLAUDE_PLUGIN_ROOT}/hooks/st-approve.py"'
 MATCHER = "Bash|Edit|Write|MultiEdit|NotebookEdit|Read|Grep|Glob"
 RID_FILE = re.compile(r"[0-9]+-[0-9]+\.(req|ok|user)")
@@ -79,12 +84,12 @@ REFUSED_COMMITS = [
     "git add src/a.py && git commit -F <(git stash; echo m)",
     'git add src/a.py && git commit -m "${ git stash; echo m; }"',
     'git add src/a.py && git commit -m "${| git add src/b.py; REPLY=m; }"',
+    "\n".join(['git add src/a.py && git commit -m "$(cat <<\'EOF\'', "a message", "EOF", ')"']),
 ]
 
 OWN_COMMITS = [
     "git commit -m x -- src/a.py",
     'git add src/a.py && git commit -m "demo heredoc"',
-    "\n".join(['git add src/a.py && git commit -m "$(cat <<\'EOF\'', "a message", "EOF", ')"']),
     "git add src/a.py && git commit -m x > log.txt",
     "git add src/a.py && git commit -m x 2>&1",
     'git add src/a.py && git commit -m "explain git guard"',
@@ -135,6 +140,40 @@ D30_SILENT = [
     "grep -n approve scripts/st-worker.sh",
     "git add scripts/st-worker.sh && git commit -m x",
     "bash tests/x.sh",
+]
+
+COMMIT_FORMS = [
+    ("F1", 'git commit -m "$(cat <<\'EOF\'\nfeat: x\n\nbody\nEOF\n)"'),
+    ("F2", 'git commit -m "$(cat <<\'EOF\'\nfeat: say "hi\n\nbody\nEOF\n)"'),
+    ("F3", "git commit -F - <<'EOF'\nfix it\nEOF"),
+    ("F4", 'git commit -m "$(echo m)"'),
+    ("F5", "git commit -m 'use `x` here'"),
+    ("F6", 'git commit -m "${ echo m; }"'),
+    ("F7", "git commit -F <(echo m)"),
+    ("F8", "git commit -m 'a' -m 'b' > >(cat)"),
+    ("F9", 'git add src/a.py && git -C . commit -m "$(echo m)"'),
+    ("F10", "cat > n.txt <<'EOF'\nnote\nEOF\ngit commit -m x"),
+    ("H2", "cat > a.md <<'EOF'\ngit commit -m x\nEOF"),
+    ("P1", "git commit -m 'feat(a): b' -m 'why it changed'"),
+    ("P2", "git commit -m 'subject' -m 'line one\nline two'"),
+    ("P3", r"git commit -m 'it'\''s fine'"),
+    ("P4", 'git add src/a.py && git commit -m "fix: b"'),
+    ("N1", "cat > a.txt <<'EOF'\nhello\nEOF"),
+    ("N2", "python3 - <<'PY'\nprint(1)\nPY"),
+    ("N3", 'echo "git commit -m x <<EOF"'),
+    ("N4", "git push"),
+]
+
+DROPS = [
+    ("never-list", None, "git add src/a.py && git commit -m x && git push", {}),
+    ("commit-never", None, "cd . && git add src/a.py && git commit -m x", {}),
+    ("unjudgeable", None, 'git commit -m "$(echo m)"', {}),
+    ("git-word", "status", "git status && git commit -m x", {}),
+    ("flag", "-a", "git commit -a -m x", {}),
+    ("branch", None, "git add src/a.py && git commit -m x", {"guard": "worker-t9"}),
+    ("owns-missing", None, "git add src/a.py && git commit -m x", {"owns": None}),
+    ("owns-missing", None, "git add src/a.py && git commit -m x", {"owns": ""}),
+    ("outside-owns", "src/b.py", "git add src/b.py && git commit -m x", {}),
 ]
 
 
@@ -223,6 +262,28 @@ class ApproveHookTest(unittest.TestCase):
             remove(owns_path)
         else:
             write(owns_path, owns)
+
+    def staged_setup(self, **options):
+        self.commit_setup(**options)
+        write(os.path.join(self.root, "src", "a.py"), "x = 2\n")
+        git("add", "src/a.py", cwd=self.root)
+
+    def guard_decision(self, command):
+        env = {k: v for k, v in os.environ.items() if not k.startswith("CLAUDE_PLUGIN_OPTION_")}
+        payload = json.dumps({"tool_name": "Bash", "cwd": self.root, "tool_input": {"command": command}})
+        r = subprocess.run([sys.executable, GUARD], input=payload, env=env, cwd=self.root,
+                           capture_output=True, text=True, timeout=20)
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        if not r.stdout.strip():
+            return None, ""
+        out = json.loads(r.stdout)["hookSpecificOutput"]
+        return out["permissionDecision"], out["permissionDecisionReason"]
+
+    def dropped(self):
+        path = os.path.join(self.approve, "dropped")
+        self.assertTrue(os.path.isfile(path), "no dropped file in the approve folder")
+        with open(path, encoding="utf-8") as f:
+            return f.readline().rstrip("\n").split("\t")
 
     def run_hook(self, data, cwd, answer="user", env=None):
         self.assertTrue(os.path.isfile(HOOK), "hooks/st-approve.py does not exist yet")
@@ -428,9 +489,7 @@ class ApproveHookTest(unittest.TestCase):
             self.commit_setup()
             write(os.path.join(self.root, "src", "a.py"), "x = 2\n")
             git("add", "src/a.py", cwd=self.root)
-            req = self.assertSent(self.bash(command))
-            self.assertEqual(req["tool_input"], {"command": command})
-            self.assertEqual(req.get("staged"), ["src/a.py"])
+            self.assertSilent(self.bash(command))
 
     def test_non_ascii_command_is_sent_under_cp1252(self):
         command = "echo café > notes.txt"
@@ -644,6 +703,64 @@ class ApproveHookTest(unittest.TestCase):
             "bash scripts/st-worker.sh approve worker-t1 --request 1-1 --input-stdin --record r", cwd=demo))
         self.assertSilent(self.pre_bash("printf S1 > .stratum/autonomous", cwd=demo))
         self.assertSilent(self.pre_bash("touch .stratum/autonomous/S1", cwd=demo))
+
+    def test_table_commit_forms_through_both_hooks(self):
+        self.staged_setup()
+        for row, command in COMMIT_FORMS:
+            guard = self.guard_decision(command)
+            with self.subTest(row=row, hook="guard"):
+                if row[0] in ("F", "H"):
+                    self.assertEqual(guard, ("deny", COMMIT_DENY))
+                elif row[0] == "P":
+                    self.assertNotEqual(guard, ("deny", COMMIT_DENY))
+                elif row == "N4":
+                    self.assertEqual(guard, ("ask", "git push sends commits to the remote."))
+                else:
+                    self.assertEqual(guard, (None, ""))
+            if row[0] == "N" and row != "N4":
+                continue
+            with self.subTest(row=row, hook="channel"):
+                run = self.bash(command)
+                if row[0] == "P":
+                    req = self.assertSent(run)
+                    self.assertEqual((req["tool_input"]["command"], req.get("branch"), req.get("staged")),
+                                     (command, "worker-t1", ["src/a.py"]))
+                else:
+                    self.assertSilent(run)
+
+    def test_unjudgeable_is_the_one_form_test(self):
+        spec = importlib.util.spec_from_file_location("st_approve", HOOK)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        unjudgeable = module.unjudgeable
+        for row, command in COMMIT_FORMS:
+            if row[0] != "N":
+                with self.subTest(row=row):
+                    self.assertEqual(unjudgeable(command), row[0] in ("F", "H"))
+
+    def test_dropped_names_the_rule_that_refused_a_commit(self):
+        for rule, detail, command, options in DROPS:
+            with self.subTest(rule=rule, command=command, options=options):
+                self.staged_setup(**options)
+                remove(os.path.join(self.approve, "dropped"))
+                self.assertSilent(self.bash(command))
+                fields = self.dropped()
+                self.assertEqual(fields[0], rule)
+                if detail is not None:
+                    self.assertEqual(fields[1], detail)
+                self.assertEqual(fields[2], command)
+
+    def test_dropped_git_error_when_git_cannot_read_the_index(self):
+        self.staged_setup()
+        write(os.path.join(self.root, ".git", "index"), "not an index\n")
+        self.assertSilent(self.bash("git add src/a.py && git commit -m x"))
+        self.assertEqual(self.dropped()[0], "git-error")
+
+    def test_sent_commit_removes_a_stale_dropped_file(self):
+        self.staged_setup()
+        write(os.path.join(self.approve, "dropped"), "x\t\t\n")
+        self.assertSent(self.bash("git add src/a.py && git commit -m x"))
+        self.assertFalse(os.path.exists(os.path.join(self.approve, "dropped")))
 
 
 if __name__ == "__main__":
