@@ -515,9 +515,11 @@ close)
     rm -rf "$WT/.stratum/approve" || fail "Worker $N: cannot remove .stratum/approve. Close refused."
   fi
   h tab list --workspace "$WS"
+  c=0
   # ponytail: Codex is the label scripts/st-codex-agent.sh sets, match its tab id from the codex-tabs record if that label changes
-  if jq -e --arg n "$N" 'all(.result.tabs[]; .label == $n or .label == "Codex")' <<<"$r" >/dev/null 2>&1 &&
-    { [ -n "$m" ] || [ "$WS" != "${HERDR_WORKSPACE_ID:-}" ]; }; then
+  jq -e --arg n "$N" 'all(.result.tabs[]; .label == $n or .label == "Codex")' <<<"$r" >/dev/null 2>&1 || c=$?
+  [ $c -le 1 ] || stop "no .result.tabs in the herdr answer"
+  if [ $c = 0 ] && { [ -n "$m" ] || { [ -n "${HERDR_WORKSPACE_ID:-}" ] && [ "$WS" != "$HERDR_WORKSPACE_ID" ]; }; }; then
     h workspace close "$WS"
   else
     h tab close "$TAB"

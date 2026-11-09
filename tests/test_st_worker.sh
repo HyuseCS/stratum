@@ -82,6 +82,7 @@ case "$1 $2" in
   echo '{"result":{}}' ;;
 "tab list")
   w=; while [ $# -gt 0 ]; do case "$1" in --workspace) w=$2 ;; esac; shift; done
+  [ -z "${STUB_TABWS_JUNK:-}" ] || [ -z "$w" ] || { echo '{}'; exit 0; }
   jq -c --arg w "$w" '{result:{tabs:(if $w == "" then . else map(select(.workspace_id == $w)) end)}}' "$T/tabs.json" ;;
 "tab close")
   : > "$T/closed"
@@ -733,7 +734,7 @@ t=$(tabid); w=$(wsid)
 jq -c --arg t "$t" 'map(if .tab_id == $t then .workspace_id = "w1P" else . end)' "$tmp/tabs.json" > "$tmp/tabs.new" && mv "$tmp/tabs.new" "$tmp/tabs.json"
 jq -c --arg t "$t" 'map(if .tab_id == $t then .workspace_id = "w1P" else . end)' "$tmp/panes.json" > "$tmp/panes.new" && mv "$tmp/panes.new" "$tmp/panes.json"
 jq -c 'map(if .name == "worker-t004" then .workspace_id = "w1P" else . end)' "$tmp/agents.json" > "$tmp/agents.new" && mv "$tmp/agents.new" "$tmp/agents.json"
-run bash "$script" close T004
+HWS=wOther run bash "$script" close T004
 check "CW2 old layout exit 0" '[ $rc = 0 ]'
 check "CW2 old layout: one tab close on the worker tab, zero workspace close" 'hascall "tab\tclose\t%s" "$t" && never 1 0'
 check "CW2 old layout: w1P and its orchestrator tab stay" 'jq -e "any(.[]; .workspace_id == \"w1P\")" "$tmp/ws.json" >/dev/null && jq -e "any(.[]; .label == \"orchestrator\")" "$tmp/tabs.json" >/dev/null'
@@ -745,6 +746,16 @@ cw3() {
   check "CW3 the worker's workspace is the caller's workspace: one tab close, zero workspace close" 'hascall "tab\tclose\t%s" "$(tabid)" && never 1 0'
 }
 cw3 "$script"
+
+mk; states done
+HWS= run bash "$script" close T004
+check "CW5 local close with no caller workspace id: exit 0" '[ $rc = 0 ]'
+check "CW5 local close with no caller workspace id: one tab close, zero workspace close" 'hascall "tab\tclose\t%s" "$(tabid)" && never 1 0'
+
+mk; states done
+STUB_TABWS_JUNK=1 run bash "$script" close T004
+check "CW6 tab list --workspace answers {}: exit 1, the stopped line" '[ $rc = 1 ] && [ "$out" = "stopped: no .result.tabs in the herdr answer" ]'
+check "CW6 tab list --workspace answers {}: zero tab close, zero workspace close" 'never 0 0'
 
 fresh
 x=$(rnd)
@@ -1215,7 +1226,7 @@ sed -E '/H\+=\(--machine/d' "$script" > "$tmp/NC1.sh" 2>/dev/null
 check "NC1 sed deletes exactly one line" '[ "$(diff "$script" "$tmp/NC1.sh" | grep -c "^<")" = 1 ]'
 nc NC1 r1
 
-sed -E 's/"?\$WS"? != "?\$\{HERDR_WORKSPACE_ID(:-)?\}"?/true/' "$script" > "$tmp/NC8.sh" 2>/dev/null
+sed -E 's/"?\$WS"? != "?\$\{?HERDR_WORKSPACE_ID(:-)?\}?"?/true/' "$script" > "$tmp/NC8.sh" 2>/dev/null
 check "NC8 sed changes exactly one line" '[ "$(diff "$script" "$tmp/NC8.sh" | grep -c "^<")" = 1 ]'
 nc NC8 cw3
 
