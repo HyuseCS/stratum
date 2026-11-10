@@ -117,6 +117,63 @@ names the worker's workspace, so the orchestrator can tell the user where to loo
 
 ---
 
+### User Story 6 - Worker folder and branch named after the project and the issue (Priority: P1, round 3)
+
+The orchestrator starts a worker for an issue. The worker's worktree folder and its branch get
+the same name, built from the project and the issue: `stratum-94` for a worker on the whole of
+issue 94, `stratum-93_t005` for a worker on task T005 of issue 93, `parasat-prod-142` when the
+project rule adds an env part. The user sees from the folder and the branch which project and
+issue the work is for, the same way as for branches the user makes by hand. A worker with no
+issue gets the task words instead. The tab label `worker-<id>` stays the key every command uses
+to find the worker, and workers started before this change keep working.
+
+**Why this priority**: The user added it to #94 after the PR opened (D21 to D23). It changes
+what every new worker leaves on disk and on the remote.
+
+**Independent Test**: Start a worker with an issue, one with an issue and a task id, one with a
+project and env override, and one with no issue. Check each folder and branch name, that a
+taken name is refused before anything is made, and that `wait`, `result`, `list` and `close`
+find each worker and use its real branch.
+
+**Acceptance Scenarios**:
+
+1. **Given** the repo folder `stratum`, **When** the orchestrator starts worker `f94` for the whole of issue 94, **Then** the worktree folder is `<parent>/stratum-94` and the branch is `stratum-94`.
+2. **Given** the repo folder `stratum`, **When** the orchestrator starts worker `t005` for task T005 of issue 93, **Then** the folder and branch are `stratum-93_t005`.
+3. **Given** a project rule that says project `parasat` and env `prod`, **When** the skill starts a worker for issue 142, **Then** it passes the project and env, and the folder and branch are `parasat-prod-142`.
+4. **Given** no issue, **When** the orchestrator starts a worker whose task heading is `Autonomous sessions`, **Then** the folder and branch are `stratum-autonomous_sessions`.
+5. **Given** a branch or folder with that name already exists, **When** the orchestrator starts the worker, **Then** `start` refuses before it makes a worktree, a branch or a workspace.
+6. **Given** a project, env, issue or task id that is not a safe token, **When** the orchestrator starts the worker, **Then** `start` refuses before any git or herdr call.
+7. **Given** a worker with the new name, **When** the orchestrator runs `wait`, `answer`, `followup`, `goal`, `resend`, `result`, `list` or `close` with its id, **Then** each finds it by the `worker-<id>` tab, and `result`, `close` and `list` use its real branch and folder.
+8. **Given** a worker started before this change (folder `<repo>-worker-<id>`, branch `worker-<id>`), **When** the orchestrator runs any command with its id, **Then** it works as before.
+
+---
+
+### User Story 7 - Worker guards still know a worker (Priority: P1, round 3)
+
+A worker on a branch such as `stratum-94` is still known as a worker by every check that knows
+one today. The lock-2 guard still stops it from writing the autonomous-mode or approve files, the
+orchestrator-only commands still refuse to run in it, the research skill still starts at once in
+it, and its Codex agent is still `st-codex-worker-<id>`.
+
+**Why this priority**: These checks found a worker by its `worker-*` branch. Without this story,
+D21 would turn off an access guard (D24).
+
+**Independent Test**: Start a worker with the new branch name in normal mode. In its folder, try
+to write the autonomous-mode file and the worker marker by shell and by edit tool, run an
+orchestrator-only command, and compute the Codex agent name. Check that each is refused or
+named as before.
+
+**Acceptance Scenarios**:
+
+1. **Given** a worker worktree with the new branch name in normal mode, **When** the worker tries to make, change or remove a file under `.stratum/autonomous`, `.stratum/approve` or the worker marker, by shell or by edit tool, **Then** the try is refused.
+2. **Given** that worktree, **When** someone runs `st-worker.sh approve`, `pass`, `autonomous-on` or `autonomous-off` there, **Then** it is refused as from a worker worktree.
+3. **Given** that worktree, **When** the research skill checks for a worker, **Then** it sees a worker and starts at once.
+4. **Given** that worktree, **When** the advisor names its Codex agent, **Then** the name is `st-codex-worker-<id>` (cut to 32 characters), and `close` matches that same name.
+5. **Given** a worktree on a `worker-*` branch with no marker (made before this change), **When** any of these checks runs, **Then** it still sees a worker.
+6. **Given** the orchestrator's own checkout (no marker, branch not `worker-*`), **When** any of these checks runs, **Then** it does not see a worker.
+
+---
+
 ### Edge Cases
 
 - The orchestrator's workspace has no label, or `start` runs with `--machine` outside a herdr pane: the orchestrator part of the name is the repo folder name.
@@ -126,6 +183,11 @@ names the worker's workspace, so the orchestrator can tell the user where to loo
 - A workspace with the same name already exists (a worker with the same id was closed by hand but its workspace stayed): the duplicate id check of `start` (a `worker-<id>` tab already exists) stays the guard. A leftover workspace with no `worker-<id>` tab does not block `start`.
 - Workers started before this feature (tabs in the orchestrator's workspace) can still be found, waited on and closed. `close` then closes only the tab (US3 scenario 3).
 - `close` must never close the orchestrator's own workspace.
+- Round 3: the repo folder name has upper-case letters or characters that are not safe (for example `My Repo`): the default project part is lower-cased, and `start` refuses a name with an unsafe character, telling the orchestrator to pass `--project`.
+- Round 3: a task id with upper-case letters (`T005`) is lower-cased in the name (`stratum-93_t005`), as the tab label `worker-t005` is today.
+- Round 3: no issue and no task heading: the feature part is the worker id (for example `stratum-f94`).
+- Round 3: two workers for the same issue and no task id get the same name: the second `start` refuses (the name is taken).
+- Round 3: the worker marker is a symlink, or a worker deleted it and switched to a `worker-*` branch: the checks read the marker only when it is a plain file, and a `worker-*` branch still counts.
 
 ## Requirements *(mandatory)*
 
@@ -144,10 +206,28 @@ names the worker's workspace, so the orchestrator can tell the user where to loo
 - **FR-011**: `tests/test_st_worker.sh` MUST cover: the workspace name with and without a heading, a long heading, the fallback name, no new tab in the orchestrator's workspace, close of the whole workspace, close of a tab in a shared workspace, the saved-machine path with no `st-workers`, and the `list` workspace name. The advisor tests MUST cover the worker Codex tab name and the unchanged orchestrator name.
 - **FR-012**: All existing tests MUST still pass, changed only where they name the old tab-in-the-orchestrator's-workspace or `st-workers` layout.
 
+Round 3 (D21 to D25):
+
+- **FR-013**: `start` MUST give the worker's worktree folder and its branch the same name, `<project>-<feature>`, or `<project>-<env>-<feature>` when an env is given. The folder sits next to the repo, as today.
+- **FR-014**: `<project>` MUST default to the repo folder name, lower-cased. The orchestrator MUST be able to give another project and an env part to `start`. The script MUST NOT read any project rule text itself.
+- **FR-015**: `<feature>` MUST be the issue number for a worker on a whole issue, and `<issue>_<task id>` for a worker on one task of an issue. With no issue it MUST be the task words of FR-002, lower-cased, with every run of other characters turned into one `_`, cut to 30 characters. With no issue and no heading it MUST be the worker id.
+- **FR-016**: Each name part (project, env, issue, task id) MUST be lower-cased and checked as a safe token (letters, digits, `.`, `_` and `-`, starting with a letter or digit, no `..`) before it reaches git, a path or ssh. A part that fails MUST stop `start` before any git or herdr call.
+- **FR-017**: `start` MUST refuse a name whose branch or folder already exists, before it makes a worktree, a branch or a workspace, here and on a saved machine.
+- **FR-018**: The tab label `worker-<id>` MUST stay the key every command uses to find a worker. `find_worker` and `list` MUST read the worker's branch and folder from the worktree of its pane, not from `worker-<id>`. `result` (its fetch on a saved machine), `close` (its open-PR check) and `list` MUST use that real branch. The commit guard file, the brief's Branch line and the `/goal` prompt MUST name the real branch.
+- **FR-019**: Workers started before round 3 (folder `<repo>-worker-<id>`, branch `worker-<id>`) MUST keep working with every command.
+- **FR-020**: `start` MUST write a worker marker `.stratum/worker` holding the worker id in the worktree, here and on a saved machine, with the same symlink and exists checks as the brief and guard files. `close` MUST remove it with the guard file.
+- **FR-021**: A session MUST count as a worker when a plain-file worker marker exists in its folder or a folder above, or its branch starts with `worker-`, or (as today) `.stratum/approve` exists. Every worker check MUST use this rule: lock 2 in the approve hook, the "run this from the orchestrator's checkout" check of `st-worker.sh`, and the research skill's worker check.
+- **FR-022**: Lock 2 MUST refuse a worker's write, change or removal of the worker marker, by shell and by edit tool, as it does for `.stratum/approve` and `.stratum/autonomous`.
+- **FR-023**: The advisor MUST name a worker's Codex agent `st-codex-worker-<id>` (cut to 32 characters) from the marker's id, and from a `worker-*` branch when there is no marker. `close` MUST match the same name.
+- **FR-024**: The st-worker skill MUST read the project's worktree naming rule from `.stratum/constitution.md` or the app's ORDINANCE file when there is one, pass the project and env parts to `start`, pass the issue (and the task id for a one-task worker) from the request, and write the real branch in the roster's branch field and in the review and merge steps. `README.md` MUST describe the new folder and branch name.
+- **FR-025**: The tests MUST cover each FR-013 to FR-023 case: every name form, the fallbacks, a refused unsafe part, a taken name, old workers, the real branch in `result`, `close` and `list`, the marker on both machines, each worker check with marker, with a `worker-*` branch, and with neither, and lock 2 on the marker.
+
 ### Key Entities
 
 - **Worker workspace**: one herdr workspace per worker, named `<orchestrator> / <id>: <task words>`, with the worker's worktree as its folder. It holds the `worker-<id>` tab and, once the advisor runs, the `Codex` tab with the Codex agent `st-codex-worker-<id>`.
 - **Worker id**: the task id the orchestrator passes to `start`. Every command finds the worker by the tab label `worker-<id>`.
+- **Worker name** (round 3): `<project>[-<env>]-<feature>`, the name of the worker's worktree folder and of its branch.
+- **Worker marker** (round 3): the file `.stratum/worker` in a worker's worktree, holding the worker id. It tells every worker check that the session is a worker.
 
 ## Success Criteria *(mandatory)*
 
@@ -158,10 +238,13 @@ names the worker's workspace, so the orchestrator can tell the user where to loo
 - **SC-003**: After `close` of every worker, 0 worker workspaces and 0 worker Codex tabs are left, and the orchestrator's workspace is still open.
 - **SC-004**: The user can tell from the sidebar alone which worker and which orchestrator each worker workspace belongs to.
 - **SC-005**: All tests pass, including the new cases.
+- **SC-006** (round 3): The user can tell from a worker's folder and branch name alone which project and which issue it works on, for 100% of workers started with an issue.
+- **SC-007** (round 3): In a worker worktree with the new branch name, 100% of the tries to write the autonomous-mode, approve or marker files are refused, as they are today on a `worker-*` branch.
 
 ## Assumptions
 
 - herdr 0.9.4 gives a pane in a workspace made by `herdr workspace create` that workspace's own `HERDR_WORKSPACE_ID` (live probe 2026-11-09). The advisor inside a worker reads its own workspace from it.
 - The user accepts that worker workspaces are not grouped under the orchestrator in the sidebar (D10).
-- Issue #93 changes `answer`, the `wait`/`watch` screen hashing and the Codex answer reader in the same scripts. This feature does not touch them.
+- Issue #93 changes `answer`, the `wait`/`watch` screen hashing and the Codex answer reader in the same scripts. This feature does not touch them. Round 3 builds on top of #93 after it merges into main (D25), because both change `hooks/st-approve.py`.
+- Round 3: lock 2 stays a text match, as its shortcut note says. The marker raises no guard level: a worker that can delete the marker could already switch its branch.
 - The live multi-worker run with real Codex tabs can only be proved by hand. The automated tests use the herdr stub.
