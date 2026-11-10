@@ -26,7 +26,7 @@ IFS= read -r path <<'EOF'
 p=$(realpath -m -- '<path>') && case "$p" in "$(realpath .)"/*) true ;; *) false ;; esac
 EOF
 IFS= read -r wbr <<'EOF'
-case "$(git symbolic-ref --short HEAD 2>/dev/null)" in worker-*) true ;; *) false ;; esac
+python3 <plugin root>/hooks/st-approve.py --worker
 EOF
 IFS= read -r idx <<'EOF'
 git ls-files -s | sha256sum
@@ -111,7 +111,8 @@ FR-015 once	skills/st-define/SKILL.md	Make it once per run and use it again for 
 FR-015 redo	skills/st-define/SKILL.md	In a redo (step 0.2), make no folder: pass `<feature_directory>/research.md` for the feature in `.stratum/state.json` that step 0.2 redoes.
 FR-013 no redo	procedures/plan.md	Do not research again what it answers.
 FR-013 add	procedures/plan.md	(add to it if it exists)
-FR-002 worker	skills/st-research/SKILL.md	On a worker branch the mode is on: start the research at once and do not run the flag command.
+FR-002 worker	skills/st-research/SKILL.md	In a worker session the mode is on: start the research at once and do not run the flag command.
+FR-002 worker exit	skills/st-research/SKILL.md	Only exit 3 means this is not a worker session; any other exit code counts as a worker session.
 SC-003 four	skills/st-research/SKILL.md	run the four git commands of step 5 again
 SC-003 ignored	skills/st-research/SKILL.md	The check does not cover git-ignored files.
 EOF
@@ -166,9 +167,22 @@ wk=$tmp/wk
 git init -q -b worker-x "$wk" && git -C "$wk" -c user.name=t -c user.email=t@t commit -q --allow-empty -m i
 hook() { python3 -c 'import json,sys; print(json.dumps({"hook_event_name":"PreToolUse","cwd":sys.argv[1],"tool_name":"Bash","tool_input":{"command":sys.argv[2]}}))' "$1" "$2" | env -u CLAUDE_PROJECT_DIR python3 "$root/hooks/st-approve.py"; }
 check "FR-002 B4 hook denies flag read" 'hook "$wk" "$auto" | grep -q "\"deny\""'
-check "FR-002 B4 hook allows worker cmd" '! hook "$wk" "$wbr" | grep -q "\"deny\""'
-check "FR-002 B4 worker branch" '(cd "$wk" && bash -c "$wbr")'
-check "FR-002 B4 other branch" '! (cd "$m" && bash -c "$wbr")'
+wrun() { (cd "$1" && env -u CLAUDE_PROJECT_DIR bash -c "${wbr/<plugin root>/${2:-$root}}") >/dev/null 2>&1; echo $?; }
+check "FR-002 B4 hook allows worker cmd" '! hook "$wk" "${wbr/<plugin root>/$root}" | grep -q "\"deny\""'
+check "FR-002 B4 worker branch" '[ "$(wrun "$wk")" = 0 ]'
+check "FR-002 B4 other branch" '[ "$(wrun "$m")" = 3 ]'
+wm=$tmp/wm
+git init -q -b wm-94 "$wm" && git -C "$wm" -c user.name=t -c user.email=t@t commit -q --allow-empty -m i
+mkdir -p "$wm/.stratum" && printf 'f94\n' > "$wm/.stratum/worker"
+check "FR-002 B4 marker" '[ "$(wrun "$wm")" = 0 ]'
+check "FR-002 B4 hook allows worker cmd with marker" '! hook "$wm" "${wbr/<plugin root>/$root}" | grep -q "\"deny\""'
+check "FR-002 B4 hook denies flag read with marker" 'hook "$wm" "$auto" | grep -q "\"deny\""'
+ws=$tmp/ws
+git init -q -b ws-94 "$ws" && git -C "$ws" -c user.name=t -c user.email=t@t commit -q --allow-empty -m i
+mkdir -p "$ws/.stratum" && printf 'f94\n' > "$tmp/wsm" && ln -s "$tmp/wsm" "$ws/.stratum/worker"
+check "FR-002 B4 symlink marker" '[ "$(wrun "$ws")" = 3 ]'
+mkdir -p "$tmp/nohook"
+check "FR-002 B4 missing hook is not exit 3" 'c=$(wrun "$m" "$tmp/nohook"); [ "$c" != 0 ] && [ "$c" != 3 ]'
 
 printf 'b\n' > "$h/kept" && git -C "$h" add kept
 i1=$(cd "$h" && bash -c "$idx")
