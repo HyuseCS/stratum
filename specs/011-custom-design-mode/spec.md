@@ -183,7 +183,7 @@ with the install link. Run a new-look task and see it go on.
   While stopped, the agent MUST make changes the user asks for, on the layers the user selected
   when the user names "this" or "the selected" layer (D11, D18).
 - **FR-009**: On "good", the agent MUST save the design, with the user's unsaved changes, to
-  `design/<screen>.figcraft` in the project. The lane MUST write the design file (`DESIGN.md` +
+  `design/app.figcraft` in the project. The lane MUST write the design file (`DESIGN.md` +
   `.impeccable/design.json`) from the design's variables and the grill answers, and the
   project's tokens (the engine's `tokens.css` and `base.css`) from the same variables, so a picked
   theme's tokens never ship over the user's changes (D12, D16).
@@ -194,7 +194,7 @@ with the install link. Run a new-look task and see it go on.
   build: the FigCraft stop. Setup stops (a missing tool, the one-time /mcp reconnect) do not count.
   The design file MUST be shown at the gate with the screenshots (D21).
 - **FR-012**: After the build, the custom mode MUST run the same checks, fix rounds, gate and
-  commit as the new-look mode. The commit MUST include `design/<screen>.figcraft`.
+  commit as the new-look mode. The commit MUST include `design/app.figcraft`.
 - **FR-013**: At the gate, the lane MUST make each change the way the user names: in FigCraft (stop
   again as FR-008, then FR-009 and FR-010) or in code. With no way named, layout and look changes
   MUST go to FigCraft and small code-only fixes MUST go to code (D13).
@@ -207,7 +207,7 @@ with the install link. Run a new-look task and see it go on.
   `st-design` agent MUST have the FigCraft MCP tools (D18).
 - **FR-016**: A custom-mode run MUST check for the FigCraft app and `figcraft-cli` at the start and
   stop before any work with the install link when one is missing or when `figcraft-cli` is older
-  than 0.13.1. New-look and autonomous runs MUST NOT check them (D19).
+  than 0.16.0. New-look and autonomous runs MUST NOT check them (D19).
 - **FR-017**: `st-status` MUST show FigCraft as optional, "for the custom mode". `st-init` MUST
   offer FigCraft as an optional install and, on yes, give the exact install command for the
   machine (D19). `st-init` MUST merge the 11 FigCraft tool names the agent uses into
@@ -217,7 +217,7 @@ with the install link. Run a new-look task and see it go on.
 
 ### Key Entities
 
-- **Saved design**: `design/<screen>.figcraft`, the screen's design as the user approved it. It is
+- **Saved design**: `design/app.figcraft`, the screen's design as the user approved it. It is
   the source of the screen's layout and is committed with the screen.
 - **Design file**: `DESIGN.md` + `.impeccable/design.json`, the project's look. In the custom mode
   its tokens come from the saved design's variables.

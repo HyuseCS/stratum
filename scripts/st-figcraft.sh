@@ -47,10 +47,10 @@ case ${1:-} in
       v=unknown
       if [[ $("${cli[@]}" --version 2>/dev/null) =~ ([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
         v=${BASH_REMATCH[0]}
-        a=$((10#${BASH_REMATCH[1]})) b=$((10#${BASH_REMATCH[2]})) c=$((10#${BASH_REMATCH[3]}))
-        (( a > 0 || b > 13 || (b == 13 && c >= 1) )) && v=
+        a=$((10#${BASH_REMATCH[1]})) b=$((10#${BASH_REMATCH[2]}))
+        (( a > 0 || b >= 16 )) && v=
       fi
-      [ -n "$v" ] && { echo "too old: figcraft-cli $v, needs 0.13.1 or later. Install: $link"; n=1; }
+      [ -n "$v" ] && { echo "too old: figcraft-cli $v, needs 0.16.0 or later. Install: $link"; n=1; }
     fi
     exit "$n" ;;
   cli) shift; run_cli "$@" ;;

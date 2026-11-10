@@ -58,7 +58,7 @@ spikes (R15) run.
 
 ## R5. Nothing outside `design/` is written through FigCraft (SC-005)
 
-- Decision: FigCraft writes only `design/<screen>.figcraft` (MCP `save_file`) and the read-back
+- Decision: FigCraft writes only `design/app.figcraft` (MCP `save_file`) and the read-back
   files in `design/.read/<screen>/` (CLI with `--automation-write-root <project>/design`). The
   agent writes the project's token files, and the orchestrator's `document` step writes
   `DESIGN.md` and `.impeccable/design.json`, with the Write and Edit tools, from the text the
@@ -161,12 +161,12 @@ spikes (R15) run.
   user's changes). `design-tool.md` names "the engine's Files line", never the engine, so the
   `FR-010 one place` check (`tests/test_design_lane.sh`) stays green.
 
-## R13. Version floor 0.13.1
+## R13. Version floor 0.16.0
 
-- Decision: `check` needs `figcraft-cli` 0.13.1 or later. The install commands pin v0.13.1 in
+- Decision: `check` needs `figcraft-cli` 0.16.0 or later. The install commands pin v0.16.0 in
   `design-tool.md`.
 - Rationale: roots need 0.7.0 or later (R3). FigCraft is alpha and its commands change between
-  minor versions. 0.13.1 is the version the docs and spikes cover. The repo pins upstream
+  minor versions. 0.16.0 is the version the docs and spikes cover. The repo pins upstream
   versions (`vendor.lock`, DESIGN.md D3).
 
 ## R14. Permission prompts for the FigCraft tools

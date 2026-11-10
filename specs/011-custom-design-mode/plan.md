@@ -19,7 +19,7 @@ project as its read root and `design/` as its write root, unless this project's 
 answers. The `st-design` agent draws the screen live through FigCraft's MCP server, which the
 plugin declares in `.claude-plugin/plugin.json` and which attaches to that app. The lane stops
 once. Change requests go to the agent and the lane stays stopped. On "good", the agent saves
-`design/<screen>.figcraft`, reads it back with the CLI (JSON layout, PNG, variables as CSS) and
+`design/app.figcraft`, reads it back with the CLI (JSON layout, PNG, variables as CSS) and
 writes the variables into the project's token files. `st-impeccable document` (scan mode, no Step 5
 show) then writes `DESIGN.md` from those tokens and the grill answers. Then come the usual build,
 checks, fix rounds (each re-reads the saved file), gate and commit, plus the saved design. All
@@ -33,12 +33,12 @@ command.
 for the port probe in the script and the plugin.json check in the test). JSON (`plugin.json`).
 
 **Primary Dependencies**: Claude Code 2.1.312 plugin layout: `plugin.json` `mcpServers`, plugin MCP
-tools named `mcp__plugin_<plugin>_<server>__<tool>` (research R8, S2 confirms). FigCraft 0.13.1 or
+tools named `mcp__plugin_<plugin>_<server>__<tool>` (research R8, S2 confirms). FigCraft 0.16.0 or
 later, an external native app the user installs (research R1, R13): `figcraft --control <port>`
 with automation roots, `figcraft-cli mcp --attach <port>`, `figcraft-cli convert|render|run`. No
 new package in Stratum.
 
-**Storage**: Project files: `design/<screen>.figcraft` (committed), `design/.read/<screen>/` (never
+**Storage**: Project files: `design/app.figcraft` (committed), `design/.read/<screen>/` (never
 committed), `DESIGN.md`, `.impeccable/design.json`, token files. Machine file: the start record
 `${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}}/st-figcraft-7979` (data-model.md).
 
@@ -92,12 +92,12 @@ Post-design re-check: all gates pass. Complexity Tracking stays empty.
 ## Security Notes
 
 - **S1. External app on the user's machine (T008, T011, T018).** FigCraft is an alpha native app from
-  GitHub releases. The user installs it with a pinned v0.13.1 command (`design-tool.md`) that
+  GitHub releases. The user installs it with a pinned v0.16.0 command (`design-tool.md`) that
   checks the package against the release's `SHA256SUMS.txt` (`sha256sum -c`) before it installs.
   The sums file comes from the same release, so this catches a broken or swapped download, not a
   compromised release. Stratum
   prints the command and never runs it (`hooks/st-approve.py` refuses `sudo`, package managers and
-  URLs anyway). `check` refuses a CLI below 0.13.1, since 0.6.0 and earlier ignore the roots.
+  URLs anyway). `check` refuses a CLI below 0.16.0, since 0.6.0 and earlier ignore the roots.
 - **S2. File and network limits (T008, FR-007, SC-005).** `start` launches the app with
   `--automation-read-root <project> --automation-write-root <project>/design`. The attached MCP
   server has no limits of its own: `--attach` refuses roots, and the app enforces them for every
@@ -221,7 +221,7 @@ Date: 2026-11-01. Verdict: CONDITIONAL
 | 4. Security and privacy | CONCERN | F3, F11, F12 |
 
 Evidence: Claude Code 2.1.312, bash 5.3, python3 3.14, pacman and gh on this laptop. `figcraft` and
-`figcraft-cli` not installed (T003 is the user's install). The v0.13.1 release assets named in
+`figcraft-cli` not installed (T003 is the user's install). The v0.16.0 release assets named in
 contract section 2 exist. Baseline green: `test_design_check`, `test_design_lane`, `test_plan_rules`,
 `test_inspect`, `test_model_files`, `claude plugin validate`. `git status` clean after.
 

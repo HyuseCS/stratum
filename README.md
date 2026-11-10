@@ -60,7 +60,7 @@ Then restart the session and run:
 | `git`, `python3` | git guard, model overrides hook, phase hook, statusline, handoff facts, scripts |
 | `node` | ponytail hooks |
 | `puppeteer-core` (`npm i -g puppeteer-core`), Chrome or Chromium | the Design lane's render check |
-| FigCraft 0.13.1 or later with `figcraft-cli` (`/stratum:st-init` gives the install command) | optional, the Design lane's custom mode |
+| FigCraft 0.16.0 or later with `figcraft-cli` (`/stratum:st-init` gives the install command) | optional, the Design lane's custom mode |
 | `bunx` (Bun) | statusline bar (falls back to markers only) |
 | `graphify` 0.9.74 or later (`uv tool install graphifyy`) | code navigation graph, Dart support |
 | `gh` | optional, for `st-issues` and `st-pr` |
