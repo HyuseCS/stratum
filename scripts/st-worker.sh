@@ -64,9 +64,8 @@ if [ "$cmd" != list ] && [ "$cmd" != autonomous-off ] && [ "$cmd" != autonomous-
   N=worker-${id,,}
 fi
 if [ "$cmd" = approve ] || [ "$cmd" = pass ] || [ "$cmd" = autonomous-off ] || [ "$cmd" = autonomous-on ] || [ -n "$auto" ]; then
-  if { tl=$(git rev-parse --show-toplevel 2>/dev/null) && [ -e "$tl/.stratum/approve" ]; } || [[ $(git symbolic-ref --short HEAD 2>/dev/null) == worker-* ]]; then
-    fail "Run this from the orchestrator's checkout, not a worker worktree."
-  fi
+  python3 "$(cd "$(dirname "$0")/.." && pwd)/hooks/st-approve.py" --worker 2>/dev/null && c=0 || c=$?
+  [ "$c" = 3 ] || fail "Run this from the orchestrator's checkout, not a worker worktree."
   d=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) && MAIN=$(dirname "$d") || MAIN=
   SID=${CLAUDE_CODE_SESSION_ID:-}
   D=$MAIN/.stratum/autonomous

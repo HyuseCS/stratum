@@ -266,7 +266,7 @@ fresh() {
   : > "$tmp/gitlog"
 }
 run() {
-  out=$(cd "${RUNDIR:-$repo}" && PATH="$tmp/bin:$PATH" HERDR_ENV="${HENV-1}" HERDR_PANE_ID=w1P:p1 HERDR_TAB_ID=w1P:t1 HERDR_WORKSPACE_ID="${HWS-w1P}" env ${NOENV:+-u HERDR_ENV} "$@" 2>&1); rc=$?
+  out=$(cd "${RUNDIR:-$repo}" && PATH="$tmp/bin:$PATH" HERDR_ENV="${HENV-1}" HERDR_PANE_ID=w1P:p1 HERDR_TAB_ID=w1P:t1 HERDR_WORKSPACE_ID="${HWS-w1P}" env ${NOENV:+-u HERDR_ENV} -u CLAUDE_PROJECT_DIR "$@" 2>&1); rc=$?
 }
 mk() { fresh; run bash "$script" start "${sargs[@]}"; reset; }
 wsid() { jq -r .result.tab.workspace_id "$tmp/tc.json"; }
@@ -1343,8 +1343,9 @@ autoclr
 
 wk="$tmp/wk"; rm -rf "$wk"; mkdir -p "$wk/.stratum/approve"; git -C "$wk" init -q; git -C "$wk" -c user.name=t -c user.email=t@t commit -q --allow-empty -m first; mkdir -p "$wk/.stratum/autonomous"; : > "$wk/.stratum/autonomous/$sid"
 git -C "$repo" worktree add -q "$tmp/repo-w9" -b worker-t9
+git -C "$repo" worktree add -q "$tmp/repo-m9" -b repo-m9; mkdir -p "$tmp/repo-m9/.stratum"; printf 'm9\n' > "$tmp/repo-m9/.stratum/worker"
 autoset "$sid"
-for d in "$wk" "$tmp/repo-w9"; do
+for d in "$wk" "$tmp/repo-w9" "$tmp/repo-m9"; do
   fresh; RUNDIR="$d" CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" start "${oargs[@]}"
   wtchk "WT1 start from $d: exit 1, one line, no call"
   fresh; RUNDIR="$d" CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" approve T004 --request "$rid" --input-hash "$(ih 'Bash: {"command":"echo hi"}')" --record "$rec"
@@ -1356,11 +1357,25 @@ for d in "$wk" "$tmp/repo-w9"; do
   fresh; RUNDIR="$d" CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-on
   wtchk "WT5 autonomous-on from $d: exit 1, one line, no call"
 done
-git -C "$repo" worktree remove --force "$tmp/repo-w9"
-git -C "$repo" branch -q -D worker-t9
+git -C "$repo" worktree add -q "$tmp/repo-s9" -b repo-s9; mkdir -p "$tmp/repo-s9/.stratum"; printf 's9\n' > "$tmp/s9target"; ln -s "$tmp/s9target" "$tmp/repo-s9/.stratum/worker"
+autoclr; fresh; RUNDIR="$tmp/repo-s9" CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-on
+check "WT6 autonomous-on from a worktree whose marker is a symlink: exit 0, the on line" '[ $rc = 0 ] && [ "$out" = "$(printf "autonomous on\tlocal")" ]'
+autoclr
+for d in w9:worker-t9 m9:repo-m9 s9:repo-s9; do
+  git -C "$repo" worktree remove --force "$tmp/repo-${d%%:*}"
+  git -C "$repo" branch -q -D "${d#*:}"
+done
+wtno() { check "$1" '[ $rc = 1 ] && [ "$out" = "Run this from the orchestrator'"'"'s checkout, not a worker worktree." ] && [ -z "$(ls -A "$repo/.stratum/autonomous" 2>/dev/null)" ]'; }
+mkdir -p "$tmp/pybin"; printf '#!/usr/bin/env bash\nexit 1\n' > "$tmp/pybin/python3"; chmod +x "$tmp/pybin/python3"
+fresh; PATH="$tmp/pybin:$PATH" CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-on
+wtno "WT7 autonomous-on with python3 failing: exit 1, the line, no entry"
+autoclr
+mkdir -p "$tmp/nohook/scripts"; cp "$script" "$tmp/nohook/scripts/st-worker.sh"
+fresh; CLAUDE_CODE_SESSION_ID="$sid" run bash "$tmp/nohook/scripts/st-worker.sh" autonomous-on
+wtno "WT8 autonomous-on with the hook missing: exit 1, the line, no entry"
 autoclr
 
-bgrun() { ( cd "$repo" && PATH="$tmp/bin:$PATH" HERDR_ENV=1 HERDR_PANE_ID=w1P:p1 HERDR_TAB_ID=w1P:t1 HERDR_WORKSPACE_ID=w1P CLAUDE_CODE_SESSION_ID="$1" bash "$script" "$2" >/dev/null 2>&1; echo $? > "$tmp/bg.$1" ); }
+bgrun() { ( cd "$repo" && PATH="$tmp/bin:$PATH" HERDR_ENV=1 HERDR_PANE_ID=w1P:p1 HERDR_TAB_ID=w1P:t1 HERDR_WORKSPACE_ID=w1P CLAUDE_CODE_SESSION_ID="$1" env -u CLAUDE_PROJECT_DIR bash "$script" "$2" >/dev/null 2>&1; echo $? > "$tmp/bg.$1" ); }
 onbad="cannot turn on autonomous mode: session id must be letters, digits or -"
 fresh; CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" autonomous-on
 check "ON1 autonomous-on from the main checkout: exit 0, the on line, no herdr call" '[ $rc = 0 ] && [ "$out" = "$(printf "autonomous on\tlocal")" ] && [ ! -s "$tmp/calls" ]'
