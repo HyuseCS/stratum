@@ -127,6 +127,9 @@ LOCK2_MARKER_BASH = [
     "mv x .stratum/worker",
     "cp x ./.stratum/worker",
     "touch $PWD/.stratum/worker",
+    "dd if=/dev/null of=.stratum/worker",
+    "python3 -c \"open('.stratum/worker','w')\"",
+    "cp x y,.stratum/worker",
 ]
 
 LOCK2_WORKER_CALLS = [

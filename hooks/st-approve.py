@@ -108,8 +108,8 @@ def lock2(data, cwd):
         command = str(ti.get("command") or "")
         words = [posixpath.normpath(w) for w in re.split(r"[\s;&|()<>`]+",
                                                           strip_quotes(command + "\n" + JOIN.sub(r"\1", command))) if w]
-        if any(".stratum/approve" in w or ".stratum/autonomous" in w or w == ".stratum/worker"
-               or w.endswith("/.stratum/worker") for w in words):
+        if any(".stratum/approve" in w or ".stratum/autonomous" in w
+               or re.search(r"\.stratum/worker(?![\w.-])", w) for w in words):
             return True
         return any((w == "st-worker.sh" or w.endswith("/st-worker.sh")) and nxt.replace("$", "") in RISKY
                    for w, nxt in zip(words, words[1:]))
