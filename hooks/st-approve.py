@@ -10,7 +10,7 @@ import subprocess
 import sys
 import time
 
-REASON = ".stratum/approve/ and .stratum/autonomous are written only by the orchestrator."
+REASON = ".stratum/approve/, .stratum/autonomous and .stratum/worker are written only by the orchestrator."
 ALLOW = '{"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"allow"}}}'
 EDIT_TOOLS = ("Edit", "Write", "MultiEdit", "NotebookEdit")
 RISKY = {"approve", "pass", "autonomous-on", "autonomous-off", "wait", "start", "resend", "followup", "watch"}
@@ -90,12 +90,14 @@ def worker_session(cwd):
     chain = list(dict.fromkeys(d for f in folders for d in up(os.path.realpath(f))))
     if any(os.path.lexists(os.path.join(d, ".stratum", "approve")) for d in chain):
         return True
+    if any(os.path.isfile(m) and not os.path.islink(m) for m in (os.path.join(d, ".stratum", "worker") for d in chain)):
+        return True
     return any((git(["symbolic-ref", "--short", "HEAD"], d) or "").startswith("worker-")
                for d in chain if os.path.exists(os.path.join(d, ".git")))
 
 
 def locked_path(p):
-    return "/.stratum/approve/" in p + "/" or "/.stratum/autonomous/" in p + "/"
+    return "/.stratum/approve/" in p + "/" or "/.stratum/autonomous/" in p + "/" or "/.stratum/worker/" in p + "/"
 
 
 # ponytail: lock 2 is a text match, not a wall (workers run as the same OS user); run-time paths, brace and glob forms and a Grep over the whole root get past it, move to OS-level isolation if workers turn hostile
@@ -106,7 +108,8 @@ def lock2(data, cwd):
         command = str(ti.get("command") or "")
         words = [posixpath.normpath(w) for w in re.split(r"[\s;&|()<>`]+",
                                                           strip_quotes(command + "\n" + JOIN.sub(r"\1", command))) if w]
-        if any(".stratum/approve" in w or ".stratum/autonomous" in w for w in words):
+        if any(".stratum/approve" in w or ".stratum/autonomous" in w or w == ".stratum/worker"
+               or w.endswith("/.stratum/worker") for w in words):
             return True
         return any((w == "st-worker.sh" or w.endswith("/st-worker.sh")) and nxt.replace("$", "") in RISKY
                    for w, nxt in zip(words, words[1:]))
@@ -358,6 +361,8 @@ def main():
     if sys.argv[1:2] == ["--render"]:
         render(sys.argv[2] if len(sys.argv) > 2 else "")
         return
+    if sys.argv[1:2] == ["--worker"]:
+        sys.exit(0 if worker_session(os.getcwd()) else 3)
     try:
         data = json.loads(sys.stdin.buffer.read())
         if not isinstance(data, dict):

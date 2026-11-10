@@ -15,7 +15,7 @@ PLUGIN = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HOOK = os.path.join(PLUGIN, "hooks", "st-approve.py")
 GUARD = os.path.join(PLUGIN, "hooks", "st-git-guard.py")
 ALLOW = '{"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"allow"}}}'
-DENY_REASON = ".stratum/approve/ and .stratum/autonomous are written only by the orchestrator."
+DENY_REASON = ".stratum/approve/, .stratum/autonomous and .stratum/worker are written only by the orchestrator."
 COMMIT_DENY = (r"Commit form denied: a commit with a heredoc, <<, a backtick, $( or a backslash line break cannot "
                r"be judged by the approve channel. Run it again as git commit -m 'subject' -m 'body': single quotes, "
                r"and no <<, backticks, $( or backslash line breaks anywhere, not even in the message. Write an "
@@ -119,6 +119,14 @@ LOCK2_BASH = [
     "rm -f .stratum/autonomous/S1",
     "mkdir -p .stratum/autonomous",
     "rm -rf .stratum/autonomous",
+]
+
+LOCK2_MARKER_BASH = [
+    "echo f > .stratum/worker",
+    "rm -f .stratum/worker",
+    "mv x .stratum/worker",
+    "cp x ./.stratum/worker",
+    "touch $PWD/.stratum/worker",
 ]
 
 LOCK2_WORKER_CALLS = [
@@ -264,6 +272,27 @@ class ApproveHookTest(unittest.TestCase):
         git("worktree", "add", "-q", "-b", "worker-t1", wt, cwd=self.root)
         self.make_approve(wt)
         return wt
+
+    def make_marker_worker(self):
+        wt = os.path.join(self.tmp, "mwt")
+        git("worktree", "add", "-q", "-b", "repo-94", wt, cwd=self.root)
+        write(os.path.join(wt, ".stratum", "worker"), "t1\n")
+        return wt
+
+    def make_symlink_marker_repo(self):
+        folder = self.make_branch_repo("sym", "010-demo")
+        target = os.path.join(self.tmp, "marker-target")
+        write(target, "t1\n")
+        os.makedirs(os.path.join(folder, ".stratum"))
+        os.symlink(target, os.path.join(folder, ".stratum", "worker"))
+        return folder
+
+    def worker_flag(self, cwd):
+        self.assertTrue(os.path.isfile(HOOK), "hooks/st-approve.py does not exist yet")
+        env = {k: v for k, v in os.environ.items() if k != "CLAUDE_PROJECT_DIR"}
+        r = subprocess.run([sys.executable, HOOK, "--worker"], cwd=cwd, env=env, stdin=subprocess.DEVNULL,
+                           capture_output=True, timeout=20)
+        return r.returncode, r.stdout, r.stderr
 
     def commit_setup(self, branch="worker-t1", guard="worker-t1", owns="src/a.py\n"):
         git("checkout", "-q", "-B", branch, cwd=self.root)
@@ -719,6 +748,62 @@ class ApproveHookTest(unittest.TestCase):
             "bash scripts/st-worker.sh approve worker-t1 --request 1-1 --input-stdin --record r", cwd=demo))
         self.assertSilent(self.pre_bash("printf S1 > .stratum/autonomous", cwd=demo))
         self.assertSilent(self.pre_bash("touch .stratum/autonomous/S1", cwd=demo))
+
+    def test_marker_session_denies_marker_writes(self):
+        wt = self.make_marker_worker()
+        for command in LOCK2_MARKER_BASH + LOCK2_BASH:
+            with self.subTest(command=command):
+                self.assertDenied(self.pre_bash(command, cwd=wt))
+        marker = os.path.join(wt, ".stratum", "worker")
+        for tool, tool_input in [
+            ("Edit", {"file_path": marker, "old_string": "a", "new_string": "b"}),
+            ("Write", {"file_path": marker, "content": "x"}),
+            ("MultiEdit", {"file_path": marker, "edits": []}),
+            ("NotebookEdit", {"notebook_path": marker, "new_source": "x"}),
+        ]:
+            with self.subTest(tool=tool):
+                self.assertDenied(self.pre(tool, tool_input, wt))
+
+    def test_marker_session_is_a_worker(self):
+        wt = self.make_marker_worker()
+        self.assertDenied(self.pre_bash("bash scripts/st-worker.sh approve worker-t1 --request 1-1", cwd=wt))
+        self.assertDenied(self.pre_bash("echo x > .stratum/autonomous", cwd=wt))
+
+    def test_worker_branch_without_marker_denies_marker_writes(self):
+        br = self.make_branch_repo("br", "worker-t1")
+        self.assertDenied(self.pre_bash("echo f > .stratum/worker", cwd=br))
+
+    def test_marker_symlink_is_not_a_worker(self):
+        sym = self.make_symlink_marker_repo()
+        self.assertSilent(self.pre_bash("touch .stratum/autonomous/S1", cwd=sym))
+
+    def test_orchestrator_marker_write_is_silent(self):
+        demo = self.make_branch_repo("demo", "010-demo")
+        self.assertSilent(self.pre_bash("echo f > .stratum/worker", cwd=demo))
+
+    def test_worker_setup_is_not_the_marker(self):
+        wt = self.make_marker_worker()
+        write(os.path.join(wt, ".stratum", "worker-setup.sh"), "#!/bin/bash\n")
+        for command in ["cat .stratum/worker-setup.sh", "bash .stratum/worker-setup.sh"]:
+            with self.subTest(command=command):
+                self.assertSilent(self.pre_bash(command, cwd=wt))
+        with self.subTest("Edit of .stratum/worker-setup.sh"):
+            self.assertSilent(self.pre("Edit", {"file_path": os.path.join(wt, ".stratum", "worker-setup.sh"),
+                                                "old_string": "a", "new_string": "b"}, wt))
+
+    def test_worker_flag(self):
+        wt = self.make_marker_worker()
+        sub = os.path.join(wt, "sub")
+        os.makedirs(sub)
+        branch_repo = self.make_branch_repo("br", "worker-t1")
+        for label, cwd in [("marker worktree", wt), ("subfolder of it", sub),
+                           ("worker-t1 branch repo", branch_repo), ("approve folder repo", self.root)]:
+            with self.subTest(label):
+                self.assertEqual(self.worker_flag(cwd), (0, b"", b""))
+        for label, cwd in [("010-demo", self.make_branch_repo("demo", "010-demo")),
+                           ("symlink marker", self.make_symlink_marker_repo())]:
+            with self.subTest(label):
+                self.assertEqual(self.worker_flag(cwd), (3, b"", b""))
 
     def test_table_commit_forms_through_both_hooks(self):
         self.staged_setup()
