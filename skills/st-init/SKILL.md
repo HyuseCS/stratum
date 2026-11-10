@@ -12,7 +12,7 @@ overwrite an existing file; report it and move on.
    `{"feature_directory": null, "phase": null, "lane": null}`.
 2. **Git ignore.** Ensure `.gitignore` has these lines: `.stratum/handoff.md`,
    `.stratum/lessons.md`, `.stratum/weather.json`, `.stratum/powerline.json`,
-   `.stratum/git-guard.json`, `.stratum/models.json`, `graphify-out/`.
+   `.stratum/git-guard.json`, `.stratum/worker`, `.stratum/models.json`, `graphify-out/`.
 3. **Git guard.** If `.stratum/git-guard.json` is missing, ask the user in one question: guard
    modes per repo (recommended) or the global plugin options? Per repo: write
    `.stratum/git-guard.json` with all eight keys (`commit`, `worktree_remove`, `worktree_prune`,

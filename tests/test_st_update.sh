@@ -185,6 +185,7 @@ audit "$tmp/proj"
 check "U7 tracked path named in .gitignore is current" exits 0 [ "$(state "$tmp/proj" ignore .stratum/lessons.md)" = current ]
 out=$(bash "$script" fix "$tmp/proj" ignore .stratum/lessons.md 2>&1); rc=$?
 check "U7 fix ignore on that path prints same" exits 0 contains "$out" "same .gitignore"
+check "U27 ignored nowhere .stratum/worker is new" exits 0 [ "$(state "$tmp/proj" ignore .stratum/worker)" = new ]
 
 before=$(snap)
 audit "$tmp/proj"
