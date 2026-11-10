@@ -33,3 +33,48 @@ No stored data. These are the herdr names the scripts make and match.
 An unreadable tab list stops with `no .result.tabs in the herdr answer`.
 
 Every existing refusal runs first. No `--group`.
+
+## Round 3
+
+### Worker name (folder and branch)
+
+- `B` = `<project>-<feature>`, or `<project>-<env>-<feature>` when `--env` is given. The folder is `<repo parent>/<B>`, the branch is `<B>`.
+- Safe token rule (FR-016), for project, env and issue: lower-cased, matches `^[a-z0-9][a-z0-9._-]*$`, holds no `..`. The task id is the worker id (`^[A-Za-z0-9][A-Za-z0-9-]{0,24}$`), lower-cased.
+- `<project>`: `--project`, else the `basename` of the repo path (local: the main checkout; saved machine: the `--repo` value as given, so `~/proj` gives `proj` and a bare `~` is refused). Lower-cased.
+- `<env>`: `--env`, lower-cased. Optional.
+- `<feature>`, first that applies:
+  1. `--issue <n>` with `--issue-task`: `<n>_<id>`.
+  2. `--issue <n>`: `<n>`.
+  3. the task words `<W>` of the workspace label (already cut to 30 characters), lower-cased, each run of characters other than `a-z0-9` turned into one `_` (byte-wise, `LC_ALL=C`). A leading or trailing `_` stays.
+  4. the id.
+
+| Worker | Flags | Name |
+|---|---|---|
+| `f94`, whole issue, repo `stratum` | `--issue 94` | `stratum-94` |
+| `T005`, task of issue 93 | `--issue 93 --issue-task` | `stratum-93_t005` |
+| issue 142, project rule `parasat`, `prod` | `--project parasat --env prod --issue 142` | `parasat-prod-142` |
+| no issue, heading `Autonomous sessions` | none | `stratum-autonomous_sessions` |
+| no issue, no heading, id `f94` | none | `stratum-f94` |
+| old worker (before round 3) | n/a | folder `<repo>-worker-<id>`, branch `worker-<id>` |
+
+Refused before anything is made: a bad part, an unsafe default project (`Pass --project <name>.`), a taken folder, a taken branch.
+
+### Worker marker
+
+- Path: `<worktree>/.stratum/worker`. A plain file (not a symlink). One line: the id lower-cased.
+- Written by `start` (here and over ssh) with the same symlink and exists checks as `brief.md` and `.stratum/git-guard.json`. Removed by `close` with the guard file.
+- Read by: `worker_session()` (any folder from the session folder up), `tabname()` (the git top folder).
+- Written, changed or removed by a worker: denied by lock 2 (shell words and edit tools). Read, Grep and Glob of it are denied too.
+
+### Worker session rule (FR-021)
+
+A session is a worker when any folder from its folder up (and from `CLAUDE_PROJECT_DIR` up, as today in the hook) has a plain-file marker, or `.stratum/approve`, or is a git folder whose branch starts with `worker-`.
+
+### Real branch and folder of a found worker
+
+- Found by the tab `worker-<id>` (unchanged), then its first pane's folder `C`.
+- `WT`, `BR`: `.path` and `.branch` of the `worktree list --cwd C` entry whose `.path` is `C`, else of the entry whose `.branch` is `worker-<id>`.
+
+### Roster row
+
+`worker-<id>	<machine>	<branch>	<task id>[	<repo path>]`: the branch field holds `B` (how it gets there: plan.md D28).

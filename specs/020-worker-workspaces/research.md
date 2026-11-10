@@ -41,3 +41,56 @@
 ## R6. Overlap with issue #93
 
 - Branch `093-autonomous-prompts` has only `specs/019-autonomous-prompts` changes now (`git diff --stat main...093-autonomous-prompts`). The conflict note is forward-looking. This plan does not touch `answer`, `wait`, `watch`, `screen`, `find_worker` or `scripts/st-codex-agent.sh`.
+
+## Round 3 (2026-11-10)
+
+Code read on worker-f94 `31b9e39` and `origin/093-autonomous-prompts` `daac275`. Line numbers are from worker-f94.
+
+### R7. A taken name is already refused before anything is made
+
+- Fact (probe, git 2.56.0, scratch repo): `git -C r worktree add -q -b r-94 <path> HEAD` with branch `r-94` present exits 255 with `fatal: a branch named 'r-94' already exists` and makes no folder.
+- Fact: `start` runs `[ ! -e $qp ] || { echo "$qp already exists" >&2; exit 1; }; git -C $qr worktree add -q -b $N $qp $sha || exit 1` through `rx` (`scripts/st-worker.sh:290`), before `workspace create` (`:292`). The `|| exit 1` turns git's 255 into 1, so `rsh` does not report it as an ssh failure (`:138`).
+- Decision (D32): FR-017 needs no new check, only `$N` replaced by the new name `B`. Tests: the git stub's `worktree add` (`tests/test_st_worker.sh`, the `-C ... worktree add -q -b` branch) refuses with git's message when `refs/heads/<b>` exists in the real repo, so a "taken branch" case can run.
+- Alternative: a separate `git show-ref` check before `worktree add`. Rejected: same result, one more git call and one more remote string change.
+
+### R8. find_worker and list can read the real branch from herdr
+
+- Fact (live, herdr 0.9.4): `herdr worktree list --cwd <worktree>` gives `.result.worktrees[]` with `path`, `branch`, `is_linked_worktree`, `open_workspace_id`. For this worktree: `{"branch":"worker-f94","path":"/home/hyuse/Desktop/stratum-worker-f94",...}`.
+- Fact (live, 2026-11-10): `herdr pane list --workspace w4B` gives both panes of this worker's tab (`w4B:t6`) the `cwd` `/home/hyuse/Desktop/stratum-worker-f94`, the same string as that worktree's `.path` above. A path match works as an exact string compare.
+- Fact: today `find_worker` (`:194-195`) and `list` (`:553-554`) pick the worktree by `.branch == worker-<id>`, which finds no new-name worker.
+- Decision: pick by `.path == <pane cwd>`, else by `.branch == worker-<id>` (old workers whose pane left its folder, FR-019). Read `WT` and `BR` from that entry. Same three herdr calls.
+- Limit: a new-name worker whose pane left its worktree root is not found. This is the limit the ponytail note at `:192` already names.
+
+### R9. Lock 2 denies a Bash read of the marker (input to D27)
+
+- Fact: `lock2()` denies any Bash command in a worker session whose words name `.stratum/approve` or `.stratum/autonomous`, reads included (`tests/test_approve_hook.py` `LOCK2_BASH` has `ls .stratum/approve`).
+- Fact: `tests/test_research.sh` "FR-002 B4 hook allows worker cmd" runs the research skill's worker check through the live hook in a worker and needs no deny.
+- So once lock 2 guards `.stratum/worker` (FR-022), a research check like `[ -f .stratum/worker ]` is denied in exactly the sessions it must detect. Options: D27.
+- Fact: `st-worker.sh` already runs the hook as a command (`render()`, `:198`), so a hook `--worker` mode follows an existing pattern.
+
+### R10. When each name part can be checked (FR-016)
+
+- Fact: `--project`, `--env`, `--issue` are known after argument parsing, before the herdr check (`:110`) and `herdr machine list` (`:120`).
+- Fact: the default project needs the repo path: local from `git rev-parse --git-common-dir` (`:263`), on a saved machine from `--repo` (`~` is resolved over ssh only at `:270-275`).
+- Decision: check given parts in the argument checks. Check the default project right after it is made: locally after one read-only git call, on a saved machine from the `--repo` text before `~` is resolved (`~/proj` gives `proj`). Both are before any herdr call in `start` and before anything is made.
+
+### R11. The `/goal` prompt and `goal`
+
+- Fact: `P` is built at `:106-109`, before any herdr call, for `start`, `goal` and `followup`, and names `$N` as the branch. `goal` does not call `find_worker`; it uses `look` and `unsent` (`:353-360`). `followup` calls `find_worker` first (`:371`), then writes the round brief (`:387`) before `prompt` (`:390`).
+- Decision (D30): helper `goalp <branch>` builds and checks `P`. `start` calls it with the new name before `h tab list` (P6 keeps "no herdr call"). `goal` calls `find_worker` then `goalp "$BR"`. `followup` calls `goalp "$BR"` right after `find_worker`, before it writes anything.
+
+### R12. The marker and the Codex name agree
+
+- Fact: `close` matches the Codex agent `st-codex-$N` cut to 32 (`:518-519`), with `N=worker-${id,,}` (`:61`). `tabname` builds `st-codex-<l>` cut to 32 when `l` matches `^worker-[a-z0-9][a-z0-9-]{0,24}$` (`scripts/st-advisor.sh:8-10`).
+- Decision (D33): the marker holds `${id,,}`. `tabname` sets `l=worker-<marker line>` and keeps its regex, so both sides make the same string and a bad marker falls back to the slug.
+
+### R13. Test churn in tests/test_st_worker.sh
+
+- Fact: every `start` case builds the name from the default rule. The shared task file has no heading, so the default name is `repo-t004` locally and `proj-t004` on the saved machine, where the cases expect `repo-worker-t004`, `proj-worker-t004` and branch `worker-t004` (39 path lines and about 120 branch mentions on worker-f94, 32 path lines on #93).
+- Decision: the existing cases are changed to the new default name. Old-worker coverage (FR-019) comes from a fixture that moves a started worker to the old folder and branch in the stub state. `fresh()` must also remove the new folders (`$tmp/repo-t004`, `$tmp/repo-94` ...) and never `$tmp/repo` or the real worktrees `repo-feat` and `repo-w9`.
+- Fact: if D28 is A, the 15 roster fixture lines (`printf 'worker-t004\t...`) need the real branch in field 3.
+
+### R14. Other `worker-` branch reads (not changed)
+
+- `scripts/st-update.sh:254` labels a checkout ` worker` in its report when its branch starts with `worker-`. It is a report label, not a worker check, and FR-021 does not list it. A new-name worker shows no label there.
+- `scripts/st-worker.sh:99` and `:584` check the roster name field (`worker-<id>`), not the session. Unchanged.

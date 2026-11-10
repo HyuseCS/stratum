@@ -9,3 +9,8 @@ summary: advisor approves all 13 small decisions; record at Close: tabname on an
 
 ## diff | 2026-11-09T15:54:54Z | /advisor
 summary: advisor approves 1efed67: close needs the worker tab, list stops on no workspaces array and prints - for an empty label
+
+## plan | 2026-11-10T00:56:21Z | sha256 988715b98b2c9a5061fb4289bacec545a650b142df89dd6dee4c89c31c82f4ba | REVISE
+summary: Two opportunities to simplify the build. Review limited to planning; no files changed or tests run.
+- [LOW] specs/020-worker-workspaces/tasks.md:138: Reorganize T024–T027 into two test-first implementation units: branch lookup first, then naming and marker lifecycle. Evidence: T024 and T025 deliberately remain red across both implementation tasks, and all four tasks edit the same two files sequentially. Pairing each implementation with its relevant fixture changes and tests would provide smaller, independently reviewable checkpoints without changing scope.
+- [LOW] specs/020-worker-workspaces/plan.md:230: Allow one shared worktree-selection expression for find_worker and list instead of prescribing the same selection twice. Evidence: The plan specifies path-first, legacy-branch fallback selection in find_worker and repeats it for list, while its helper limit allows only goalp. Sharing just this selection would reduce duplicated logic while leaving each caller's output and failure handling separate.
