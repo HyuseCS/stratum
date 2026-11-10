@@ -60,7 +60,7 @@ printf '{"stratum": {"source": {"source": "directory", "path": "%s"}, "installLo
 cat > "$tmp/cfg/plugins/installed_plugins.json" <<EOF
 {"version": 2, "plugins": {"stratum@stratum": [
 {"scope": "local", "projectPath": "$tmp/proj", "installPath": "$tmp/cfg/plugins/cache/stratum/stratum/0.1.22", "version": "0.1.22"},
-{"scope": "local", "projectPath": "$tmp/proj-wt", "installPath": "$tmp/cfg/plugins/cache/stratum/stratum/0.7.0", "version": "0.7.0"},
+{"scope": "local", "projectPath": "$tmp/proj-wt", "installPath": "$tmp/cfg/plugins/cache/stratum/stratum/0.1.22", "version": "0.1.22"},
 {"scope": "local", "projectPath": "$tmp/proj/apps/a", "installPath": "$tmp/cfg/plugins/cache/stratum/stratum/0.1.22", "version": "0.1.22"},
 {"scope": "local", "projectPath": "$tmp/proj/apps/gone", "installPath": "$tmp/cfg/plugins/cache/stratum/stratum/0.1.22", "version": "0.1.22"},
 {"scope": "local", "projectPath": "$tmp/proj-worker-w1a", "installPath": "$tmp/cfg/plugins/cache/stratum/stratum/0.1.22", "version": "0.1.22"},
@@ -116,10 +116,11 @@ check "U2 no-record row says no install" contains "$(rowsof "$tmp/proj-norec" in
 check "U2 gone record under a checkout" [ "$(state "$tmp/proj/apps/gone" install stratum@stratum)" = gone ]
 check "U2 gone sibling of the main checkout" [ "$(state "$tmp/proj-worker-w1a" install stratum@stratum)" = gone ]
 check "U2 gone folder of another project has no row" exits 0 [ -z "$(folderrows "$tmp/other-x")" ]
-check "U2 user record and no-record worktree are listed" exits 0 [ "$(listedcount)" = 2 ]
+check "U2 user record, no-record worktree and record worktree are listed" exits 0 [ "$(listedcount)" = 3 ]
 
 check "U3 0.1.22 record outdated" [ "$(state "$tmp/proj" install stratum@stratum)" = outdated ]
-check "U3 0.7.0 record current" [ "$(state "$tmp/proj-wt" install stratum@stratum)" = current ]
+check "U3 worktree record follows an outdated main record: listed" [ "$(state "$tmp/proj-wt" install stratum@stratum)" = listed ]
+check "U3 worktree row says it follows the main checkout" contains "$(rowsof "$tmp/proj-wt" install stratum@stratum)" "follows the main checkout"
 check "U3 subfolder 0.1.22 record outdated" [ "$(state "$tmp/proj/apps/a" install stratum@stratum)" = outdated ]
 
 check "U4 statusLine at an old cache path outdated" [ "$(slcmd "bash $tmp/cfg/plugins/cache/stratum/stratum/0.1.0/statusline/st-statusline.sh")" = outdated ]
@@ -243,6 +244,9 @@ check "U9 plugin prints ok, the new version and path" contains "$out" "ok 0.7.0 
 check "U9 claude runs in the folder with the record scope" calledwith "$tmp/proj plugin update --json -s local stratum@stratum"
 check "U9 record version moves to 0.7.0" [ "$(rec "$tmp/proj" version)" = 0.7.0 ]
 check "U9 record path moves to the 0.7.0 cache" [ "$(rec "$tmp/proj" installPath)" = "$cache7" ]
+audit "$tmp/proj"
+check "U9 worktree with a stale record is current once the main record is" [ "$(state "$tmp/proj-wt" install stratum@stratum)" = current ]
+check "U9 the worktree record itself stays at 0.1.22" [ "$(rec "$tmp/proj-wt" version)" = 0.1.22 ]
 before=$(calls); run plugin "$tmp/proj/apps/gone"
 check "U9 gone record under a checkout exits 1, claude not called" exits 1 [ "$(calls)" = "$before" ]
 before=$(calls); run plugin "$tmp/proj-worker-w1a"
@@ -273,6 +277,9 @@ run fix "$tmp/proj-norec" statusline statusLine
 check "U11 fix statusline with no settings.local.json exits 0" [ "$rc" = 0 ]
 check "U11 that new file holds only statusLine" [ "$(pyq "$tmp/proj-norec/.claude/settings.local.json" 'sorted(d)')" = '["statusLine"]' ]
 check "U11 its statusLine is the main record's new path" [ "$(pyq "$tmp/proj-norec/.claude/settings.local.json" 'd["statusLine"]["command"]')" = "bash $cache7/statusline/st-statusline.sh" ]
+run fix "$tmp/proj-wt" statusline statusLine
+check "U11 fix statusline in a worktree with a stale record exits 0" [ "$rc" = 0 ]
+check "U11 its statusLine is the main record's new path, not its own" [ "$(pyq "$tmp/proj-wt/.claude/settings.local.json" 'd["statusLine"]["command"]')" = "bash $cache7/statusline/st-statusline.sh" ]
 
 run fix "$tmp/proj" file .stratum/state.json
 check "U13 fix file state.json exits 0" [ "$rc" = 0 ]
