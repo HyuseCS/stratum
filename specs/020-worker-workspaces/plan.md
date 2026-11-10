@@ -145,7 +145,7 @@ F7. research.md:18, data-model.md:31, scripts/st-worker.sh:291. Two transition l
 
 **Date**: 2026-11-10 | **Input**: spec.md US6, US7, FR-013 to FR-025, decisions.md D21 to D26
 
-**Status**: Final. D27 = A, D28 = A, D29 = B (answers 2026-11-10), D30 to D33 as taken in Plan, D34 to D36 from the round 3 Inspect at merge `0cfe73e`. All are in decisions.md. Round 3 tasks: tasks.md T015 to T031.
+**Status**: Final. D27 = A, D28 = A, D29 = B (answers 2026-11-10), D30 to D33 as taken in Plan, D34 to D36 from the round 3 Inspect at merge `0cfe73e`, D37 from the US6 review. All are in decisions.md. Round 3 tasks: tasks.md T015 to T031.
 
 ### Summary
 
@@ -209,6 +209,7 @@ No new check. The existing `rx` string in `start` already refuses both before an
 - `goalp "$B"` builds and checks the `/goal` prompt before `h tab list`, so P6 still fails with no herdr call.
 - `worktree add -q -b $B`, `BR=$B`, and the undo `branch -D $B` / `left $path and branch $B`. `B` is a safe token, so it goes into the `rx` string unquoted, as `N` did.
 - Marker (FR-020): `.stratum/worker` holds one line, the id lower-cased. Local: add `"$WT/.stratum/worker"` to the symlink and exists loop and write it after the guard file. Saved machine: add `$Q/.stratum/worker` to the `for p in ...` list of the `rsh` string and append `&& printf '%s\n' <id> > $Q/.stratum/worker` after the guard write.
+- Top of the script (D37): `unset proj envn issue`, so an exported shell variable of that name is never taken as a flag value.
 - `brief()`: `- Branch: $BR`. Rule 1 (D29): `Never commit brief.md, result.md, .stratum/git-guard.json, .stratum/worker or .stratum/approve/, and never write in .stratum/approve/.`
 - Roster own-row branch check (D28): the roster loop already keeps the own row (`own=1; orepo=...`); it also keeps that row's branch field. Right after `B` is made, before `goalp` and before any herdr call: `[ "$obr" = "$B" ] || fail "Roster row for $N must name branch $B."`.
 
@@ -229,8 +230,9 @@ After `h worktree list --cwd "$C"`, the helper `pick` (D34) chooses the worktree
 #### followup, result, close (FR-018, FR-020)
 
 - `followup`: `refs/heads/$BR` in the autonomous base sha line (`sha=$(git rev-parse -q --verify "refs/heads/$N" ...)` in the `.stratum/approve` block).
-- `result` on a saved machine: `git fetch -- <target>:<WT> "$BR:$BR"` and `git rev-parse --verify "$BR"`. The `fetched` line keeps its fields.
-- `close`: `gh pr list --head "$BR"`. The guard file and `.stratum/approve` go first, as today. The marker goes last (D34): after the `workspace close` or `tab close` and the agent and tab check loop, right before the `closed` line: local `rm -f "$WT/.stratum/worker"`, saved machine one `rsh "rm -f $Q/.stratum/worker"`; a failure stops with `Worker $N: closed, but cannot remove .stratum/worker.` So a close that fails at the workspace step leaves the marker, and a retried `close` still finds the worker by it. The Codex name match (`st-codex-$N` cut to 32) does not change: the marker holds the same id `N` is made from.
+- `ownbr <Cmd>` (D37): `result` on a saved machine and `close` call it right after `find_worker`. It reads the `branch` key of the worker's `.stratum/git-guard.json` (a plain file, one `rx`) and refuses with `Worker $N has no branch in .stratum/git-guard.json. <Cmd> refused.` when the key is missing, or `Worker $N is on branch $BR, not its branch $G. <Cmd> refused.` when it differs from the checked-out branch. `<Cmd>` is `Result` or `Close`.
+- `result` on a saved machine: after `ownbr Result`, `git fetch -- <target>:<WT> "$BR:$BR"` and `git rev-parse --verify "$BR"`. The `fetched` line keeps its fields: `fetched <N> <sha>`, the sha of the real branch `$BR`.
+- `close`: `gh pr list --head "$BR"`. The `.stratum` symlink refusal (`Worker $N: .stratum is a symlink. Close refused.`) runs before anything closes. Then come the `workspace close` or `tab close` and the agent and tab check loop. After them, in this order (D34, D37 build note): the guard file and the approve folder (`rx` with `rm -f` and `rm -rf`; a failure stops with `Worker $N: closed, but cannot remove .stratum/git-guard.json.`), then the marker last, right before the `closed` line: `rx "rm -f $Q/.stratum/worker"`, local and saved machine alike; a failure stops with `Worker $N: closed, but cannot remove .stratum/worker.` So a close that fails at the workspace step leaves the guard file and the marker, and a retried `close` still finds the worker and its branch. The Codex name match (`st-codex-$N` cut to 32) does not change: the marker holds the same id `N` is made from.
 
 #### list (FR-009, FR-018, D31)
 
@@ -242,11 +244,11 @@ Why: a new session (skill step 12) has no roster, and steps 8 and 11 need the br
 
 - `worker_session()` in `hooks/st-approve.py`: add a third clause, a plain-file marker (`os.path.isfile` and not `os.path.islink`) at `<d>/.stratum/worker` for any folder `d` in the chain it already walks. The `.stratum/approve` clause and the `worker-*` branch clause stay.
 - `locked_path()`: add `"/.stratum/worker/" in p + "/"`. This also denies Read, Grep and Glob of the marker in a worker, as for `.stratum/approve` (accepted).
-- `lock2()` Bash words: add an exact match, `w == ".stratum/worker" or w.endswith("/.stratum/worker")`. A substring match would also hit `.stratum/worker-setup.sh`.
+- `lock2()` Bash words: add a regex match, `re.search(r"\.stratum/worker(?![\w.-])", w)`. It catches the path inside a longer word (for example `cat<.stratum/worker`) and does not hit `.stratum/worker-setup.sh`.
 - `REASON` and the test's `DENY_REASON`: `.stratum/approve/, .stratum/autonomous and .stratum/worker are written only by the orchestrator.`
 - `tabname()` in `scripts/st-advisor.sh`: when `$(git rev-parse --show-toplevel)/.stratum/worker` is a plain file, `l=worker-<its first line>`; else `l` is the branch as today. The existing regex line then decides, so a bad marker gives the label slug. The output stays `st-codex-worker-<id>` cut to 32, the same string `close` matches.
 - `main()` (D27, D35): `if sys.argv[1:2] == ["--worker"]: sys.exit(0 if worker_session(os.getcwd()) else 3)`, next to the `--render` branch. It reads no stdin and prints nothing. Exit 0: a worker. Exit 3: not a worker. Any other code (python missing, hook missing, a crash) is an error.
-- `st-worker.sh` orchestrator-only check (the `if` before `D=$MAIN/.stratum/autonomous`, D27, D35): run `python3 "$(cd "$(dirname "$0")/.." && pwd)/hooks/st-approve.py" --worker` (the path form `render()` uses), keep its exit code, and refuse with the unchanged message `Run this from the orchestrator's checkout, not a worker worktree.` on any code other than 3. So a missing hook or a failing python3 refuses. `run()` and `bgrun()` in `tests/test_st_worker.sh` unset `CLAUDE_PROJECT_DIR`, since the hook rule also walks that folder.
+- `st-worker.sh` orchestrator-only check (the `if` before `D=$MAIN/.stratum/autonomous`, D27, D35): run `python3 "$(cd "$(dirname "$0")/.." && pwd)/hooks/st-approve.py" --worker 2>/dev/null && c=0 || c=$?` (the path form `render()` uses), keep its exit code in `c`, and refuse with the unchanged message `Run this from the orchestrator's checkout, not a worker worktree.` unless `c` is 3 (`[ "$c" = 3 ] || fail ...`). So a missing hook or a failing python3 refuses. `run()` and `bgrun()` in `tests/test_st_worker.sh` unset `CLAUDE_PROJECT_DIR`, since the hook rule also walks that folder.
 - Research skill step 4 (D27, D35): the first command becomes `python3 <plugin root>/hooks/st-approve.py --worker`. Only exit 3 means not a worker: then the flag check runs as today. Any other exit code means a worker session: the mode is on. Rest of step 4 unchanged.
 
 #### Skill and README (FR-024)
@@ -275,6 +277,7 @@ Tests that grep these lines: `tests/test_worker_rules.sh` (W5, W14, W15, new W40
 
 ### Lane F: ignore lists (D29)
 
+- `DESIGN.md` (commit `d17d6c6`): D13a and the harness model list `.stratum/worker` as an own-state file next to `.stratum/git-guard.json`. A touched file of round 3.
 - `.gitignore`: add `.stratum/worker` after `.stratum/git-guard.json`.
 - `scripts/st-update.sh`: add `".stratum/worker"` to `IGNORE` after `".stratum/git-guard.json"`.
 - `skills/st-init/SKILL.md` step 2: add `` `.stratum/worker` `` after `` `.stratum/git-guard.json` ``. Keep `` `graphify-out/`. `` last: the negative control in `tests/test_update_items.sh` seds that text.

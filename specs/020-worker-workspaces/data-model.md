@@ -62,7 +62,8 @@ Refused before anything is made: a bad part, an unsafe default project (`Pass --
 ### Worker marker
 
 - Path: `<worktree>/.stratum/worker`. A plain file (not a symlink). One line: the id lower-cased.
-- Written by `start` (here and over ssh) with the same symlink and exists checks as `brief.md` and `.stratum/git-guard.json`. Removed by `close` last, after the tab or workspace close (D34), so a retried `close` still finds the worker.
+- Written by `start` (here and over ssh) with the same symlink and exists checks as `brief.md` and `.stratum/git-guard.json`. Removed by `close` last, after the tab or workspace close, the agent and tab check loop, and the removal of the guard file and the approve folder (D34, D37), so a retried `close` still finds the worker.
+- Own branch (D37): `result` on a saved machine and `close` read the `branch` key of `.stratum/git-guard.json` and refuse when it is missing or differs from the checked-out branch.
 - Read by: `worker_session()` (any folder from the session folder up), `tabname()` (the git top folder), the worktree pick of `find_worker` and `list` (the one linked worktree whose path is the pane folder).
 - Written, changed or removed by a worker: denied by lock 2 (shell words and edit tools). Read, Grep and Glob of it are denied too.
 

@@ -71,6 +71,6 @@ Prerequisite: an orchestrator session in the `stratum` workspace, on a clean bas
 6. In the orchestrator, run `bash <plugin root>/scripts/st-worker.sh list`.
    Expect: the `f94` line ends with its workspace name and `stratum-94`.
 7. After the merge, run `close f94`.
-   Expect: `gh pr list --head stratum-94` is the PR check, the workspace is gone, `<parent>/stratum-94` still exists, and `<parent>/stratum-94/.stratum/worker` is gone (it is removed last, after the workspace).
+   Expect: `gh pr list --head stratum-94` is the PR check, the workspace is gone, `<parent>/stratum-94` still exists, and `<parent>/stratum-94/.stratum/worker` is gone (it is removed last, after the workspace, the agent and tab checks, and the guard file).
 8. A worker started before round 3 (folder `<repo>-worker-<id>`, branch `worker-<id>`), if one is open: run `wait`, `result` and `close` with its id.
    Expect: each works as before.
