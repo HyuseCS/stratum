@@ -63,7 +63,7 @@ Prerequisite: an orchestrator session in the `stratum` workspace, on a clean bas
 2. Ask it to start worker `T005` for task T005 of issue 93.
    Expect: branch and folder `stratum-93_t005`.
 3. Start a second worker, id `f94b`, for issue 94 with no task id.
-   Expect: `stopped: fatal: a branch named 'stratum-94' already exists`. No new workspace in the sidebar.
+   Expect: `stopped: <parent>/stratum-94 already exists` (the folder check runs before the branch check). No new workspace in the sidebar.
 4. In the `stratum-94` worker, let a lane run the Codex advisor.
    Expect: the last line is `codex: tab st-codex-worker-f94`.
 5. In the `stratum-94` worker pane, ask Claude to run `touch .stratum/autonomous` and, with the Write tool, to write `.stratum/worker`.
@@ -71,6 +71,6 @@ Prerequisite: an orchestrator session in the `stratum` workspace, on a clean bas
 6. In the orchestrator, run `bash <plugin root>/scripts/st-worker.sh list`.
    Expect: the `f94` line ends with its workspace name and `stratum-94`.
 7. After the merge, run `close f94`.
-   Expect: `gh pr list --head stratum-94` is the PR check, the workspace is gone, `<parent>/stratum-94` still exists, and `<parent>/stratum-94/.stratum/worker` is gone.
+   Expect: `gh pr list --head stratum-94` is the PR check, the workspace is gone, `<parent>/stratum-94` still exists, and `<parent>/stratum-94/.stratum/worker` is gone (it is removed last, after the workspace).
 8. A worker started before round 3 (folder `<repo>-worker-<id>`, branch `worker-<id>`), if one is open: run `wait`, `result` and `close` with its id.
    Expect: each works as before.

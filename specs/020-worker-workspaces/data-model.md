@@ -62,8 +62,8 @@ Refused before anything is made: a bad part, an unsafe default project (`Pass --
 ### Worker marker
 
 - Path: `<worktree>/.stratum/worker`. A plain file (not a symlink). One line: the id lower-cased.
-- Written by `start` (here and over ssh) with the same symlink and exists checks as `brief.md` and `.stratum/git-guard.json`. Removed by `close` with the guard file.
-- Read by: `worker_session()` (any folder from the session folder up), `tabname()` (the git top folder).
+- Written by `start` (here and over ssh) with the same symlink and exists checks as `brief.md` and `.stratum/git-guard.json`. Removed by `close` last, after the tab or workspace close (D34), so a retried `close` still finds the worker.
+- Read by: `worker_session()` (any folder from the session folder up), `tabname()` (the git top folder), the worktree pick of `find_worker` and `list` (the one linked worktree whose path is the pane folder).
 - Written, changed or removed by a worker: denied by lock 2 (shell words and edit tools). Read, Grep and Glob of it are denied too.
 
 ### Worker session rule (FR-021)
@@ -73,7 +73,17 @@ A session is a worker when any folder from its folder up (and from `CLAUDE_PROJE
 ### Real branch and folder of a found worker
 
 - Found by the tab `worker-<id>` (unchanged), then its first pane's folder `C`.
-- `WT`, `BR`: `.path` and `.branch` of the `worktree list --cwd C` entry whose `.path` is `C`, else of the entry whose `.branch` is `worker-<id>`.
+- `WT`, `BR` (D34): `.path` and `.branch` of the `worktree list --cwd C` entry whose `.path` is `C`, whose `.is_linked_worktree` is `true`, and whose `.stratum/worker` is a plain file whose first line is the id lower-cased (`worker-<line>` equals the tab label); else of the entry whose `.branch` is `worker-<id>`; else none (`No worker`).
+- The marker is read only for that one path-matched entry: locally with `[ -f ]`, `[ ! -L ]` and `head -n 1`; on a saved machine with one `rsh`.
+- A pane in the main checkout (not linked) or in another worker's folder (marker with another id) gives none, unless the branch fallback matches.
+
+### --worker exit codes (D35)
+
+| Code | Meaning | `st-worker.sh` check | research step 4 |
+|---|---|---|---|
+| 0 | worker session | refuse | mode on |
+| 3 | not a worker | go on | run the flag check |
+| other (python missing, hook missing, error) | unknown | refuse | mode on |
 
 ### Roster row
 

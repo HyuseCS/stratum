@@ -145,15 +145,15 @@ F7. research.md:18, data-model.md:31, scripts/st-worker.sh:291. Two transition l
 
 **Date**: 2026-11-10 | **Input**: spec.md US6, US7, FR-013 to FR-025, decisions.md D21 to D26
 
-**Status**: Final. D27 = A, D28 = A, D29 = B (answers 2026-11-10), D30 to D33 as taken in Plan. All are in decisions.md. Round 3 tasks: tasks.md T015 to T031.
+**Status**: Final. D27 = A, D28 = A, D29 = B (answers 2026-11-10), D30 to D33 as taken in Plan, D34 to D36 from the round 3 Inspect at merge `0cfe73e`. All are in decisions.md. Round 3 tasks: tasks.md T015 to T031.
 
 ### Summary
 
-`start` names the worktree folder and the branch `<project>[-<env>]-<feature>` and writes a marker `.stratum/worker` with the worker id. Every command still finds a worker by its tab `worker-<id>`; `find_worker` and `list` then read the real folder and branch from the worktree whose path is the pane's folder. `result`, `close`, `list`, the guard file, the brief and the `/goal` prompt use that real branch. The worker checks (lock 2 in `hooks/st-approve.py`, the orchestrator-only check in `scripts/st-worker.sh`, the research skill check) see a worker by the marker, a `worker-*` branch, or `.stratum/approve`. Lock 2 also guards the marker. `tabname` takes the id from the marker, else from a `worker-*` branch.
+`start` names the worktree folder and the branch `<project>[-<env>]-<feature>` and writes a marker `.stratum/worker` with the worker id. Every command still finds a worker by its tab `worker-<id>`; `find_worker` and `list` then read the real folder and branch from the linked worktree whose path is the pane's folder and whose marker holds this worker's id, else from the `worker-<id>` branch (D34). `result`, `close`, `list`, the guard file, the brief and the `/goal` prompt use that real branch. The worker checks (lock 2 in `hooks/st-approve.py`, the orchestrator-only check in `scripts/st-worker.sh`, the research skill check) see a worker by the marker, a `worker-*` branch, or `.stratum/approve`. Lock 2 also guards the marker. `tabname` takes the id from the marker, else from a `worker-*` branch.
 
 ### Build gate (D25)
 
-Build of round 3 starts only after #93 (`093-autonomous-prompts`) is merged into main and origin/main is merged into worker-f94. Code was read on both: worker-f94 at `31b9e39` and `origin/093-autonomous-prompts` at `daac275`. Line numbers in this section are from worker-f94 `31b9e39` and are only a pointer: tasks name functions and case ids.
+Build of round 3 starts only after #93 (`093-autonomous-prompts`) is merged into main and origin/main is merged into worker-f94. Code was read on both: worker-f94 at `31b9e39` and `origin/093-autonomous-prompts` at `daac275`, and checked again at the merge `0cfe73e`. The design names functions, cases and code blocks, not line numbers, because the merge moved them.
 
 ### Where #93 moves the code round 3 touches
 
@@ -170,7 +170,8 @@ New test ids, free on both branches (grep 2026-11-10): `NM` (names), `MK` (marke
 
 ### Code rules for the round 3 build
 
-- Minimal code. Reuse `fail`, `stop`, `h`, `rx`, `rsh`, `quote`, `jq` the way the code around them does. Two shared pieces only: the helper `goalp` (three callers build the same `/goal` prompt, D30) and one jq filter for the worktree pick (path first, legacy `worker-<id>` branch fallback), defined once and used by `find_worker` and `list`. No other new function, option or abstraction.
+- Minimal code. Reuse `fail`, `stop`, `h`, `rx`, `rsh`, `quote`, `jq` the way the code around them does. Two shared pieces only: the helper `goalp` (three callers build the same `/goal` prompt, D30) and the helper `pick` for the worktree pick (linked path with this worker's marker first, legacy `worker-<id>` branch fallback, D34), used by `find_worker` and `list`. No other new function, option or abstraction.
+- Commits use plain `-m` messages only: no heredoc, no backticks, no `$(` and no backslash line breaks (the git guard and the approve hook from #93 refuse those).
 - No explanatory comments. Only `# ponytail: <limit>, <when to upgrade>` markers on deliberate shortcuts.
 - Each test task runs red before its build task.
 - Round 1's "do not touch `find_worker`" is lifted for `find_worker` only (FR-018). #93 does not change it. `answer`, `wait`, `watch`, `screen`, `block` stay untouched.
@@ -184,18 +185,18 @@ New test ids, free on both branches (grep 2026-11-10): `NM` (names), `MK` (marke
 
 #### Name (FR-013 to FR-015)
 
-Rules in [data-model.md](data-model.md) "Worker name". Built in the `start` case right after `repo` is known (line 263), before the guard file `G` (line 264) and before `h tab list`:
+Rules in [data-model.md](data-model.md) "Worker name". Built in the `start` case right after the line that sets `repo` from `git rev-parse --git-common-dir`, before the two guard-file lines (`G=$(jq ...)` and its empty-file fallback `[ -n "$G" ] || G=...`) and before `h tab list`:
 
-1. Move the task-words line `W=...` (line 280) up to here. The workspace label line keeps using it.
+1. Move the task-words line `W=...` (next to the workspace label lines) up to here. The workspace label line keeps using it.
 2. `<project>`: `--project`, else `basename "$repo"`. On a saved machine that is the `--repo` value as given, before `~` is resolved (`~/proj` gives `proj`; a bare `~` is refused). Lower-case it.
 3. `<feature>`: the issue (`_<id>` added with `--issue-task`), else `W` lower-cased with every run of other characters than `a-z0-9` turned into one `_` (`LC_ALL=C sed -E 's/[^a-z0-9]+/_/g'`), else the id lower-cased.
-4. `B=<project>[-<env>]-<feature>`. `path="$(dirname "$repo")/$B"` replaces the `<repo>-$N` path (line 276), after the `~` resolution.
+4. `B=<project>[-<env>]-<feature>`. `path="$(dirname "$repo")/$B"` replaces the `path="$(dirname "$repo")/$(basename "$repo")-$N"` line, after the `~` resolution.
 
 #### Safe tokens (FR-016)
 
-- `--project`, `--env` and `--issue` values are checked in the argument checks, next to the model check (lines 86-89): lower-cased, `^[a-z0-9][a-z0-9._-]*$`, no `..`. A bad value fails with one line before any git or herdr call: `Name part <value> must be letters, digits, dot, underscore or dash, start with a letter or digit, and have no "..".`
-- The task id is the worker id, already checked at line 60.
-- The default project is known only after `git rev-parse` (local) or from `--repo` (saved machine). It is checked with the same rule right after it is made, before any herdr call and before anything is made: `The repo folder name <name> is not a safe name part. Pass --project <name>.`
+- `--project`, `--env` and `--issue` values are checked in the argument checks, next to the model check (the `if [ "$cmd" = start ] || [ "$cmd" = headless ]` block): lower-cased, `^[a-z0-9][a-z0-9._-]*$`, no `..`. A bad value fails with one line before any git or herdr call: `Name part <value> must be letters, digits, dot, underscore or dash, start with a letter or digit, and have no "..".`
+- The task id is the worker id, already checked by the `Task id must be letters, digits or dash` line.
+- The default project is known only after `git rev-parse` (local) or from `--repo` (saved machine). It is checked with the same rule right after it is made, before anything is made. Locally that is before any herdr call. With `--machine`, the `herdr machine list` and `herdr --machine <m> workspace list` checks run before the `start` case, so they have run by then; no ssh call, `tab list` or `workspace create` has: `The repo folder name <name> is not a safe name part. Pass --project <name>.`
 - `# ponytail: the token rule does not check git ref rules (a part ending in "." or ".lock"), git refuses those at worktree add before anything is made; check with git check-ref-format if a refusal confuses users`.
 
 #### Taken name (FR-017)
@@ -204,7 +205,7 @@ No new check. The existing `rx` string in `start` already refuses both before an
 
 #### start (other changes)
 
-- `G` (guard file) takes `--arg b "$B"`.
+- Both guard-file lines take `--arg b "$B"`: the `G=$(jq -c ... '.commit="auto" | .branch=$b' ...)` line and its empty-file fallback `[ -n "$G" ] || G=$(jq -nc ... '{commit:"auto",branch:$b}')` (case S1c covers the fallback).
 - `goalp "$B"` builds and checks the `/goal` prompt before `h tab list`, so P6 still fails with no herdr call.
 - `worktree add -q -b $B`, `BR=$B`, and the undo `branch -D $B` / `left $path and branch $B`. `B` is a safe token, so it goes into the `rx` string unquoted, as `N` did.
 - Marker (FR-020): `.stratum/worker` holds one line, the id lower-cased. Local: add `"$WT/.stratum/worker"` to the symlink and exists loop and write it after the guard file. Saved machine: add `$Q/.stratum/worker` to the `for p in ...` list of the `rsh` string and append `&& printf '%s\n' <id> > $Q/.stratum/worker` after the guard write.
@@ -213,21 +214,27 @@ No new check. The existing `rx` string in `start` already refuses both before an
 
 #### `/goal` prompt (FR-018, D30)
 
-The block at lines 106-109 becomes the helper `goalp`: `P="/goal \`$test\` exits 0, the change is committed on branch $1, and result.md is written; read brief.md in this folder first and follow it"`, then the 4000-character check with the same message. Callers: `start` (with `$B`, before `h tab list`), `goal` and `followup` (with `$BR`, right after `find_worker`). `goal` gains a `find_worker` call as its first line: three read-only herdr calls (`tab list`, `pane list`, `worktree list`).
+The `/goal` prompt block (`if [ "$cmd" = start ] || [ "$cmd" = goal ] || [ "$cmd" = followup ]; then P=...`) becomes the helper `goalp`: `P="/goal \`$test\` exits 0, the change is committed on branch $1, and result.md is written; read brief.md in this folder first and follow it"`, then the 4000-character check with the same message. Callers: `start` (with `$B`, before `h tab list`), `goal` and `followup` (with `$BR`, right after `find_worker`). `goal` gains a `find_worker` call as its first line: three read-only herdr calls (`tab list`, `pane list`, `worktree list`).
 
 #### find_worker (FR-018, FR-019)
 
-After `h worktree list --cwd "$C"`: the shared worktree-pick filter takes the worktree whose `.path` is the pane folder `$C`, else (old workers whose pane left its folder) the one whose `.branch` is `$N`. `find_worker` and `list` both use this one filter; each keeps its own output and failure handling. Set `WT` from its `.path` and `BR` from its `.branch`. None, or no branch: `No worker $N on <machine>.` as today. Same three herdr calls, so `wait`, `watch` and `answer` call counts do not change (FR-004).
+After `h worktree list --cwd "$C"`, the helper `pick` (D34) chooses the worktree, from the answer in `$r`, the pane folder and the label `$N`:
+
+1. One jq call takes the entry whose `.path` is the pane folder and whose `.is_linked_worktree` is `true`. So the main checkout is never picked by path.
+2. Only for that one candidate, read its marker: locally `[ -f "$p/.stratum/worker" ] && [ ! -L "$p/.stratum/worker" ]` and `head -n 1`; on a saved machine one `rsh` with the same test and `head -n 1 --` on the quoted path. The candidate counts only when `worker-<marker line>` is `$N`. One marker read per lookup, not one per worktree.
+3. Else one jq call takes the entry whose `.branch` is `$N` (old workers, and a pane that left its folder).
+
+`pick` sets `WT` and `BR` from the chosen entry's `.path` and `.branch`, or leaves them empty. Each caller keeps its own output and failure handling: `find_worker` fails with `No worker $N on <machine>.` as today when `WT` or `BR` is empty; `list` prints `-`. So a pane moved into the main checkout or into another worker's folder (marker with another id) finds no worker, and nothing there is touched. Same three herdr calls, so `wait`, `watch` and `answer` herdr call counts do not change (FR-004); on a saved machine each lookup adds the one marker `rsh` when a linked path matches.
 
 #### followup, result, close (FR-018, FR-020)
 
-- `followup`: `refs/heads/$BR` in the autonomous base sha line (line 379).
+- `followup`: `refs/heads/$BR` in the autonomous base sha line (`sha=$(git rev-parse -q --verify "refs/heads/$N" ...)` in the `.stratum/approve` block).
 - `result` on a saved machine: `git fetch -- <target>:<WT> "$BR:$BR"` and `git rev-parse --verify "$BR"`. The `fetched` line keeps its fields.
-- `close`: `gh pr list --head "$BR"`. The marker goes with the guard file: local `rm -f "$WT/.stratum/git-guard.json" "$WT/.stratum/worker"`, remote `rm -f $Q/.stratum/git-guard.json $Q/.stratum/worker`. Messages unchanged. The Codex name match (`st-codex-$N` cut to 32) does not change: the marker holds the same id `N` is made from.
+- `close`: `gh pr list --head "$BR"`. The guard file and `.stratum/approve` go first, as today. The marker goes last (D34): after the `workspace close` or `tab close` and the agent and tab check loop, right before the `closed` line: local `rm -f "$WT/.stratum/worker"`, saved machine one `rsh "rm -f $Q/.stratum/worker"`; a failure stops with `Worker $N: closed, but cannot remove .stratum/worker.` So a close that fails at the workspace step leaves the marker, and a retried `close` still finds the worker by it. The Codex name match (`st-codex-$N` cut to 32) does not change: the marker holds the same id `N` is made from.
 
 #### list (FR-009, FR-018, D31)
 
-The shared worktree-pick filter of `find_worker` (path, else old branch); `list` keeps its own `-` output when nothing is found. Each `found` line gets the branch as a new last field, after the workspace label, `-` when no worktree was found:
+The helper `pick` of `find_worker`, with `N=$l` for each tab; `list` keeps its own `-` output when nothing is found. Each `found` line gets the branch as a new last field, after the workspace label, `-` when no worktree was found:
 `found	<N>	<machine>	<tab>	<pane>	<status>	<path>	<workspace label>	<branch>`.
 Why: a new session (skill step 12) has no roster, and steps 8 and 11 need the branch.
 
@@ -238,9 +245,9 @@ Why: a new session (skill step 12) has no roster, and steps 8 and 11 need the br
 - `lock2()` Bash words: add an exact match, `w == ".stratum/worker" or w.endswith("/.stratum/worker")`. A substring match would also hit `.stratum/worker-setup.sh`.
 - `REASON` and the test's `DENY_REASON`: `.stratum/approve/, .stratum/autonomous and .stratum/worker are written only by the orchestrator.`
 - `tabname()` in `scripts/st-advisor.sh`: when `$(git rev-parse --show-toplevel)/.stratum/worker` is a plain file, `l=worker-<its first line>`; else `l` is the branch as today. The existing regex line then decides, so a bad marker gives the label slug. The output stays `st-codex-worker-<id>` cut to 32, the same string `close` matches.
-- `main()` (D27): `if sys.argv[1:2] == ["--worker"]: sys.exit(0 if worker_session(os.getcwd()) else 1)`, next to the `--render` branch. It reads no stdin and prints nothing.
-- `st-worker.sh` orchestrator-only check (the `if` before `D=$MAIN/.stratum/autonomous`, D27): its condition becomes `python3 "$(cd "$(dirname "$0")/.." && pwd)/hooks/st-approve.py" --worker`, the same path form `render()` uses. Message unchanged. `run()` in `tests/test_st_worker.sh` adds `-u CLAUDE_PROJECT_DIR` to its `env`, since the hook rule also walks that folder.
-- Research skill step 4 (D27): the first command becomes `python3 <plugin root>/hooks/st-approve.py --worker`; exit 0 means a worker session: the mode is on. Rest of step 4 unchanged.
+- `main()` (D27, D35): `if sys.argv[1:2] == ["--worker"]: sys.exit(0 if worker_session(os.getcwd()) else 3)`, next to the `--render` branch. It reads no stdin and prints nothing. Exit 0: a worker. Exit 3: not a worker. Any other code (python missing, hook missing, a crash) is an error.
+- `st-worker.sh` orchestrator-only check (the `if` before `D=$MAIN/.stratum/autonomous`, D27, D35): run `python3 "$(cd "$(dirname "$0")/.." && pwd)/hooks/st-approve.py" --worker` (the path form `render()` uses), keep its exit code, and refuse with the unchanged message `Run this from the orchestrator's checkout, not a worker worktree.` on any code other than 3. So a missing hook or a failing python3 refuses. `run()` and `bgrun()` in `tests/test_st_worker.sh` unset `CLAUDE_PROJECT_DIR`, since the hook rule also walks that folder.
+- Research skill step 4 (D27, D35): the first command becomes `python3 <plugin root>/hooks/st-approve.py --worker`. Only exit 3 means not a worker: then the flag check runs as today. Any other exit code means a worker session: the mode is on. Rest of step 4 unchanged.
 
 #### Skill and README (FR-024)
 
@@ -251,10 +258,11 @@ Why: a new session (skill step 12) has no roster, and steps 8 and 11 need the br
 - Step 8: `<base>..<branch>` and `git merge --no-ff --no-edit <branch>`, with `<branch>` from the worker's roster row.
 - Step 11: `gh pr view <branch>` and `gh pr list --head <branch>`.
 - Step 12: each `found` line ends with the workspace name and the branch.
+- Step 6, the never list under `approval`: "a request whose input names `.stratum/approve`, `.stratum/autonomous` or `.stratum/worker`" (row W5).
 
 `README.md`: the "Worker guard" bullet gets the folder and branch name rule and the marker. The "Autonomous build mode" bullet (row W15) names `.stratum/worker` with `.stratum/approve/` and `.stratum/autonomous`. Lines 266 and 270 (rows R7, R17) do not change.
 
-Tests that grep these lines: `tests/test_worker_rules.sh` (W14, W15, new W40+), `tests/test_on_demand.sh` (`#17 FR-009 review`, `#17 FR-009 merge`, `#pr-flow worker close after merged`, `#pr-flow worker close refuses`), `tests/test_state.sh` (S6), `tests/test_lane_steps.sh`.
+Tests that grep these lines: `tests/test_worker_rules.sh` (W5, W14, W15, new W40+), `tests/test_on_demand.sh` (`#17 FR-009 review`, `#17 FR-009 merge`, `#pr-flow worker close after merged`, `#pr-flow worker close refuses`), `tests/test_state.sh` (S6), `tests/test_lane_steps.sh`.
 
 ### Security notes (round 3)
 
@@ -262,7 +270,8 @@ Tests that grep these lines: `tests/test_worker_rules.sh` (W14, W15, new W40+), 
 - Trust boundary: `--project`, `--env`, `--issue` and the repo folder name reach `git worktree add -b`, a path, an `ssh` command string and `gh pr list --head`. Each is a checked safe token first. `B` holds only `[a-z0-9._-]`, so it is shell-safe in the `rx` string. The path still goes through `quote`.
 - Saved machine: the marker is written over ssh with the same symlink and exists guards as `brief.md` and the guard file.
 - A committed marker merged into main would make the orchestrator's checkout a worker: lock 2 would then block its own `approve` and `pass` calls. D29: brief rule 1 names `.stratum/worker`, and it is in this repo's `.gitignore`, the `IGNORE` list of `scripts/st-update.sh` and the ignore list of `skills/st-init/SKILL.md` step 2, as `.stratum/git-guard.json` is. User projects get the `.gitignore` line through `st-update` (an `ignore` row) or `st-init`.
-- `--worker` (D27) adds a hook command that only reads the folder chain and git branches. It cannot write or allow anything.
+- `--worker` (D27) adds a hook command that only reads the folder chain and git branches. It cannot write or allow anything. Its callers fail closed (D35): `st-worker.sh` refuses unless the exit code is exactly 3.
+- Worktree pick (D34): a path match needs a linked worktree whose plain-file marker holds this worker's id, so `close` never removes files in the main checkout or in another worker's folder when a pane moved there.
 
 ### Lane F: ignore lists (D29)
 
@@ -281,5 +290,32 @@ Tests that grep these lines: `tests/test_worker_rules.sh` (W14, W15, new W40+), 
 - D31: `list` prints the branch as a new last field.
 - D32: FR-017 uses the existing folder check and `worktree add -b` refusal, no new check.
 - D33: the marker holds the id lower-cased, one line; `tabname` prefixes `worker-` and reuses its regex.
+- D34 (Inspect F1): the worktree pick takes a path match only for a linked worktree whose plain-file marker holds this worker's id, else the `worker-<id>` branch. `close` removes the marker last.
+- D35 (Inspect F2): `--worker` exits 0 for a worker and 3 for not a worker; `st-worker.sh` refuses on any other code; research step 4 treats only exit 3 as not a worker.
+- D36 (Inspect F9): `st-update.sh` keeps its `worker` report label by branch (research R14). It is a label, not a guard.
 
 No open decisions.
+
+## Validate (round 3)
+
+Date: 2026-11-10. Verdict: CONDITIONAL
+
+Checked against the merged code at `0cfe73e` (worker-f94 with origin/main and #93). Every function and case the round 3 tasks name still exists, and the design fits: `worker_session()` (`hooks/st-approve.py:88`), `locked_path()` (`:97`), the deny line after `words =` in `lock2()` (`:109`), `main()` with `--render` (`:358`); in `scripts/st-worker.sh` the worker check (`:67`), `P` (`:105-108`), the roster loop (`:93-101`), `find_worker` (`:202-214`), `brief()` (`:256-276`), `start` (`:279`), `goal` (`:371`), `followup` (`:388`, `refs/heads/$N` at `:397`), `result` (`:514-515`), `close` (`:528`, `:532-536`), `list` (`:575`); `tabname()` (`scripts/st-advisor.sh:6`); research step 4 (`skills/st-research/SKILL.md:16`); `IGNORE` (`scripts/st-update.sh:22`); st-init step 2 (`skills/st-init/SKILL.md:13-15`). The test ids and helpers the tasks name exist or are free (M30 loop, `run()`, `fresh()`, `mk`, `nc`, `autoclr`, `axrun`, `STUB_WT_LINK`, `LOCK2_BASH`, `make_branch_repo`, `wbr`, U7; free: NM, MK, OW, RB, WT6, M31, NC20, NC21, W40+, G20+, U27). The plan's line numbers are from `31b9e39` and are stale by up to 18 lines; the tasks name functions, so this does not block.
+
+| Check | Verdict | Findings |
+|-------|---------|----------|
+| 1. Setup and dependencies | PASS | herdr 0.9.4, jq 1.8.2, Python 3.14.9, git 2.56.0, gh 2.102.1, bash 5.3.20. No new dependency. At `0cfe73e` these exit 0 with no FAIL line: test_st_worker, test_approve_hook, test_git_guard, test_research, test_advisor_matrix, test_advisor, test_advisor_waive, test_worker_rules, test_on_demand, test_st_update, test_update_items, test_state, test_lane_steps, test_risk_rules. Live herdr: `worktree list --cwd` gives `path`, `branch` and `is_linked_worktree`, and a worker pane's `cwd` equals its worktree `path`. Not checked: the laptop. |
+| 2. Test coverage per requirement | CONCERN | F3, F4, F6, F8 |
+| 3. Breaking changes | PASS | The `found` line gets a 9th field (T024, T028 change L1-L5, R12 and skill step 12). `REASON` changes (T016 changes `DENY_REASON`; only old specs quote the old text). New branch and folder names: old workers are kept by the branch fallback (OW1-OW7). No stored data, no migration. The st-update ` worker` label is F9. |
+| 4. Security and privacy | CONCERN | F1, F2, F5. Name parts are safe tokens before `rx`, a path, ssh or `gh`. `--worker` only reads. No secrets, no personal data. |
+
+F1. plan.md:220, tasks.md:141 (T025), data-model.md:76. The new worktree pick takes the entry whose `.path` is the pane folder and does not check that this worktree belongs to the worker. The ponytail note at `scripts/st-worker.sh:209` says a stopped worker's pane can `cd` away. If that pane is in the main checkout (live: the main checkout is in the `worktree list` answer with `is_linked_worktree: false`), `find_worker` sets `WT` to the main checkout and `BR` to `main`. Then `close` (`scripts/st-worker.sh:534-536`) deletes the main checkout's `.stratum/git-guard.json`, which is git-ignored and cannot be restored, and `followup` writes its round brief there. If the pane is in another worker's folder, `close` deletes that worker's marker, and lock 2 then stops seeing that worker. Today the pick by `worker-<id>` branch fails safe with `No worker`. -> st-plan, fix before T025: in the shared filter, take the path match only when `.is_linked_worktree == true`; T024 adds a case where the pane is in the main checkout: `close` refuses, and the main checkout's guard file is still there. Matching another worker's folder can also be stopped by checking that the marker holds the id. That is a user decision, because `close` deletes the marker.
+F2. plan.md:241-243, tasks.md:128 (T023), tasks.md:126 (T021). `if python3 .../st-approve.py --worker; then fail ...` treats every exit code other than 0 as "not a worker". So a missing python3 (127), a missing hook file (2) or an uncaught Python error (1) turns the orchestrator-only check off. Today's check is inline bash and cannot fail this way. -> st-plan: give "not a worker" its own exit code (for example 3). Make `st-worker.sh` refuse on any code other than 3, and add a negative control in T022 (point the hook path at a missing file: refused).
+F3. quickstart.md:65-66 (by hand, step 3). The `rx` string checks the folder before `worktree add` (`scripts/st-worker.sh:308`). After step 1, `<parent>/stratum-94` exists, so the line is `stopped: <parent>/stratum-94 already exists`, not the branch message. NM12 and NM13 in T026 are correct. -> st-plan: expect the folder line.
+F4. tasks.md:143 (T027), plan.md:207. "`G` takes `--arg b "$B"`" names one line, but there are two: `scripts/st-worker.sh:282` and the fallback for an empty guard file, `:283`. If `:283` keeps `$N`, a worker whose main checkout has an empty `.stratum/git-guard.json` gets `branch: worker-<id>`, and the git guard asks on every commit (`hooks/st-git-guard.py:281-282`). No case covers `:283`. -> st-plan: T027 names both lines; T026 adds a start with an empty guard file and checks `branch`.
+F5. skills/st-worker/SKILL.md:34. The never list (a request whose input names `.stratum/approve` or `.stratum/autonomous`) does not name `.stratum/worker`, and T028 does not change it. Lock 2 denies first, so this is the second layer only. Row W5 (`tests/test_worker_rules.sh:14`) checks this sentence. -> st-plan: add `.stratum/worker` in T028 and change W5.
+F6. tests/test_st_worker.sh:1363. `bgrun()` runs the script without `run()`, so the `-u CLAUDE_PROJECT_DIR` of T022 does not reach it. Its `autonomous-off` calls (`:1789`) then go through the new `--worker` check with the caller's `CLAUDE_PROJECT_DIR`. It is not set in the Bash tool today, so the suite passes. -> st-plan: T022 also unsets it in `bgrun`.
+F7. contracts/cli.md:65 and :67. "no herdr call" for the unsafe repo folder name and the roster branch refusal is not true with `--machine`: `herdr machine list` and `workspace list` run first (`scripts/st-worker.sh:118-124`). NM11 in T026 already allows them. -> st-plan: write "no ssh call and no `workspace create`" for a saved machine.
+F8. tasks.md:173. SC-007 is mapped only to T031 (by hand), but the deny cases of T016 prove it automatically. -> st-plan: map SC-007 to T016, T017.
+F9. scripts/st-update.sh:254, skills/st-update/SKILL.md:20. The st-update report labels a checkout ` worker` only on a `worker-*` branch, so new-name workers lose the label (research R14 keeps it as is). It is a report label, not a guard. -> user decision, small: keep R14, or read the marker there too.
+F10. plan.md:171-177. The round 4 brief allows commits only with plain `-m` (no heredoc, no backticks, no `$(`, no backslash line breaks), because the git guard denies them. The build rules do not say this. -> st-plan: add one line. No task needs `hooks/st-git-guard.py`, `tests/test_git_guard.py` or `skills/st-update/SKILL.md`. The guard compares HEAD to the guard file's `branch`, which T027 sets to `B`, and it uses only `unjudgeable()` from the approve hook, which T017 does not touch. `tests/test_git_guard.py` already runs in T015, T017 and T031.
