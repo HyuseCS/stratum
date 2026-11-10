@@ -13,11 +13,11 @@ before it installs it (contract section 2, Install):
 
 ```sh
 # pacman (this laptop, CachyOS)
-cd "$(mktemp -d)" && curl -LO https://github.com/storytold/figcraft/releases/download/v0.13.1/figcraft-0.13.1-linux-x86_64.pkg.tar.zst -LO https://github.com/storytold/figcraft/releases/download/v0.13.1/SHA256SUMS.txt && sha256sum -c --ignore-missing SHA256SUMS.txt && sudo pacman -U ./figcraft-0.13.1-linux-x86_64.pkg.tar.zst
+cd "$(mktemp -d)" && curl -LO https://github.com/storytold/figcraft/releases/download/v0.16.0/figcraft-0.16.0-linux-x86_64.pkg.tar.zst -LO https://github.com/storytold/figcraft/releases/download/v0.16.0/SHA256SUMS.txt && sha256sum -c --ignore-missing SHA256SUMS.txt && sudo pacman -U ./figcraft-0.16.0-linux-x86_64.pkg.tar.zst
 # apt
-cd "$(mktemp -d)" && curl -LO https://github.com/storytold/figcraft/releases/download/v0.13.1/figcraft-0.13.1-linux-<arch>.deb -LO https://github.com/storytold/figcraft/releases/download/v0.13.1/SHA256SUMS.txt && sha256sum -c --ignore-missing SHA256SUMS.txt && sudo apt install ./figcraft-0.13.1-linux-<arch>.deb
+cd "$(mktemp -d)" && curl -LO https://github.com/storytold/figcraft/releases/download/v0.16.0/figcraft-0.16.0-linux-<arch>.deb -LO https://github.com/storytold/figcraft/releases/download/v0.16.0/SHA256SUMS.txt && sha256sum -c --ignore-missing SHA256SUMS.txt && sudo apt install ./figcraft-0.16.0-linux-<arch>.deb
 # dnf
-cd "$(mktemp -d)" && curl -LO https://github.com/storytold/figcraft/releases/download/v0.13.1/figcraft-0.13.1-linux-<arch>.rpm -LO https://github.com/storytold/figcraft/releases/download/v0.13.1/SHA256SUMS.txt && sha256sum -c --ignore-missing SHA256SUMS.txt && sudo dnf install ./figcraft-0.13.1-linux-<arch>.rpm
+cd "$(mktemp -d)" && curl -LO https://github.com/storytold/figcraft/releases/download/v0.16.0/figcraft-0.16.0-linux-<arch>.rpm -LO https://github.com/storytold/figcraft/releases/download/v0.16.0/SHA256SUMS.txt && sha256sum -c --ignore-missing SHA256SUMS.txt && sudo dnf install ./figcraft-0.16.0-linux-<arch>.rpm
 ```
 
 Then: `sha256sum` printed `OK` for the package, `command -v figcraft figcraft-cli` prints two

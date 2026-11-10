@@ -26,7 +26,7 @@
 
 - [ ] CHK010 Does the spec say which parts of the saved design the build must follow exactly (layout, sizes, colors, text) and which it may adapt to code? [FR-010, SC-001]
 - [ ] CHK011 Does the spec say how the design file is written when the saved design's variables differ from the existing design file? [FR-009, D16]
-- [ ] CHK012 Is `<screen>` in `design/<screen>.figcraft` defined, so two screens never share or overwrite one file? [FR-009, Key Entities]
+- [ ] CHK012 Is the page name in `design/app.figcraft` defined, so two screens never share or overwrite one page? [FR-009, Key Entities]
 
 ## Gate changes
 

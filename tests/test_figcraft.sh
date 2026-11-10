@@ -111,7 +111,7 @@ want "F7 cli on PATH" 0 "cli: info x"
 
 mk F8; fake figcraft <<'SH'
 #!/bin/sh
-case "$*" in "cli --version") echo "figcraft-cli 0.13.1" ;; *) echo "app: $*" ;; esac
+case "$*" in "cli --version") echo "figcraft-cli 0.16.0" ;; *) echo "app: $*" ;; esac
 SH
 out=$(st cli info x); rc=$?
 want "F8 cli through AppImage" 0 "app: cli info x"

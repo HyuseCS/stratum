@@ -5,8 +5,8 @@ No database. The entities are files and one run record. Texts are in
 
 ## Saved design
 
-- Path: `design/<screen>.figcraft` in the project. `<screen>`: the screen's name in kebab case.
-  One file per screen.
+- Path: `design/app.figcraft` in the project. `<screen>`: the screen's name in kebab case.
+  One file per project: one page per screen, named `<Role> / <screen>` (no role: `<screen>`).
 - Written by: the `st-design` agent through FigCraft's `save_file`, at the end of Draw and on
   "good" (Save). Never by hand through Bash.
 - Read by: the build (Read step, CLI, no window) and a restart after the window was closed (Draw

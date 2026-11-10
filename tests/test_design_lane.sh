@@ -158,10 +158,15 @@ C-FR-006 design-tool.md	skills/st-design/design-tool.md	bind each color, font si
 C-FR-006 design-tool.md	skills/st-design/design-tool.md	first run the engine's Before step, then draw the current screen
 C-FR-007 design-tool.md	skills/st-design/design-tool.md	the project as its read root and `design/` as its write
 C-FR-008 design-tool.md	skills/st-design/design-tool.md	When the request says
-C-FR-009 design-tool.md	skills/st-design/design-tool.md	`save_file` with `document` and the path `<project>/design/<screen>.figcraft`.
+C-FR-009 design-tool.md	skills/st-design/design-tool.md	`save_file` with `document` and the path `<project>/design/app.figcraft`.
 C-FR-009 design-tool.md	skills/st-design/design-tool.md	Write each variable's value into the file the first design read it from:
-C-FR-010 design-tool.md	skills/st-design/design-tool.md	`<fc> cli convert design/<screen>.figcraft design/.read/<screen>/design.json`,
-C-FR-010 design-tool.md	skills/st-design/design-tool.md	`<fc> cli render design/<screen>.figcraft -o design/.read/<screen>/design.png`,
+C-FR-009 design-tool.md	skills/st-design/design-tool.md	No page yet and an old `design/<screen>.figcraft` exists (never `app.figcraft`): `run_command` `file.import` with its
+C-FR-009 design-tool.md	skills/st-design/design-tool.md	that Draw imported is removed (`git rm`) in that screen's commit.
+C-FR-006 design-tool.md	skills/st-design/design-tool.md	Only when the brief says `new theme`,
+C-FR-006 SKILL.md	skills/st-design/SKILL.md	Only the first draw after a theme pick says `new theme` in its brief.
+C-FR-010 design-tool.md	skills/st-design/design-tool.md	`<fc> cli convert design/app.figcraft design/.read/<screen>/design.json`,
+C-FR-010 design-tool.md	skills/st-design/design-tool.md	`<fc> cli render design/app.figcraft --page '<page name>' -o design/.read/<screen>/design.png`,
+C-FR-010 design-tool.md	skills/st-design/design-tool.md	--page
 C-FR-012 design-tool.md	skills/st-design/design-tool.md	`design/.read/` is never
 C-FR-014 design-tool.md	skills/st-design/design-tool.md	A swap to another tool changes this file,
 EOF
