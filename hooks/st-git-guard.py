@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import importlib.util
 import json
 import os
 import re
@@ -18,6 +19,19 @@ TOKEN = re.compile(r"""[ \t]*(?:(\d*(?:<<-|<<<|<>|>\||[<>][<>&]?)|&>>?)|([;&|]+)
 COMPOUND = {"{", "if", "then", "else", "elif", "do", "while", "until", "for", "case", "select", "function",
             "coproc"}
 INERT = {"cat", "tee", "cd", "echo", "printf", "ls", "mkdir", "true", ":", "wc", "pwd"}
+FORM_DENY = (r"Commit form denied: a commit with a heredoc, <<, a backtick, $( or a backslash line break cannot "
+             r"be judged by the approve channel. Run it again as git commit -m 'subject' -m 'body': single quotes, "
+             r"and no <<, backticks, $( or backslash line breaks anywhere, not even in the message. Write an "
+             r"apostrophe as '\''.")
+JOIN = re.compile(r"(?<!\\)((?:\\\\)*)\\\n")
+try:
+    _spec = importlib.util.spec_from_file_location(
+        "st_approve", os.path.join(os.path.dirname(os.path.realpath(__file__)), "st-approve.py"))
+    _approve = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_approve)
+    unjudgeable, LOAD_ERROR = _approve.unjudgeable, ""
+except Exception as e:
+    unjudgeable, LOAD_ERROR = None, f"{type(e).__name__}: {e}"
 
 
 def segments(command):
@@ -274,10 +288,10 @@ def main():
             if RANK[d] > RANK[decision]:
                 decision = d
 
-    here, left = cwd, False
+    here, left, commit = cwd, False, False
 
     def check(seg, unknown=False):
-        nonlocal here, left
+        nonlocal here, left, commit
         i = 0
         while i < len(seg) and (seg[i] in PREFIX
                                 or "=" in seg[i] and not seg[i].startswith("-")):
@@ -295,15 +309,19 @@ def main():
         parsed = parse_git(seg)
         if parsed:
             sub, args, cdir, elsewhere, conf = parsed
+            commit = commit or sub == "commit"
             gitdir = resolve(here, cdir) if cdir else here
             note(*judge(sub, args, gitdir or cwd, unknown or env or elsewhere or left
                         or away(gitdir) or off_branch(gitdir), conf))
             left = left or sub in ("switch", "checkout")
         return bool(parsed and re.fullmatch(r"[a-z][a-z0-9-]*", parsed[0]))
 
+    joined = JOIN.sub(r"\1", command)
     try:
-        for seg in segments(command):
-            check(seg)
+        for text in dict.fromkeys((command, joined)):
+            here, left = cwd, False
+            for seg in segments(text):
+                check(seg)
     except ValueError:
         decision, reasons, here, left = None, [], cwd, False
         lines, bodies, clean, runs, quiet = command.split("\n"), [], True, False, set()
@@ -328,24 +346,38 @@ def main():
                     start = end + 1
         if runs or not clean:
             quiet = set()
-        for n, line in enumerate(lines):
-            if n in quiet:
-                continue
-            if not GIT_WORD.search(line.translate(UNQUOTE)):
-                continue
-            try:
-                segs = list(segments(line))
-            except ValueError:
-                note("ask", "The git guard could not parse the command.")
-                continue
-            for seg in segs:
-                if not check(seg, True) and GIT_WORD.search(" ".join(seg).translate(UNQUOTE)):
-                    note("ask", "The git guard could not read a git command on this line.")
+        for join in (False, True):
+            here, left, buf = cwd, False, ""
+            for n, line in enumerate(lines + [""]):
+                if n in quiet:
+                    continue
+                if join and JOIN.search(line + "\n"):
+                    buf += line[:-1]
+                    continue
+                line, buf = buf + line, ""
+                if not GIT_WORD.search(line.translate(UNQUOTE)):
+                    continue
+                try:
+                    segs = list(segments(line))
+                except ValueError:
+                    note("ask", "The git guard could not parse the command.")
+                    commit = commit or bool(re.search(r"\bcommit\b", line))
+                    continue
+                for seg in segs:
+                    if not check(seg, True) and GIT_WORD.search(" ".join(seg).translate(UNQUOTE)):
+                        note("ask", "The git guard could not read a git command on this line.")
+                        commit = commit or bool(re.search(r"\bcommit\b", line))
+    if unjudgeable is None:
+        if any(GIT_WORD.search(t.translate(UNQUOTE)) for t in (command, joined)):
+            note("ask", f"The git guard could not load hooks/st-approve.py ({LOAD_ERROR}). "
+                        "Every git command asks until it loads.")
+    elif commit and unjudgeable(command):
+        decision, reasons = "deny", [FORM_DENY]
     if decision:
         print(json.dumps({"hookSpecificOutput": {
             "hookEventName": "PreToolUse",
             "permissionDecision": decision,
-            "permissionDecisionReason": "\n\n".join(reasons),
+            "permissionDecisionReason": "\n\n".join(dict.fromkeys(reasons)),
         }}))
 
 

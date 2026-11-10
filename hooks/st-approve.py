@@ -37,8 +37,15 @@ NEVER = re.compile("|".join([
     r"\bsudo\b", r"\beval\b",
 ]))
 COMMIT_NEVER = re.compile(r"\b(?:sh|bash|zsh)\s+-c\b|\beval\b|\bGIT_[A-Z0-9_]*=|\b(?:cd|pushd)\b")
-HEREDOC_MESSAGE = re.compile(r"\$\(cat <<(['\"])(\w+)\1\n(?:(?!\2\n)[^\n]*\n)*\2\n\s*\)")
 SUBSTITUTION = re.compile(r"`|\$\(|\$\{[\s|]|[<>]\(")
+CONTROL = re.compile(r"[\x00-\x1f\x7f]")
+JOIN = re.compile(r"(?<!\\)((?:\\\\)*)\\\n")
+
+
+def unjudgeable(command):
+    return "\\\n" in command or "<<" in command or bool(SUBSTITUTION.search(command))
+
+
 LOCK = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "scripts", "st-lock.sh")
 
 
@@ -96,7 +103,9 @@ def lock2(data, cwd):
     tool = data.get("tool_name")
     ti = data.get("tool_input") or {}
     if tool == "Bash":
-        words = [posixpath.normpath(w) for w in re.split(r"[\s;&|()<>`]+", strip_quotes(str(ti.get("command") or ""))) if w]
+        command = str(ti.get("command") or "")
+        words = [posixpath.normpath(w) for w in re.split(r"[\s;&|()<>`]+",
+                                                          strip_quotes(command + "\n" + JOIN.sub(r"\1", command))) if w]
         if any(".stratum/approve" in w or ".stratum/autonomous" in w for w in words):
             return True
         return any((w == "st-worker.sh" or w.endswith("/st-worker.sh")) and nxt.replace("$", "") in RISKY
@@ -154,7 +163,7 @@ def bash_ok(root, cwd, command):
 
 
 def split_commands(command):
-    lex = shlex.shlex(command.replace("\n", " ; "), posix=True, punctuation_chars=True)
+    lex = shlex.shlex(JOIN.sub(r"\1", command).replace("\n", " ; "), posix=True, punctuation_chars=True)
     lex.whitespace_split = True
     lex.commenters = ""
     tokens = list(lex)
@@ -183,28 +192,43 @@ def commit_words(command):
     try:
         return split_commands(command)
     except ValueError:
-        return split_commands(strip_quotes(command))
+        return split_commands(strip_quotes(JOIN.sub(r"\1", command)))
 
 
 def is_git(word):
     return word == "git" or word.endswith("/git")
 
 
+def drop(root, rule, detail, command):
+    path = os.path.join(root, ".stratum", "approve", "dropped")
+    tmp = f"{path}.{os.getpid()}.tmp"
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write("\t".join((rule, CONTROL.sub("?", detail), CONTROL.sub("?", command)[:300])) + "\n")
+        os.rename(tmp, path)
+    except (OSError, ValueError):
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+
+
 def commit_check(root, cwd, command, commands):
-    if COMMIT_NEVER.search(command) or COMMIT_NEVER.search(strip_quotes(command)) \
-            or SUBSTITUTION.search(HEREDOC_MESSAGE.sub("", command)):
-        return None
+    if any(COMMIT_NEVER.search(t) or COMMIT_NEVER.search(strip_quotes(t)) for t in (command, JOIN.sub(r"\1", command))):
+        return drop(root, "commit-never", "", command)
+    if unjudgeable(command):
+        return drop(root, "unjudgeable", "", command)
     paths = []
     for words, heredoc in commands:
         for i, w in enumerate(words):
             if is_git(w) and (i + 1 >= len(words) or words[i + 1] not in ("add", "commit")):
-                return None
+                return drop(root, "git-word", words[i + 1] if i + 1 < len(words) else "", command)
         if not any(is_git(w) for w in words):
             continue
         i = next(i for i, w in enumerate(words) if is_git(w))
         sub, args = words[i + 1], words[i + 2:]
         if sub == "commit" and heredoc:
-            return None
+            return drop(root, "unjudgeable", "", command)
         rest, j = False, 0
         while j < len(args):
             a = args[j]
@@ -214,34 +238,40 @@ def commit_check(root, cwd, command, commands):
                 rest = True
             elif sub == "add":
                 if a not in ADD_FLAGS:
-                    return None
+                    return drop(root, "flag", a, command)
             elif a in COMMIT_VALUE_OPTS:
                 if j + 1 >= len(args) or (a in ("-F", "--file") and args[j + 1] == "-"):
-                    return None
+                    return drop(root, "flag", a, command)
                 j += 1
             elif a.split("=", 1)[0] in COMMIT_VALUE_OPTS and "=" in a:
                 if a in ("-F=-", "--file=-"):
-                    return None
+                    return drop(root, "flag", a, command)
             elif a not in COMMIT_FLAGS:
-                return None
+                return drop(root, "flag", a, command)
             j += 1
     branch = git(["symbolic-ref", "--short", "HEAD"], root)
     try:
         with open(os.path.join(root, ".stratum", "git-guard.json"), encoding="utf-8") as f:
             guard = json.load(f)
+    except (OSError, ValueError):
+        guard = None
+    want = guard.get("branch") if isinstance(guard, dict) else None
+    if not branch or want != branch:
+        return drop(root, "branch", f"{branch or ''} vs {want if isinstance(want, str) else ''}", command)
+    try:
         with open(os.path.join(root, ".stratum", "approve", "owns"), encoding="utf-8") as f:
             owns = {line.strip() for line in f if line.strip()}
     except (OSError, ValueError):
-        return None
-    if not owns or not branch or not isinstance(guard, dict) or guard.get("branch") != branch:
-        return None
+        owns = set()
+    if not owns:
+        return drop(root, "owns-missing", "", command)
     cached = git(["-c", "core.fsmonitor=false", "diff", "--cached", "--name-only"], root)
     if cached is None:
-        return None
+        return drop(root, "git-error", "", command)
     staged = set(cached.splitlines())
     staged |= {os.path.relpath(os.path.normpath(os.path.join(cwd, p)), root) for p in paths}
     if not staged <= owns:
-        return None
+        return drop(root, "outside-owns", sorted(staged - owns)[0], command)
     return {"branch": branch, "staged": sorted(staged)}
 
 
@@ -267,10 +297,15 @@ def request(data, cwd):
     req = {"tool_name": tool, "tool_input": ti, "time": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
     if tool == "Bash":
         command = ti.get("command")
-        if not isinstance(command, str) or not bash_ok(root, cwd, command):
+        if not isinstance(command, str):
             return
         commands = commit_words(command)
-        if any(is_git(w) and "commit" in words[i + 1:] for words, _ in commands for i, w in enumerate(words)):
+        commit = any(is_git(w) and "commit" in words[i + 1:] for words, _ in commands for i, w in enumerate(words))
+        if not (bash_ok(root, cwd, command) and bash_ok(root, cwd, JOIN.sub(r"\1", command))):
+            if commit:
+                drop(root, "never-list", "", command)
+            return
+        if commit:
             extra = commit_check(root, cwd, command, commands)
             if extra is None:
                 return
@@ -285,6 +320,10 @@ def request(data, cwd):
         with open(files[0], "w", encoding="utf-8") as f:
             json.dump(req, f)
         os.rename(files[0], files[1])
+        try:
+            os.remove(os.path.join(approve, "dropped"))
+        except OSError:
+            pass
         start = time.monotonic()
         while True:
             if os.path.exists(files[2]):

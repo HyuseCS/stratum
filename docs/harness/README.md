@@ -846,6 +846,7 @@ graph TB
   StatuslineSt_statusline_sh@{ shape: rectangle, label: "st-statusline.sh" }
   StratumApp_constitution_md@{ shape: rectangle, label: ".stratum/APP-constitution.md" }
   ProjectApps_app_claude_md@{ shape: rectangle, label: "apps/APP/CLAUDE.md" }
+  StratumGit_instructions_kept@{ shape: rectangle, label: ".stratum/git-instructions-kept" }
   StratumDecisions_md@{ shape: rectangle, label: ".stratum/decisions.md" }
   FeatureDecisions_md@{ shape: rectangle, label: "specs/NNN-feature/decisions.md" }
   ProjectPackage_json@{ shape: rectangle, label: "package.json" }
@@ -921,11 +922,13 @@ questions, blockers and next step`" .-> StratumHandoff_md
   SkillsSt_status -. "`feature dir, phase and lane`" .-> StratumState_json
   SkillsSt_init -. "`advisor mode`" .-> StratumAdvisor_json
   SkillsSt_init -. "`eight guard modes set to ask`" .-> StratumGit_guard_json
+  SkillsSt_init -. "`[...]`" .-> StratumGit_instructions_kept
   SkillsSt_init -. "`agent model and effort`" .-> StratumModels_json
   SkillsSt_init -. "`theme, shape and weather`" .-> StratumPowerline_json
   SkillsSt_init -. "`empty feature directory, phase and lane`" .-> StratumState_json
   SkillsSt_update -. "`advisor mode`" .-> StratumAdvisor_json
   SkillsSt_update -. "`guard modes`" .-> StratumGit_guard_json
+  SkillsSt_update -. "`[...]`" .-> StratumGit_instructions_kept
   SkillsSt_update -. "`agent model and effort`" .-> StratumModels_json
   SkillsSt_update -. "`theme, shape and weather`" .-> StratumPowerline_json
   SkillsSt_template -. "`project copy of the template`" .-> StratumTemplates

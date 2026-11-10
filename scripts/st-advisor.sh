@@ -254,13 +254,13 @@ if [ "${HERDR_ENV:-}" = 1 ] && [ -n "${HERDR_WORKSPACE_ID:-}" ] && command -v he
     0) via=$(grep -a '^codex: tab ' "$tmp/tab" | tail -n1) ;;
     3) via="codex: headless (Codex tab in use)" ;;
     5) via="codex: headless (Codex tab name $name in use elsewhere)" ;;
+    6) via="codex: headless (no session log)" ;;
     *) grep -a '^ERROR:' "$tmp/tab" | tail -n1; via="codex: headless (Codex tab failed)" ;;
   esac
 fi
 lim=540
 [ $point = review ] && lim=1800
 left=$((lim - SECONDS))
-# ponytail: the 60 s floor has no test (it needs a 60 s wait), add one with a fake clock if the budget changes
 [ $rc != 0 ] && [ $left -lt 60 ] && block "timed out"
 [ $rc = 0 ] || { rc=0; timeout -k 10 $left codex exec -s read-only --ignore-user-config "${opts[@]}" --ephemeral --output-schema "$tmp/schema.json" -o "$tmp/answer.json" - < "$tmp/prompt" > "$tmp/out" 2> "$tmp/err" || rc=$?; }
 
