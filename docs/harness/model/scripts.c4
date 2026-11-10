@@ -107,6 +107,7 @@ model {
 
   scripts.st-advisor-sh -[reads]-> stratum.advisor-json 'mode, model and effort, from the worktree or the main checkout'
   scripts.st-advisor-sh -[reads]-> stratum.state-json 'risk level of the main checkout'
+  scripts.st-advisor-sh -[reads]-> stratum.worker 'worker id for the Codex agent name'
   scripts.st-advisor-sh -[reads]-> feature.spec-md 'spec, hashed for the plan point'
   scripts.st-advisor-sh -[reads]-> feature.plan-md 'plan without the Validate section, hashed for the plan point'
   scripts.st-advisor-sh -[reads]-> feature.tasks-md 'tasks, hashed for the plan point'
@@ -171,6 +172,7 @@ model {
   scripts.st-worker-sh -[writes]-> stratum.autonomous 'session id on a saved machine, deleted at autonomous-off'
   scripts.st-worker-sh -[reads]-> stratum.git-guard-json 'commit modes of the main checkout'
   scripts.st-worker-sh -[writes]-> stratum.git-guard-json 'worker copy with commit auto and the worker branch, deleted at close'
+  scripts.st-worker-sh -[writes]-> stratum.worker 'worker id, deleted at close'
   scripts.st-worker-sh -[reads]-> stratum.approve 'request files and the session id'
   scripts.st-worker-sh -[writes]-> stratum.approve 'owns and session files, ok and user answer files, deleted at close'
   scripts.st-worker-sh -[runs]-> stratum.worker-setup-sh 'main checkout path, in the new worktree'
