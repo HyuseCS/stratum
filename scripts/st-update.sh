@@ -20,7 +20,7 @@ exec python3 -I - "$cfg" "$main" "$@" <<'PY'
 import functools, json, os, re, shlex, shutil, subprocess, sys, tempfile
 cfg, main, cmd, *args = sys.argv[1:]
 IGNORE = [".stratum/handoff.md", ".stratum/lessons.md", ".stratum/weather.json", ".stratum/powerline.json",
-          ".stratum/git-guard.json", ".stratum/models.json", "graphify-out/"]
+          ".stratum/git-guard.json", ".stratum/worker", ".stratum/models.json", "graphify-out/"]
 FILES = [".stratum/state.json", ".stratum/git-guard.json", ".stratum/models.json", ".stratum/powerline.json",
          ".stratum/advisor.json", ".stratum/constitution.md"]
 GONE = [".stratum/commit-mode"]

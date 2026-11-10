@@ -179,6 +179,7 @@ model {
   hooks.st-approve-py -[writes]-> stratum.approve 'permission request file'
   hooks.st-approve-py -[reads]-> stratum.autonomous 'autonomous session id from the main checkout'
   hooks.st-approve-py -[reads]-> stratum.git-guard-json 'guarded branch'
+  hooks.st-approve-py -[reads]-> stratum.worker 'worker session marker'
   hooks.st-approve-py -[passes]-> claude 'deny for locked paths, allow after an ok answer'
 
   hooks.st-git-guard-py -[reads]-> stratum.git-guard-json 'commit mode, destructive git modes and guarded branch'

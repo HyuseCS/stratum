@@ -502,6 +502,32 @@ for pair in 'stratum|st-codex-stratum' 'Stratum Main!|st-codex-stratum-main-' 'a
   got=$(sed -n 's/^agent start \([^ ]*\) .*/\1/p' "$tmp/herdr.log" 2>/dev/null | head -n1)
   check "(M16) label ${pair%%|*}: agent start ${pair#*|}" '[ "$got" = "${pair#*|}" ]'
 done
+mbr=$(git -C "$proj" symbolic-ref --short HEAD)
+for c in 'M30a|stratum|worker-f77|st-codex-worker-f77' 'M30b|abcdefghijklmnopqrstuvwxyz0123456789ABCD|worker-f77|st-codex-worker-f77' 'M30c|stratum|worker-Foo|st-codex-stratum' 'M30d|stratum|worker-abcdefghijklmnopqrstuvwxy|st-codex-worker-abcdefghijklmnop'; do
+  IFS='|' read -r cid clab cbr cexp <<<"$c"
+  git -C "$proj" checkout -q -b "$cbr"
+  printf '%s' "$clab" > "$tmp/hlabel"
+  hrun nofolder
+  got=$(sed -n 's/^agent start \([^ ]*\) .*/\1/p' "$tmp/herdr.log" 2>/dev/null | head -n1)
+  git -C "$proj" checkout -q "$mbr"
+  git -C "$proj" branch -q -D "$cbr"
+  check "($cid) branch $cbr, label $clab: agent start $cexp" '[ "$got" = "$cexp" ]'
+done
+printf '%s\n' f94 > "$tmp/mtarget"
+for c in 'M31a|stratum-94|file:f94|st-codex-worker-f94' 'M31b|stratum-94|none|st-codex-stratum' 'M31c|stratum-94|link|st-codex-stratum' 'M31d|worker-zzz|file:f77|st-codex-worker-f77'; do
+  IFS='|' read -r cid cbr cmk cexp <<<"$c"
+  git -C "$proj" checkout -q -b "$cbr"
+  printf '%s' stratum > "$tmp/hlabel"
+  mkdir -p "$proj/.stratum"
+  case $cmk in file:*) printf '%s\n' "${cmk#file:}" > "$proj/.stratum/worker";; link) ln -s "$tmp/mtarget" "$proj/.stratum/worker";; esac
+  hrun nofolder
+  got=$(sed -n 's/^agent start \([^ ]*\) .*/\1/p' "$tmp/herdr.log" 2>/dev/null | head -n1)
+  rm -f "$proj/.stratum/worker"
+  git -C "$proj" checkout -q "$mbr"
+  git -C "$proj" branch -q -D "$cbr"
+  check "($cid) branch $cbr, marker $cmk: agent start $cexp" '[ "$got" = "$cexp" ]'
+done
+printf '%s' '~' > "$tmp/hlabel"
 touch "$tmp/hnows"
 hrun nofolder
 got=$(sed -n 's/^agent start \([^ ]*\) .*/\1/p' "$tmp/herdr.log" 2>/dev/null | head -n1)

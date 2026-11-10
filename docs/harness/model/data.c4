@@ -108,6 +108,12 @@ model {
         data '.stratum/weather.json'
       }
     }
+    worker = datafile '.stratum/worker' {
+      summary 'The worker marker with the worker id. st-worker.sh start writes it and close removes it, st-approve.py and st-advisor.sh read it.'
+      metadata {
+        data '.stratum/worker'
+      }
+    }
     worker-setup-sh = datafile '.stratum/worker-setup.sh' {
       summary 'The user setup script for a new worker worktree. The user owns it and st-worker.sh start runs it.'
       metadata {

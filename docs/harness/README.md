@@ -874,6 +874,7 @@ graph TB
   ProjectClaude_local_md@{ shape: rectangle, label: "CLAUDE.local.md" }
   StratumApprove@{ shape: rectangle, label: ".stratum/approve" }
   StratumModels_json@{ shape: rectangle, label: ".stratum/models.json" }
+  StratumWorker@{ shape: rectangle, label: ".stratum/worker" }
   StratumWorker_setup_sh@{ shape: rectangle, label: ".stratum/worker-setup.sh" }
   ProjectBrief_md@{ shape: rectangle, label: "brief.md" }
   ProjectResult_md@{ shape: rectangle, label: "result.md" }
@@ -1056,6 +1057,7 @@ questions`" .-> ProjectGraphify_out_graph_report_md
   HooksSt_approve_py -. "`autonomous session id from the main 
 checkout`" .-> StratumAutonomous
   HooksSt_approve_py -. "`guarded branch`" .-> StratumGit_guard_json
+  HooksSt_approve_py -. "`worker session marker`" .-> StratumWorker
   HooksSt_git_guard_py -. "`commit mode, destructive git modes and 
 guarded branch`" .-> StratumGit_guard_json
   HooksSt_handoff_facts_sh -. "`facts block: phase, lane, tasks, branch, 
@@ -1080,6 +1082,7 @@ time, sha256, verdict and findings`" .-> StratumAdvisor_dir
   ScriptsSt_advisor_sh -. "`mode, model and effort, from the 
 worktree or the main checkout`" .-> StratumAdvisor_json
   ScriptsSt_advisor_sh -. "`risk level of the main checkout`" .-> StratumState_json
+  ScriptsSt_advisor_sh -. "`worker id for the Codex agent name`" .-> StratumWorker
   ScriptsSt_update_sh -. "`exists check`" .-> StratumAdvisor_json
   ScriptsSt_update_sh -. "`old file deleted`" .-> StratumCommit_mode
   ScriptsSt_update_sh -. "`exists check`" .-> StratumConstitution_md
@@ -1091,6 +1094,7 @@ worktree or the main checkout`" .-> StratumAdvisor_json
   ScriptsSt_worker_sh -. "`[...]`" .-> StratumAutonomous
   ScriptsSt_worker_sh -. "`[...]`" .-> StratumGit_guard_json
   ScriptsSt_worker_sh -. "`st-worker model`" .-> StratumModels_json
+  ScriptsSt_worker_sh -. "`worker id, deleted at close`" .-> StratumWorker
   ScriptsSt_worker_sh -. "`main checkout path, in the new worktree`" .-> StratumWorker_setup_sh
   ScriptsCheck_prerequisites_sh -. "`exists check for --require-spec`" .-> FeatureSpec_md
   ScriptsCheck_prerequisites_sh -. "`exists and not empty check for 

@@ -198,6 +198,7 @@ dependency.
   | `.stratum/worker-setup.sh` | main | The user's own setup for a new worker worktree. `st-worker.sh start` runs the main checkout's file in the worktree before `claude` starts. Stratum never writes it. |
   | `.stratum/state.json` | own | Each checkout runs its own phase. `st-advisor.sh` reads `risk` from the main checkout's file. |
   | `.stratum/git-guard.json` | own | `st-worker.sh start` writes each worker's own. |
+  | `.stratum/worker` | own | `st-worker.sh start` writes each worker's own. |
   | `.stratum/approve` | own | `st-worker.sh start` writes each worker's own. |
   | `.stratum/git-instructions-kept` | own | Committed. `st-init` and `st-update` write the empty marker on the "not at all" answer to turning off the built-in git instructions, and read it in each checkout to skip that question. |
   | `.stratum/models.json` | own | Worktree agents use the plugin defaults. |
