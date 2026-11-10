@@ -114,7 +114,7 @@ Setup stops (a missing tool, the one-time /mcp reconnect) do not count.
    tokens when there is no design file.
 2. Run the design tool's Start from the project root. Exit 1: print its line and stop.
 3. Start the `st-design` agent as in section 4 step 1, step draw. It reopens a saved design as
-   it is. For a page or screen the project has with no saved design,
+   it is. Only the first draw after a theme pick says `new theme` in its brief. For a page or screen the project has with no saved design,
    it first draws the current screen from its code and a screenshot, in the existing
    look. A failed step: show the agent's report and stop. Build no code from a half-drawn design.
    Keep the document id the last draw reported and pass it in each step change and step save brief.
