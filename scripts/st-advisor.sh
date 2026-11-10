@@ -4,8 +4,9 @@ SECONDS=0
 usage() { echo "usage: st-advisor.sh plan|test|diff|decisions|change|review|round|check|continued|waive|note|talk|count|answer|watch ..."; exit 2; }
 tabs=${XDG_STATE_HOME:-$HOME/.local/state}/stratum/codex-tabs
 tabname() {
-  local l
+  local l m
   l=$(git symbolic-ref -q --short HEAD 2>/dev/null)
+  m=$(git rev-parse --show-toplevel 2>/dev/null)/.stratum/worker && [ -f "$m" ] && [ ! -L "$m" ] && l=worker-$(head -n1 "$m")
   # ponytail: ids over 16 characters with the same first 16 clash and go headless, add a short hash of the id if that happens
   [[ $l =~ ^worker-[a-z0-9][a-z0-9-]{0,24}$ ]] && { printf '%.32s\n' "st-codex-$l"; return; }
   l=$(herdr workspace list 2>/dev/null) || l=
