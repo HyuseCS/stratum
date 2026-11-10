@@ -252,11 +252,16 @@ main_rec = (own.get(main) or [None])[0] or (users or [None])[0]
 
 for c, branch in cos:
     worker = " worker" if branch.startswith("worker-") else ""
+    follows = c != main and main in own
     for r in own.get(c, []):
-        install(c, r, worker)
+        if follows:
+            row(c, "install", "stratum@stratum", "current" if main_rec.get("version") == ver else "listed",
+                f"{r.get('scope')} {r.get('version')}, follows the main checkout" + worker)
+        else:
+            install(c, r, worker)
     if c not in own:
         row(c, "install", "stratum@stratum", "listed", "no install" + worker)
-    statusline(c, (own.get(c) or [None])[0] or main_rec)
+    statusline(c, main_rec if follows else (own.get(c) or [None])[0] or main_rec)
 
     probe = [n + "x" if n.endswith("/") else n for n in IGNORE]
     hit = set(git("-C", c, "check-ignore", "--no-index", "--", *probe).stdout.splitlines())
