@@ -11,6 +11,7 @@ case $cmd in
   *) usage ;;
 esac
 m= repo= auto= itask=
+unset proj envn issue
 while [ $# -gt 0 ]; do
   case "$cmd $1" in
     "start --autonomous") auto=1; shift; continue ;;
@@ -226,6 +227,13 @@ pick() {
     rx "[ -f $Q ] && [ ! -L $Q ] && head -n 1 -- $Q" >"$t" && [ "worker-$(head -n 1 "$t")" = "$N" ] || WT= BR=
   fi
   [ -n "$WT" ] || { WT=$(jq -er --arg n "$N" 'first(.result.worktrees[] | select(.branch == $n) | .path)' <<<"$r" 2>/dev/null) && BR=$N; } || WT=
+}
+ownbr() {
+  local g
+  rx "[ -f $Q/.stratum/git-guard.json ] && [ ! -L $Q/.stratum/git-guard.json ] && cat -- $Q/.stratum/git-guard.json" >"$t" || :
+  g=$(jq -r '.branch | strings' "$t" 2>/dev/null) || g=
+  [ -n "$g" ] || fail "Worker $N has no branch in .stratum/git-guard.json. $1 refused."
+  [ "$g" = "$BR" ] || fail "Worker $N is on branch $BR, not its branch $g. $1 refused."
 }
 render() { python3 "$(cd "$(dirname "$0")/.." && pwd)/hooks/st-approve.py" --render "$1"; }
 owns() { awk 'f && (/^[[:space:]]*$/ || /^[[:space:]]*- \[/) { exit } !f && /Owns:/ { f = 1; sub(/.*Owns:/, "") } f { if (sub(/Test:.*/, "")) { print; exit } print }' "$task" | grep -o '`[^`]*`' | tr -d '`' || true; }
@@ -534,6 +542,7 @@ result)
     cat -- "$WT/result.md"
     exit 0
   fi
+  ownbr Result
   rsh cat -- "$Q/result.md" >"$t" || noresult
   printf 'result\t%s\t%s/result.md\n' "$N" "$WT"
   cat -- "$t"
@@ -543,6 +552,7 @@ result)
   ;;
 close)
   find_worker
+  ownbr Close
   if r=$("${H[@]}" agent get "$N" 2>"$e"); then
     S=$(jq -er '.result.agent.agent_status' <<<"$r" 2>/dev/null) || fail "Worker $N: cannot read worker state. Close refused."
     case $S in working | blocked) fail "Worker $N is $S. Close refused." ;; esac
@@ -554,13 +564,7 @@ close)
     p=$(gh pr list --head "$BR" --state open --json number -q length 2>/dev/null) || fail "Worker $N: cannot read its PRs. Close refused."
     [ "$p" = 0 ] || fail "Worker $N has an open PR. Close refused."
   fi
-  if [ -n "$m" ]; then
-    rsh "[ ! -L $Q/.stratum ] || exit 3; rm -f $Q/.stratum/git-guard.json && rm -rf $Q/.stratum/approve" || { [ $? != 3 ] || fail "Worker $N: .stratum is a symlink. Close refused."; fail "Worker $N: cannot remove .stratum/git-guard.json. Close refused."; }
-  else
-    [ ! -L "$WT/.stratum" ] || fail "Worker $N: .stratum is a symlink. Close refused."
-    rm -f "$WT/.stratum/git-guard.json" || fail "Worker $N: cannot remove .stratum/git-guard.json. Close refused."
-    rm -rf "$WT/.stratum/approve" || fail "Worker $N: cannot remove .stratum/approve. Close refused."
-  fi
+  rx "[ ! -L $Q/.stratum ]" || fail "Worker $N: .stratum is a symlink. Close refused."
   h agent list
   k=st-codex-$N
   k=$(jq -er --arg n "${k:0:32}" --arg w "$WS" '.result.agents | arrays | first(.[] | select(.name == $n and .workspace_id == $w) | .tab_id | strings) // ""' <<<"$r" 2>/dev/null) || stop "no .result.agents in the herdr answer"
@@ -580,6 +584,7 @@ close)
     [ $c != 0 ] || fail "close left ${k%:*} $N"
     [ $c = 1 ] || fail "close left ${k%:*} $N: cannot read the list"
   done
+  rx "[ ! -L $Q/.stratum ] && rm -f $Q/.stratum/git-guard.json && rm -rf $Q/.stratum/approve" || fail "Worker $N: closed, but cannot remove .stratum/git-guard.json."
   rx "rm -f $Q/.stratum/worker" || fail "Worker $N: closed, but cannot remove .stratum/worker."
   printf 'closed\t%s\nfolder\t%s\tready to remove\n' "$N" "$WT"
   ;;

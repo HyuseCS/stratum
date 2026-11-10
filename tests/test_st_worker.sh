@@ -135,6 +135,7 @@ case "$c" in
 "cat -- "*result.md) printf 'RESULT FILE %s\n' "$(cat "$T/x")" ;;
 "test -f "*) [ -e "$T/ssh_has_result" ] ;;
 *"head -n 1 -- "*".stratum/worker") [ -e "$T/rmarker" ] && cat "$T/rmarker" ;;
+*"cat -- "*".stratum/git-guard.json") if [ -e "$T/rguard" ]; then cat "$T/rguard"; else p=${c##*cat -- }; jq -c --arg p "${p%/.stratum/git-guard.json}" 'first(.[] | select(.path == $p)) | {commit:"auto",branch}' "$T/wt.json"; fi ;;
 esac
 EOF
 cat > "$tmp/bin/git" <<'EOF'
@@ -257,7 +258,7 @@ sargs=(T004 --task "$task" --test "$testcmd" --lane "$lane" --roster "$roster")
 reset() { : > "$tmp/calls"; : > "$tmp/gh_calls"; }
 states() { rm -f "$tmp/n_get"; printf '%s\n' "$@" > "$tmp/states"; }
 fresh() {
-  rm -rf "$tmp"/repo-worker-* "$tmp"/rrepo-worker-* "$tmp"/repo-t00* "$tmp"/repo-9* "$tmp"/repo-autonomous_sessions "$tmp"/repo-fix_* "$tmp"/repo-real_* "$tmp"/repo-abc* "$tmp"/parasat-* "$tmp"/myrepo-* "$tmp"/rrepo-t00* "$tmp/rmarker" "$tmp"/n_* "$tmp/closed" "$tmp/resume_result" "$tmp/tc.json" "$tmp/s2" "$tmp/pane.txt" "$tmp/pane.after" "$tmp/made" "$tmp/order"
+  rm -rf "$tmp"/repo-worker-* "$tmp"/rrepo-worker-* "$tmp"/repo-t00* "$tmp"/repo-9* "$tmp"/repo-autonomous_sessions "$tmp"/repo-fix_* "$tmp"/repo-real_* "$tmp"/repo-abc* "$tmp"/parasat-* "$tmp"/myrepo-* "$tmp"/rrepo-t00* "$tmp/rmarker" "$tmp/rguard" "$tmp"/n_* "$tmp/closed" "$tmp/resume_result" "$tmp/tc.json" "$tmp/s2" "$tmp/pane.txt" "$tmp/pane.after" "$tmp/made" "$tmp/order"
   printf 'x%s\n' "$RANDOM$RANDOM" > "$tmp/x"
   printf 'TASK BODY %s\nOwns: `src/a.py`.\n' "$(cat "$tmp/x")" > "$task"
   jq -nc '[{workspace_id:"w1P",label:"orchestrator"},{workspace_id:"stubDecoyWS",label:"notaworker"},{workspace_id:"stubMainWS",label:"main"}]' > "$tmp/ws.json"
@@ -715,7 +716,7 @@ check "C11 no GitHub remote: closed and folder lines, one workspace close, zero 
 check "C11 no GitHub remote: no gh call" '[ ! -s "$tmp/gh_calls" ]'
 
 mk; states done
-mkdir "$tmp/guard-target"; echo '{}' > "$tmp/guard-target/git-guard.json"; printf 't004\n' > "$tmp/guard-target/worker"
+mkdir "$tmp/guard-target"; echo '{"branch":"repo-t004"}' > "$tmp/guard-target/git-guard.json"; printf 't004\n' > "$tmp/guard-target/worker"
 rm -rf "$(wt)/.stratum"; ln -s "$tmp/guard-target" "$(wt)/.stratum"
 run bash "$script" close T004
 check "C12 exit 1" '[ $rc = 1 ]'
@@ -978,7 +979,7 @@ git -C "$repo" branch -q proj-t004
 bsha=$(git -C "$repo" rev-parse proj-t004)
 rrun bash "$script" result T004 --machine laptop
 check "R2 exit 0" '[ $rc = 0 ]'
-check "R2 one ssh marker read of the linked path, then one ssh cat of the quoted result path" '[ "$(grep -c . "$tmp/ssh")" = 2 ] && [ "$(grep -c "stratum/worker$" "$tmp/ssh")" = 1 ] && grep -qP "^-o\tBatchMode=yes\t--\tu@stubhost\t" "$tmp/ssh" && sshs | grep -qF -- "cat -- /stubhome/proj-t004/result.md"'
+check "R2 one ssh marker read of the linked path, one ssh guard-file read, then one ssh cat of the quoted result path" '[ "$(grep -c . "$tmp/ssh")" = 3 ] && [ "$(grep -c "stratum/worker$" "$tmp/ssh")" = 1 ] && [ "$(grep -c "cat -- /stubhome/proj-t004/.stratum/git-guard.json$" "$tmp/ssh")" = 1 ] && grep -qP "^-o\tBatchMode=yes\t--\tu@stubhost\t" "$tmp/ssh" && sshs | grep -qF -- "cat -- /stubhome/proj-t004/result.md"'
 check "R2 result line and the file text" 'hasline "result\tworker-t004\t/stubhome/proj-t004/result.md" && grep -qxF "RESULT FILE $(rnd)" <<<"$out"'
 check "R2 one git fetch of target:WT proj-t004:proj-t004 with GIT_SSH_COMMAND BatchMode" '[ "$(grep -c . "$tmp/gitlog")" = 1 ] && grep -qxF "$(printf "ENV=ssh -o BatchMode=yes\tfetch\t--\tu@stubhost:/stubhome/proj-t004\tproj-t004:proj-t004")" "$tmp/gitlog"'
 check "R2 fetched line has the branch sha" 'hasline "fetched\tworker-t004\t%s" "$bsha"'
@@ -2080,6 +2081,7 @@ moveto() {
     p=$tmp/$f
     [ "$o" = "$p" ] || mv "$o" "$p"
     [ -z "$k" ] || printf '%s\n' "$k" > "$p/.stratum/worker"
+    jqmv "$f/.stratum/git-guard.json" --arg b "$b" '.branch = $b'
   fi
   setcwd "$p"
   jqmv wt.json --arg o "$o" --arg p "$p" --arg b "$b" 'map(if .path == $o then (.path = $p | .branch = $b) else . end)'
@@ -2260,6 +2262,31 @@ check "MK4 a close with a failing workspace close keeps the marker" '[ $rc = 1 ]
 rmk; states done
 rrun bash "$script" close T004 --machine laptop
 check "MK5 saved machine close: exit 0, the guard-file rm -f ssh command does not name the marker, a separate last ssh rm -f removes it after the workspace close" '[ $rc = 0 ] && c=$(grep "rm -f" "$tmp/ssh" | grep "git-guard.json") && [ "$(grep -c . <<<"$c")" = 1 ] && ! grep -q "stratum/worker" <<<"$c" && [ "$(tail -n1 "$tmp/ssh" | grep -c "rm -f /stubhome/proj-t004/.stratum/worker")" = 1 ] && ! tail -n1 "$tmp/ssh" | grep -q git-guard && awk "/^ssh\$/{s = NR} /^workspace close\$/{w = NR} END{exit !(w && s > w)}" "$tmp/order"'
+
+swbr() { jqmv wt.json --arg p "$(wt)" --arg b "$1" 'map(if .path == $p then .branch = $b else . end)'; }
+rmk; swbr dev; printf '{"commit":"auto","branch":"proj-t004"}\n' > "$tmp/rguard"
+rrun bash "$script" result T004 --machine laptop
+check "GB1 saved machine worker switched to dev: result exits 1 with the refused line, no git fetch" '[ $rc = 1 ] && [ "$out" = "Worker worker-t004 is on branch dev, not its branch proj-t004. Result refused." ] && [ ! -s "$tmp/gitlog" ]'
+rmk; swbr dev; printf '{"commit":"auto","branch":"proj-t004"}\n' > "$tmp/rguard"; states done
+rrun bash "$script" close T004 --machine laptop
+check "GB2 saved machine worker switched to dev: close exits 1 with the refused line, no gh call, nothing closed, no ssh rm" '[ $rc = 1 ] && [ "$out" = "Worker worker-t004 is on branch dev, not its branch proj-t004. Close refused." ] && [ ! -s "$tmp/gh_calls" ] && rnever 0 0 0 && ! grep -q "rm -" "$tmp/ssh"'
+rmk; : > "$tmp/rguard"
+rrun bash "$script" result T004 --machine laptop
+check "GB3 saved machine worker with no guard branch: result exits 1, no git fetch" '[ $rc = 1 ] && [ "$out" = "Worker worker-t004 has no branch in .stratum/git-guard.json. Result refused." ] && [ ! -s "$tmp/gitlog" ]'
+mk; swbr dev; states done
+run bash "$script" close T004
+check "GB4 local worker switched to dev: close exits 1 with the refused line, no gh call, nothing closed, guard file and marker stay" '[ $rc = 1 ] && [ "$out" = "Worker worker-t004 is on branch dev, not its branch repo-t004. Close refused." ] && [ ! -s "$tmp/gh_calls" ] && never 0 0 && [ -f "$(wt)/.stratum/git-guard.json" ] && [ -f "$(wt)/.stratum/worker" ]'
+mk; rm -f "$(wt)/.stratum/git-guard.json"; states done
+run bash "$script" close T004
+check "GB5 local worker with no guard file: close exits 1, no gh call, nothing closed" '[ $rc = 1 ] && [ "$out" = "Worker worker-t004 has no branch in .stratum/git-guard.json. Close refused." ] && [ ! -s "$tmp/gh_calls" ] && never 0 0'
+
+mk; states done; printf 'R\n' > "$(wt)/result.md"
+run issue='a b' proj='../x' envn='a b' bash "$script" wait T004
+check "EV1 exported issue, proj, envn with spaces: wait exits 0, state finished" '[ $rc = 0 ] && hasline "state\tfinished\tworker-t004\t%s" "$(pane)"'
+run issue='a b' bash "$script" list
+check "EV2 exported issue with a space: list exits 0" '[ $rc = 0 ] && grep -qP "^found\tworker-t004\t" <<<"$out"'
+fresh; run issue=94 proj=other envn=prod bash "$script" start "${sargs[@]}"
+check "EV3 exported issue=94, proj, envn: start without the flags uses branch repo-t004" '[ $rc = 0 ] && nmadd repo-t004 "$tmp/repo-t004"'
 
 sed -E '/must name branch/d' "$script" > "$tmp/NC20.sh" 2>/dev/null
 check "NC20 sed deletes exactly one line" '[ "$(diff "$script" "$tmp/NC20.sh" | grep -c "^<")" = 1 ]'
