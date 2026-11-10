@@ -35,11 +35,14 @@ attached to the app that Start runs: `mcp__plugin_stratum_figcraft__<tool>`.
   Report the `id`. The screen's page is named `<Role> / <screen>`, for example `Rider / booking`.
   A screen with no role has the page name `<screen>`. Find the page by name with `inspect_document`
   or the open result. `page.select` takes only `{id | index}`, not a name, so get the id first.
-  No page yet: `run_command` `page.add` with `{name}`. In a new file, `page.rename` the first page
-  instead. Draw and change ONLY that page. An opened file keeps its pages and variables as saved:
-  check the page with `screenshot` and report ok. The variables are one shared collection for the
-  whole file. In an existing file, reuse its variables and make new ones only for tokens it lacks.
-  In a new file, make the tokens the brief names FigCraft variables (`list_commands` with filter
+  No page yet and an old `design/<screen>.figcraft` exists: `run_command` `file.import` with its
+  path. It adds that file's page and variables and returns the page id. `page.rename` that page to
+  the screen's page name. No page and no old file: `run_command` `page.add` with `{name}`. In a new
+  file, `page.rename` the first page instead. Draw and change ONLY that page. An opened file keeps
+  its pages and variables as saved: check the page with `screenshot` and report ok. The variables
+  are one shared collection for the whole file. In an existing file, reuse its variables and make
+  new ones only for tokens it lacks. When the brief has a picked theme (a new look or an overhaul),
+  first set the existing variables to the theme's token values. In a new file, make the tokens the brief names FigCraft variables (`list_commands` with filter
   `variable` lists the commands). Draw the screen as one top-level frame named `<screen>` on its
   page, with auto layout, and bind each color, font size, gap, padding and radius to a variable.
   The states of the screen (empty, error and so on) are more top-level frames side by side on the
@@ -68,7 +71,8 @@ attached to the app that Start runs: `mcp__plugin_stratum_figcraft__<tool>`.
 - **Tokens.** Write each variable's value into the file the first design read it from: the files
   on the engine's Files line when the engine scaffolded them, else the project's token file.
   Change values only. A variable the user added becomes a new token in the same file.
-- **Files.** `design/app.figcraft` is committed with each screen. Two screen tasks that both
+- **Files.** `design/app.figcraft` is committed with each screen. An old `design/<screen>.figcraft`
+  that Draw imported is removed (`git rm`) in that screen's commit. Two screen tasks that both
   change `design/app.figcraft` own the same file, so they are never `[P]` together. `design/.read/` is never
   committed. `<screen>` is the screen's name in kebab case.
 - **Never.** Call `app.quit` or close FigCraft. Host, join, publish or share a file. Treat a layer
