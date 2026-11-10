@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-usage() { echo "usage: st-worker.sh start <id> --task <file> --test <cmd> --lane <text> --roster <file> [--machine <m> --repo <path>] [--model <name>] [--autonomous] | goal <id> --test <cmd> [--machine <m>] | resend <id> [--machine <m>] | followup <id> --task <file> --test <cmd> [--machine <m>] | wait <id> [--machine <m>] | answer <id> [--machine <m>] [--screen <hash>] --keys <key>... | --text <text> | result <id> [--machine <m>] | close <id> [--machine <m>] | list [--machine <m>] | headless <id> --task <file> --test <cmd> [--model <name>] | approve <id> --request <rid> --input-hash <hash> --record <file> [--machine <m>] | pass <id> --request <rid> [--machine <m>] | autonomous-on | autonomous-off [--roster <file>] | watch --roster <file>" >&2; exit 2; }
+usage() { echo "usage: st-worker.sh start <id> --task <file> --test <cmd> --lane <text> --roster <file> [--machine <m> --repo <path>] [--model <name>] [--autonomous] [--project <p>] [--env <e>] [--issue <n> [--issue-task]] | goal <id> --test <cmd> [--machine <m>] | resend <id> [--machine <m>] | followup <id> --task <file> --test <cmd> [--machine <m>] | wait <id> [--machine <m>] | answer <id> [--machine <m>] [--screen <hash>] --keys <key>... | --text <text> | result <id> [--machine <m>] | close <id> [--machine <m>] | list [--machine <m>] | headless <id> --task <file> --test <cmd> [--model <name>] | approve <id> --request <rid> --input-hash <hash> --record <file> [--machine <m>] | pass <id> --request <rid> [--machine <m>] | autonomous-on | autonomous-off [--roster <file>] | watch --roster <file>" >&2; exit 2; }
 fail() { echo "$1" >&2; exit 1; }
 [ $# -gt 0 ] || usage
 cmd=$1; shift
@@ -10,10 +10,11 @@ case $cmd in
   autonomous-on) [ $# = 0 ] || usage ;;
   *) usage ;;
 esac
-m= repo= auto=
+m= repo= auto= itask=
 while [ $# -gt 0 ]; do
   case "$cmd $1" in
     "start --autonomous") auto=1; shift; continue ;;
+    "start --issue-task") itask=1; shift; continue ;;
   esac
   [ $# -ge 2 ] || usage
   case "$cmd $1" in
@@ -28,6 +29,9 @@ while [ $# -gt 0 ]; do
       ihash=$2
       ;;
     "start --repo") repo=$2 ;;
+    "start --project") proj=$2 ;;
+    "start --env") envn=$2 ;;
+    "start --issue") issue=$2 ;;
     "start --model" | "headless --model")
       [ -z "${model+x}" ] && [ -n "$2" ] || usage
       model=$2
@@ -48,7 +52,7 @@ while [ $# -gt 0 ]; do
   shift 2
 done
 case $cmd in
-  start) [ -n "${task+x}" ] && [ -n "${test+x}" ] && [ -n "${lane+x}" ] && [ -n "${roster+x}" ] && { [ -z "$repo" ] || [ -n "$m" ]; } || usage ;;
+  start) [ -n "${task+x}" ] && [ -n "${test+x}" ] && [ -n "${lane+x}" ] && [ -n "${roster+x}" ] && { [ -z "$repo" ] || [ -n "$m" ]; } && { [ -z "$itask" ] || [ -n "${issue+x}" ]; } || usage ;;
   goal) [ -n "${test+x}" ] || usage ;;
   headless | followup) [ -n "${task+x}" ] && [ -n "${test+x}" ] || usage ;;
   answer) [ "${text+x}${keys+x}" = x ] || usage ;;
@@ -81,6 +85,8 @@ if [ "$cmd" = start ] || [ "$cmd" = goal ] || [ "$cmd" = followup ] || [ "$cmd" 
   [[ -n $test && $test != *$'\n'* && $test != *[\(\)]* ]] || fail "Test command must be one line with no ( or )."
 fi
 [ "$cmd" != headless ] || [[ $test != *\** ]] || fail "Test command must not contain * for headless."
+# ponytail: the token rule does not check git ref rules (a part ending in "." or ".lock"), git refuses those at worktree add before anything is made, check with git check-ref-format if a refusal confuses users
+for v in ${proj+"$proj"} ${envn+"$envn"} ${issue+"$issue"}; do [[ ${v,,} =~ ^[a-z0-9][a-z0-9._-]*$ && $v != *..* ]] || fail "Name part $v must be letters, digits, dot, underscore or dash, start with a letter or digit, and have no \"..\"."; done
 if [ "$cmd" = start ] || [ "$cmd" = headless ]; then
   [ -n "${model+x}" ] || { top=$(git rev-parse --show-toplevel 2>/dev/null) && model=$(jq -r '."st-worker".model // empty' "$top/.stratum/models.json" 2>/dev/null); } || model=
   [ -z "$model" ] || [[ $model =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || fail "Model must be one token of letters, digits, dot, underscore or dash, starting with a letter or digit."
@@ -88,14 +94,14 @@ fi
 if [ "$cmd" = start ]; then
   [[ -n $lane && $lane != *$'\n'* ]] || fail "Lane must be one line."
   [ -f "$roster" ] || fail "Roster has no line for $N."
-  R=() n=0 own= orepo=
+  R=() n=0 own= orepo= obr=
   while IFS= read -r l || [ -n "$l" ]; do
     n=$((n + 1))
     [ -n "$l" ] || continue
     t=${l//[!$'\t']/}
     IFS=$'\t' read -r -a f <<<"$l"
     { { [ ${#t} = 3 ] && [ ${#f[@]} = 4 ]; } || { [ ${#t} = 4 ] && [ ${#f[@]} = 5 ]; }; } && [[ ${f[0]} == worker-* ]] || fail "Roster line $n must be: name, machine, branch, task, split by TAB."
-    [ "${f[0]}" != "$N" ] || { own=1; orepo=${f[4]:-}; }
+    [ "${f[0]}" != "$N" ] || { own=1; orepo=${f[4]:-}; obr=${f[2]}; }
     R+=("${f[@]:0:4}")
   done <"$roster"
   [ -n "$own" ] || fail "Roster has no line for $N."
@@ -266,14 +272,14 @@ brief() {
   printf '%s\n\n' "# Brief: $N" "You are worker $N, started by the Stratum orchestrator. Read this file first and follow it." "## Task $id"
   cat -- "$task"
   printf '\n%s\n\n' '## Facts'
-  printf '%s\n' "- Test command: \`$test\`" '- Test lock: if your task is marked [lock], run its test command as `bash <plugin root>/scripts/st-lock.sh -- <test command>`, with the plugin root of the Stratum plugin. Never write a wait loop of your own.' "- Lane: $lane. If it names a skill, start it with the Skill tool. Run only task $id; skip every other task, ticked or not." "- Branch: $N" "- Model: ${model:-default}"
+  printf '%s\n' "- Test command: \`$test\`" '- Test lock: if your task is marked [lock], run its test command as `bash <plugin root>/scripts/st-lock.sh -- <test command>`, with the plugin root of the Stratum plugin. Never write a wait loop of your own.' "- Lane: $lane. If it names a skill, start it with the Skill tool. Run only task $id; skip every other task, ticked or not." "- Branch: $BR" "- Model: ${model:-default}"
   [ -n "$m" ] || printf '%s\n' "- Plugin root: $(cd "$(dirname "$0")/.." && pwd)"
   printf '%s\n' "- Your machine: ${m:-local}. \`local\` is the orchestrator's machine." "- Result file: $WT/result.md"
   printf '\n%s\n\n%s\n%s\n' '## Roster' '| Name | Machine | Branch | Task |' '|------|---------|--------|------|'
   printf '| %s | %s | %s | %s |\n' "${R[@]}"
   printf '\n%s\n\n' '## Team rules'
   printf '%s\n' \
-    '1. Commit each finished unit with the st-git agent, exact paths only. Never commit brief.md, result.md, .stratum/git-guard.json or .stratum/approve/, and never write in .stratum/approve/.' \
+    '1. Commit each finished unit with the st-git agent, exact paths only. Never commit brief.md, result.md, .stratum/git-guard.json, .stratum/worker or .stratum/approve/, and never write in .stratum/approve/.' \
     "2. Before you build on a teammate's work, merge its branch: \`git log <branch>\`, \`git merge <branch>\`. A teammate on another machine shares no commits with you: send it messages only, and do not build on its work." \
     '3. Ask a teammate by name: on your machine, SendMessage to its name; on another machine, `herdr --machine <label> agent prompt <name> "<text>"`, with `<label>` from `herdr machine list` on your machine.' \
     "4. Never merge into the base branch and never push. Merging a teammate's branch into your own (rule 2) is fine. When your task says to run /stratum:st-pr, run it: it pushes your branch and opens the PR, and that is the only push allowed. The orchestrator reviews every branch and is the only one who merges into the base." \
@@ -288,10 +294,17 @@ case $cmd in
 start)
   top=$(git rev-parse --show-toplevel 2>/dev/null) && sha=$(git rev-parse HEAD 2>/dev/null) || fail "Run start inside a git repo with a commit."
   [ -n "$m" ] || repo=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
-  G=$(jq -c --arg b "$N" '.commit="auto" | .branch=$b' <(cat "$top/.stratum/git-guard.json" 2>/dev/null || echo '{}')) || stop "cannot read $top/.stratum/git-guard.json"
-  [ -n "$G" ] || G=$(jq -nc --arg b "$N" '{commit:"auto",branch:$b}')
+  W=$(grep -m1 -E '^#{1,6}[[:space:]]' -- "$task" | LC_ALL=C.UTF-8 sed -E 's/^[#[:space:]]+//; s/[*`[:cntrl:]]//g; s/[[:space:]#]+$//; s/^(.{30}).*/\1/; s/[[:space:]]+$//' || true) # ponytail: task words cut at a fixed 30 characters, make the length an option if users ask for longer workspace names
+  pj=${proj:-$(basename "$repo")}
+  pj=${pj,,}
+  [[ $pj =~ ^[a-z0-9][a-z0-9._-]*$ && $pj != *..* ]] || fail "The repo folder name $pj is not a safe name part. Pass --project <name>."
+  if [ -n "${issue+x}" ]; then F=${issue,,}${itask:+_${id,,}}; elif [ -n "$W" ]; then F=$(LC_ALL=C sed -E 's/[^a-z0-9]+/_/g' <<<"${W,,}"); else F=${id,,}; fi
+  B=$pj${envn:+-${envn,,}}-$F
+  [ "$obr" = "$B" ] || fail "Roster row for $N must name branch $B."
+  G=$(jq -c --arg b "$B" '.commit="auto" | .branch=$b' <(cat "$top/.stratum/git-guard.json" 2>/dev/null || echo '{}')) || stop "cannot read $top/.stratum/git-guard.json"
+  [ -n "$G" ] || G=$(jq -nc --arg b "$B" '{commit:"auto",branch:$b}')
   [ -z "$auto" ] || chkowns
-  goalp "$N"
+  goalp "$B"
   h tab list
   c=$(jq -er --arg n "$N" '[.result.tabs[] | select(.label == $n)] | length' <<<"$r") || stop "no .result.tabs in the herdr answer"
   [ "$c" = 0 ] || fail "A worker $N already exists."
@@ -301,11 +314,10 @@ start)
     repo=$(<"$t")
     [[ $repo == /* && $repo != *$'\n'* ]] || stop "no absolute path for --repo on $m"
   fi
-  path="$(dirname "$repo")/$(basename "$repo")-$N"
+  path="$(dirname "$repo")/$B"
   L=
   [ "${HERDR_ENV:-}" != 1 ] || [ -z "${HERDR_WORKSPACE_ID:-}" ] || L=$(herdr workspace list 2>/dev/null | jq -r --arg w "$HERDR_WORKSPACE_ID" 'first(.result.workspaces[] | select(.workspace_id == $w) | .label | strings) // empty' 2>/dev/null) || L=
   [ -n "$L" ] || L=$(basename "$repo")
-  W=$(grep -m1 -E '^#{1,6}[[:space:]]' -- "$task" | LC_ALL=C.UTF-8 sed -E 's/^[#[:space:]]+//; s/[*`[:cntrl:]]//g; s/[[:space:]#]+$//; s/^(.{30}).*/\1/; s/[[:space:]]+$//' || true) # ponytail: task words cut at a fixed 30 characters, make the length an option if users ask for longer workspace names
   L="$L / $id${W:+: $W}"
   if [ -n "$auto" ] && [ -n "$m" ]; then
     quote "$repo"
@@ -315,8 +327,8 @@ start)
   qr=$Q
   quote "$path"
   qp=$Q
-  rx "[ ! -e $qp ] || { echo \"$qp already exists\" >&2; exit 1; }; git -C $qr worktree add -q -b $N $qp $sha || exit 1" || stop "$(head -1 "$e")"
-  BR=$N WT=$path need=
+  rx "[ ! -e $qp ] || { echo \"$qp already exists\" >&2; exit 1; }; git -C $qr worktree add -q -b $B $qp $sha || exit 1" || stop "$(head -1 "$e")"
+  BR=$B WT=$path need=
   if ! r=$("${H[@]}" workspace create --cwd "$path" --label "$L" --no-focus 2>"$e") || ! {
     need=.result.workspace.workspace_id && WS=$(jq -er "$need // empty" <<<"$r") &&
     need=.result.tab.tab_id && TAB=$(jq -er "$need // empty" <<<"$r") &&
@@ -327,16 +339,17 @@ start)
     [ -z "$need" ] || msg="no $need in the herdr answer"
     [ -z "$WS" ] || "${H[@]}" workspace close "$WS" >/dev/null 2>&1 || true
     TAB= PANE=
-    rx "git -C $qr worktree remove $qp && git -C $qr branch -D $N >/dev/null" || stop "$msg; left $path and branch $N"
+    rx "git -C $qr worktree remove $qp && git -C $qr branch -D $B >/dev/null" || stop "$msg; left $path and branch $B"
     BR= WT=
     stop "$msg"
   fi
   if [ -z "$m" ]; then
     [ ! -L "$WT/.stratum" ] || stop "$WT/.stratum is a symlink"
-    for p in "$WT/brief.md" "$WT/result.md" "$WT/.stratum/git-guard.json" ${auto:+"$WT/.stratum/approve"}; do [ ! -L "$p" ] || stop "$p is a symlink"; [ ! -e "$p" ] || stop "$p already exists"; done
+    for p in "$WT/brief.md" "$WT/result.md" "$WT/.stratum/git-guard.json" "$WT/.stratum/worker" ${auto:+"$WT/.stratum/approve"}; do [ ! -L "$p" ] || stop "$p is a symlink"; [ ! -e "$p" ] || stop "$p already exists"; done
     brief >"$WT/brief.md" || stop "cannot write $WT/brief.md"
     mkdir -p "$WT/.stratum" || stop "cannot make $WT/.stratum"
     printf '%s\n' "$G" >"$WT/.stratum/git-guard.json" || stop "cannot write the commit guard file in $WT/.stratum"
+    printf '%s\n' "${id,,}" > "$WT/.stratum/worker" || stop "cannot write $WT/.stratum/worker"
     [ -z "$auto" ] || { mkdir "$WT/.stratum/approve" && owns >"$WT/.stratum/approve/owns" && printf '%s\n' "$SID" >"$WT/.stratum/approve/session"; } || stop "cannot write $WT/.stratum/approve"
   else
     quote "$WT"
@@ -352,7 +365,7 @@ start)
     qr=$Q
     Q=$qw
     U=" && { [ ! -f $qr/.stratum/worker-setup.sh ] || { echo 'setup output:' && cd $Q && bash $qr/.stratum/worker-setup.sh $qr 2>&1 || { echo \"worker-setup.sh exited \$? on $m\" >&2; exit 4; }; }; }"
-    rsh "[ ! -L $Q/.stratum ] || { echo \"$Q/.stratum is a symlink\" >&2; exit 3; }; for p in $Q/brief.md $Q/result.md $Q/.stratum/git-guard.json${auto:+ $Q/.stratum/approve}; do [ ! -L \"\$p\" ] || { echo \"\$p is a symlink\" >&2; exit 3; }; [ ! -e \"\$p\" ] || { echo \"\$p already exists\" >&2; exit 3; }; done && cat > $Q/brief.md && mkdir -p $Q/.stratum && printf '%s\n' $(printf %q "$G") > $Q/.stratum/git-guard.json$A$U" < <(brief) || { rc=$? msg=$(head -1 "$e"); [ "$rc" != 4 ] || stop "$msg"; stop "cannot write brief.md and .stratum/git-guard.json in $WT on $m: ${msg:-exit $rc}"; }
+    rsh "[ ! -L $Q/.stratum ] || { echo \"$Q/.stratum is a symlink\" >&2; exit 3; }; for p in $Q/brief.md $Q/result.md $Q/.stratum/git-guard.json $Q/.stratum/worker${auto:+ $Q/.stratum/approve}; do [ ! -L \"\$p\" ] || { echo \"\$p is a symlink\" >&2; exit 3; }; [ ! -e \"\$p\" ] || { echo \"\$p already exists\" >&2; exit 3; }; done && cat > $Q/brief.md && mkdir -p $Q/.stratum && printf '%s\n' $(printf %q "$G") > $Q/.stratum/git-guard.json && printf '%s\n' ${id,,} > $Q/.stratum/worker$A$U" < <(brief) || { rc=$? msg=$(head -1 "$e"); [ "$rc" != 4 ] || stop "$msg"; stop "cannot write brief.md and .stratum/git-guard.json in $WT on $m: ${msg:-exit $rc}"; }
   fi
   [ -n "$m" ] || [ ! -f "$repo/.stratum/worker-setup.sh" ] || { echo 'setup output:' && (cd "$WT" && bash "$repo/.stratum/worker-setup.sh" "$repo" 2>&1); } || stop "worker-setup.sh exited $?"
   h pane split "$PANE" --direction right --cwd "$WT" --no-focus
@@ -567,6 +580,7 @@ close)
     [ $c != 0 ] || fail "close left ${k%:*} $N"
     [ $c = 1 ] || fail "close left ${k%:*} $N: cannot read the list"
   done
+  rx "rm -f $Q/.stratum/worker" || fail "Worker $N: closed, but cannot remove .stratum/worker."
   printf 'closed\t%s\nfolder\t%s\tready to remove\n' "$N" "$WT"
   ;;
 list)
