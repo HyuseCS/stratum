@@ -156,7 +156,7 @@ Two test-first units, each red then green on its own: unit 1 (T024, T025) is the
 
 ## Phase 12: Final check (round 3)
 
-- [ ] T031 Final check: run the automated part of "Round 3" in specs/020-worker-workspaces/quickstart.md, then hand its "By hand" steps to the user (live herdr and real branches are the only proof of SC-006). Test: bash tests/test_st_worker.sh && python3 tests/test_approve_hook.py && python3 tests/test_git_guard.py && bash tests/test_advisor_matrix.sh && bash tests/test_advisor.sh && bash tests/test_advisor_waive.sh && bash tests/test_research.sh && bash tests/test_worker_rules.sh && bash tests/test_on_demand.sh && bash tests/test_st_update.sh && bash tests/test_update_items.sh.
+- [X] T031 Final check: run the automated part of "Round 3" in specs/020-worker-workspaces/quickstart.md, then hand its "By hand" steps to the user (live herdr and real branches are the only proof of SC-006). Test: bash tests/test_st_worker.sh && python3 tests/test_approve_hook.py && python3 tests/test_git_guard.py && bash tests/test_advisor_matrix.sh && bash tests/test_advisor.sh && bash tests/test_advisor_waive.sh && bash tests/test_research.sh && bash tests/test_worker_rules.sh && bash tests/test_on_demand.sh && bash tests/test_st_update.sh && bash tests/test_update_items.sh.
 
 ## Round 3 dependencies and execution order
 

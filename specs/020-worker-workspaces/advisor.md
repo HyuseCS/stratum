@@ -17,3 +17,6 @@ summary: Two opportunities to simplify the build. Review limited to planning; no
 
 ## plan | 2026-11-10T01:25:14Z | sha256 76fbcea25fe1b4262ec9becd1a971d4d29459006a4e0a037b3923487ff69053c | WAIVED
 reason: Round 3 Inspect fixes F1-F8, F10 and decisions D34-D36 only; no task added or removed
+
+## diff | 2026-11-10T03:43:17Z | /advisor
+summary: advisor approves a15bedf..HEAD: unset of name flags, ownbr refusal in result and close, guard removal after the close
