@@ -101,10 +101,10 @@ if [ "$cmd" = start ]; then
   [ -n "$own" ] || fail "Roster has no line for $N."
   [ -z "$auto" ] || [ -z "$m" ] || [ "$orepo" = "$repo" ] || fail "Roster row for $N needs the repo path as a fifth field."
 fi
-if [ "$cmd" = start ] || [ "$cmd" = goal ] || [ "$cmd" = followup ]; then
-  P="/goal \`$test\` exits 0, the change is committed on branch $N, and result.md is written; read brief.md in this folder first and follow it"
+goalp() {
+  P="/goal \`$test\` exits 0, the change is committed on branch $1, and result.md is written; read brief.md in this folder first and follow it"
   [ ${#P} -le 4000 ] || fail "The /goal prompt is over 4000 characters."
-fi
+}
 [ "$cmd" = headless ] || [ "$cmd" = autonomous-off ] || [ "$cmd" = autonomous-on ] || [ -n "$m" ] || { [ "${HERDR_ENV:-}" = 1 ] && { [ "$cmd" != start ] || [ -n "${HERDR_WORKSPACE_ID:-}" ]; }; } || fail "Not inside a herdr pane. Run it from a herdr pane, or name a --machine."
 [ "$cmd" != start ] || [ -z "$m" ] || [[ $repo == [/~]* ]] || fail "A saved machine needs --repo <path> starting with / or ~."
 
@@ -208,8 +208,18 @@ find_worker() {
   h pane list --workspace "$WS" # ponytail: only the first pane's cwd is used, a cd in a stopped worker's pane breaks the find, upgrade by falling back to <repo parent>/<repo name>-N
   C=$(jq -er --arg t "$TAB" 'first(.result.panes[] | select(.tab_id == $t) | .cwd)' <<<"$r") || fail "No worker $N on ${m:-local}."
   h worktree list --cwd "$C"
-  WT=$(jq -er --arg n "$N" 'first(.result.worktrees[] | select(.branch == $n) | .path)' <<<"$r") || fail "No worker $N on ${m:-local}."
+  pick "$C"
+  [ -n "$WT" ] && [ -n "$BR" ] || fail "No worker $N on ${m:-local}."
   quote "$WT"
+}
+pick() {
+  WT= BR=
+  BR=$(jq -er --arg c "$1" 'first(.result.worktrees[] | select(.path == $c and .is_linked_worktree == true) | .branch)' <<<"$r" 2>/dev/null) && WT=$1 || BR=
+  if [ -n "$WT" ]; then
+    quote "$WT/.stratum/worker"
+    rx "[ -f $Q ] && [ ! -L $Q ] && head -n 1 -- $Q" >"$t" && [ "worker-$(head -n 1 "$t")" = "$N" ] || WT= BR=
+  fi
+  [ -n "$WT" ] || { WT=$(jq -er --arg n "$N" 'first(.result.worktrees[] | select(.branch == $n) | .path)' <<<"$r" 2>/dev/null) && BR=$N; } || WT=
 }
 render() { python3 "$(cd "$(dirname "$0")/.." && pwd)/hooks/st-approve.py" --render "$1"; }
 owns() { awk 'f && (/^[[:space:]]*$/ || /^[[:space:]]*- \[/) { exit } !f && /Owns:/ { f = 1; sub(/.*Owns:/, "") } f { if (sub(/Test:.*/, "")) { print; exit } print }' "$task" | grep -o '`[^`]*`' | tr -d '`' || true; }
@@ -281,6 +291,7 @@ start)
   G=$(jq -c --arg b "$N" '.commit="auto" | .branch=$b' <(cat "$top/.stratum/git-guard.json" 2>/dev/null || echo '{}')) || stop "cannot read $top/.stratum/git-guard.json"
   [ -n "$G" ] || G=$(jq -nc --arg b "$N" '{commit:"auto",branch:$b}')
   [ -z "$auto" ] || chkowns
+  goalp "$N"
   h tab list
   c=$(jq -er --arg n "$N" '[.result.tabs[] | select(.label == $n)] | length' <<<"$r") || stop "no .result.tabs in the herdr answer"
   [ "$c" = 0 ] || fail "A worker $N already exists."
@@ -368,6 +379,8 @@ start)
   [ "$S" != blocked ] || exit 4
   ;;
 goal)
+  find_worker
+  goalp "$BR"
   ! unsent || fail "The /goal prompt is still in the input box of $N. Run resend."
   prompt
   look
@@ -386,6 +399,7 @@ resend)
   ;;
 followup)
   find_worker
+  goalp "$BR"
   look
   case $S in idle | done) ;; *) fail "Worker $N is $S, not finished. Followup refused." ;; esac
   ! question || fail "Worker $N has an open question. Answer it first."
@@ -393,7 +407,7 @@ followup)
   O=()
   if rx "[ -d $Q/.stratum/approve ]"; then
     [ -n "${CLAUDE_CODE_SESSION_ID:-}" ] && [ "$(rx "head -n 1 -- $Q/.stratum/approve/session")" = "$CLAUDE_CODE_SESSION_ID" ] || fail "Worker $N is not in this autonomous run."
-    sha=$(git rev-parse -q --verify "refs/heads/$N" || git rev-parse HEAD)
+    sha=$(git rev-parse -q --verify "refs/heads/$BR" || git rev-parse HEAD)
     chkowns
   fi
   r=$(($(rx "ls -A -- $Q" | grep -c '^result-round[0-9]*\.md$' || :) + 2))
@@ -510,8 +524,8 @@ result)
   rsh cat -- "$Q/result.md" >"$t" || noresult
   printf 'result\t%s\t%s/result.md\n' "$N" "$WT"
   cat -- "$t"
-  GIT_SSH_COMMAND='ssh -o BatchMode=yes' git fetch -- "$target:$WT" "$N:$N" >/dev/null 2>"$e" || stop "$(head -1 "$e")"
-  f=$(git rev-parse --verify "$N" 2>"$e") || stop "$(head -1 "$e")"
+  GIT_SSH_COMMAND='ssh -o BatchMode=yes' git fetch -- "$target:$WT" "$BR:$BR" >/dev/null 2>"$e" || stop "$(head -1 "$e")"
+  f=$(git rev-parse --verify "$BR" 2>"$e") || stop "$(head -1 "$e")"
   printf 'fetched\t%s\t%s\n' "$N" "$f"
   ;;
 close)
@@ -524,7 +538,7 @@ close)
   fi
   # ponytail: GitHub remote found by "github" in a remote URL, use gh's host list if a GitHub Enterprise host lacks the word
   if git remote -v 2>/dev/null | grep -q github; then
-    p=$(gh pr list --head "$N" --state open --json number -q length 2>/dev/null) || fail "Worker $N: cannot read its PRs. Close refused."
+    p=$(gh pr list --head "$BR" --state open --json number -q length 2>/dev/null) || fail "Worker $N: cannot read its PRs. Close refused."
     [ "$p" = 0 ] || fail "Worker $N has an open PR. Close refused."
   fi
   if [ -n "$m" ]; then
@@ -566,22 +580,21 @@ list)
   n=0
   while IFS=$'\t' read -r -u 3 tb w l; do
     [ -n "$tb" ] || continue
+    N=$l WT= BR=
     h pane list --workspace "$w"
     c=$(jq -r --arg t "$tb" 'first(.result.panes[] | select(.tab_id == $t) | .cwd | strings) // empty' <<<"$r")
-    p=-
     if [ -n "$c" ]; then
       h worktree list --cwd "$c"
-      p=$(jq -r --arg n "$l" 'first(.result.worktrees[] | select(.branch == $n) | .path) // "-"' <<<"$r")
+      pick "$c"
     fi
     a=$(jq -r --arg n "$l" 'first(.result.agents[] | select(.name == $n) | "\(.pane_id // "-")\t\(.agent_status)") // "-\tgone"' <<<"$ag")
     case ${a#*$'\t'} in
       idle | done)
-        N=$l
         if question; then a=${a%$'\t'*}$'\tblocked'; elif unsent; then a=${a%$'\t'*}$'\tunsent'; fi
         ;;
     esac
     s=$(jq -r --arg w "$w" 'first(.result.workspaces[] | select(.workspace_id == $w) | .label | strings | select(. != "") | gsub("[[:cntrl:]]"; " ")) // "-"' <<<"$ws")
-    printf 'found\t%s\t%s\t%s\t%s\t%s\t%s\n' "$l" "${m:-local}" "$tb" "$a" "$p" "$s"
+    printf 'found\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$l" "${m:-local}" "$tb" "$a" "${WT:--}" "$s" "${BR:--}"
     n=$((n + 1))
   done 3<<<"$x"
   [ "$n" != 0 ] || echo "no workers on ${m:-local}"
