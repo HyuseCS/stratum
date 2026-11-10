@@ -48,8 +48,10 @@ script and to git (folder, kind, name, paths, message).
    Skip: leave the file missing. Else write it as that st-init step does.
    A `constitution.md` row: tell the user to run `/stratum:st-constitution`.
    A Bash call a hook or the classifier blocks: keep the exact command for the user.
+   Built-in git instructions, once per run: list the folders left after the gate that have no `.stratum/git-instructions-kept` and where the setting is at no level (the tests of st-init step 12, run per folder). None: skip. Else ask the question of st-init step 12 once, naming those folders, with a `skip` answer. Write it as st-init step 12 does: the project or local file of each listed folder, the user file once, or for "not at all" the marker in each listed folder. Skip: write nothing.
+   <!-- ponytail: one-time step for checkouts set up before 019, remove it when every Stratum checkout on the PC and the laptop has run this update (check: no checkout prints a folder in this list) -->
 7. **Commit.** `<paths>` are the files that `fix` printed in its `changed <file>` lines for this checkout,
-   and `.stratum/advisor.json` when step 6 wrote it, minus each file that `git check-ignore` ignores.
+   and `.stratum/advisor.json` when step 6 wrote it, and `.claude/settings.json` or `.stratum/git-instructions-kept` when the git instructions paragraph wrote it, minus each file that `git check-ignore` ignores.
    Never `.claude/settings.local.json`, never `.stratum/models.json`, never `.stratum/commit-mode`.
    Per checkout with such a file, one Bash call:
    `git -C <checkout> add -- <paths> && git -C <checkout> commit -m 'chore(stratum): update harness files to <version>' -m '<one line per item>' -- <paths>`

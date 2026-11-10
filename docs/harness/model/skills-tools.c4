@@ -216,6 +216,8 @@ model {
   skills.st-init -[reads]-> skills.st-design 'FigCraft Install and Tools lines of design-tool.md'
   skills.st-init -[writes]-> stratum.advisor-json 'advisor mode'
   skills.st-init -[runs]-> scripts.st-advisor-sh 'codex-home'
+  skills.st-init -[reads]-> stratum.git-instructions-kept 'exists check'
+  skills.st-init -[writes]-> stratum.git-instructions-kept 'empty marker on not at all'
   skills.st-init -[passes]-> user 'setup questions and the report'
   skills.st-init -[passes]-> git 'commit of the created project files'
 
@@ -226,6 +228,8 @@ model {
   skills.st-update -[writes]-> stratum.models-json 'agent model and effort'
   skills.st-update -[writes]-> stratum.powerline-json 'theme, shape and weather'
   skills.st-update -[writes]-> stratum.advisor-json 'advisor mode'
+  skills.st-update -[reads]-> stratum.git-instructions-kept 'exists check per folder'
+  skills.st-update -[writes]-> stratum.git-instructions-kept 'empty marker on not at all'
   skills.st-update -[passes]-> git 'harness update commit per checkout'
   skills.st-update -[passes]-> user 'changes, skips and commands to run'
 

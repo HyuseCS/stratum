@@ -6,6 +6,7 @@ trap 'rm -rf "$tmp"' EXIT
 fail=0
 check() { if eval "$2"; then echo "ok   $1"; else echo "FAIL $1"; fail=1; fi; }
 export GIT_CONFIG_GLOBAL=/dev/null XDG_CONFIG_HOME="$tmp" XDG_STATE_HOME="$tmp/state"
+export CODEX_HOME="$tmp/codex"
 repo_paths() { git -C "$root" status --porcelain --no-renames --untracked-files=all | cut -c4- | while IFS= read -r p; do echo "$(git -C "$root" hash-object -- "$p" 2>/dev/null) $p"; done | sort; }
 repo_before=$(repo_paths)
 
@@ -18,6 +19,7 @@ cat > "$d/prompt"
 o=
 while [ $# -gt 0 ]; do [ "$1" = -o ] && o=$2; shift; done
 [ -f "$d/answer" ] && [ -n "$o" ] && cp "$d/answer" "$o"
+[ -e "$d/codexfail" ] && exit 1
 exit 0
 FAKE
 cat > "$tmp/bin/timeout" <<'FAKE'
@@ -248,6 +250,28 @@ printf '{"tokens":"x"}' > "$tmp/user/auth.json"
 out=$(cd "$proj" && CODEX_HOME="$tmp/user" bash "$root/scripts/st-advisor.sh" codex-home); rc=$?
 check "(M1) codex-home: usage line without codex-home, exit 2, no Stratum Codex home folder" '[ $rc = 2 ] && [[ "$(head -n1 <<<"$out")" == "usage:"* ]] && [[ "$(head -n1 <<<"$out")" != *codex-home* ]] && [ ! -e "$tmp/state/stratum/codex-home" ]'
 
+cat > "$tmp/logw.py" <<'PY'
+import json, os, re, sys
+d = os.environ["FAKE_DIR"]
+mode = sys.argv[1]
+pf = re.search(r"request in (\S+) and follow it", open(os.path.join(d, "h.args")).read()).group(1)
+nonce = re.findall(r"ST-ADVISOR-BEGIN-([0-9a-f]{12})", open(pf).read())[-1]
+if mode == "aborted":
+    recs = [
+        {"type": "response_item", "payload": {"type": "message", "role": "user", "content": [{"type": "input_text", "text": f"Read the review request in {pf} and follow it. Change no file."}]}},
+        {"type": "event_msg", "payload": {"type": "turn_aborted", "reason": "interrupted"}},
+    ]
+else:
+    if mode == "nomarkers":
+        msg = "some text without the markers"
+    else:
+        msg = f"ST-ADVISOR-BEGIN-{nonce}\n" + open(os.path.join(d, "answer")).read().rstrip("\n") + f"\nST-ADVISOR-END-{nonce}"
+    recs = [{"type": "event_msg", "payload": {"type": "task_complete", "last_agent_message": msg}}]
+out = os.path.join(os.environ["CODEX_HOME"], "sessions", "2026", "11", "09")
+os.makedirs(out, exist_ok=True)
+with open(os.path.join(out, f"rollout-{nonce}.jsonl"), "w") as f:
+    f.write("".join(json.dumps(r) + "\n" for r in recs))
+PY
 mkdir -p "$tmp/hbin2"
 cat > "$tmp/hbin2/herdr" <<'FAKE'
 #!/usr/bin/env bash
@@ -280,25 +304,16 @@ case "$1 $2" in
   "agent start") echo '{"result":{"agent":"codex","name":"st-codex-demo","pane_id":"w1:p2"}}' ;;
   "agent prompt") printf '%s\n' "$@" > "$d/h.args"
     [ "$m" = gone ] && { echo '{"error":{"code":"agent_not_found","message":"agent st-codex-demo not found"}}'; exit 1; }
-    [ "$m" = writes ] && printf 'new\n' > "$d/proj/new.txt"; echo '{"result":{"state":"done"}}' ;;
+    [ "$m" = writes ] && printf 'new\n' > "$d/proj/new.txt"
+    [ -e "$d/nolog" ] || python3 -I "$d/logw.py" "$m"; echo '{"result":{"state":"done"}}' ;;
   "agent read")
-    if [[ " $* " == *" 400 "* ]]; then
-      [ "$m" = nomarkers ] && { echo "some text without the markers"; exit 0; }
-      pf=$(sed -n 's/.*request in \(.*\) and follow it.*/\1/p' "$d/h.args" | head -n1)
-      nonce=$(grep -o 'ST-ADVISOR-BEGIN-[0-9a-f]\{12\}' "$pf" | tail -n1 | sed 's/ST-ADVISOR-BEGIN-//')
-      echo "ready"
-      echo "ST-ADVISOR-BEGIN-$nonce"
-      cat "$d/answer"; echo
-      echo "ST-ADVISOR-END-$nonce"
+    r=$(( $(cat "$d/hread.n" 2>/dev/null || echo 0) + 1 )); echo "$r" > "$d/hread.n"
+    if [ -e "$d/hfixture" ]; then
+      cat "$d/hfixture"
+    elif [ -e "$d/hscreen2" ] && [ "$r" -ge 2 ]; then
+      printf 'Do you want to run this command?\n> 1. Yes, proceed\n  2. No, and rm -rf x\n'
     else
-      r=$(( $(cat "$d/hread.n" 2>/dev/null || echo 0) + 1 )); echo "$r" > "$d/hread.n"
-      if [ -e "$d/hfixture" ]; then
-        cat "$d/hfixture"
-      elif [ -e "$d/hscreen2" ] && [ "$r" -ge 2 ]; then
-        printf 'Do you want to run this command?\n> 1. Yes, proceed\n  2. No, and rm -rf x\n'
-      else
-        printf 'Do you want to run this command?\n> 1. Yes, proceed\n  2. No, tell Codex what to do differently\n'
-      fi
+      printf 'Do you want to run this command?\n> 1. Yes, proceed\n  2. No, tell Codex what to do differently\n'
     fi ;;
 esac
 exit 0
@@ -511,8 +526,30 @@ hreset
 hrun nofolder
 check "(M18) tab path: no logged timeout call runs st-lock.sh or st-codex-agent.sh, last line names the tab" '[ $rc = 0 ] && [ "$(tail -n1 <<<"$out")" = "codex: tab st-codex-demo" ] && ! grep -qE "st-lock.sh|st-codex-agent.sh" "$tmp/timeout.log" 2>/dev/null'
 hreset
-hrun nomarkers
-check "(M19) no markers in the tab answer: first line BLOCKED: no answer between the markers, exit 1, codex exec not run" '[ $rc = 1 ] && [ "$(head -n1 <<<"$out")" = "BLOCKED: no answer between the markers" ] && [ ! -e "$tmp/argv" ]'
+approve
+PATH="$tmp/nosleep:$PATH" hrun nomarkers
+check "(M19) log record without a marker pair: exit 0, codex exec runs, last line codex: headless (no session log), verdict recorded" '[ $rc = 0 ] && [ -f "$tmp/argv" ] && [ "$(tail -n1 <<<"$out")" = "codex: headless (no session log)" ] && grep "^## " "$recf" | tail -n1 | grep -qE "\| sha256 $h \| APPROVED$"'
+hreset
+touch "$tmp/nolog"
+approve
+PATH="$tmp/nosleep:$PATH" hrun folder
+rm -f "$tmp/nolog"
+check "(M25) no session log: codex exec runs, its verdict is recorded, last line codex: headless (no session log)" '[ $rc = 0 ] && [ -f "$tmp/argv" ] && [ "$(tail -n1 <<<"$out")" = "codex: headless (no session log)" ] && grep "^## " "$recf" | tail -n1 | grep -qE "\| sha256 $h \| APPROVED$"'
+hreset
+touch "$tmp/nolog" "$tmp/codexfail"
+PATH="$tmp/nosleep:$PATH" hrun folder
+rm -f "$tmp/nolog" "$tmp/codexfail"
+check "(M26) no session log and codex exec exits 1: first line BLOCKED: codex exited 1, exit 1, codex exec ran" '[ $rc = 1 ] && [ "$(head -n1 <<<"$out")" = "BLOCKED: codex exited 1" ] && [ -f "$tmp/argv" ]'
+hreset
+sed -i 's/^lim=540$/lim=59/' "$tmp/sc/scripts/st-advisor.sh"
+check "(M27) setup: the copied advisor has lim=59" 'grep -qx "lim=59" "$tmp/sc/scripts/st-advisor.sh"'
+touch "$tmp/nolog"
+sr="$tmp/sc" PATH="$tmp/nosleep:$PATH" hrun folder
+rm -f "$tmp/nolog"
+check "(M27) no session log and less than 60 s left: first line BLOCKED: timed out, exit 1, codex exec not run" '[ $rc = 1 ] && [ "$(head -n1 <<<"$out")" = "BLOCKED: timed out" ] && [ ! -e "$tmp/argv" ]'
+hreset
+hrun aborted
+check "(M28) Esc in the Codex tab: first line BLOCKED: the review was stopped in the Codex tab, exit 1, codex exec not run" '[ $rc = 1 ] && [ "$(head -n1 <<<"$out")" = "BLOCKED: the review was stopped in the Codex tab" ] && [ ! -e "$tmp/argv" ]'
 hreset
 setmode '{"mode": "codex"}'
 approve

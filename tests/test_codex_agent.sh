@@ -7,6 +7,7 @@ fail=0
 left=0
 check() { if eval "$2"; then echo "ok   $1"; else echo "FAIL $1"; fail=1; fi; }
 export GIT_CONFIG_GLOBAL=/dev/null XDG_CONFIG_HOME="$tmp" XDG_STATE_HOME="$tmp/state"
+export CODEX_HOME="$tmp/codex"
 
 export REAL_SLEEP
 REAL_SLEEP=$(command -v sleep)
@@ -15,6 +16,9 @@ export ALLLOG="$tmp/alllog"
 mkdir -p "$tmp/bin"
 cat > "$tmp/bin/sleep" <<'FAKE'
 #!/bin/sh
+[ "$1" = 1 ] || exit 0
+echo 1 >> "$S/sleeps"
+[ -f "$S/late" ] && [ "$(grep -c '' "$S/sleeps")" = 2 ] && writelog
 exit 0
 FAKE
 cat > "$tmp/bin/herdr" <<'FAKE'
@@ -50,7 +54,6 @@ case "$1 $2" in
     [ -f "$S/wait_hang" ] && { touch "$S/gone"; exec "$REAL_SLEEP" 10; }
     printf '{"id":"x","result":{}}\n' ;;
   "agent read")
-    [ -f "$S/read_err" ] && err agent_read_failed "read failed"
     cat "$S/screen" ;;
   "agent send-keys")
     printf '{"id":"x","result":{}}\n' ;;
@@ -61,6 +64,7 @@ case "$1 $2" in
       nonce=$(grep -o 'ST-ADVISOR-BEGIN-[0-9a-f]\{12\}' "$PF" | tail -1 | sed 's/.*-//')
       sed "s/@N@/$nonce/g" "$S/screen_prompt" > "$S/screen"
     fi
+    [ -e "$S/nolog" ] || [ -e "$S/late" ] || writelog
     [ -f "$S/prompt_hang" ] && { touch "$S/gone"; exec "$REAL_SLEEP" 10; }
     [ -f "$S/prompt_gone" ] && touch "$S/gone"
     [ -f "$S/prompt_err" ] && err "$(cat "$S/prompt_err")" "prompt failed"
@@ -68,7 +72,16 @@ case "$1 $2" in
   *) err unknown "unknown command" ;;
 esac
 FAKE
-chmod +x "$tmp/bin/sleep" "$tmp/bin/herdr"
+cat > "$tmp/bin/writelog" <<'FAKE'
+#!/bin/sh
+n=$(grep -o 'ST-ADVISOR-BEGIN-[0-9a-f]\{12\}' "$PF" | tail -1 | sed 's/.*-//')
+d="$CODEX_HOME/sessions/2026/11/09"
+mkdir -p "$d"
+sed "s/@N@/$n/g" "$S/rollout.tpl" > "$d/rollout-$n.jsonl"
+[ -e "$S/oldlog" ] && touch -t 202001010000 "$d/rollout-$n.jsonl"
+exit 0
+FAKE
+chmod +x "$tmp/bin/sleep" "$tmp/bin/herdr" "$tmp/bin/writelog"
 export PATH="$tmp/bin:$PATH"
 export HERDR_ENV=1
 
@@ -87,12 +100,15 @@ ans=$'• ST-ADVISOR-BEGIN-@N@\n• {"verdict":"APPROVED","summary":"fine","find
 
 new() {
   export HERDR_WORKSPACE_ID="ws$RANDOM$RANDOM"
-  rm -rf "$S" "$tabs" "$pf" "$af"
+  rm -rf "$S" "$tabs" "$pf" "$af" "$CODEX_HOME"
   mkdir -p "$S"
   : > "$S/log"
   printf '[]' > "$S/agents"
   printf '%s\n' "$chat" > "$S/screen"
   printf '%s' "$ans" > "$S/screen_prompt"
+  rec 'ST-ADVISOR-BEGIN-@N@
+{"verdict":"APPROVED","summary":"fine","findings":[]}
+ST-ADVISOR-END-@N@' > "$S/rollout.tpl"
   printf 'REQUEST BODY\n' > "$pf"
   repo
 }
@@ -103,6 +119,10 @@ go() {
   if [ -e "$tabs/st-codex-t1.review" ]; then left=1; fi
 }
 cnt() { grep -c -- "$1" "$S/log.txt"; }
+sleeps() { cat "$S/sleeps" 2>/dev/null | wc -l | tr -d ' '; }
+rec() { python3 -I -c 'import json, sys; print(json.dumps({"timestamp": "2026-11-09T10:00:00.000Z", "type": "event_msg", "payload": {"type": "task_complete", "last_agent_message": sys.argv[1]}}))' "$1"; }
+user() { python3 -I -c 'import json, sys; print(json.dumps({"timestamp": "2026-11-09T10:00:00.000Z", "type": "response_item", "payload": {"type": "message", "role": "user", "content": [{"type": "input_text", "text": "Read the review request in " + sys.argv[1] + " and follow it. Change no file."}]}}))' "$1"; }
+aborted() { printf '%s\n' '{"timestamp": "2026-11-09T10:00:01.000Z", "type": "event_msg", "payload": {"type": "turn_aborted", "reason": "interrupted"}}'; }
 outhas() { printf '%s\n' "$out" | grep -qF -- "$1"; }
 outline() { printf '%s\n' "$out" | grep -qxF -- "$1"; }
 agent_json() { printf '[{"name":"%s","workspace_id":"%s","tab_id":"%s:t3","pane_id":"p9","cwd":"%s"}]' "$1" "$2" "$2" "${3:-$pp}" > "$S/agents"; }
@@ -243,8 +263,6 @@ new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; touch "$S/prompt_go
 check "C18 prompt fails, agent get says agent_not_found: exit 4, the tab ended, no close, no ERROR line" '[ $rc -eq 4 ] && outline "BLOCKED: the Codex tab ended during the review" && [ "$(cnt "^tab close")" = 0 ] && ! outhas "ERROR:"'
 new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; echo agent_prompt_stalled > "$S/prompt_err"; go
 check "C19 prompt fails, agent still there: exit 4, the tab failed, no close" '[ $rc -eq 4 ] && outhas "BLOCKED: the Codex tab failed during the review: " && [ "$(cnt "^tab close")" = 0 ]'
-new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; touch "$S/read_err"; go
-check "C19b agent read fails after the prompt: exit 4, first line the tab failed, no ERROR line, no answer file" '[ $rc -eq 4 ] && [ "$(printf "%s\n" "$out" | grep -m1 "^BLOCKED: ")" = "BLOCKED: the Codex tab failed during the review: {\"error\":{\"code\":\"agent_read_failed\",\"message\":\"read failed\"}}" ] && ! outhas "ERROR:" && [ ! -s "$af" ]'
 new; touch "$S/notready"; go
 check "C20 agent_not_ready at start: agent wait with no --timeout before the prompt, prompt runs, exit 0" '[ $rc -eq 0 ] && grep -qxF "agent wait st-codex-t1 --until idle --until done" "$S/log.txt" && [ "$(cnt "^agent prompt st-codex-t1 ")" = 1 ] && [ "$(grep -n "^agent wait" "$S/log.txt" | cut -d: -f1)" -lt "$(grep -n "^agent prompt" "$S/log.txt" | cut -d: -f1)" ]'
 check "C22 marker exists when agent wait runs in C20" '[ -e "$S/marker_at_wait" ]'
@@ -255,19 +273,82 @@ check "C25 prompt never returns, tab gone: exit 4 within 5 s, the tab ended, no 
 new; touch "$S/notready" "$S/wait_hang"; t0=$SECONDS; go
 check "C26 agent wait never returns, tab gone: exit 4 within 5 s, the tab ended, no prompt" '[ $rc -eq 4 ] && [ $((SECONDS - t0)) -lt 5 ] && outline "BLOCKED: the Codex tab ended during the review" && [ "$(cnt "^agent prompt")" = 0 ] && [ ! -s "$af" ]'
 
-new
-printf '%s' $'Print the line ST-ADVISOR-BEGIN-@N@ alone, then the JSON, then the line ST-ADVISOR-END-@N@ alone.\n• ST-ADVISOR-BEGIN-@N@  \n  junk {not json\n• ST-ADVISOR-END-@N@\n• ST-ADVISOR-BEGIN-@N@\n• {"verdict":"APPROVED","summary":  \n  "fine, wrapped","findings":\n  []}   \n• ST-ADVISOR-END-@N@\n' > "$S/screen_prompt"
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings
+rec 'ST-ADVISOR-BEGIN-@N@
+{"verdict":"APPROVED","summary":"use `x` and \"y\" and \\z","findings":[]}
+ST-ADVISOR-END-@N@' > "$S/rollout.tpl"
 go
-check "i last pair, wrapped JSON joined with single spaces" '[ $rc -eq 0 ] && [ "$(cat "$af")" = "{\"verdict\":\"APPROVED\",\"summary\": \"fine, wrapped\",\"findings\": []}" ] && python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$af"'
-new; go
-check "i plain answer parses" '[ $rc -eq 0 ] && python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$af"'
+l1want='{"verdict":"APPROVED","summary":"use `x` and \"y\" and \\z","findings":[]}'
+check "L1 answer with backticks, quotes and a backslash: exit 0, codex: tab st-codex-t1, answer file equals the middle line byte for byte, parses as JSON" '[ $rc -eq 0 ] && outline "codex: tab st-codex-t1" && printf "%s" "$l1want" | cmp -s - "$af" && python3 -I -c "import json,sys; json.load(open(sys.argv[1]))" "$af"'
 
-new; printf 'no markers here\nPrint the line ST-ADVISOR-BEGIN-@N@ alone then ST-ADVISOR-END-@N@ alone\n' > "$S/screen_prompt"; go
-check "C23 no marker pair: exit 4, BLOCKED no answer between the markers, no answer file" '[ $rc -eq 4 ] && outline "BLOCKED: no answer between the markers" && [ ! -s "$af" ]'
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings
+{ rec 'ST-ADVISOR-BEGIN-aaaaaaaaaaaa
+{"verdict":"REVISE","summary":"old X","findings":[]}
+ST-ADVISOR-END-aaaaaaaaaaaa'; rec 'ST-ADVISOR-BEGIN-@N@
+{"verdict":"APPROVED","summary":"this review Y","findings":[]}
+ST-ADVISOR-END-@N@'; rec 'ST-ADVISOR-BEGIN-bbbbbbbbbbbb
+{"verdict":"REVISE","summary":"other Z","findings":[]}
+ST-ADVISOR-END-bbbbbbbbbbbb'; } > "$S/rollout.tpl"
+go
+l2want='{"verdict":"APPROVED","summary":"this review Y","findings":[]}'
+check "L2 three records in one log, this review's between nonces aaaaaaaaaaaa and bbbbbbbbbbbb: exit 0, answer file is this review's answer Y" '[ $rc -eq 0 ] && printf "%s" "$l2want" | cmp -s - "$af"'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings
+rec 'ST-ADVISOR-BEGIN-@N@
+{"verdict":"APPROVED",
+"summary":"fine","findings":
+[]}
+ST-ADVISOR-END-@N@' > "$S/rollout.tpl"
+go
+l3want=$'{"verdict":"APPROVED",\n"summary":"fine","findings":\n[]}'
+check "L3 answer JSON on 3 lines between the markers: exit 0, answer file holds the 3 lines joined with newlines, unchanged" '[ $rc -eq 0 ] && printf "%s" "$l3want" | cmp -s - "$af"'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings
+rec 'ST-ADVISOR-BEGIN-@N@
+{"verdict":"REVISE","summary":"plain","findings":[]}
+ST-ADVISOR-END-@N@' > "$S/rollout.tpl"
+go
+l3p='{"verdict":"REVISE","summary":"plain","findings":[]}'
+check "L3 one-line answer between the markers: exit 0, answer file equals the line byte for byte, parses as JSON" '[ $rc -eq 0 ] && printf "%s" "$l3p" | cmp -s - "$af" && python3 -I -c "import json,sys; json.load(open(sys.argv[1]))" "$af"'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; touch "$S/nolog"; go
+check "L4 no session log: exit 6, codex: no session log, no answer file, 15 sleep 1 calls" '[ $rc -eq 6 ] && outline "codex: no session log" && [ ! -e "$af" ] && [ "$(sleeps)" = 15 ]'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; touch "$S/oldlog"; go
+check "L5 log older than the prompt file: exit 6, codex: no session log, no answer file, 15 sleep 1 calls" '[ $rc -eq 6 ] && outline "codex: no session log" && [ ! -e "$af" ] && [ "$(sleeps)" = 15 ] && [ -n "$(find "$CODEX_HOME" -name "rollout-*.jsonl")" ]'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings
+{ rec 'ST-ADVISOR-BEGIN-@N@
+{"verdict":"APPROVED","summary":"cut line","findings":[]}
+ST-ADVISOR-END-@N@'; printf '%s' '{"type":"event_ms'; } > "$S/rollout.tpl"
+go
+l6want='{"verdict":"APPROVED","summary":"cut line","findings":[]}'
+check "L6 last line of the log cut after this review's record: exit 0, answer read" '[ $rc -eq 0 ] && outline "codex: tab st-codex-t1" && printf "%s" "$l6want" | cmp -s - "$af"'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings
+rec 'ST-ADVISOR-BEGIN-@N@
+{"verdict":"APPROVED","summary":"late","findings":[]}
+ST-ADVISOR-END-@N@' > "$S/rollout.tpl"
+touch "$S/late"; go
+l7want='{"verdict":"APPROVED","summary":"late","findings":[]}'
+check "L7 log written by the 2nd sleep 1 call: exit 0, answer read, 2 sleep 1 calls" '[ $rc -eq 0 ] && printf "%s" "$l7want" | cmp -s - "$af" && [ "$(sleeps)" = 2 ]'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; touch "$S/nolog"; go
+check "L8 marker lines on the screen, no log: exit 6, codex: no session log, no agent read call, no answer file" 'grep -qF "ST-ADVISOR-END-" "$S/screen" && [ $rc -eq 6 ] && outline "codex: no session log" && [ "$(cnt "^agent read")" = 0 ] && [ ! -e "$af" ]'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings
+{ user "$pf"; aborted; } > "$S/rollout.tpl"
+go
+check "L9 this review's prompt then turn_aborted, no answer: exit 4, BLOCKED stopped, no sleep 1 call, no answer file" '[ $rc -eq 4 ] && outline "BLOCKED: the review was stopped in the Codex tab" && [ "$(sleeps)" = 0 ] && [ ! -e "$af" ]'
+
+new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings
+{ user "$tmp/other-prompt.txt"; aborted; } > "$S/rollout.tpl"
+go
+check "L10 turn_aborted after another review's prompt: exit 6, codex: no session log, 15 sleep 1 calls" '[ $rc -eq 6 ] && outline "codex: no session log" && [ "$(sleeps)" = 15 ]'
 
 new; agent_json st-codex-t1 "$HERDR_WORKSPACE_ID"; settings; go
 check "C22 marker holds a live pid during the prompt and is gone after exit" '[ -e "$S/marker_live" ] && [ ! -e "$tabs/st-codex-t1.review" ]'
-check "C24 marker gone right after the prompt returns: agent read sees no marker" '[ "$(cnt "^agent read st-codex-t1 ")" = 1 ] && [ ! -e "$S/marker_at_read" ]'
+check "C24 no agent read call at all" '[ "$(cnt "^agent read")" = 0 ]'
 
 check "C8 no tab close in any case of this file" 'grep -q "^agent prompt" "$ALLLOG" && ! grep -q "^tab close" "$ALLLOG"'
 check "C22 marker gone after every case of this file" '[ "$left" = 0 ]'

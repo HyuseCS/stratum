@@ -31,6 +31,7 @@ If no file list is given, stop and ask for it. Do not guess scope from `git stat
 5. `git diff --cached --check` and `git diff --cached --stat`. Confirm only the listed files
    are staged.
 6. Commit with a conventional message:
+   - Run it as `git commit -m 'subject' -m 'body'`: single quotes, no heredoc, no backticks, no `$(`, no `-F`. Write an apostrophe as `'\''`.
    - Subject: `type(scope): what changed`, under 72 characters.
      Types: feat, fix, refactor, docs, style, test, chore.
    - Body: why, in 1-3 lines. Name the task ID (for example `T012`).
@@ -48,6 +49,7 @@ If no file list is given, stop and ask for it. Do not guess scope from `git stat
   that.
 - A commit hook fails or the commit guard denies: stop and report its exact text. Do not retry
   around it.
+- Exception: a deny that starts with `Commit form denied:`. Write the same message as `git commit -m 'subject' -m 'body'` and run it once more. A second deny: stop and report.
 
 ## Report
 
