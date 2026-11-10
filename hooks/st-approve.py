@@ -43,8 +43,7 @@ JOIN = re.compile(r"(?<!\\)((?:\\\\)*)\\\n")
 
 
 def unjudgeable(command):
-    command = JOIN.sub(r"\1", command)
-    return "<<" in command or bool(SUBSTITUTION.search(command))
+    return "\\\n" in command or "<<" in command or bool(SUBSTITUTION.search(command))
 
 
 LOCK = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "scripts", "st-lock.sh")

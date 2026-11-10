@@ -5,8 +5,10 @@
 One function in `hooks/st-approve.py`, next to `SUBSTITUTION` (`:41`):
 
 ```text
-unjudgeable(command) first joins each backslash-newline (`JOIN` in `hooks/st-approve.py`: a backslash at a line end, not itself escaped, is removed with the line break). It is true when "<<" is in the joined command, or SUBSTITUTION.search(joined) matches.
+unjudgeable(command) is true when a backslash followed by a newline is anywhere in the command (also inside quotes), or "<<" is in it, or SUBSTITUTION.search(command) matches.
 ```
+
+The backslash-newline rule is D9 (stricter only): inside single quotes bash keeps both characters, so a joined form can name another file than the one bash stages. The other checks still also read the joined form (`JOIN` in `hooks/st-approve.py`: a backslash at a line end, not itself escaped, is removed with the line break), and the stricter result wins.
 
 `SUBSTITUTION` stays as it is: `` ` ``, `$(`, `${` followed by whitespace or `|`, `<(`, `>(`. It matches inside quotes too. `<<` also covers `<<-` and `<<<`.
 
@@ -36,7 +38,7 @@ Deny when both are true (research P3):
 
 The scan of (a) runs on the raw command and on its joined form (§1), and the stricter decision wins.
 
-(b) `unjudgeable(command)` on the whole raw command (it joins first, §1).
+(b) `unjudgeable(command)` on the whole raw command (§1).
 
 Then the output is `permissionDecision: "deny"` with `permissionDecisionReason` exactly the deny text in §3, alone. Other reasons found for the same command are dropped from the output (the agent fixes the form first, and the next run shows any other reason). This holds for every commit mode (`auto`, `ask`, `deny`) and every session, worker or not (D6).
 
@@ -47,7 +49,7 @@ No deny under this rule when (a) or (b) is false. Then the guard decides as toda
 Exactly, on one line:
 
 ```text
-Commit form denied: a commit with a heredoc, <<, a backtick or $( cannot be judged by the approve channel. Run it again as git commit -m 'subject' -m 'body': single quotes, and no <<, backticks or $( anywhere, not even in the message. Write an apostrophe as '\''.
+Commit form denied: a commit with a heredoc, <<, a backtick, $( or a backslash line break cannot be judged by the approve channel. Run it again as git commit -m 'subject' -m 'body': single quotes, and no <<, backticks, $( or backslash line breaks anywhere, not even in the message. Write an apostrophe as '\''.
 ```
 
 `agents/st-git.md` keys its retry on the prefix `Commit form denied:`.

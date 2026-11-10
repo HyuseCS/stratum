@@ -16,9 +16,10 @@ HOOK = os.path.join(PLUGIN, "hooks", "st-approve.py")
 GUARD = os.path.join(PLUGIN, "hooks", "st-git-guard.py")
 ALLOW = '{"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"allow"}}}'
 DENY_REASON = ".stratum/approve/ and .stratum/autonomous are written only by the orchestrator."
-COMMIT_DENY = (r"Commit form denied: a commit with a heredoc, <<, a backtick or $( cannot be judged by the "
-               r"approve channel. Run it again as git commit -m 'subject' -m 'body': single quotes, and no <<, "
-               r"backticks or $( anywhere, not even in the message. Write an apostrophe as '\''.")
+COMMIT_DENY = (r"Commit form denied: a commit with a heredoc, <<, a backtick, $( or a backslash line break cannot "
+               r"be judged by the approve channel. Run it again as git commit -m 'subject' -m 'body': single quotes, "
+               r"and no <<, backticks, $( or backslash line breaks anywhere, not even in the message. Write an "
+               r"apostrophe as '\''.")
 CMD = 'python3 "${CLAUDE_PLUGIN_ROOT}/hooks/st-approve.py"'
 MATCHER = "Bash|Edit|Write|MultiEdit|NotebookEdit|Read|Grep|Glob"
 RID_FILE = re.compile(r"[0-9]+-[0-9]+\.(req|ok|user)")
@@ -185,7 +186,9 @@ DROPS = [
     ("never-list", None, "c\\\nd .. && git commit -m x", {}, "c\\?d .. && git commit -m x"),
     ("commit-never", None, "c\\\nd src && git commit -m x", {}, "c\\?d src && git commit -m x"),
     ("commit-never", None, "bash -\\\nc true; git commit -m x", {}, "bash -\\?c true; git commit -m x"),
-    ("flag", "-a", "gi\\\nt commit -a -m $'x\\'y'", {}, "gi\\?t commit -a -m $'x\\'y'"),
+    ("unjudgeable", None, "gi\\\nt commit -a -m $'x\\'y'", {}, "gi\\?t commit -a -m $'x\\'y'"),
+    ("unjudgeable", None, "git add 'src/a\\\n.py' && git commit -m x", {}, "git add 'src/a\\?.py' && git commit -m x"),
+    ("unjudgeable", None, 'git add "src/a\\\n.py" && git commit -m x', {}, 'git add "src/a\\?.py" && git commit -m x'),
 ]
 
 

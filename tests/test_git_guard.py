@@ -9,9 +9,10 @@ import unittest
 
 GUARD = os.environ.get("ST_GIT_GUARD") or os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "..", "hooks", "st-git-guard.py")
-COMMIT_DENY = (r"Commit form denied: a commit with a heredoc, <<, a backtick or $( cannot be judged by the "
-               r"approve channel. Run it again as git commit -m 'subject' -m 'body': single quotes, and no <<, "
-               r"backticks or $( anywhere, not even in the message. Write an apostrophe as '\''.")
+COMMIT_DENY = (r"Commit form denied: a commit with a heredoc, <<, a backtick, $( or a backslash line break cannot "
+               r"be judged by the approve channel. Run it again as git commit -m 'subject' -m 'body': single quotes, "
+               r"and no <<, backticks, $( or backslash line breaks anywhere, not even in the message. Write an "
+               r"apostrophe as '\''.")
 FORM_DENIED = [
     'git commit -m "$(cat <<\'EOF\'\nfeat: x\n\nbody\nEOF\n)"',
     'git commit -m "$(cat <<\'EOF\'\nfeat: say "hi\n\nbody\nEOF\n)"',
@@ -22,6 +23,8 @@ FORM_DENIED = [
     "git commit -F <(echo m)",
     "git commit -m 'a' -m 'b' > >(cat)",
     'git add src/a.py && git -C . commit -m "$(echo m)"',
+    "git add 'src/a\\\n.py' && git commit -m x",
+    'git add "src/a\\\n.py" && git commit -m x',
     "cat > a.md <<'EOF'\ngit commit -m x\nEOF",
     '/usr/bin/git commit -m "$(x)"',
     'command git commit -m "$(x)"',

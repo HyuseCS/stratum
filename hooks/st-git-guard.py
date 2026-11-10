@@ -19,9 +19,10 @@ TOKEN = re.compile(r"""[ \t]*(?:(\d*(?:<<-|<<<|<>|>\||[<>][<>&]?)|&>>?)|([;&|]+)
 COMPOUND = {"{", "if", "then", "else", "elif", "do", "while", "until", "for", "case", "select", "function",
             "coproc"}
 INERT = {"cat", "tee", "cd", "echo", "printf", "ls", "mkdir", "true", ":", "wc", "pwd"}
-FORM_DENY = (r"Commit form denied: a commit with a heredoc, <<, a backtick or $( cannot be judged by the "
-             r"approve channel. Run it again as git commit -m 'subject' -m 'body': single quotes, and no <<, "
-             r"backticks or $( anywhere, not even in the message. Write an apostrophe as '\''.")
+FORM_DENY = (r"Commit form denied: a commit with a heredoc, <<, a backtick, $( or a backslash line break cannot "
+             r"be judged by the approve channel. Run it again as git commit -m 'subject' -m 'body': single quotes, "
+             r"and no <<, backticks, $( or backslash line breaks anywhere, not even in the message. Write an "
+             r"apostrophe as '\''.")
 JOIN = re.compile(r"(?<!\\)((?:\\\\)*)\\\n")
 try:
     _spec = importlib.util.spec_from_file_location(
