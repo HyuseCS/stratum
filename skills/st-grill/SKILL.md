@@ -32,7 +32,7 @@ After each answer:
 
 Each answer reshapes the tree: a settled decision pushes the frontier outward and unblocks the questions that depended on it. Recompute the frontier and ask the next question.
 
-Finding _facts_ is your job, never the user's. When a question needs a fact from the environment (filesystem, tools, etc.), look it up or dispatch a sub-agent; don't ask the user for anything you could find yourself. Don't block on it: a running exploration is an unsettled prerequisite, so only the questions downstream of it wait; ask the rest of the frontier meanwhile. The _decisions_ are the user's: put each to them and wait.
+Finding _facts_ is your job, never the user's. When a question needs a fact from the environment (filesystem, tools, etc.), look it up or dispatch a sub-agent with a fresh context window; don't ask the user for anything you could find yourself. Don't block on it: a running exploration is an unsettled prerequisite, so only the questions downstream of it wait; ask the rest of the frontier meanwhile. The _decisions_ are the user's: put each to them and wait.
 
 When a question needs facts from the code that a quick look cannot find, run `/stratum:st-research` (Skill tool) with the facts the grill has as its scope, and the research path your caller gives, if any. Show its findings to the user, then go on with the grill.
 
