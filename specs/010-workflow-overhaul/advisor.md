@@ -17,3 +17,6 @@ summary: The change is small and targeted, but the proposed path extraction stil
 
 ## diff | 2026-11-09T11:37:18Z | /advisor
 summary: /advisor on #95 diff: no hidden regression; asked for a clean-repo check (done: ok clean, FAIL on a write during the run)
+
+## change | 2026-11-12T16:28:59Z | sha256 edb1373f191b98dd7f6be78b19a907ead775dca7375889d6646221a4e627fd52 | APPROVED
+summary: The plan addresses both flake causes without changing runtime behavior. The elapsed-time bounds match the contracts, the private scripts copy isolates the write checks, and the planned negative controls preserve meaningful coverage. No files changed and no tests run.

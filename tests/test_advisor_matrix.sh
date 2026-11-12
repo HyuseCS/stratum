@@ -7,8 +7,10 @@ fail=0
 check() { if eval "$2"; then echo "ok   $1"; else echo "FAIL $1"; fail=1; fi; }
 export GIT_CONFIG_GLOBAL=/dev/null XDG_CONFIG_HOME="$tmp" XDG_STATE_HOME="$tmp/state"
 export CODEX_HOME="$tmp/codex"
-repo_paths() { git -C "$root" status --porcelain --no-renames --untracked-files=all | cut -c4- | while IFS= read -r p; do echo "$(git -C "$root" hash-object -- "$p" 2>/dev/null) $p"; done | sort; }
-repo_before=$(repo_paths)
+repo=$tmp/repo
+mkdir "$repo" && cp -r "$root/scripts" "$repo/" || exit 1
+repo_files() { (cd "$repo" && find . -type f -exec sha256sum {} + | LC_ALL=C sort); }
+repo_before=$(repo_files)
 
 mkdir -p "$tmp/bin"
 cat > "$tmp/bin/codex" <<'FAKE'
@@ -62,7 +64,7 @@ mf="$proj/.stratum/advisor.json"
 recf="$proj/specs/001-demo/advisor.md"
 
 approve() { printf '%s' '{"verdict":"APPROVED","summary":"fine","findings":[]}' > "$tmp/answer"; }
-adv() { (cd "$proj" && bash "$root/scripts/st-advisor.sh" "$@"); }
+adv() { (cd "$proj" && bash "$repo/scripts/st-advisor.sh" "$@"); }
 run() { rm -f "$tmp/argv" "$tmp/prompt"; out=$(adv "$@"); rc=$?; }
 nrec() { cat "$recf" 2>/dev/null | grep -c '^## '; }
 plan_hash() { (cd "$proj/specs/001-demo" && { cat spec.md; awk '/^```/{f=!f} !f&&/^## Validate$/{s=1;next} !f&&/^## /{s=0} !s' plan.md; cat tasks.md; } | sha256sum | cut -d' ' -f1); }
@@ -132,7 +134,7 @@ setmode '{"mode": "codex"}'
 h=$(plan_hash)
 run plan specs/001-demo
 check "(d) mode codex: plan prints today's first line, no advisors line" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "APPROVED sha256 $h" ] && ! grep -q "^advisors:" <<<"$out"'
-out=$(cd "$proj" && say='advisors: none (plan, risk none)' bash "$root/scripts/st-advisor.sh" plan specs/001-demo); rc=$?
+out=$(cd "$proj" && say='advisors: none (plan, risk none)' bash "$repo/scripts/st-advisor.sh" plan specs/001-demo); rc=$?
 check "(d) mode codex with say in the environment: no advisors line" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "APPROVED sha256 $h" ] && ! grep -q "^advisors:" <<<"$out"'
 n0=$(nrec)
 run decisions specs/001-demo "$tmp/list.txt"
@@ -159,7 +161,7 @@ mkdir -p "$tmp/gitfail" "$tmp/nosha"
 printf '#!/usr/bin/env bash\n[ "$1" = diff ] && exit 1\nexec %s "$@"\n' "$realgit" > "$tmp/gitfail/git"
 printf '#!/usr/bin/env bash\nexit 0\n' > "$tmp/nosha/sha256sum"
 chmod +x "$tmp/gitfail/git" "$tmp/nosha/sha256sum"
-rundiff() { rm -f "$tmp/argv"; n0=$(nrec); out=$(cd "$proj" && PATH="$1" bash "$root/scripts/st-advisor.sh" diff specs/001-demo "$first"); rc=$?; }
+rundiff() { rm -f "$tmp/argv"; n0=$(nrec); out=$(cd "$proj" && PATH="$1" bash "$repo/scripts/st-advisor.sh" diff specs/001-demo "$first"); rc=$?; }
 rundiff "$tmp/gitfail:$PATH"
 check "(f) git diff fails: cannot hash inputs, exit 2, no record, no Codex" '[ $rc = 2 ] && [ "$out" = "cannot hash inputs" ] && calls_ok 0'
 rundiff "$tmp/nosha:$PATH"
@@ -242,12 +244,12 @@ git -C "$proj" worktree add -q --detach "$wt"
 mkdir -p "$wt/.stratum"
 printf '{"risk": "low"}' > "$wt/.stratum/state.json"
 approve
-out=$(cd "$wt" && bash "$root/scripts/st-advisor.sh" plan specs/001-demo); rc=$?
+out=$(cd "$wt" && bash "$repo/scripts/st-advisor.sh" plan specs/001-demo); rc=$?
 check "(m) linked worktree: risk comes from the main checkout (high)" '[ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "advisors: both (plan, risk high)" ]'
 
 mkdir -p "$tmp/user"
 printf '{"tokens":"x"}' > "$tmp/user/auth.json"
-out=$(cd "$proj" && CODEX_HOME="$tmp/user" bash "$root/scripts/st-advisor.sh" codex-home); rc=$?
+out=$(cd "$proj" && CODEX_HOME="$tmp/user" bash "$repo/scripts/st-advisor.sh" codex-home); rc=$?
 check "(M1) codex-home: usage line without codex-home, exit 2, no Stratum Codex home folder" '[ $rc = 2 ] && [[ "$(head -n1 <<<"$out")" == "usage:"* ]] && [[ "$(head -n1 <<<"$out")" != *codex-home* ]] && [ ! -e "$tmp/state/stratum/codex-home" ]'
 
 cat > "$tmp/logw.py" <<'PY'
@@ -323,7 +325,7 @@ ws=wQ9
 hrun() {
   rm -f "$tmp/argv" "$tmp/herdr.log" "$tmp/h.args" "$tmp/hget.n" "$tmp/timeout.log"
   printf '%s' "$1" > "$tmp/hmode"
-  out=$(cd "$proj" && PATH="$tmp/hbin2:$PATH" HERDR_ENV=1 HERDR_WORKSPACE_ID=$ws bash "${sr:-$root}/scripts/st-advisor.sh" plan specs/001-demo); rc=$?
+  out=$(cd "$proj" && PATH="$tmp/hbin2:$PATH" HERDR_ENV=1 HERDR_WORKSPACE_ID=$ws bash "${sr:-$repo}/scripts/st-advisor.sh" plan specs/001-demo); rc=$?
 }
 setmode '{"mode": "codex"}'
 approve
@@ -357,7 +359,7 @@ check "(M2) tab path: no --env in herdr calls, record under codex-tabs, last lin
 hreset
 rm -f "$tmp/herdr.log"
 printf '%s' nofolder > "$tmp/hmode"
-for fd in 001-demo 002-count; do (cd "$proj" && PATH="$tmp/hbin2:$PATH" HERDR_ENV=1 HERDR_WORKSPACE_ID=$ws bash "$root/scripts/st-advisor.sh" plan "specs/$fd" >/dev/null); done
+for fd in 001-demo 002-count; do (cd "$proj" && PATH="$tmp/hbin2:$PATH" HERDR_ENV=1 HERDR_WORKSPACE_ID=$ws bash "$repo/scripts/st-advisor.sh" plan "specs/$fd" >/dev/null); done
 check "(M3) two feature folders: both agent start lines name st-codex-demo" '[ "$(grep -c "^agent start st-codex-demo --kind codex" "$tmp/herdr.log")" = 2 ]'
 hreset
 touch "$tmp/htab"
@@ -378,8 +380,8 @@ check "(M6) Codex writes a file in the tab: first line BLOCKED with the file, ex
 rm -f "$proj/new.txt"
 mk="$tmp/state/stratum/codex-tabs/st-codex-demo.review"
 mkdir -p "$tmp/state/stratum/codex-tabs"
-akey() { rm -f "$tmp/herdr.log" "$tmp/hget.n" "$tmp/hread.n"; out=$(cd "$proj" && PATH="$tmp/hbin2:$PATH" HERDR_ENV=1 HERDR_WORKSPACE_ID=$ws bash "$root/scripts/st-advisor.sh" answer "$@"); rc=$?; }
-wrun() { rm -f "$tmp/herdr.log" "$tmp/hget.n" "$tmp/hread.n"; out=$(cd "$proj" && PATH="$tmp/nosleep:$tmp/hbin2:$PATH" HERDR_ENV=1 HERDR_WORKSPACE_ID=$ws "$realtimeout" "$1" bash "$root/scripts/st-advisor.sh" watch); rc=$?; }
+akey() { rm -f "$tmp/herdr.log" "$tmp/hget.n" "$tmp/hread.n"; out=$(cd "$proj" && PATH="$tmp/hbin2:$PATH" HERDR_ENV=1 HERDR_WORKSPACE_ID=$ws bash "$repo/scripts/st-advisor.sh" answer "$@"); rc=$?; }
+wrun() { rm -f "$tmp/herdr.log" "$tmp/hget.n" "$tmp/hread.n"; out=$(cd "$proj" && PATH="$tmp/nosleep:$tmp/hbin2:$PATH" HERDR_ENV=1 HERDR_WORKSPACE_ID=$ws "$realtimeout" "$1" bash "$repo/scripts/st-advisor.sh" watch); rc=$?; }
 mark() { sleep 120 & live=$!; echo "$live" > "$mk"; }
 unmark() { kill "$live" 2>/dev/null; wait "$live" 2>/dev/null; rm -f "$mk"; }
 nokeys() { ! grep -q "^agent send-keys" "$tmp/herdr.log" 2>/dev/null; }
@@ -430,8 +432,8 @@ for a in "--keys y" "--screen --keys y" "--screen ${sh1}0 --keys y" "--screen ${
 done
 unmark
 check "(M22) answer with no, a short, a long, an uppercase or a non-hex --screen, or keys first: usage, exit 2, no herdr call" '[ $ok = 1 ]'
-out=$(cd "$proj" && bash "$root/scripts/st-advisor.sh" answer --screen "$sh1" --keys y); rc=$?
-outw=$(cd "$proj" && "$realtimeout" 20 bash "$root/scripts/st-advisor.sh" watch); rcw=$?
+out=$(cd "$proj" && bash "$repo/scripts/st-advisor.sh" answer --screen "$sh1" --keys y); rc=$?
+outw=$(cd "$proj" && "$realtimeout" 20 bash "$repo/scripts/st-advisor.sh" watch); rcw=$?
 check "(M12) answer and watch outside herdr: not in herdr, exit 1" '[ $rc = 1 ] && [ "$out" = "not in herdr" ] && [ $rcw = 1 ] && [ "$outw" = "not in herdr" ]'
 printf blocked > "$tmp/hstatus"
 mark
@@ -572,7 +574,7 @@ rrecf="$proj/.stratum/advisor/${br//\//-}.md"
 rrun() {
   rm -f "$tmp/argv" "$tmp/herdr.log" "$tmp/h.args" "$tmp/hget.n" "$tmp/timeout.log"
   printf '%s' "$1" > "$tmp/hmode"
-  out=$(cd "$proj" && PATH="$tmp/hbin2:$PATH" HERDR_ENV=1 HERDR_WORKSPACE_ID=$ws bash "$root/scripts/st-advisor.sh" review "$first"); rc=$?
+  out=$(cd "$proj" && PATH="$tmp/hbin2:$PATH" HERDR_ENV=1 HERDR_WORKSPACE_ID=$ws bash "$repo/scripts/st-advisor.sh" review "$first"); rc=$?
 }
 rrun nofolder
 check "(R1) review in the tab: exit 0, no codex exec, last line names the tab" '[ $rc = 0 ] && [ ! -e "$tmp/argv" ] && [ "$(tail -n1 <<<"$out")" = "codex: tab st-codex-demo" ]'
@@ -592,5 +594,5 @@ rrun writes
 check "(R5) review, Codex writes a file in the tab: BLOCKED with the file, exit 1, BLOCKED entry in the branch record" '[ $rc = 1 ] && [ "$(head -n1 <<<"$out")" = "BLOCKED: Codex changed files during the review: new.txt" ] && grep -qE "^## review \| [^|]+ \| sha256 [0-9a-f]{64} \| BLOCKED$" "$rrecf"'
 rm -f "$proj/new.txt"
 hreset
-check "no repo writes" '[ -z "$(repo_paths | comm -13 <(printf "%s\n" "$repo_before") -)" ]'
+check "no repo writes" '[ "$(repo_files)" = "$repo_before" ]'
 exit $fail
