@@ -44,8 +44,7 @@ Expected red states during the build. Do not "fix" them by editing a test:
 Run in T011. Method of feature 005: copy the whole repo without `.git`
 (`rsync -a --exclude .git ./ <copy>/`, `<copy>` from `mktemp -d`). Baseline: run
 `ST_ROOT=<copy> bash <copy>/tests/test_advisor.sh` and `ST_ROOT=<copy> bash <copy>/tests/test_on_demand.sh`
-on the untouched copy and note the `FAIL` lines (the copy is not a git repo, so `no repo writes`
-compares two equal errors and stays `ok`). Then, per control, take a fresh copy, make the one
+on the untouched copy and note the `FAIL` lines (the copy is not a git repo. `no repo writes` hashes its own copy of `scripts/` and does not use git, so it stays `ok`). Then, per control, take a fresh copy, make the one
 change, run the same test, and expect exactly one more kind of `FAIL` than the baseline: the
 named check. A control that adds no `FAIL` is a check that cannot fail: fix the check (lessons
 L2, L10).
