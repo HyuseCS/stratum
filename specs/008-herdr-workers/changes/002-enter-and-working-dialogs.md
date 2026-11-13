@@ -54,17 +54,40 @@ Part 2 (the input-box lines are a spinner, `$rule`, `❯$nb`, `$rule` and a foot
   - AQ1, AQ2, AQ3, AQ6, W8 and L2 stay green: no question fixture has an input box below it.
   - A2 and NC5 stay.
 
-## Live proof (#104)
-Run on 2026-11-13 with herdr 0.9.5 (installed 2026-11-12), in one scratch Claude pane that is now closed. `herdr agent send-keys <name> enter` submitted in all three places:
+## Live proof (#104, #105)
+Both runs were on 2026-11-13 with herdr 0.9.5 (installed 2026-11-12), in scratch Claude panes in this checkout, now closed.
+
+Run 1 (#104). `herdr agent send-keys <name> enter` submitted in all three places:
 - the prompt box,
 - the "Type something." field while the worker was `blocked`,
 - the same field while it was `done` (read 8 s after the key).
 
-`pane send-keys <pane> enter` also submits, and capital `Enter` works with both. So the bug does not happen on 0.9.5. It was seen on the older herdr, and the laptop's herdr version is unknown. The key change keeps one form that submits on both. No manual step is left for #104.
+`pane send-keys <pane> enter` also submits, and capital `Enter` works with both. So the bug does not happen on 0.9.5. It was seen on an older herdr.
+
+Run 2 (#104). The pane key alone, with no `agent send-keys` Enter before it, submitted the text in both places:
+- the prompt box: `pane send-text`, then `pane send-keys <pane> enter`,
+- the "Type something." field, in the exact order of `answer --text`: the digit by `agent send-keys`, then `pane send-text`, then `pane send-keys <pane> enter`.
+
+Run 2 (#105). A Claude pane in `--permission-mode default` started a general-purpose subagent that ran `touch <scratch file>`.
+- While the dialog was open, `agent get` gave `agent_status` `working`.
+- The screen (`agent read --source recent-unwrapped --lines 40`) ended with these lines, with no input box below them:
+  - a rule line,
+  - ` Bash command · from the general-purpose agent`,
+  - the command block,
+  - ` Do you want to proceed?`,
+  - ` ❯ 1. Yes`,
+  - `   2. Yes, and always allow access to ...`,
+  - `   3. Yes, and switch to auto mode ...`,
+  - `   4. No`,
+  - an ` Esc to cancel ...` line,
+  - a rule line.
+- The script's own functions, sourced from scripts/st-worker.sh at 1ddc983, gave this on that capture: `shown` true, `BM=block`, a 12-character hash, `perm` true, `question` false.
+- Key `1` sent by `agent send-keys` to the `working` worker was accepted. 2 s later the status was still `working` and `shown` was false, so the 2 s re-check gives `state working`.
 
 ## Risks
-- R1: The live text of a subagent dialog is not in the repo. `shown` uses the present `HEAD`, `PERM`, option-line and question patterns. `live` assumes that Claude hides the input box under an open dialog (REAL fixture) and shows it while working (`sentpane`). If a subagent dialog keeps the box below it, the worker is handled as today: no report, never a wrong report.
-  - Optional capture: in a scratch pane with `--permission-mode default`, ask for a subagent that runs one Bash command. Save `herdr agent get <name>` and `herdr agent read <name> --source recent-unwrapped --lines 40`.
+- R1: The dialog shape is now proven for one case: a Bash permission dialog of a subagent on Claude Code, as run on 2026-11-13 (see Live proof). Other dialog kinds use the present `HEAD`, `PERM`, option-line and question patterns. Examples are an edit or write dialog of a subagent, or a question of a subagent. If such a dialog keeps an input box below it, the worker is handled as today: no report, never a wrong report.
+  - Not run live: the whole `st-worker.sh wait` and `answer` commands against a real worker, because they need a started worker with a roster and a worktree.
+  - Not measured: `pane send-keys` on a herdr older than 0.9.5, and the laptop.
 - R2: A dialog of a `working` worker with two head lines (the AN6f shape) or no option line has `BM` empty, so it is not reported. The same as today.
 - R3: Each 5 s poll of a `working` worker in `watch`, and each 10 s slice in `wait`, adds one or two `agent read` calls. On a saved machine, these go through herdr's machine link.
 - R4: W2, WD2 and WD3b run 54 stub slices each. This adds a few seconds to the test run.
