@@ -6,8 +6,10 @@ trap 'rm -rf "$tmp"' EXIT
 fail=0
 check() { if eval "$2"; then echo "ok   $1"; else echo "FAIL $1"; fail=1; fi; }
 export GIT_CONFIG_GLOBAL=/dev/null XDG_CONFIG_HOME="$tmp"
-repo_paths() { git -C "$root" status --porcelain --no-renames --untracked-files=all | cut -c4- | while IFS= read -r p; do echo "$(git -C "$root" hash-object -- "$p" 2>/dev/null) $p"; done | sort; }
-repo_before=$(repo_paths)
+repo=$tmp/repo
+mkdir "$repo" && cp -r "$root/scripts" "$repo/" || exit 1
+repo_files() { (cd "$repo" && find . -type f -exec sha256sum {} + | LC_ALL=C sort); }
+repo_before=$(repo_files)
 
 mkdir -p "$tmp/bin"
 cat > "$tmp/bin/codex" <<'FAKE'
@@ -56,7 +58,7 @@ git -C "$proj" add -A
 git -C "$proj" -c user.name=t -c user.email=t@t commit -q -m first
 first=$(git -C "$proj" rev-parse HEAD)
 
-adv() { (cd "$proj" && bash "$root/scripts/st-advisor.sh" "$@"); }
+adv() { (cd "$proj" && bash "$repo/scripts/st-advisor.sh" "$@"); }
 run() { out=$(adv "$@"); rc=$?; }
 answer() { printf '%s' "$1" > "$tmp/answer"; }
 plan_hash() { (cd "$proj/$1" && { cat spec.md; awk '/^```/{f=!f} !f&&/^## Validate$/{s=1;next} !f&&/^## /{s=0} !s' plan.md; cat tasks.md; } | sha256sum | cut -d' ' -f1); }
@@ -152,7 +154,7 @@ b=$(snap specs/010-hash)
 mkdir -p "$tmp/nosha"
 printf '#!/usr/bin/env bash\nexit 0\n' > "$tmp/nosha/sha256sum"
 chmod +x "$tmp/nosha/sha256sum"
-out=$(cd "$proj" && PATH="$tmp/nosha:$PATH" bash "$root/scripts/st-advisor.sh" waive plan specs/010-hash fix-only 2>&1); rc=$?
+out=$(cd "$proj" && PATH="$tmp/nosha:$PATH" bash "$repo/scripts/st-advisor.sh" waive plan specs/010-hash fix-only 2>&1); rc=$?
 check "(g) sha256sum prints nothing: cannot hash inputs, exit 2, no record" '[ $rc = 2 ] && [ "$out" = "cannot hash inputs" ] && [ "$(snap specs/010-hash)" = "$b" ]'
 
 rm -f "$tmp/argv"
@@ -197,11 +199,11 @@ realgit=$(command -v git)
 mkdir -p "$tmp/git128"
 printf '#!/usr/bin/env bash\n[ "$1 $2" = "diff --quiet" ] && exit 128\nexec %s "$@"\n' "$realgit" > "$tmp/git128/git"
 chmod +x "$tmp/git128/git"
-out=$(cd "$proj" && PATH="$tmp/git128:$PATH" bash "$root/scripts/st-advisor.sh" diff specs/013-git "$first"); rc=$?
+out=$(cd "$proj" && PATH="$tmp/git128:$PATH" bash "$repo/scripts/st-advisor.sh" diff specs/013-git "$first"); rc=$?
 check "(n) git diff --quiet exits 128: usage, exit 2, no record" '[ $rc = 2 ] && [[ "$(head -n1 <<<"$out")" == "usage: st-advisor.sh"* ]] && [ ! -e "$proj/specs/013-git/advisor.md" ] && [ ! -e "$tmp/argv" ]'
 
 run waive plan specs/014-noplan fix-only
 check "(o) waive with no plan.md and no record: usage, exit 2, no record" '[ $rc = 2 ] && [[ "$(head -n1 <<<"$out")" == "usage: st-advisor.sh"* ]] && [ ! -e "$proj/specs/014-noplan/advisor.md" ]'
 
-check "no repo writes" '[ -z "$(repo_paths | comm -13 <(printf "%s\n" "$repo_before") -)" ]'
+check "no repo writes" '[ "$(repo_files)" = "$repo_before" ]'
 exit $fail

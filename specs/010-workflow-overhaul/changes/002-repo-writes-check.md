@@ -3,6 +3,7 @@
 What: Fix issue #95. The "no repo writes" check in three advisor tests compares the full `git status --porcelain` text from the start and the end of the run. A commit or `git add` by another process in the same worktree changes that text and the check fails. The new check fails only when a path and content pair shows up in the status at the end that was not there at the start. A real write by the advisor scripts into the repo still fails it.
 FRs: FR-001, FR-002, FR-012 (the advisor tests that hold the check). FR-009 does not apply: `st-lock.sh` cannot serialise a `git commit`.
 Impact area: core runtime (test suite only, no script change)
+Superseded in part by `changes/003-advisor-test-flakes.md`, which replaces the `git status` check with a hash of a private copy of `scripts/`.
 
 ## Cause (proven, red run 2026-11-09)
 

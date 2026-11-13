@@ -6,8 +6,10 @@ trap 'rm -rf "$tmp"' EXIT
 fail=0
 check() { if eval "$2"; then echo "ok   $1"; else echo "FAIL $1"; fail=1; fi; }
 export GIT_CONFIG_GLOBAL=/dev/null XDG_CONFIG_HOME="$tmp"
-repo_paths() { git -C "$root" status --porcelain --no-renames --untracked-files=all | cut -c4- | while IFS= read -r p; do echo "$(git -C "$root" hash-object -- "$p" 2>/dev/null) $p"; done | sort; }
-repo_before=$(repo_paths)
+repo=$tmp/repo
+mkdir "$repo" && cp -r "$root/scripts" "$repo/" || exit 1
+repo_files() { (cd "$repo" && find . -type f -exec sha256sum {} + | LC_ALL=C sort); }
+repo_before=$(repo_files)
 
 mkdir -p "$tmp/bin"
 cat > "$tmp/bin/codex" <<'FAKE'
@@ -50,8 +52,9 @@ git -C "$proj" add -A
 git -C "$proj" -c user.name=t -c user.email=t@t commit -q -m first
 first=$(git -C "$proj" rev-parse HEAD)
 
-adv() { (cd "$proj" && bash "$root/scripts/st-advisor.sh" "$@"); }
-run() { out=$(adv "$@"); rc=$?; }
+adv() { (cd "$proj" && bash "$repo/scripts/st-advisor.sh" "$@"); }
+run() { t0=$(date +%s); out=$(adv "$@"); rc=$?; t1=$(date +%s); }
+lim_ok() { local a n; a=$(sed -n 1,4p "$tmp/timeout_argv" 2>/dev/null | paste -sd,); n=${a#-k,10,}; n=${n%,codex}; [[ $a == -k,10,*,codex && $n =~ ^[0-9]+$ ]] && [ "$n" -le "$1" ] && [ "$n" -ge $(( $1 - (t1 - t0) )) ]; }
 last_header() { grep -E "^## $1 \| " "$proj/specs/001-demo/advisor.md" 2>/dev/null | tail -n1; }
 plan_hash() { (cd "$proj/specs/001-demo" && { cat spec.md; awk '/^```/{f=!f} !f&&/^## Validate$/{s=1;next} !f&&/^## /{s=0} !s' plan.md; cat tasks.md; } | sha256sum | cut -d' ' -f1); }
 answer() { printf '%s' "$1" > "$tmp/answer"; }
@@ -64,7 +67,7 @@ check "G5 outside herdr the last line says headless" '[ "$(tail -n1 <<<"$out")" 
 check "plan record header" 'last_header plan | grep -qE "^## plan \| [0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z \| sha256 $h \| APPROVED$"'
 check "FR-012 argv read-only" '[ "$(head -n1 "$tmp/argv" 2>/dev/null)" = exec ] && grep -x -A1 -- "-s" "$tmp/argv" | grep -qx read-only && grep -qx -- "--ephemeral" "$tmp/argv" && grep -qx -- "--output-schema" "$tmp/argv" && grep -qx -- "-o" "$tmp/argv" && [ "$(tail -n1 "$tmp/argv")" = "-" ]'
 check "D23 argv ignore-user-config after read-only" 'grep -x -A1 -- read-only "$tmp/argv" | grep -qx -- --ignore-user-config'
-check "FR-012 script has no write flag" '[ -f "$root/scripts/st-advisor.sh" ] && ! grep -qE -- "workspace-write|danger-full-access|dangerously-bypass|approve-for-me|add-dir|full-auto|exec review" "$root/scripts/st-advisor.sh"'
+check "FR-012 script has no write flag" '[ -f "$repo/scripts/st-advisor.sh" ] && ! grep -qE -- "workspace-write|danger-full-access|dangerously-bypass|approve-for-me|add-dir|full-auto|exec review" "$repo/scripts/st-advisor.sh"'
 cat > "$tmp/schema.expected" <<'EOF'
 {"type":"object","additionalProperties":false,"required":["verdict","summary","findings"],"properties":{"verdict":{"type":"string","enum":["APPROVED","REVISE","BLOCKED"]},"summary":{"type":"string"},"findings":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["claim","evidence","location","severity"],"properties":{"claim":{"type":"string"},"evidence":{"type":"string"},"location":{"type":"string"},"severity":{"type":"string","enum":["CRITICAL","HIGH","MEDIUM","LOW"]}}}}}}
 EOF
@@ -134,7 +137,7 @@ blocked() { [ "$rc" = 1 ] && [ "$(head -n1 <<<"$out")" = "BLOCKED: $1" ] && ! gr
 
 rm -f "$tmp/answer"
 n0=$(nrec)
-out=$(cd "$proj" && PATH="$tmp/sys" bash "$root/scripts/st-advisor.sh" plan specs/001-demo); rc=$?
+out=$(cd "$proj" && PATH="$tmp/sys" bash "$repo/scripts/st-advisor.sh" plan specs/001-demo); rc=$?
 check "codex missing: no advisor, exit 0, no record" '[ $rc = 0 ] && [ "$out" = "no advisor: codex not found" ] && [ "$(nrec)" = "$n0" ]'
 
 FAKE_RC=1 FAKE_ERR=$'warning: retry\nERROR: unexpected status 401 Unauthorized: test-401\nretrying in 1s\n' run plan specs/001-demo
@@ -202,7 +205,7 @@ check "timed out" 'blocked "timed out"'
 FAKE_TIMEOUT=137 run plan specs/001-demo
 check "killed after timeout (137)" 'blocked "timed out"'
 
-check "timeout argv" '[ "$(sed -n 1,4p "$tmp/timeout_argv" | paste -sd,)" = "-k,10,540,codex" ]'
+check "timeout argv" 'lim_ok 540'
 
 mkdir -p "$proj/specs/002-half"
 printf '# spec\n' > "$proj/specs/002-half/spec.md"
@@ -331,11 +334,11 @@ check "no mode file: no advisor, exit 0, no codex" '[ $rc = 0 ] && [ "$out" = "n
 git -C "$proj" worktree add -q --detach "$tmp/wt"
 rm -f "$tmp/wt/.stratum/advisor.json"
 printf '{"mode": "off"}' > "$mf"
-out=$(cd "$tmp/wt" && bash "$root/scripts/st-advisor.sh" plan specs/001-demo); rc=$?
+out=$(cd "$tmp/wt" && bash "$repo/scripts/st-advisor.sh" plan specs/001-demo); rc=$?
 check "worktree with no mode file reads the main checkout's file" '[ $rc = 0 ] && [ "$out" = "no advisor: mode off" ]'
 printf '{"mode": "off"}' > "$tmp/wt/.stratum/advisor.json"
 printf '{"mode": "codex"}' > "$mf"
-out=$(cd "$tmp/wt" && bash "$root/scripts/st-advisor.sh" plan specs/001-demo); rc=$?
+out=$(cd "$tmp/wt" && bash "$repo/scripts/st-advisor.sh" plan specs/001-demo); rc=$?
 check "worktree mode file wins over the main checkout's" '[ $rc = 0 ] && [ "$out" = "no advisor: mode off" ]'
 git -C "$proj" worktree remove --force "$tmp/wt"
 
@@ -356,7 +359,7 @@ check "mode off" '[ $rc = 0 ] && [ "$out" = "no advisor: mode off" ] && [ ! -e "
 
 rm -f "$tmp/argv"
 n0=$(nrec)
-out=$(cd "$proj" && PATH="$tmp/sys" bash "$root/scripts/st-advisor.sh" plan specs/001-demo); rc=$?
+out=$(cd "$proj" && PATH="$tmp/sys" bash "$repo/scripts/st-advisor.sh" plan specs/001-demo); rc=$?
 check "mode off without codex" '[ $rc = 0 ] && [ "$out" = "no advisor: mode off" ] && [ ! -e "$tmp/argv" ] && [ "$(nrec)" = "$n0" ]'
 
 badjson() {
@@ -398,11 +401,11 @@ printf '#!/usr/bin/env bash\nexit 0\n' > "$tmp/nosha/sha256sum"
 chmod +x "$tmp/nosha/sha256sum"
 rm -f "$tmp/argv"
 n0=$(nrec)
-out=$(cd "$proj" && PATH="$tmp/nosha:$PATH" bash "$root/scripts/st-advisor.sh" plan specs/001-demo); rc=$?
+out=$(cd "$proj" && PATH="$tmp/nosha:$PATH" bash "$repo/scripts/st-advisor.sh" plan specs/001-demo); rc=$?
 check "sha256sum prints nothing: plan run exit 2, no record" '[ $rc = 2 ] && [ "$out" = "cannot hash inputs" ] && [ ! -e "$tmp/argv" ] && [ "$(nrec)" = "$n0" ]'
-out=$(cd "$proj" && PATH="$tmp/nosha:$PATH" bash "$root/scripts/st-advisor.sh" check plan specs/001-demo); rc=$?
+out=$(cd "$proj" && PATH="$tmp/nosha:$PATH" bash "$repo/scripts/st-advisor.sh" check plan specs/001-demo); rc=$?
 check "sha256sum prints nothing: check plan exit 2" '[ $rc = 2 ] && [ "$out" = "cannot hash inputs" ]'
-runpath() { rm -f "$tmp/argv"; n0=$(nrec); out=$(cd "$proj" && PATH="$1" bash "$root/scripts/st-advisor.sh" plan specs/001-demo); rc=$?; }
+runpath() { rm -f "$tmp/argv"; n0=$(nrec); out=$(cd "$proj" && PATH="$1" bash "$repo/scripts/st-advisor.sh" plan specs/001-demo); rc=$?; }
 noadv() { [ $rc = 0 ] && [ "$out" = "$1" ] && [ ! -e "$tmp/argv" ] && [ "$(nrec)" = "$n0" ]; }
 rm -f "$mf"
 runpath "$tmp/nosha:$PATH"
@@ -429,9 +432,9 @@ printf '#!/usr/bin/env bash\nhead -q -c 10 "$@"\nexit 1\n' > "$tmp/badcat/cat"
 chmod +x "$tmp/badcat/cat"
 rm -f "$tmp/argv"
 n0=$(nrec)
-out=$(cd "$proj" && PATH="$tmp/badcat:$PATH" bash "$root/scripts/st-advisor.sh" plan specs/001-demo); rc=$?
+out=$(cd "$proj" && PATH="$tmp/badcat:$PATH" bash "$repo/scripts/st-advisor.sh" plan specs/001-demo); rc=$?
 check "cat fails after partial output: plan run exit 2, no record" '[ $rc = 2 ] && [ "$out" = "cannot hash inputs" ] && [ ! -e "$tmp/argv" ] && [ "$(nrec)" = "$n0" ]'
-out=$(cd "$proj" && PATH="$tmp/badcat:$PATH" bash "$root/scripts/st-advisor.sh" check plan specs/001-demo); rc=$?
+out=$(cd "$proj" && PATH="$tmp/badcat:$PATH" bash "$repo/scripts/st-advisor.sh" check plan specs/001-demo); rc=$?
 check "cat fails after partial output: check plan exit 2" '[ $rc = 2 ] && [ "$out" = "cannot hash inputs" ]'
 
 mkdir -p "$tmp/badsha"
@@ -439,9 +442,9 @@ printf '#!/usr/bin/env bash\necho "000000000000000000000000000000000000000000000
 chmod +x "$tmp/badsha/sha256sum"
 rm -f "$tmp/argv"
 n0=$(nrec)
-out=$(cd "$proj" && PATH="$tmp/badsha:$PATH" bash "$root/scripts/st-advisor.sh" plan specs/001-demo); rc=$?
+out=$(cd "$proj" && PATH="$tmp/badsha:$PATH" bash "$repo/scripts/st-advisor.sh" plan specs/001-demo); rc=$?
 check "sha256sum fails with a digest: plan run exit 2, no record" '[ $rc = 2 ] && [ "$out" = "cannot hash inputs" ] && [ ! -e "$tmp/argv" ] && [ "$(nrec)" = "$n0" ]'
-out=$(cd "$proj" && PATH="$tmp/badsha:$PATH" bash "$root/scripts/st-advisor.sh" check plan specs/001-demo); rc=$?
+out=$(cd "$proj" && PATH="$tmp/badsha:$PATH" bash "$repo/scripts/st-advisor.sh" check plan specs/001-demo); rc=$?
 check "sha256sum fails with a digest: check plan exit 2" '[ $rc = 2 ] && [ "$out" = "cannot hash inputs" ]'
 
 if [ "$(id -u)" = 0 ]; then
@@ -488,8 +491,8 @@ rvm="$rv/.stratum/advisor.json"
 rvs="$rv/.stratum/state.json"
 rdir="$rv/.stratum/advisor"
 printf '{"mode": "codex"}' > "$rvm"
-rvadv() { (cd "$rv" && bash "$root/scripts/st-advisor.sh" review "$@"); }
-rrun() { out=$(rvadv "$@"); rc=$?; }
+rvadv() { (cd "$rv" && bash "$repo/scripts/st-advisor.sh" review "$@"); }
+rrun() { t0=$(date +%s); out=$(rvadv "$@"); rc=$?; t1=$(date +%s); }
 rh=$(git -C "$rv" diff --no-ext-diff --no-color "$c1" HEAD -- | sha256sum | cut -d' ' -f1)
 rrec() { grep -E '^## review \| ' "$1" 2>/dev/null | tail -n1; }
 usage_rc2() { [ "$rc" = 2 ] && [[ "$(head -n1 <<<"$out")" == "usage: st-advisor.sh plan|test|diff|decisions|change|review|round|check|continued|waive|note|talk|count|answer|watch ..."* ]]; }
@@ -502,7 +505,7 @@ git -C "$rv" status --porcelain > "$tmp/st.after"
 check "FR-001 review runs with no feature folder: exit 0, verdict line with the diff hash" '[ ! -d "$rv/specs" ] && [ $rc = 0 ] && [ "$(head -n1 <<<"$out")" = "APPROVED sha256 $rh" ]'
 check "FR-009 review output: record line and headless last line" 'grep -qxF "record: $rdir/main.md" <<<"$out" && [ "$(tail -n1 <<<"$out")" = "codex: headless (not in herdr)" ]'
 check "FR-009 review prompt: head is exact, Point line names the base" 'head -n4 "$tmp/prompt" | cmp -s - "$tmp/head.expected" && grep -qxF "Point: review. Do a full review of the changes in git diff $c1..HEAD (run it yourself): bugs, regressions, security and broken rules of the project'"'"'s constitution. Do not build or fix." "$tmp/prompt"'
-check "FR-005 review timeout argv is 1800" '[ "$(sed -n 1,4p "$tmp/timeout_argv" 2>/dev/null | paste -sd,)" = "-k,10,1800,codex" ]'
+check "FR-005 review timeout argv is 1800" 'lim_ok 1800'
 check "FR-007 review record header" 'rrec "$rdir/main.md" | grep -qE "^## review \| [0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z \| sha256 $rh \| APPROVED$"'
 check "SC-002 review run changes nothing in git status" '[ -s "$tmp/st.before" ] && cmp -s "$tmp/st.before" "$tmp/st.after"'
 rrun "$c1"
@@ -543,7 +546,7 @@ rm -f "$rvm" "$tmp/argv"
 rrun "$c1"
 check "FR-003 mode not set: no advisor, no codex" '[ $rc = 0 ] && [ "$out" = "no advisor: mode not set. Write .stratum/advisor.json with \"mode\": \"auto\", \"codex\", \"both\" or \"off\"." ] && [ ! -e "$tmp/argv" ]'
 printf '{"mode": "codex"}' > "$rvm"
-out=$(cd "$rv" && PATH="$tmp/sys" bash "$root/scripts/st-advisor.sh" review "$c1"); rc=$?
+out=$(cd "$rv" && PATH="$tmp/sys" bash "$repo/scripts/st-advisor.sh" review "$c1"); rc=$?
 check "FR-003 codex not found: no advisor, no codex" '[ $rc = 0 ] && [ "$out" = "no advisor: codex not found" ] && [ ! -e "$tmp/argv" ]'
 
 rm -rf "$rdir"
@@ -557,7 +560,7 @@ check "FR-007 detached HEAD writes <short id>.md" '[ -f "$rdir/$sid.md" ] && rre
 git -C "$rv" checkout -q main
 wt="$tmp/rvwt"
 git -C "$rv" worktree add -q -b wtb "$wt"
-out=$(cd "$wt" && bash "$root/scripts/st-advisor.sh" review "$c1"); rc=$?
+out=$(cd "$wt" && bash "$repo/scripts/st-advisor.sh" review "$c1"); rc=$?
 check "FR-007 linked worktree writes into the main checkout" '[ -f "$rdir/wtb.md" ] && [ ! -e "$wt/.stratum/advisor" ] && grep -qxF "record: $rdir/wtb.md" <<<"$out"'
 git -C "$rv" worktree remove --force "$wt"
 
@@ -616,5 +619,5 @@ fi
 chmod 600 "$tmp/plan000.md"
 rm -rf "$rdir"
 
-check "no repo writes" '[ -z "$(repo_paths | comm -13 <(printf "%s\n" "$repo_before") -)" ]'
+check "no repo writes" '[ "$(repo_files)" = "$repo_before" ]'
 exit $fail
