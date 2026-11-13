@@ -25,6 +25,8 @@ screen	<hash>
 
 (tab-separated, like the `state` and `request` lines). Then print `pane text:` and `s` itself, not a second read (D9). No dialog: no `screen` line, and `pane text:` with `s`. A failed read: no `screen` line, and `pane text:` with nothing after it (as `panetext` does today with `|| true`). The blocked pane text is now ANSI-stripped. `stopped`, `unsent` and the `approval` block keep `panetext` as it is. `watch` prints the same lines, since it uses `st blocked`.
 
+A `working` worker whose screen shows a live dialog is also handled as `blocked` here and in `answer`: see specs/008-herdr-workers/changes/002-enter-and-working-dialogs.md and D38 in specs/008-herdr-workers/decisions.md.
+
 ## 3. `answer`
 
 Inputs: `answer <id> [--machine <m>] [--screen <hash>] --keys <key>...` or `answer <id> [--machine <m>] --text <text>`. `--screen` comes before `--keys`, because `--keys` takes the rest of the line. `--screen` must match `^[0-9a-f]{12}$`, else the usage line and exit 2, with no herdr call.
@@ -49,7 +51,7 @@ Step 3.5 replaces T003's "no option" line and its lasting-phrase check (D7). The
 
 ## 4. Stub cases (`tests/test_st_worker.sh`)
 
-Every case: `mk`, then the pane in `$tmp/pane.txt`. "Nothing sent" means `cnt "^(agent\tsend-keys|pane\tsend-text)\t"` is 0. "The hash" is the `screen` line's hash from a `wait` run on the same pane (`states blocked` before `wait`, then `states blocked working` for a send). The dialog head for the cases below is `Do you want to proceed?`, and option 3 is `  3. No, and tell Claude what to do differently (esc)`, unless the row says otherwise.
+Every case: `mk`, then the pane in `$tmp/pane.txt`. "Nothing sent" means `cnt "^(agent\tsend-keys|pane\tsend-(text|keys))\t"` is 0. "The hash" is the `screen` line's hash from a `wait` run on the same pane (`states blocked` before `wait`, then `states blocked working` for a send). The dialog head for the cases below is `Do you want to proceed?`, and option 3 is `  3. No, and tell Claude what to do differently (esc)`, unless the row says otherwise.
 
 | Id | Pane | Call | Expect |
 |----|------|------|--------|

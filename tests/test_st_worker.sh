@@ -18,6 +18,7 @@ X=$(cat "$T/x")
 if [ $# -eq 0 ]; then echo BARE >> "$T/calls"; exit 99; fi
 ( IFS=$'\t'; printf '%s\n' "$*" >> "$T/calls" )
 M=; if [ "$1" = --machine ]; then M=$2; shift 2; fi
+if [ "$1 $2" = "agent prompt" ] && [ -e "$T/pane.prompt" ]; then mv "$T/pane.prompt" "$T/pane.txt"; fi
 printf '%s\n' "$1 $2" >> "$T/order"
 p=; for a in "$@"; do [ "$p" != --cwd ] || [[ $a != \~* ]] || [ "$1 $2" = "worktree list" ] || { printf '{"error":{"code":"stub_tilde","message":"stub --cwd %s"}}\n' "$a" >&2; exit 1; }; p=$a; done
 if [ "$1 $2" = "agent start" ] && [ -n "${STUB_BUSY:-}" ]; then
@@ -104,9 +105,13 @@ case "$1 $2" in
   printf 'pane\t%s\n' "$p" >> "$T/made"
   jq -nc --arg p "$p" '{result:{type:"pane_created",pane:{pane_id:$p}}}' ;;
 "agent read")
-  if [ "$5" = visible ]; then cat "$T/pane.txt" 2>/dev/null || printf 'STUB PANE %s\n' "$X"
-  elif [ -e "$T/pane.txt" ]; then tail -n "$7" "$T/pane.txt"; else printf 'STUB PANE %s\n' "$X"; fi ;;
+  if [ -e "$T/swap.after" ]; then n=$(( $(cat "$T/n_read" 2>/dev/null || echo 0) + 1 )); echo $n > "$T/n_read"; [ "$n" -le "$(cat "$T/swap.at")" ] || mv "$T/swap.after" "$T/pane.txt"; fi
+  f=$T/pane.$3.txt; [ -e "$f" ] || f=$T/pane.txt
+  if [ "$5" = visible ]; then cat "$f" 2>/dev/null || printf 'STUB PANE %s\n' "$X"
+  elif [ -e "$f" ]; then tail -n "$7" "$f"; else printf 'STUB PANE %s\n' "$X"; fi ;;
 "agent send-keys")
+  echo '{"result":{}}' ;;
+"pane send-keys")
   [ ! -e "$T/pane.after" ] || [ "${*: -1}" != enter ] || mv "$T/pane.after" "$T/pane.txt"
   echo '{"result":{}}' ;;
 "agent wait")
@@ -258,7 +263,7 @@ sargs=(T004 --task "$task" --test "$testcmd" --lane "$lane" --roster "$roster")
 reset() { : > "$tmp/calls"; : > "$tmp/gh_calls"; }
 states() { rm -f "$tmp/n_get"; printf '%s\n' "$@" > "$tmp/states"; }
 fresh() {
-  rm -rf "$tmp"/repo-worker-* "$tmp"/rrepo-worker-* "$tmp"/repo-t00* "$tmp"/repo-9* "$tmp"/repo-autonomous_sessions "$tmp"/repo-fix_* "$tmp"/repo-real_* "$tmp"/repo-abc* "$tmp"/parasat-* "$tmp"/myrepo-* "$tmp"/rrepo-t00* "$tmp/rmarker" "$tmp/rguard" "$tmp"/n_* "$tmp/closed" "$tmp/resume_result" "$tmp/tc.json" "$tmp/s2" "$tmp/pane.txt" "$tmp/pane.after" "$tmp/made" "$tmp/order"
+  rm -rf "$tmp"/repo-worker-* "$tmp"/rrepo-worker-* "$tmp"/repo-t00* "$tmp"/repo-9* "$tmp"/repo-autonomous_sessions "$tmp"/repo-fix_* "$tmp"/repo-real_* "$tmp"/repo-abc* "$tmp"/parasat-* "$tmp"/myrepo-* "$tmp"/rrepo-t00* "$tmp/rmarker" "$tmp/rguard" "$tmp"/n_* "$tmp/closed" "$tmp/resume_result" "$tmp/tc.json" "$tmp/s2" "$tmp/pane.txt" "$tmp/pane.after" "$tmp/pane.prompt" "$tmp"/pane.worker-*.txt "$tmp/swap.after" "$tmp/swap.at" "$tmp/made" "$tmp/order"
   printf 'x%s\n' "$RANDOM$RANDOM" > "$tmp/x"
   printf 'TASK BODY %s\nOwns: `src/a.py`.\n' "$(cat "$tmp/x")" > "$task"
   jq -nc '[{workspace_id:"w1P",label:"orchestrator"},{workspace_id:"stubDecoyWS",label:"notaworker"},{workspace_id:"stubMainWS",label:"main"}]' > "$tmp/ws.json"
@@ -394,10 +399,10 @@ check "S5 one prompt only, nothing closed" 'never 0 1'
 
 fresh; unsentpane > "$tmp/pane.txt"; sentpane > "$tmp/pane.after"
 STUB_FAIL="agent prompt" STUB_FAIL_CODE=agent_prompt_stalled run bash "$script" start "${sargs[@]}"
-check "S5b stalled prompt in the box: one Enter, no second paste, exit 0, state working" '[ $rc = 0 ] && [ "$(cnt "^agent\tsend-keys\tworker-t004\tenter$")" = 1 ] && never 0 1 && hasline "state\tworking\tworker-t004\t%s" "$(pane)"'
+check "S5b stalled prompt in the box: one Enter, no second paste, exit 0, state working" '[ $rc = 0 ] && [ "$(cnt "^pane\tsend-keys\t$(pane)\tenter$")" = 1 ] && [ "$(cnt "^agent\tsend-keys\t[^\t]*\tenter$")" = 0 ] && never 0 1 && hasline "state\tworking\tworker-t004\t%s" "$(pane)"'
 fresh; unsentpane > "$tmp/pane.txt"
 STUB_FAIL="agent prompt" STUB_FAIL_CODE=agent_prompt_stalled run bash "$script" start "${sargs[@]}"
-check "S5c prompt still in the box after the Enter: exit 7, worker line, state unsent, pane text" '[ $rc = 7 ] && [ "$(cnt "^agent\tsend-keys\tworker-t004\tenter$")" = 1 ] && never 0 1 && hasline "worker\tworker-t004\tlocal\t%s\t%s\trepo-t004\t%s" "$(tabid)" "$(pane)" "$(wt)" && hasline "state\tunsent\tworker-t004\t%s" "$(pane)" && grep -qxF "pane text:" <<<"$out"'
+check "S5c prompt still in the box after the Enter: exit 7, worker line, state unsent, pane text" '[ $rc = 7 ] && [ "$(cnt "^pane\tsend-keys\t$(pane)\tenter$")" = 1 ] && [ "$(cnt "^agent\tsend-keys\t[^\t]*\tenter$")" = 0 ] && never 0 1 && hasline "worker\tworker-t004\tlocal\t%s\t%s\trepo-t004\t%s" "$(tabid)" "$(pane)" "$(wt)" && hasline "state\tunsent\tworker-t004\t%s" "$(pane)" && grep -qxF "pane text:" <<<"$out"'
 
 fresh
 addtab "stubDecoyWS:t9" worker-t004 stubDecoyWS
@@ -604,7 +609,7 @@ check "W5 never-list" 'never 0 0'
 
 mk; states idle; unsentpane > "$tmp/pane.txt"
 run bash "$script" wait T004
-check "W7 idle with the /goal prompt in the box: exit 7, state unsent, pane text, no key sent" '[ $rc = 7 ] && hasline "state\tunsent\tworker-t004\t%s" "$(pane)" && grep -qxF "pane text:" <<<"$out" && [ "$(cnt "^agent\tsend-keys\t")" = 0 ] && never 0 0'
+check "W7 idle with the /goal prompt in the box: exit 7, state unsent, pane text, no key sent" '[ $rc = 7 ] && hasline "state\tunsent\tworker-t004\t%s" "$(pane)" && grep -qxF "pane text:" <<<"$out" && [ "$(cnt "^(agent|pane)\tsend-keys\t")" = 0 ] && never 0 0'
 mk; states done; dialogpane > "$tmp/pane.txt"; printf 'RESULT FILE %s\n' "$(rnd)" > "$(wt)/result.md"
 run bash "$script" wait T004
 check "W8 done with an open question and a result file: exit 4, state blocked, not finished" '[ $rc = 4 ] && hasline "state\tblocked\tworker-t004\t%s" "$(pane)" && ! grep -q "^state	finished" <<<"$out"'
@@ -614,15 +619,18 @@ check "W9 a sent /goal in the history and an empty box is not unsent: exit 5, st
 mk; unsentpane > "$tmp/pane.txt"
 run bash "$script" goal T004 --test "$testcmd"
 check "GO1 goal with the prompt still in the box: exit 1, the resend line, no prompt" '[ $rc = 1 ] && [ "$out" = "The /goal prompt is still in the input box of worker-t004. Run resend." ] && never 0 0'
+mk; sentpane > "$tmp/pane.txt"; unsentpane > "$tmp/pane.prompt"; sentpane > "$tmp/pane.after"
+STUB_FAIL="agent prompt" STUB_FAIL_CODE=agent_prompt_stalled run bash "$script" goal T004 --test "$testcmd"
+check "GO2 goal with a stalled prompt in the box: exit 0, one pane Enter with the real pane id" '[ $rc = 0 ] && hascall "pane\tsend-keys\t%s\tenter" "$(pane)" && [ "$(cnt "^pane\tsend-keys\t")" = 1 ]'
 mk; states idle working; unsentpane > "$tmp/pane.txt"; sentpane > "$tmp/pane.after"
 run bash "$script" resend T004
-check "RS1 resend: one Enter, no paste, exit 0, state working" '[ $rc = 0 ] && [ "$(cnt "^agent\tsend-keys\tworker-t004\tenter$")" = 1 ] && [ "$(cnt "^pane\tsend-text\t")" = 0 ] && never 0 0 && hasline "state\tworking\tworker-t004\t%s" "$(pane)"'
+check "RS1 resend: one Enter, no paste, exit 0, state working" '[ $rc = 0 ] && [ "$(cnt "^pane\tsend-keys\t$(pane)\tenter$")" = 1 ] && [ "$(cnt "^agent\tsend-keys\t[^\t]*\tenter$")" = 0 ] && [ "$(cnt "^pane\tsend-text\t")" = 0 ] && never 0 0 && hasline "state\tworking\tworker-t004\t%s" "$(pane)"'
 mk; states idle; sentpane > "$tmp/pane.txt"
 run bash "$script" resend T004
-check "RS2 resend with an empty box: exit 1, the line, no key sent" '[ $rc = 1 ] && [ "$out" = "No unsent prompt in worker-t004: idle" ] && [ "$(cnt "^agent\tsend-keys\t")" = 0 ]'
+check "RS2 resend with an empty box: exit 1, the line, no key sent" '[ $rc = 1 ] && [ "$out" = "No unsent prompt in worker-t004: idle" ] && [ "$(cnt "^(agent|pane)\tsend-keys\t")" = 0 ]'
 mk; states idle; unsentpane > "$tmp/pane.txt"
 run bash "$script" resend T004
-check "RS3 resend and the prompt stays: exit 7, state unsent" '[ $rc = 7 ] && [ "$(cnt "^agent\tsend-keys\tworker-t004\tenter$")" = 1 ] && hasline "state\tunsent\tworker-t004\t%s" "$(pane)"'
+check "RS3 resend and the prompt stays: exit 7, state unsent" '[ $rc = 7 ] && [ "$(cnt "^pane\tsend-keys\t$(pane)\tenter$")" = 1 ] && [ "$(cnt "^agent\tsend-keys\t[^\t]*\tenter$")" = 0 ] && hasline "state\tunsent\tworker-t004\t%s" "$(pane)"'
 
 fresh; states idle
 STUB_WT_LINK=resultfile run bash "$script" start "${sargs[@]}"
@@ -830,7 +838,7 @@ jq -c --arg x "$x" 'map(if .workspace_id == ("stubA"+$x) then .label = "" else .
 run bash "$script" list
 check "L5 an empty workspace label prints -" '[ $rc = 0 ] && hasline "found\tworker-t004\tlocal\tstubA%s:t1\tstubA%s:p1\tblocked\t/stub/a%s\t-\tworker-t004" "$x" "$x" "$x"'
 
-sendlog() { grep -P '^(agent\t(get|send-keys|wait)|pane\tsend-text)\t' "$tmp/calls"; }
+sendlog() { grep -P '^(agent\t(get|send-keys|wait)|pane\tsend-(text|keys))\t' "$tmp/calls"; }
 a1() {
   mk; states blocked working
   run bash "$1" answer T004 --keys 1
@@ -844,13 +852,13 @@ a2() {
   run bash "$1" answer T004 --text yes
   check "A2 exit 1" '[ $rc = 1 ]'
   check "A2 the not blocked line" '[ "$out" = "not blocked: working" ]'
-  check "A2 one agent get, no send-keys, no send-text" '[ "$(cnt "^agent\tget\t")" = 1 ] && [ "$(cnt "^agent\tsend-keys\t")" = 0 ] && [ "$(cnt "^pane\tsend-text\t")" = 0 ] && never 0 0'
+  check "A2 one agent get, no send-keys, no send-text" '[ "$(cnt "^agent\tget\t")" = 1 ] && [ "$(cnt "^(agent|pane)\tsend-keys\t")" = 0 ] && [ "$(cnt "^pane\tsend-text\t")" = 0 ] && never 0 0'
 }
 a3() {
   mk; states blocked blocked
   STUB_FAIL_UNTIL="agent wait" STUB_FAIL_CODE=timeout run bash "$1" answer T004 --text "use main"
   check "A3 exit 4" '[ $rc = 4 ]'
-  check "A3 agent get, send-text, send-keys enter, agent wait until working, agent get, in order" '[ "$(sendlog)" = "$(printf "agent\tget\tworker-t004\npane\tsend-text\t%s\tuse main\nagent\tsend-keys\tworker-t004\tenter\nagent\twait\tworker-t004\t--until\tworking\t--timeout\t5000\nagent\tget\tworker-t004" "$(pane)")" ]'
+  check "A3 agent get, send-text, send-keys enter, agent wait until working, agent get, in order" '[ "$(sendlog)" = "$(printf "agent\tget\tworker-t004\npane\tsend-text\t%s\tuse main\npane\tsend-keys\t%s\tenter\nagent\twait\tworker-t004\t--until\tworking\t--timeout\t5000\nagent\tget\tworker-t004" "$(pane)" "$(pane)")" ]'
   check "A3 state blocked line" 'hasline "state\tblocked\tworker-t004\t%s" "$(pane)"'
   check "A3 never-list, no prompt" 'never 0 0'
 }
@@ -859,29 +867,29 @@ a2 "$script"
 a3 "$script"
 mk; states done working; dialogpane > "$tmp/pane.txt"
 run bash "$script" answer T004 --text "use main"
-check "AQ1 open question while done: --text picks Type something, types and sends, in one call" '[ $rc = 0 ] && [ "$(sendlog)" = "$(printf "agent\tget\tworker-t004\nagent\tsend-keys\tworker-t004\t3\npane\tsend-text\t%s\tuse main\nagent\tsend-keys\tworker-t004\tenter\nagent\twait\tworker-t004\t--until\tworking\t--timeout\t5000\nagent\tget\tworker-t004" "$(pane)")" ]'
+check "AQ1 open question while done: --text picks Type something, types and sends, in one call" '[ $rc = 0 ] && [ "$(sendlog)" = "$(printf "agent\tget\tworker-t004\nagent\tsend-keys\tworker-t004\t3\npane\tsend-text\t%s\tuse main\npane\tsend-keys\t%s\tenter\nagent\twait\tworker-t004\t--until\tworking\t--timeout\t5000\nagent\tget\tworker-t004" "$(pane)" "$(pane)")" ]'
 mk; states done working; dialogpane > "$tmp/pane.txt"
 run bash "$script" answer T004 --keys 2
 check "AQ2 open question while done: --keys sends the key" '[ $rc = 0 ] && hascall "agent\tsend-keys\tworker-t004\t2"'
 mk; states done; dialogpane | grep -v 'Type something' > "$tmp/pane.txt"
 run bash "$script" answer T004 --text "use main"
-check "AQ3 no Type something option: exit 1, the line, nothing sent" '[ $rc = 1 ] && [ "$out" = "The question has no \"Type something.\" option. Answer with --keys." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+check "AQ3 no Type something option: exit 1, the line, nothing sent" '[ $rc = 1 ] && [ "$out" = "The question has no \"Type something.\" option. Answer with --keys." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-(text|keys))\t")" = 0 ]'
 mk; states done; { printf '%s\n' ' Do you want to proceed?' '❯ 1. Yes' '  2. No'; echo 'Enter to select · Esc to cancel'; } > "$tmp/pane.txt"
 run bash "$script" answer T004 --keys 1
-check "AQ4 permission dialog while done is not a question: exit 1, not blocked, nothing sent" '[ $rc = 1 ] && [ "$out" = "not blocked: done" ] && [ "$(cnt "^agent\tsend-keys\t")" = 0 ]'
+check "AQ4 permission dialog while done is not a question: exit 1, not blocked, nothing sent" '[ $rc = 1 ] && [ "$out" = "not blocked: done" ] && [ "$(cnt "^(agent|pane)\tsend-keys\t")" = 0 ]'
 reviewpane() { printf '%s\n' ' Review your answers' ' ● Which folder holds the brief.md? → Newest brief.md folder' '' 'Ready to submit your answers?' '' '❯ 1. Submit answers' '  2. Cancel'; }
 mk; states done working; reviewpane > "$tmp/pane.txt"
 run bash "$script" answer T004 --keys 1
 check "AQ6 review screen while done: exit 0, key 1 sent once" '[ $rc = 0 ] && [ "$(cnt "^agent\tsend-keys\tworker-t004\t1\$")" = 1 ]'
 mk; states done; printf '%s\n' 'Done. Ran the tests.' 'All green.' > "$tmp/pane.txt"
 run bash "$script" answer T004 --keys 1
-check "AQ7 plain output while done: exit 1, not blocked, nothing sent" '[ $rc = 1 ] && [ "$out" = "not blocked: done" ] && [ "$(cnt "^agent\tsend-keys\t")" = 0 ]'
+check "AQ7 plain output while done: exit 1, not blocked, nothing sent" '[ $rc = 1 ] && [ "$out" = "not blocked: done" ] && [ "$(cnt "^(agent|pane)\tsend-keys\t")" = 0 ]'
 mk; states done; { printf '%s\n' ' Do you want to proceed?'; reviewpane; } > "$tmp/pane.txt"
 run bash "$script" answer T004 --keys 1
-check "AQ8 permission line above review screen: exit 1, not blocked, nothing sent" '[ $rc = 1 ] && [ "$out" = "not blocked: done" ] && [ "$(cnt "^agent\tsend-keys\t")" = 0 ]'
+check "AQ8 permission line above review screen: exit 1, not blocked, nothing sent" '[ $rc = 1 ] && [ "$out" = "not blocked: done" ] && [ "$(cnt "^(agent|pane)\tsend-keys\t")" = 0 ]'
 mk; states done; printf '%s\n' '$ grep -n Ready spec.md' '42: the "Ready to submit your answers?" screen (with "1. Submit answers / 2. Cancel")' '❯ ' > "$tmp/pane.txt"
 run bash "$script" answer T004 --keys 1
-check "AQ9 review phrase as plain text while done: exit 1, not blocked, nothing sent" '[ $rc = 1 ] && [ "$out" = "not blocked: done" ] && [ "$(cnt "^agent\tsend-keys\t")" = 0 ]'
+check "AQ9 review phrase as plain text while done: exit 1, not blocked, nothing sent" '[ $rc = 1 ] && [ "$out" = "not blocked: done" ] && [ "$(cnt "^(agent|pane)\tsend-keys\t")" = 0 ]'
 for a in --keys --text; do
   fresh; reset
   run bash "$script" answer T004 $a -x
@@ -1051,6 +1059,10 @@ rmk; states blocked working
 rrun bash "$script" answer T004 --machine laptop --keys 1
 check "R10 exit 0" '[ $rc = 0 ]'
 check "R10 one agent send-keys, --machine rule" '[ "$(rcnt "agent\tsend-keys\t")" = 1 ] && rcall "agent\tsend-keys\tworker-t004\t1" && rnever 0 0'
+
+rmk; states blocked working
+rrun bash "$script" answer T004 --machine laptop --text "use main"
+check "R10b exit 0, one pane Enter, no agent send-keys Enter, --machine rule" '[ $rc = 0 ] && rcall "pane\tsend-keys\t%s\tenter" "$(pane)" && [ "$(rcnt "pane\tsend-keys\t")" = 1 ] && [ "$(rcnt "agent\tsend-keys\t[^\t]*\tenter$")" = 0 ] && rnever 0 0'
 
 rmk
 rrun bash "$script" goal T004 --machine laptop --test "$testcmd"
@@ -1633,11 +1645,11 @@ autoclr
 for pl in 'Do you want to proceed?' 'Do you want to make this edit to a.py?' 'Do you want to create b.py?' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)'; do
   mk; states blocked; printf '%s\n' "$rule" "$pl" > "$tmp/pane.txt"
   run bash "$script" answer T004 --text hi
-  check "AN1 pane line '$pl': exit 1, the permission line, no key sent" '[ $rc = 1 ] && [ "$out" = "This is a permission prompt. Tell the user the workspace, the tab and the prompt; do not answer it." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+  check "AN1 pane line '$pl': exit 1, the permission line, no key sent" '[ $rc = 1 ] && [ "$out" = "This is a permission prompt. Tell the user the workspace, the tab and the prompt; do not answer it." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-(text|keys))\t")" = 0 ]'
 done
 mk; states blocked
 STUB_FAIL="agent read" STUB_FAIL_CODE=timeout run bash "$script" answer T004 --keys 1
-check "AN2 agent read fails: exit 1, the same permission line, no key sent" '[ $rc = 1 ] && [ "$out" = "This is a permission prompt. Tell the user the workspace, the tab and the prompt; do not answer it." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+check "AN2 agent read fails: exit 1, the same permission line, no key sent" '[ $rc = 1 ] && [ "$out" = "This is a permission prompt. Tell the user the workspace, the tab and the prompt; do not answer it." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-(text|keys))\t")" = 0 ]'
 for pq in 'Should the helper be named normalizeInput?' 'Do you want to rename it?'; do
   mk; states blocked working; printf '%s\n' "$pq" '❯ 1. Yes' '  2. No' > "$tmp/pane.txt"
   run bash "$script" answer T004 --keys 1
@@ -1658,52 +1670,52 @@ for ao in "  2. Yes, and don't ask again for git commands" "  2. Yes, and don’
   mk; states blocked; printf '%s\n' "$rule" 'Do you want to proceed?' '❯ 1. Yes' "$ao" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
   run bash "$script" wait T004; h=$(shash); states blocked
   run bash "$script" answer T004 --screen "$h" --keys 2
-  check "AN6 option 2 '$ao' is not a one-time yes: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 2 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+  check "AN6 option 2 '$ao' is not a one-time yes: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 2 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-(text|keys))\t")" = 0 ]'
 done
 mk; states blocked; printf '%s\n' "$rule" 'Do you want to proceed?' '❯ 1. Yes' '  2. Yes, allow reading from other-project/secrets/' '     during this session' '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
 run bash "$script" wait T004; h=$(shash); states blocked
 run bash "$script" answer T004 --screen "$h" --keys 2
-check "AN6b option 2 wraps, 'during this session' on the next line: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 2 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+check "AN6b option 2 wraps, 'during this session' on the next line: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 2 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-(text|keys))\t")" = 0 ]'
 mk; states blocked; printf '%s\n' "$rule" 'Bash command' '  printf "3. step three"' 'Do you want to proceed?' '❯ 1. Yes' '  2. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
 run bash "$script" wait T004; h=$(shash); states blocked
 run bash "$script" answer T004 --screen "$h" --keys 3
-check "AN6c a command line with 3. is not option 3: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 3 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+check "AN6c a command line with 3. is not option 3: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 3 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-(text|keys))\t")" = 0 ]'
 mk; states blocked; printf '%s\n' "$rule" 'Bash command' '  2. Yes' 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
 run bash "$script" wait T004; h=$(shash); states blocked
 run bash "$script" answer T004 --screen "$h" --keys 2
-check "AN6d a command line 2. Yes above the dialog is not option 2: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 2 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+check "AN6d a command line 2. Yes above the dialog is not option 2: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 2 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-(text|keys))\t")" = 0 ]'
 mk; states blocked; printf '%s\n' "$rule" 'Bash command' '  3. Yes' 'Do you want to proceed?' '❯ 1. Yes' '  2. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
 run bash "$script" wait T004; h=$(shash); states blocked
 run bash "$script" answer T004 --screen "$h" --keys 3
-check "AN6e a command line 3. Yes above the dialog is not option 3: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 3 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+check "AN6e a command line 3. Yes above the dialog is not option 3: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 3 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-(text|keys))\t")" = 0 ]'
 mk; states blocked; printf '%s\n' "$rule" 'Read file' 'Do you want to proceed?' '❯ 1. Yes' '  2. Yes, allow reading from evil/' 'Do you want to proceed?' '  2. Yes' '/ during this session' '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
 run bash "$script" wait T004
 check "AN6f two dialog heads in the window: wait exits 4 and prints no screen line" '[ $rc = 4 ] && ! grep -q "^screen" <<<"$out"'
 states blocked working
 run bash "$script" answer T004 --screen 0123456789ab --keys 2
-check "AN6f option 2 under a second dialog head, any hash: exit 1, the another-prompt line, nothing sent" '[ $rc = 1 ] && [ "$out" = "The pane shows another prompt. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+check "AN6f option 2 under a second dialog head, any hash: exit 1, the another-prompt line, nothing sent" '[ $rc = 1 ] && [ "$out" = "The pane shows another prompt. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-(text|keys))\t")" = 0 ]'
 mk; states blocked; printf '%s\n' "$rule" 'Read file' 'Do you want to proceed?' '❯ 1. Yes' '  2. Yes, allow reading from evil/' '  2. Yes' '/ during this session' '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
 run bash "$script" wait T004; h=$(shash); states blocked working
 run bash "$script" answer T004 --screen "$h" --keys 2
-check "AN6g a second 2. Yes line under the lasting option 2 is not a one-time yes: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 2 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+check "AN6g a second 2. Yes line under the lasting option 2 is not a one-time yes: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 2 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-(text|keys))\t")" = 0 ]'
 mk; states blocked; printf '%s\n' "$rule" 'Read file' 'Do you want to proceed?' '❯ 1. Yes' '  2. Yes' '/ during this session' '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
 run bash "$script" wait T004; h=$(shash); states blocked working
 run bash "$script" answer T004 --screen "$h" --keys 2
-check "AN6h option 2 reads 'Yes' and 'during this session' is on the next line: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 2 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+check "AN6h option 2 reads 'Yes' and 'during this session' is on the next line: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 2 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-(text|keys))\t")" = 0 ]'
 mk; states blocked; printf '%s\n' "$rule" 'Read file' 'Do you want to proceed?' '❯ 1. Yes' '  2. Yes' '  2. Yes, allow reading from evil/' '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
 run bash "$script" wait T004; h=$(shash); states blocked working
 run bash "$script" answer T004 --screen "$h" --keys 2
-check "AN6i two option 2 lines, the first '2. Yes', the second lasting: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 2 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+check "AN6i two option 2 lines, the first '2. Yes', the second lasting: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 2 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-(text|keys))\t")" = 0 ]'
 for ka in '1 enter' 'enter' 'down'; do
   mk; states blocked; printf '%s\n' "$rule" 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
   run bash "$script" wait T004; h=$(shash); states blocked
   run bash "$script" answer T004 --screen "$h" --keys $ka
-  check "AN7 --keys $ka: exit 1, the one-option line, nothing sent" '[ $rc = 1 ] && [ "$out" = "A permission prompt takes one option number. Nothing sent." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+  check "AN7 --keys $ka: exit 1, the one-option line, nothing sent" '[ $rc = 1 ] && [ "$out" = "A permission prompt takes one option number. Nothing sent." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-(text|keys))\t")" = 0 ]'
 done
 mk; states blocked; printf '%s\n' "$rule" 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
 run bash "$script" wait T004; h=$(shash); states blocked
 run bash "$script" answer T004 --screen "$h" --keys 4
-check "AN8 --keys 4, the pane has no option 4: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 4 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+check "AN8 --keys 4, the pane has no option 4: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 4 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-(text|keys))\t")" = 0 ]'
 for no in '  2. No, and tell Claude what to do differently (esc)' '  2. No'; do
   mk; states blocked working; printf '%s\n' 'Bash command: very-long-command ...' 'Do you want to proceed?' '❯ 1. Yes' "$no" > "$tmp/pane.txt"
   run bash "$script" wait T004; h=$(shash); states blocked working
@@ -1713,12 +1725,12 @@ done
 mk; states blocked; printf '%s\n' 'Bash command: very-long-command ...' 'Do you want to proceed?' '❯ 1. Yes' '  2. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
 run bash "$script" wait T004; states blocked
 run bash "$script" answer T004 --screen 000000000000 --keys 2
-check "NO2 option 2 No with a wrong hash: exit 1, the other-prompt line, nothing sent" '[ $rc = 1 ] && [ "$out" = "The pane shows another prompt. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+check "NO2 option 2 No with a wrong hash: exit 1, the other-prompt line, nothing sent" '[ $rc = 1 ] && [ "$out" = "The pane shows another prompt. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-(text|keys))\t")" = 0 ]'
 for ao in '  2. Yes, and always allow access to other/ from this project' "  2. No, and don't ask again" '  2. No, always deny git commands' '  2. No, deny for this session' '  2. No, and deny this in the future' '  2. No, block example.com' '  2. Nope'; do
   mk; states blocked; printf '%s\n' 'Do you want to proceed?' '❯ 1. Yes' "$ao" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
   run bash "$script" wait T004; h=$(shash); states blocked
   run bash "$script" answer T004 --screen "$h" --keys 2
-  check "NO3 option 2 '$ao' is refused: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 2 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+  check "NO3 option 2 '$ao' is refused: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 2 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-(text|keys))\t")" = 0 ]'
 done
 mk; states blocked; printf '%s\n' "$rule" 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
 run bash "$script" wait T004; h=$(shash)
@@ -1741,7 +1753,7 @@ run bash "$script" wait T004; h=$(shash)
 printf '%s\n' "$rule" 'Bash command' '  git push' 'Do you want to proceed?' '❯ 1. Yes' '  2. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
 states blocked
 run bash "$script" answer T004 --screen "$h" --keys 1
-check "AN11 the pane changed after wait: exit 1, the another-prompt line, nothing sent" '[ $rc = 1 ] && [ "$out" = "The pane shows another prompt. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+check "AN11 the pane changed after wait: exit 1, the another-prompt line, nothing sent" '[ $rc = 1 ] && [ "$out" = "The pane shows another prompt. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-(text|keys))\t")" = 0 ]'
 mk; states blocked; { seq -f 'line %g' 25; printf '%s\n' "$rule" 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)'; } > "$tmp/pane.txt"
 run bash "$script" wait T004; h=$(shash)
 sed -i 's/^line 5$/line five/' "$tmp/pane.txt"
@@ -1750,7 +1762,7 @@ run bash "$script" answer T004 --screen "$h" --keys 1
 check "AN11b line 5 changes, outside the block (the 40-line read holds it): exit 0, key 1 sent" '[ $rc = 0 ] && hascall "agent\tsend-keys\tworker-t004\t1"'
 mk; states blocked; printf '%s\n' "$rule" 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
 run bash "$script" answer T004 --keys 1
-check "AN12 no --screen on a permission dialog: exit 1, the needs-screen line, nothing sent" '[ $rc = 1 ] && [ "$out" = "A permission prompt needs --screen <hash> from the screen line of wait or watch. Nothing sent." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+check "AN12 no --screen on a permission dialog: exit 1, the needs-screen line, nothing sent" '[ $rc = 1 ] && [ "$out" = "A permission prompt needs --screen <hash> from the screen line of wait or watch. Nothing sent." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-(text|keys))\t")" = 0 ]'
 for bh in abc 0123456789abc 0123456789AB; do
   mk; states blocked; printf '%s\n' "$rule" 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
   run bash "$script" answer T004 --screen "$bh" --keys 1
@@ -1879,10 +1891,10 @@ wrun
 check "WC3 the same open question is not reported again until the worker worked: exit 4 after three polls" '[ $rc = 4 ] && [ "$(sleeps)" = 3 ] && hasline "state\tblocked\tworker-t004\t%s" "$(pane)"'
 mk; rm -f "$wr.seen"; states idle working done; unsentpane > "$tmp/pane.txt"; sentpane > "$tmp/pane.after"; : > "$tmp/resume_result"
 wrun
-check "WC4 unsent prompt: one Enter by itself, then finished" '[ $rc = 0 ] && [ "$(cnt "^agent\tsend-keys\tworker-t004\tenter$")" = 1 ] && hasline "state\tfinished\tworker-t004\t%s" "$(pane)" && never 0 0'
+check "WC4 unsent prompt: one Enter by itself, then finished" '[ $rc = 0 ] && [ "$(cnt "^pane\tsend-keys\t$(pane)\tenter$")" = 1 ] && [ "$(cnt "^agent\tsend-keys\t[^\t]*\tenter$")" = 0 ] && hasline "state\tfinished\tworker-t004\t%s" "$(pane)" && never 0 0'
 mk; rm -f "$wr.seen"; states idle; unsentpane > "$tmp/pane.txt"
 wrun
-check "WC5 prompt still in the box after the Enter: exit 7, state unsent" '[ $rc = 7 ] && [ "$(cnt "^agent\tsend-keys\tworker-t004\tenter$")" = 1 ] && hasline "state\tunsent\tworker-t004\t%s" "$(pane)"'
+check "WC5 prompt still in the box after the Enter: exit 7, state unsent" '[ $rc = 7 ] && [ "$(cnt "^pane\tsend-keys\t$(pane)\tenter$")" = 1 ] && [ "$(cnt "^agent\tsend-keys\t[^\t]*\tenter$")" = 0 ] && hasline "state\tunsent\tworker-t004\t%s" "$(pane)"'
 mk; rm -f "$wr.seen"; states idle; sentpane > "$tmp/pane.txt"
 wrun
 check "WC6 idle with no result, question or prompt for three polls: exit 5, stopped" '[ $rc = 5 ] && [ "$(sleeps)" = 2 ] && hasline "state\tstopped\tworker-t004\t%s" "$(pane)"'
@@ -1923,47 +1935,100 @@ check "DB1 wait: one screen line, its hash is the first 12 hex of the 12 block l
 dbwait "${REAL[@]}"; dbput 'step a' 'step b' 'step c' "${REAL[@]:0:1}" '  ⎿  Running… (12s)' "${REAL[@]:2}"; dbans 1
 check "DB2 lines above the dialog and the ⎿ line change: exit 0, key 1 sent" '[ "$h" = "$bh" ] && [ $rc = 0 ] && hascall "agent\tsend-keys\tworker-t004\t1"'
 dbwait "${REAL[@]}"; dbput "${REAL[@]:0:8}" ' │ touch /tmp/q.txt' "${REAL[@]:9}"; dbans 1
-check "DB3 the command line changed: exit 1, the another-prompt line, nothing sent" '[ "$h" = "$bh" ] && [ $rc = 1 ] && [ "$out" = "The pane shows another prompt. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+check "DB3 the command line changed: exit 1, the another-prompt line, nothing sent" '[ "$h" = "$bh" ] && [ $rc = 1 ] && [ "$out" = "The pane shows another prompt. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-(text|keys))\t")" = 0 ]'
 dbwait "${REAL[@]}"; dbput "${REAL[@]:0:4}" ' Bash command (unsandboxed)' "${REAL[@]:5}"; dbans 1
-check "DB4 the header line changed: exit 1, the another-prompt line, nothing sent" '[ "$h" = "$bh" ] && [ $rc = 1 ] && [ "$out" = "The pane shows another prompt. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+check "DB4 the header line changed: exit 1, the another-prompt line, nothing sent" '[ "$h" = "$bh" ] && [ $rc = 1 ] && [ "$out" = "The pane shows another prompt. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-(text|keys))\t")" = 0 ]'
 dbwait "${REAL[@]}"; dbput "${REAL[@]:0:12}" '   2. Yes, and always allow access to / from this project' "${REAL[@]:13}"; dbans 1
-check "DB5 option 2 changed: exit 1, the another-prompt line, nothing sent" '[ "$h" = "$bh" ] && [ $rc = 1 ] && [ "$out" = "The pane shows another prompt. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+check "DB5 option 2 changed: exit 1, the another-prompt line, nothing sent" '[ "$h" = "$bh" ] && [ $rc = 1 ] && [ "$out" = "The pane shows another prompt. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-(text|keys))\t")" = 0 ]'
 dbwait "${REAL[@]}"; dbput "${REAL[@]:0:16}" ' Esc to cancel · Tab to amend · changed'; dbans 1
 check "DB6 the footer changed (outside the block): exit 0, key 1 sent" '[ "$h" = "$bh" ] && [ $rc = 0 ] && hascall "agent\tsend-keys\tworker-t004\t1"'
 cut=("${REAL[@]:0:8}"); for i in $(seq 45); do cut+=(" │ line $i"); done; cut+=("${REAL[@]:9}")
 dbwait "${cut[@]}"; txt=$(sed -n '/^pane text:$/,$p' <<<"$out" | tail -n +2)
 check "DB7 cut: wait exits 4, one screen line, its hash is the first 12 hex of the printed 40-line pane text" '[ $rc = 4 ] && [ "$(grep -c "^screen" <<<"$out")" = 1 ] && [ "$h" = "$(sha256sum <<<"$txt" | cut -c1-12)" ] && [ "$(awk "END{print NR}" <<<"$txt")" = 40 ]'
 dbans 1
-check "DB7 cut: --keys 1 (a yes) refused with the cut-off line, nothing sent" '[ $rc = 1 ] && [ "$out" = "The top of the dialog is not on the screen, so only its No can be sent. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+check "DB7 cut: --keys 1 (a yes) refused with the cut-off line, nothing sent" '[ $rc = 1 ] && [ "$out" = "The top of the dialog is not on the screen, so only its No can be sent. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-(text|keys))\t")" = 0 ]'
 dbans 4
 check "DB7b cut: --keys 4 (No) sent: exit 0, key 4" '[ $rc = 0 ] && hascall "agent\tsend-keys\tworker-t004\t4"'
 dbwait "${cut[@]}"; dbput "${cut[@]:0:37}" ' │ changed' "${cut[@]:38}"; dbans 4
-check "DB7c cut: a transcript line inside the 40 lines changed: --keys 4 refused with the another-prompt line, nothing sent" '[ $rc = 1 ] && [ "$out" = "The pane shows another prompt. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+check "DB7c cut: a transcript line inside the 40 lines changed: --keys 4 refused with the another-prompt line, nothing sent" '[ $rc = 1 ] && [ "$out" = "The pane shows another prompt. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-(text|keys))\t")" = 0 ]'
 norule=("${REAL[@]:0:3}" "${REAL[@]:4}")
 dbwait "${norule[@]}"; txt=$(sed -n '/^pane text:$/,$p' <<<"$out" | tail -n +2)
 check "DB8 no top rule in the pane: wait exits 4, one screen line, its hash is the first 12 hex of the printed pane text" '[ $rc = 4 ] && [ "$(grep -c "^screen" <<<"$out")" = 1 ] && [ "$h" = "$(sha256sum <<<"$txt" | cut -c1-12)" ]'
 dbans 1
-check "DB8 --keys 1 (a yes) refused with the cut-off line, nothing sent" '[ $rc = 1 ] && [ "$out" = "The top of the dialog is not on the screen, so only its No can be sent. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+check "DB8 --keys 1 (a yes) refused with the cut-off line, nothing sent" '[ $rc = 1 ] && [ "$out" = "The top of the dialog is not on the screen, so only its No can be sent. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-(text|keys))\t")" = 0 ]'
 dbans 4
 check "DB8 --keys 4 (No) sent: exit 0, key 4" '[ $rc = 0 ] && hascall "agent\tsend-keys\tworker-t004\t4"'
 dbwait "${REAL[@]:0:13}" ' Do you want to proceed?' "${REAL[@]:13}"
 check "DB9 a second dialog head between options 2 and 3: wait exits 4 and prints no screen line" '[ $rc = 4 ] && ! grep -q "^screen" <<<"$out"'
 states blocked working; run bash "$script" answer T004 --screen 0123456789ab --keys 4
-check "DB9 answer with hash 0123456789ab: exit 1, the another-prompt line, nothing sent" '[ $rc = 1 ] && [ "$out" = "The pane shows another prompt. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+check "DB9 answer with hash 0123456789ab: exit 1, the another-prompt line, nothing sent" '[ $rc = 1 ] && [ "$out" = "The pane shows another prompt. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-(text|keys))\t")" = 0 ]'
 mk; rm -f "$wr.seen"; states blocked; dbput "${REAL[@]}"
 wrun
 check "DB10 watch --roster: the screen hash is the block hash, the same as DB1" '[ $rc = 4 ] && [ "$(shash)" = "$bh" ]'
 dbwait "${REAL[@]}"
 dbans 2
-check "DB11 the block hash holds; option 2 (a lasting yes) refused: exit 1, the not-one-time-yes line, nothing sent" '[ "$h" = "$bh" ] && [ $rc = 1 ] && [ "$out" = "Option 2 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+check "DB11 the block hash holds; option 2 (a lasting yes) refused: exit 1, the not-one-time-yes line, nothing sent" '[ "$h" = "$bh" ] && [ $rc = 1 ] && [ "$out" = "Option 2 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-(text|keys))\t")" = 0 ]'
 dbans 3
-check "DB11 option 3 (a yes that switches mode) refused: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 3 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+check "DB11 option 3 (a yes that switches mode) refused: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 3 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-(text|keys))\t")" = 0 ]'
 dbans 4
 check "DB11 option 4 (No) sent: exit 0, key 4" '[ $rc = 0 ] && hascall "agent\tsend-keys\tworker-t004\t4"'
 fake=("${REAL[@]:0:6}" ' ─────' "${REAL[@]:7}")
 fh=$(printf '%s\n' "${fake[@]:3:12}" | sha256sum | cut -c1-12)
 dbwait "${fake[@]}"; dbput "${fake[@]:0:4}" ' Bash command (unsandboxed)' "${fake[@]:5}"; dbans 1
-check "DB12 a description of only ─ after a space is not the top rule: the hash starts at the real rule, a header change refused, nothing sent" '[ "$h" = "$fh" ] && [ $rc = 1 ] && [ "$out" = "The pane shows another prompt. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-text)\t")" = 0 ]'
+check "DB12 a description of only ─ after a space is not the top rule: the hash starts at the real rule, a header change refused, nothing sent" '[ "$h" = "$fh" ] && [ $rc = 1 ] && [ "$out" = "The pane shows another prompt. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-(text|keys))\t")" = 0 ]'
+
+inbox=('✻ Working… (esc to interrupt)' "$rule" "❯$nb" "$rule" '  ⏵⏵ auto mode on (shift+tab to cycle)')
+mk; states working; dbput "${REAL[@]}"
+STUB_FAIL="agent wait" STUB_FAIL_CODE=timeout run bash "$script" wait T004
+check "WD1 wait, live dialog while working: exit 4, state blocked, one screen line with the block hash, one agent wait with --timeout 10000" '[ $rc = 4 ] && hasline "state\tblocked\tworker-t004\t%s" "$(pane)" && [ "$(grep -c "^screen" <<<"$out")" = 1 ] && [ "$(shash)" = "$bh" ] && grep -qxF "pane text:" <<<"$out" && [ "$(cnt "^agent\twait\t")" = 1 ] && hascall "agent\twait\tworker-t004\t--timeout\t10000"'
+mk; states working; dbput "${REAL[@]}" "${inbox[@]}"
+STUB_FAIL="agent wait" STUB_FAIL_CODE=timeout run bash "$script" wait T004
+check "WD2 wait, quoted dialog under an input box: exit 3, state working, no screen line, 54 agent wait calls" '[ $rc = 3 ] && hasline "state\tworking\tworker-t004\t%s" "$(pane)" && ! grep -q "^screen" <<<"$out" && [ "$(cnt "^agent\twait\t")" = 54 ]'
+mk; states working; dialogpane > "$tmp/pane.txt"
+STUB_FAIL="agent wait" STUB_FAIL_CODE=timeout run bash "$script" wait T004
+check "WD3 wait, open question while working: exit 4, state blocked, no screen line" '[ $rc = 4 ] && hasline "state\tblocked\tworker-t004\t%s" "$(pane)" && ! grep -q "^screen" <<<"$out"'
+mk; states working; { dialogpane; printf '%s\n' "${inbox[@]}"; } > "$tmp/pane.txt"
+STUB_FAIL="agent wait" STUB_FAIL_CODE=timeout run bash "$script" wait T004
+check "WD3b wait, open question under an input box: exit 3, state working, 54 agent wait calls" '[ $rc = 3 ] && hasline "state\tworking\tworker-t004\t%s" "$(pane)" && [ "$(cnt "^agent\twait\t")" = 54 ]'
+mk; rm -f "$wr.seen"; states working; dbput "${REAL[@]}"; wrun
+check "WD4 watch, live dialog while working: exit 4, screen line is the block hash, seen holds blocked with the block hash" '[ $rc = 4 ] && [ "$(shash)" = "$bh" ] && [ "$(cat "$wr.seen")" = "$(printf "worker-t004\tblocked %s" "$bh")" ]'
+mk; rm -f "$wr.seen"; states working working done; dbput "${REAL[@]}" "${inbox[@]}"; printf 'R\n' > "$lw/result.md"
+wrun
+check "WD5 watch, quoted dialog under an input box, then done: exit 0, state finished, no blocked line, two polls" '[ $rc = 0 ] && hasline "state\tfinished\tworker-t004\t%s" "$(pane)" && ! grep -qP "^state\tblocked" <<<"$out" && [ "$(sleeps)" = 2 ]'
+dbwait "${REAL[@]}"; states working working
+run bash "$script" answer T004 --screen "$h" --keys 1
+check "WD6 answer to a live dialog of a working worker that stays open after the key: key 1 sent once, one sleep 2, state blocked, exit 4" '[ $rc = 4 ] && hascall "agent\tsend-keys\tworker-t004\t1" && [ "$(cnt "^agent\tsend-keys\t")" = 1 ] && [ "$(cnt "^sleep\t2$")" = 1 ] && hasline "state\tblocked\tworker-t004\t%s" "$(pane)"'
+mk; states working; dbput "${REAL[@]}" "${inbox[@]}"
+run bash "$script" answer T004 --screen "$bh" --keys 1
+check "WD7 answer to a quoted dialog under an input box while working: not blocked: working, nothing sent" '[ $rc = 1 ] && [ "$out" = "not blocked: working" ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-(text|keys))\t")" = 0 ]'
+mk; states working; dbput "${REAL[@]}"
+run bash "$script" answer T004 --keys 1
+check "WD8 answer --keys 1 to a live dialog while working without --screen: exit 1, the needs-screen line, nothing sent" '[ $rc = 1 ] && [ "$out" = "A permission prompt needs --screen <hash> from the screen line of wait or watch. Nothing sent." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-(text|keys))\t")" = 0 ]'
+mk; states working; dbput "${REAL[@]}"
+run bash "$script" answer T004 --screen "$bh" --keys 2
+check "WD8 answer --keys 2 to a live dialog while working: exit 1, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 2 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-(text|keys))\t")" = 0 ]'
+mk; states working; dbput "${REAL[@]}"
+run bash "$script" answer T004 --text hi
+check "WD8 answer --text to a live dialog while working: exit 1, the permission line, nothing sent" '[ $rc = 1 ] && [ "$out" = "This is a permission prompt. Tell the user the workspace, the tab and the prompt; do not answer it." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-(text|keys))\t")" = 0 ]'
+mk; states working; { dialogpane; printf '%s\n' "${inbox[@]}"; } > "$tmp/pane.txt"
+run bash "$script" answer T004 --keys 1
+check "WD3c answer --keys 1 to a quoted question while working: not blocked: working, nothing sent" '[ $rc = 1 ] && [ "$out" = "not blocked: working" ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-(text|keys))\t")" = 0 ]'
+mk; states working; { dialogpane; printf '%s\n' "${inbox[@]}"; } > "$tmp/pane.txt"
+run bash "$script" answer T004 --text hi
+check "WD3c answer --text to a quoted question while working: not blocked: working, nothing sent" '[ $rc = 1 ] && [ "$out" = "not blocked: working" ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-(text|keys))\t")" = 0 ]'
+printf 'worker-t004\tlocal\trepo-t004\tT004\nworker-t005\tlocal\trepo-t005\tT005\n' > "$tmp/wr9"
+fresh; run bash "$script" start T004 --task "$task" --test "$testcmd" --lane "$lane" --roster "$tmp/wr9"
+run bash "$script" start T005 --task "$task" --test "$testcmd" --lane "$lane" --roster "$tmp/wr9"
+printf '%s\n' "${REAL[@]}" "${inbox[@]}" > "$tmp/pane.worker-t004.txt"
+dialogpane > "$tmp/pane.worker-t005.txt"
+rm -f "$tmp/wr9.seen"; states working working; reset
+run "$rto" 60 bash "$script" watch --roster "$tmp/wr9"
+ck9=$(cksum < "$tmp/pane.worker-t005.txt" | cut -d' ' -f1)
+check "WD9 watch, two workers: the quoted dialog of worker-t004 is not reported, the live question of worker-t005 is blocked with the cksum key" '[ $rc = 4 ] && hasline "state\tblocked\tworker-t005\t%s" "$(pane)" && ! grep -qP "^state\tblocked\tworker-t004\t" <<<"$out" && grep -qxF "$(printf "worker-t005\tblocked %s" "$ck9")" "$tmp/wr9.seen"'
+dialogpane | sed 's/folder/dir/' > "$tmp/pane.worker-t005.txt"
+states working working; reset
+run "$rto" 60 bash "$script" watch --roster "$tmp/wr9"
+check "WD9 the question of worker-t005 changed: reported again, exit 4" '[ $rc = 4 ] && hasline "state\tblocked\tworker-t005\t%s" "$(pane)"'
 
 drl=$(printf 'outside-owns\tsrc/b.py\tgit add src/b.py && git commit -m x')
 drop() { mkdir -p "$1/.stratum/approve"; printf '%s\n' "$2" > "$1/.stratum/approve/dropped"; }
@@ -2034,6 +2099,31 @@ check "FU4 no result.md: exit 1, refused, no prompt" '[ $rc = 1 ] && [ "$out" = 
 mk; states done; printf 'R\n' > "$lw/result.md"; dialogpane > "$tmp/pane.txt"
 run bash "$script" followup T004 --task "$round" --test "$testcmd"
 check "FU5 open question: exit 1, refused, result kept" '[ $rc = 1 ] && [ "$out" = "Worker worker-t004 has an open question. Answer it first." ] && [ -e "$lw/result.md" ] && never 0 0'
+gone=("${REAL[@]:0:3}" '● done' "${inbox[@]}")
+mk; states working; dbput "${REAL[@]}"; printf '%s\n' "${gone[@]}" > "$tmp/swap.after"; echo 2 > "$tmp/swap.at"
+run bash "$script" answer T004 --screen "$bh" --keys 1
+check "WD10 answer --keys 1, the dialog closes after the gate read: judged on the gate screen, key 1 sent once, one sleep 2, state working, exit 0" '[ $rc = 0 ] && hascall "agent\tsend-keys\tworker-t004\t1" && [ "$(cnt "^agent\tsend-keys\t")" = 1 ] && [ "$(cnt "^sleep\t2$")" = 1 ] && hasline "state\tworking\tworker-t004\t%s" "$(pane)"'
+mk; states working; dbput "${REAL[@]}"; printf '%s\n' "${gone[@]}" > "$tmp/swap.after"; echo 2 > "$tmp/swap.at"
+run bash "$script" answer T004 --screen "$bh" --keys 2
+check "WD10 answer --keys 2, the dialog closes after the gate read: judged on the gate screen, the not-one-time-yes line, nothing sent" '[ $rc = 1 ] && [ "$out" = "Option 2 is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-(text|keys))\t")" = 0 ]'
+mk; states working; dbput "${REAL[@]}"; printf '%s\n' "${gone[@]}" > "$tmp/swap.after"; echo 2 > "$tmp/swap.at"
+run bash "$script" answer T004 --text hi
+check "WD10 answer --text, the dialog closes after the gate read: the permission line, nothing sent" '[ $rc = 1 ] && [ "$out" = "This is a permission prompt. Tell the user the workspace, the tab and the prompt; do not answer it." ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-(text|keys))\t")" = 0 ]'
+mk; states done; printf 'R\n' > "$lw/result.md"; { dialogpane; printf '%s\n' "${inbox[@]}"; } > "$tmp/pane.txt"
+run bash "$script" wait T004
+check "WD11 wait, done worker with a question under an input box: not blocked, state finished, exit 0" '[ $rc = 0 ] && hasline "state\tfinished\tworker-t004\t%s" "$(pane)" && ! grep -qP "^state\tblocked" <<<"$out"'
+mk; states done working; printf 'R\n' > "$lw/result.md"; { dialogpane; printf '%s\n' "${inbox[@]}"; } > "$tmp/pane.txt"
+run bash "$script" followup T004 --task "$round" --test "$testcmd"
+check "WD11 followup, done worker with a question under an input box: not refused, round 2, exit 0" '[ $rc = 0 ] && hasline "round\tworker-t004\t2" && ! grep -q "open question" <<<"$out"'
+mk; states working; dbput "${REAL[@]}" '✻ Working… (esc to interrupt)' "$rule" "  ❯$nb" "$rule"
+STUB_FAIL="agent wait" STUB_FAIL_CODE=timeout run bash "$script" wait T004
+check "WD12 wait, quoted dialog above an indented input box: exit 3, state working, no screen line" '[ $rc = 3 ] && hasline "state\tworking\tworker-t004\t%s" "$(pane)" && ! grep -q "^screen" <<<"$out"'
+mk; states working; dbput "${REAL[@]}" '✻ Working… (esc to interrupt)' "╭$rule╮" "│ ❯$nb" "╰$rule╯"
+run bash "$script" answer T004 --screen "$bh" --keys 1
+check "WD12 answer to a quoted dialog above a framed input box: not blocked: working, nothing sent" '[ $rc = 1 ] && [ "$out" = "not blocked: working" ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-(text|keys))\t")" = 0 ]'
+mk; states working; sentpane > "$tmp/pane.txt"; dialogpane > "$tmp/swap.after"; echo 1 > "$tmp/swap.at"
+run bash "$script" answer T004 --text hi
+check "WD13 answer --text, a live question appears after the first read of a working worker: not blocked: working, nothing sent" '[ $rc = 1 ] && [ "$out" = "not blocked: working" ] && [ "$(cnt "^(agent\tsend-keys|pane\tsend-(text|keys))\t")" = 0 ]'
 mk; states done working; printf 'R\n' > "$lw/result.md"; apd; printf '%s\n' "$sid" > "$lw/.stratum/approve/session"; printf 'src/a.py\n' > "$lw/.stratum/approve/owns"
 CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" followup T004 --task "$round" --test "$testcmd"
 check "FU6 autonomous worker: the round Owns paths are added" '[ $rc = 0 ] && [ "$(cat "$lw/.stratum/approve/owns")" = "$(printf "src/a.py\nsrc/b.py")" ]'
