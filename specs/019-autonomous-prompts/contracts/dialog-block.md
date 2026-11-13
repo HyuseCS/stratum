@@ -35,6 +35,8 @@ For the captured dialog (research P1) the block is the 12 lines from the `─` r
 
 `screen\t<SH>` is printed when the read worked, `perm` is true and the mode is `block` or `cut`. Mode none: no `screen` line. `pane text:` and the full `SC` print as today.
 
+A `working` worker whose dialog block is live is also handled as `blocked`, and `watch` keys it on `SH`: see specs/008-herdr-workers/changes/002-enter-and-working-dialogs.md and D38 in specs/008-herdr-workers/decisions.md.
+
 ## 3. `answer` (permission branch, `:452-467`)
 
 Order of checks, each "Nothing sent", exit 1:
@@ -72,7 +74,7 @@ This keeps the cut-off-dialog No flow of 837282c (`skills/st-worker/SKILL.md` st
  Esc to cancel · Tab to amend
 ```
 
-"The hash" is the `screen` line's hash from `wait` on the first pane. "Nothing sent": no `agent send-keys` and no `pane send-text` call.
+"The hash" is the `screen` line's hash from `wait` on the first pane. "Nothing sent": no `agent send-keys`, no `pane send-text` and no `pane send-keys` call.
 
 | Id | Pane at `wait` | Pane at `answer` | Call | Expect |
 |----|----------------|------------------|------|--------|

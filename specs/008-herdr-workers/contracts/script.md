@@ -250,12 +250,24 @@ any command line. `effort` is not read: `claude` has no flag for it here.
 
 ```text
 F1, F2, F3
-1 H agent wait N --timeout <ms left>     timeout error -> state working, exit 3
-2 H agent get N                          blocked -> state blocked, pane text, exit 4
+0 ms left <= 0, or 54 timed-out slices   -> state working, exit 3
+1 H agent wait N --timeout <min(ms left, 10000)>   timeout error -> count one slice, go on to 2
+2 H agent get N                          working with a live dialog on the screen -> blocked
+                                         blocked -> state blocked, pane text, exit 4
 3 idle|done: result.md in WT?            yes -> state finished, exit 0
                                          no  -> H agent wait N --until working --until blocked --timeout 10000
-                                                matched -> back to 1; else state stopped, pane text, exit 5
+                                                matched -> back to 0; else state stopped, pane text, exit 5
 ```
+
+Change 002 (#105, D38): the wait runs in 10 s slices (`ponytail:` fixed slice), so a `working`
+worker is checked every 10 s. The slice count stops a hot loop when `agent wait` returns a
+timeout at once. A live dialog is a permission dialog with a head and an option line (`BM` is
+`block` or `cut`), or an open question (`Enter to select` or `Ready to submit your answers`),
+with no line below its head or its last question line that matches `^([[:space:]]|│)*❯`, except
+an option line (`^([[:space:]]|│)*❯[[:space:]]*[0-9]+\.[[:space:]]`). An input box below the
+dialog means the dialog is quoted output, and the worker stays `working`. The question rule holds
+for every caller (`wait` idle or done, `watch`, `list`, `followup` and `answer`): a quoted question
+is no open question.
 
 The result file check is `test -f <WT>/result.md` here and
 `ssh -o BatchMode=yes -- <target> test -f <Q>/result.md` on a saved machine. `unknown` counts as
@@ -267,9 +279,10 @@ means no result file yet (R3b).
 
 ```text
 0 a value starts with -                  -> "Answer values must not start with -.", exit 2, no herdr call
-1 H agent get N                          state != blocked -> "not blocked: <state>", exit 1, nothing sent
+1 H agent get N                          not blocked, no live question, and not a working worker whose
+                                         screen shows a live dialog -> "not blocked: <state>", exit 1, nothing sent
 2 --keys: H agent send-keys N <key>...
-  --text: H pane send-text <pane> <text>; H agent send-keys N enter
+  --text: H pane send-text <pane> <text>; H pane send-keys <pane> enter
 3 H agent wait N --until working --timeout 5000   a timeout error only means still blocked
 4 H agent get N                          -> state; exit 4 if still blocked, else 0
 ```
@@ -280,6 +293,24 @@ lingering about 2 s after a dialog key (research R7). `ponytail:` fixed 5 s boun
 the `state` line of section 5,
 `state<TAB><state><TAB><N><TAB><pane>`, with every state but `blocked` printed as `working`,
 as `start` and `goal` do. `answer` never prints the pane text.
+
+Change 002 (#104, #105, D38): a question counts in step 1 only when it is live (the `wait` rule).
+A `working` worker passes step 1 with a live permission dialog (`BM` set) or with a live question
+on the first read (`q` set). A question that shows up after the first read gives
+`not blocked: working`, and the next `wait` reports it.
+The permission checks after step 1 do not change for a `working` worker. With a live permission
+dialog, the checks use the screen that step 1 read, with no second read, so a dialog that closes
+between two reads cannot skip them. With a live question, the checks read the screen again, as for
+a blocked worker. After a key to a `working` worker with a live permission dialog, step 4 waits 2 s
+(`ponytail:` fixed) and reads the screen again: a live dialog still open gives `state blocked`,
+exit 4, else `state working`, exit 0. After a key to a `working` worker with a live question, step 4
+waits no 2 s and reads no screen again: it prints `state working`, exit 0, unless the state read
+gives `blocked`. The Enter goes by `pane send-keys`. Live on herdr 0.9.5 (2026-11-13) it submits;
+older herdr is not measured.
+
+`watch` (change 002): a `working` worker whose screen shows a live dialog is reported as
+`blocked`, the same lines and exit 4 as `wait`. Its seen key is `blocked <block hash>` for a
+permission dialog with a whole block (`BM` is `block`), else `blocked <cksum of the visible screen>`.
 
 A typed answer to an AskUserQuestion dialog is two `answer` calls. Live T008 (research R7): the
 dialog lists numbered options, then `Type something.` and `Chat about this`; a digit key picks
@@ -461,8 +492,23 @@ stub log, never from built ids.
 | W5 | `wait`, `blocked`: `state blocked`, the worker name, pane text, exit 4 |
 | A1 | `answer --keys 1`, states `blocked` before and `working` after: one `agent send-keys worker-t004 1`, then one `agent wait worker-t004 --until working --timeout 5000` before the last `agent get`, the line `state<TAB>working<TAB>worker-t004<TAB><pane>`, exit 0 |
 | A2 | `answer --text yes`, state `working`: `not blocked: working`, no `send-keys`, no `send-text`, exit 1 (US2 scenario 3) |
-| A3 | `answer --text "use main"`, states `blocked` before and after (the stub's `agent wait --until working` times out): `pane send-text <pane> use main`, then `agent send-keys worker-t004 enter`, then the `agent wait`, the line `state<TAB>blocked<TAB>worker-t004<TAB><pane>`, exit 4 |
+| A3 | `answer --text "use main"`, states `blocked` before and after (the stub's `agent wait --until working` times out): `pane send-text <pane> use main`, then `pane send-keys <pane> enter`, then the `agent wait`, the line `state<TAB>blocked<TAB>worker-t004<TAB><pane>`, exit 4 |
 | A4 | `answer --keys -x` and `answer --text -x`: each prints `Answer values must not start with -.`, exit 2, no herdr call |
+| GO2 | `goal` with a stalled `/goal` prompt in the box (`agent_prompt_stalled`): exit 0 and one `pane send-keys <pane> enter` with the real pane id (change 002) |
+| WD1 | `wait`, state `working`, a live permission dialog on the screen, `agent wait` times out: exit 4, `state blocked`, one `screen` line with the block hash, `pane text:`, one `agent wait` with `--timeout 10000` |
+| WD2 | `wait`, state `working`, the same dialog under an input box (quoted): exit 3, `state working`, no `screen` line, 54 `agent wait` calls |
+| WD3 | `wait`, state `working`, an open question: exit 4, `state blocked`, no `screen` line. WD3b: the question under an input box: exit 3, 54 `agent wait` calls |
+| WD4 | `watch`, state `working`, a live permission dialog: exit 4, the `screen` hash is the block hash, `.seen` holds `blocked <block hash>` |
+| WD5 | `watch`, states `working working done`, a quoted dialog, result.md present: exit 0, `state finished`, no `blocked` line, two polls |
+| WD6 | `answer --screen <hash> --keys 1`, state `working`, a live permission dialog that stays open: one `agent send-keys worker-t004 1`, one `sleep 2`, `state blocked`, exit 4 |
+| WD7 | `answer --screen <hash> --keys 1`, state `working`, a quoted dialog: `not blocked: working`, nothing sent |
+| WD8 | `answer`, state `working`, a live permission dialog: `--keys 1` without `--screen`, `--keys 2` (a lasting yes) and `--text` each give their present refusal line, nothing sent |
+| WD3c | `answer --keys 1` and `answer --text`, state `working`, a question under an input box: `not blocked: working`, nothing sent |
+| WD9 | `watch`, two workers: worker-t004 shows a quoted dialog, worker-t005 a live question: exit 4, `state blocked` for worker-t005 only, its seen key is `blocked <cksum of its screen>`. A changed question is reported again |
+| WD10 | `answer`, state `working`, a live permission dialog that is gone from the third screen read on (after the gate read): `--screen <hash> --keys 1` sends key 1 once, one `sleep 2`, `state working`, exit 0; `--keys 2` gives the not-one-time-yes line and `--text` the permission line, nothing sent |
+| WD11 | state `done`, result.md present, a question under an input box: `wait` gives `state finished`, exit 0, no `blocked`; `followup` is not refused (round 2, exit 0) |
+| WD12 | state `working`, a quoted dialog above an indented input box: `wait` gives exit 3, no `screen` line; above a framed input box (`│ ❯`): `answer` gives `not blocked: working`, nothing sent |
+| WD13 | `answer --text hi`, state `working`, no dialog on the first read, a live question from the second read on: `not blocked: working`, nothing sent |
 | G1 | `result` here with result.md: prints `RESULT FILE <random>`, not `STUB PANE`, exit 0 |
 | G2 | `result` here, no result.md: `no result file: `, `pane text:`, the stub pane text, exit 1 |
 | C1 | `close`, state `done`, the worker tab in `w1P` beside the orchestrator's own tab `w1P:t1`: finds the worker through `tab list`, `pane list --workspace w1P`, `worktree list --cwd <WT>`; one `tab close` on the worker's tab id; zero `workspace close`; `w1P:t1` in no call; `closed`, `folder <WT> ready to remove`, exit 0 |
@@ -499,6 +545,7 @@ stub log, never from built ids.
 | R8b | `start --machine laptop --repo proj` (no leading `/` or `~`): the same line |
 | R9 | `close --machine laptop`: every herdr call starts `--machine laptop` but `machine list --json`; one `tab close`; zero `workspace close` (the main checkout tab stays in `stubMainWS`); `closed` line |
 | R10 | `answer --machine laptop --keys 1`, state `blocked`: same `--machine` rule; one `agent send-keys` |
+| R10b | `answer --machine laptop --text "use main"`, state `blocked`: same `--machine` rule; one `pane send-keys <pane> enter`, no `agent send-keys ... enter`, exit 0 |
 | R11 | `goal --machine laptop --test <cmd>`: same `--machine` rule; exactly one `agent prompt` |
 | R12 | `list --machine laptop`: same `--machine` rule; `found` lines name `laptop`, field 4 the tab id |
 | H1 | `headless`: stub claude argv has exactly the flags in section 4 step 3, the prompt `HP`, the brief file outside the repo; output `headless worker-t004 success <turns> <cost>` and the stub's result text; exit 0; the `timeout` log has `-k 10 540` |

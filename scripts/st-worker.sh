@@ -177,26 +177,37 @@ PERM="$HEAD|don.t ask again|tell Claude what to do differently"
 screen() { SC=$("${H[@]}" agent read "$N" --source recent-unwrapped --lines 40 2>/dev/null | sed $'s/\e\\[[0-9;]*[A-Za-z]//g') || return; }
 perm() { tail -n 15 <<<"$SC" | grep -qaE "$PERM"; }
 block() {
-  local n w hd en tr
+  local n w en tr
   BM= SH=
   n=$(wc -l <<<"$SC")
   w=$((n > 15 ? n - 14 : 1))
-  hd=$(tail -n "+$w" <<<"$SC" | grep -naE "$HEAD" | cut -d: -f1) || :
-  [[ $hd =~ ^[0-9]+$ ]] || return 0
-  hd=$((hd + w - 1))
-  en=$(tail -n "+$((hd + 1))" <<<"$SC" | grep -naE '^([[:space:]]|│)*(❯[[:space:]]*)?[0-9]+\.[[:space:]]' | tail -n 1 | cut -d: -f1) || :
+  HD=$(tail -n "+$w" <<<"$SC" | grep -naE "$HEAD" | cut -d: -f1) || :
+  [[ $HD =~ ^[0-9]+$ ]] || return 0
+  HD=$((HD + w - 1))
+  en=$(tail -n "+$((HD + 1))" <<<"$SC" | grep -naE '^([[:space:]]|│)*(❯[[:space:]]*)?[0-9]+\.[[:space:]]' | tail -n 1 | cut -d: -f1) || :
   [ -n "$en" ] || return 0
-  en=$((en + hd))
+  en=$((en + HD))
   while [ "$en" -lt "$n" ] && sed -n "$((en + 1))p" <<<"$SC" | grep -qav '^[[:space:]]*$'; do en=$((en + 1)); done
-  tr=$(head -n "$((hd - 1))" <<<"$SC" | grep -naE '^(─)+[[:space:]]*$' | tail -n 1 | cut -d: -f1) || :
+  tr=$(head -n "$((HD - 1))" <<<"$SC" | grep -naE '^(─)+[[:space:]]*$' | tail -n 1 | cut -d: -f1) || :
   if [ -n "$tr" ]; then BM=block SH=$(sed -n "$tr,${en}p" <<<"$SC" | sha256sum); else BM=cut SH=$(sha256sum <<<"$SC"); fi
   SH=${SH:0:12}
 }
+live() { awk -v n="$1" 'NR > n && /^([[:space:]]|│)*❯/ && !/^([[:space:]]|│)*❯[[:space:]]*[0-9]+\.[[:space:]]/ { f = 1 } END { exit f }' <<<"$2"; }
 readpane() { "${H[@]}" agent read "$N" --source visible >"$t" 2>/dev/null; }
 unsent() { readpane && grep -a '^❯' "$t" | tail -n 1 | grep -qaE '^❯.{0,2}/goal '; }
-question() { readpane && ! grep -qaE "$PERM" "$t" && { grep -qa 'Enter to select' "$t" || { grep -qa 'Ready to submit your answers?' "$t" && grep -qaE '^([[:space:]]|❯)*1\. Submit answers[[:space:]]*$' "$t"; }; }; }
+question() { readpane && ! grep -qaE "$PERM" "$t" && { grep -qa 'Enter to select' "$t" || { grep -qa 'Ready to submit your answers?' "$t" && grep -qaE '^([[:space:]]|❯)*1\. Submit answers[[:space:]]*$' "$t"; }; } && live "$(grep -naE 'Enter to select|Ready to submit your answers' "$t" | tail -n 1 | cut -d: -f1)" "$(<"$t")"; }
+shown() {
+  BM= SH=
+  if screen && perm; then
+    block
+    [ -n "$BM" ] && live "$HD" "$SC"
+  else
+    question
+  fi
+}
 push() {
-  h agent send-keys "$N" enter
+  [ -n "$PANE" ] || look
+  h pane send-keys "$PANE" enter
   "${H[@]}" agent wait "$N" --until working --until blocked --timeout 10000 >/dev/null 2>&1 || true # ponytail: fixed 10 s for a resent prompt to leave the input box, raise it if a live run measures a slower start
   ! unsent
 }
@@ -449,21 +460,22 @@ wait)
   find_worker
   bound=540 # ponytail: fixed 540 s bound to stay under the Bash tool's 600 s cap, raise it if the cap moves
   resume=10000 # ponytail: fixed 10 s resume check between goal turns, raise it if quickstart section 2 measures a longer idle gap
+  slice=10000 # ponytail: fixed 10 s slice between screen reads of a working worker, raise it if the extra reads cost too much
+  sl=0
   end=$((SECONDS + bound))
   while :; do
     left=$(((end - SECONDS) * 1000))
-    if [ "$left" -le 0 ]; then
+    if [ "$left" -le 0 ] || [ "$sl" -ge 54 ]; then
       look
       st working
       exit 3
     fi
-    if ! "${H[@]}" agent wait "$N" --timeout "$left" >/dev/null 2>"$e"; then
+    if ! "${H[@]}" agent wait "$N" --timeout "$((left < slice ? left : slice))" >/dev/null 2>"$e"; then
       [ "$(code)" = timeout ] || stop "$(head -1 "$e")"
-      look
-      st working
-      exit 3
+      sl=$((sl + 1))
     fi
     look
+    [ "$S" != working ] || ! shown || S=blocked
     case $S in
       blocked)
         approval
@@ -493,11 +505,11 @@ wait)
   ;;
 answer)
   look
-  q=
+  q= dlg=
   ! question || q=1
-  [ -n "$q" ] || [ "$S" = blocked ] || fail "not blocked: $S"
+  [ -n "$q" ] || [ "$S" = blocked ] || { [ "$S" = working ] && shown && [ -n "$BM" ] && dlg=1; } || fail "not blocked: $S"
   p="This is a permission prompt. Tell the user the workspace, the tab and the prompt; do not answer it."
-  screen || fail "$p"
+  [ -n "$dlg" ] || screen || fail "$p"
   if perm; then
     [ -n "${keys+x}" ] || fail "$p"
     [ -n "${scr+x}" ] || fail "A permission prompt needs --screen <hash> from the screen line of wait or watch. Nothing sent."
@@ -525,11 +537,12 @@ answer)
       h agent send-keys "$N" "$k"
     fi
     h pane send-text "$PANE" "$text"
-    h agent send-keys "$N" enter
+    h pane send-keys "$PANE" enter
   fi
   settle=5000 # ponytail: fixed 5 s wait for blocked to clear after an answer (live T008 saw about 2 s), raise it if a live run measures a longer lag
   "${H[@]}" agent wait "$N" --until working --timeout "$settle" >/dev/null 2>&1 || true
   look
+  [ -z "$dlg" ] || { sleep 2; ! shown || S=blocked; } # ponytail: fixed 2 s for a dialog to close after a key, raise it if a live run needs longer
   [ "$S" = blocked ] || S=working
   printf 'state\t%s\t%s\t%s\n' "$S" "$N" "$PANE"
   [ "$S" != blocked ] || exit 4
@@ -655,7 +668,8 @@ watch)
         exit 5
       fi
       PANE=$(jq -r '.result.agent.pane_id // "-"' <<<"$r")
-      key=
+      key= dlg=
+      [ "$S" != working ] || ! shown || { S=blocked; dlg=1; }
       case $S in
         blocked | idle | done)
           [ -n "${wtc[$N]:-}" ] || { find_worker; wtc[$N]=$WT; qc[$N]=$Q; }
@@ -671,6 +685,7 @@ watch)
           fi
           readpane || :
           key="blocked $(cksum <"$t" | cut -d" " -f1)"
+          [ -z "$dlg" ] || [ "$BM" != block ] || key="blocked $SH"
           ;;
         idle | done)
           if question; then

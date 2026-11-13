@@ -197,6 +197,7 @@ the change is in the working tree, nothing is committed by the worker, and no pr
   change is committed on the worker's branch, and the result file is written (D21).
 - **FR-004**: The orchestrator MUST wait for the worker through herdr's agent states (`working`,
   `idle`, `done`, `blocked`), with a wait bound, and MUST NOT poll by re-prompting (D13, D14).
+  For a `working` worker, `wait` and `watch` also read the worker's screen for a live permission dialog or question and report it as `blocked` (D38, change 002).
 - **FR-005**: The result MUST be read from the result file: directly on this machine, over ssh
   on the other. The pane text is for a look or a fallback, never the result (D13).
 - **FR-006**: A `blocked` worker MUST be handled as a question: read the question from the pane
