@@ -55,8 +55,8 @@ All scratch files go in a scratch folder outside the repo (`$S` below). Wrappers
    - Red before the build (done, see Cause): both checks FAIL, argv 539 and 1799.
    - Green after the build: both checks show `ok`, and the argv is still 539 and 1799.
 2. Part 1 negative controls: wrong limit in `$C/scripts/st-advisor.sh`, then `ST_ROOT=$C bash $C/tests/test_advisor.sh | grep -E '^FAIL'`.
-   - N1: `sed -i 's/^\[ \$point = review \] && lim=1800$/[ $point = review ] \&\& lim=540/'`. Expect only `FAIL FR-005 review timeout argv is 1800`.
-   - N2: `sed -i 's/^lim=540$/lim=1800/'`. Expect `FAIL timeout argv` (review stays 1800).
+   - N1: `sed -i 's/^\[ \$point = review \] && lim=1800$/[ $point = review ] \&\& lim=540/' $C/scripts/st-advisor.sh`. Expect only `FAIL FR-005 review timeout argv is 1800`.
+   - N2: `sed -i 's/^lim=540$/lim=1800/' $C/scripts/st-advisor.sh`. Expect `FAIL timeout argv` (review stays 1800).
    - Check that each sed changed the line (`grep -c`) before you trust the result.
 3. Part 2 outside write, run once for each of the three tests `$t`. Command: `(sleep 0.3; printf 'x\n' >> $C/README.md; printf 'x\n' > $C/scripts/race-new.txt) & ST_ROOT=$C bash $C/tests/$t | grep -E '^FAIL|no repo writes'; wait`. Reset `$C` between runs.
    - Red before the build: test_advisor_waive.sh done (`FAIL no repo writes`). Run the other two the same way.
