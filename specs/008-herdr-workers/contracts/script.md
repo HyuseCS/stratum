@@ -295,13 +295,18 @@ the `state` line of section 5,
 as `start` and `goal` do. `answer` never prints the pane text.
 
 Change 002 (#104, #105, D38): a question counts in step 1 only when it is live (the `wait` rule).
-A `working` worker passes step 1 only with a live permission dialog (`BM` set); a question that
-shows up after the first read gives `not blocked: working`, and the next `wait` reports it.
-The permission checks after step 1 do not change for a `working` worker. For a `working` worker
-the checks use the screen that step 1 read, with no second read, so a dialog that closes between
-two reads cannot skip them. After a key to a `working` worker, step 4 waits 2 s (`ponytail:` fixed)
-and reads the screen again: a live dialog still open gives `state blocked`, exit 4, else
-`state working`, exit 0. The Enter goes by `pane send-keys`, which submits on old and new herdr.
+A `working` worker passes step 1 with a live permission dialog (`BM` set) or with a live question
+on the first read (`q` set). A question that shows up after the first read gives
+`not blocked: working`, and the next `wait` reports it.
+The permission checks after step 1 do not change for a `working` worker. With a live permission
+dialog, the checks use the screen that step 1 read, with no second read, so a dialog that closes
+between two reads cannot skip them. With a live question, the checks read the screen again, as for
+a blocked worker. After a key to a `working` worker with a live permission dialog, step 4 waits 2 s
+(`ponytail:` fixed) and reads the screen again: a live dialog still open gives `state blocked`,
+exit 4, else `state working`, exit 0. After a key to a `working` worker with a live question, step 4
+waits no 2 s and reads no screen again: it prints `state working`, exit 0, unless the state read
+gives `blocked`. The Enter goes by `pane send-keys`. Live on herdr 0.9.5 (2026-11-13) it submits;
+older herdr is not measured.
 
 `watch` (change 002): a `working` worker whose screen shows a live dialog is reported as
 `blocked`, the same lines and exit 4 as `wait`. Its seen key is `blocked <block hash>` for a
