@@ -27,7 +27,8 @@ JOIN = re.compile(r"(?<!\\)((?:\\\\)*)\\\n")
 SUBJECT = re.compile(r"(feat|fix|refactor|docs|style|test|chore|spec|plan|sync)(\([A-Za-z0-9._-]+\))?: \S.*"
                      r"|Bump version to \d+\.\d+\.\d+")
 MERGE = re.compile(r"Merge (branch|pull request|remote-tracking branch) .*|Revert \".*")
-ATTRIBUTION = re.compile(r"(?im)^[^\w\n]*(co-authored-by:|generated (with|by)\b)")
+ATTRIBUTION = re.compile(r"(?im)^[^\w\n]*(co-authored-by:|generated (with|by)\W+(an? )?"
+                         r"(claude|anthropic|ai|gpt|chatgpt|openai|codex|copilot|gemini|llm|model)(?![a-z]))")
 CO_AUTHOR = re.compile(r"(?i)\s*co-authored-by\s*[:=]")
 NO_AI = "the message has an AI attribution line (Co-Authored-By or Generated with)"
 try:
@@ -107,11 +108,14 @@ def config_writes(args):
 
 
 def message_deny(problem):
+    if problem == NO_AI:
+        return "deny", (f"Commit message denied: {problem}. Remove the Co-Authored-By or Generated line "
+                        "and run it again.")
     return "deny", (f"Commit message denied: {problem}. Run it again as git commit -m 'type(scope): subject' "
                     "-m 'why' (standard: agents/st-git.md step 6 in the Stratum plugin).")
 
 
-def message_problem(args):
+def message_problem(args, standard):
     msgs, trailers, squash, it = [], [], False, iter(args)
     for a in it:
         if a == "--":
@@ -125,11 +129,12 @@ def message_problem(args):
             msgs.append(value if eq else next(it, ""))
         elif len(name) >= 4 and "--trailer".startswith(name):
             trailers.append(value if eq else next(it, ""))
+    # ponytail: a literal " ; " or "\n" reads as a line break git does not store, upgrade if it denies a real message
     msgs = [m.replace(" ; ", "\n").replace("\\n", "\n") for m in msgs]
     if any(ATTRIBUTION.search(m) for m in msgs) or any(CO_AUTHOR.match(t) or ATTRIBUTION.search(t)
                                                         for t in trailers):
         return NO_AI
-    if not msgs or squash or not STANDARD:
+    if not msgs or squash or not standard:
         return ""
     subject = msgs[0].split("\n", 1)[0]
     if MERGE.fullmatch(subject):
@@ -197,7 +202,6 @@ def guard_file(cwd):
 
 
 GUARD = {}
-STANDARD = False
 
 
 def mode(key):
@@ -214,7 +218,7 @@ def destructive(key, reason):
     return m, f"DESTRUCTIVE ({key}: {m}): {reason}"
 
 
-def judge(sub, args, gitdir, elsewhere=False, conf=()):
+def judge(sub, args, gitdir, elsewhere=False, conf=(), target=None):
     if "--no-verify" in args or "core.hookspath" in conf:
         return "deny", "--no-verify and -c core.hooksPath are blocked: hooks must run."
     if sub == "config":
@@ -225,16 +229,19 @@ def judge(sub, args, gitdir, elsewhere=False, conf=()):
             return "deny", "git add -A / --all / . is blocked: stage exact paths."
         return None, ""
     if sub == "commit":
-        problem = message_problem(args)
+        problem = message_problem(args, bool(target) and os.path.exists(
+            os.path.join(stratum_dir(target), "commit-standard")))
         if problem:
             return message_deny(problem)
         m = mode("commit")
         amend = "--amend" in args
-        if m == "auto" and not amend and not elsewhere:
+        trailer = any(c.startswith("trailer.") for c in conf)
+        if m == "auto" and not amend and not elsewhere and not trailer:
             return None, ""
         decision = "deny" if m == "deny" else "ask"
         head = f"git commit (commit: {m})" + (" with --amend rewrites the last commit" if amend else "") \
-            + (" may target another folder or branch" if elsewhere else "")
+            + (" may target another folder or branch" if elsewhere else "") \
+            + (" sets -c trailer.*, which can add a trailer the guard cannot read" if trailer else "")
         return decision, head + "\n" + staged_summary(gitdir)
     if sub == "push":
         if "--delete" in args or short_has(args, "d") or any(a.startswith(":") for a in args):
@@ -317,7 +324,6 @@ def body_end(lines, start, tag, dash, quoted):
 
 
 def main():
-    global STANDARD
     try:
         data = json.load(sys.stdin)
     except Exception:
@@ -325,7 +331,6 @@ def main():
     command = (data.get("tool_input") or {}).get("command") or ""
     cwd = data.get("cwd") or os.getcwd()
     GUARD.update(guard_file(cwd))
-    STANDARD = os.path.exists(os.path.join(stratum_dir(cwd), "commit-standard"))
     decision, reasons = None, []
     home = git(["rev-parse", "--show-toplevel"], cwd)
 
@@ -366,7 +371,7 @@ def main():
             commit = commit or sub == "commit"
             gitdir = resolve(here, cdir) if cdir else here
             note(*judge(sub, args, gitdir or cwd, unknown or env or elsewhere or left
-                        or away(gitdir) or off_branch(gitdir), conf))
+                        or away(gitdir) or off_branch(gitdir), conf, None if env or elsewhere else gitdir))
             left = left or sub in ("switch", "checkout")
         return bool(parsed and re.fullmatch(r"[a-z][a-z0-9-]*", parsed[0]))
 
