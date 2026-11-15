@@ -27,8 +27,7 @@ JOIN = re.compile(r"(?<!\\)((?:\\\\)*)\\\n")
 SUBJECT = re.compile(r"(feat|fix|refactor|docs|style|test|chore|spec|plan|sync)(\([A-Za-z0-9._-]+\))?: \S.*"
                      r"|Bump version to \d+\.\d+\.\d+")
 MERGE = re.compile(r"Merge (branch|pull request|remote-tracking branch) .*|Revert \".*")
-ATTRIBUTION = re.compile(r"(?im)^[^\w\n]*(co-authored-by:|generated (with|by)\W+(an? )?"
-                         r"(claude|anthropic|ai|gpt|chatgpt|openai|codex|copilot|gemini|llm|model)(?![a-z]))")
+ATTRIBUTION = re.compile(r"(?im)^[^\w\n]*(co-authored-by:|generated (with|by) \[?(claude|anthropic)\b)")
 CO_AUTHOR = re.compile(r"(?i)\s*co-authored-by\s*[:=]")
 NO_AI = "the message has an AI attribution line (Co-Authored-By or Generated with)"
 try:
@@ -230,7 +229,7 @@ def judge(sub, args, gitdir, elsewhere=False, conf=(), target=None):
         return None, ""
     if sub == "commit":
         problem = message_problem(args, bool(target) and os.path.exists(
-            os.path.join(stratum_dir(target), "commit-standard")))
+            os.path.join(stratum_dir(os.path.realpath(target)), "commit-standard")))
         if problem:
             return message_deny(problem)
         m = mode("commit")
