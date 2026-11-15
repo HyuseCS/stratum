@@ -263,7 +263,7 @@ phrases <<'EOF'
 #18 FR-001 build quick	skills/st-build/SKILL.md	The Quick lane has no advisor.
 #18 FR-001 build worktree	skills/st-build/SKILL.md	with the working directory at that worktree's root and `<feature dir>` as the main checkout's absolute path, so the record lands in the main checkout.
 #18 FR-001 plan point	skills/st-plan/SKILL.md	bash <plugin root>/scripts/st-advisor.sh plan <feature dir>
-#18 FR-002 wait build	skills/st-build/SKILL.md	Change no file in that folder until the point ends. When it ends, stop the watch and handle the point's output.
+#18 FR-002 wait build	skills/st-build/SKILL.md	Change no file in that folder and run no `st-git` until the point ends. When it ends, stop the watch and handle the point's output.
 #18 FR-002 wait plan	skills/st-plan/SKILL.md	as "Advisor" in `<plugin root>/skills/st-build/SKILL.md` says: the watch first, then the point in the background.
 #18 FR-005 revise	skills/st-build/SKILL.md	Two rounds at most per point per gate pass, then the user decides.
 #18 FR-006 blocked	skills/st-build/SKILL.md	stop and show the user the reason. Nothing passes the gate.

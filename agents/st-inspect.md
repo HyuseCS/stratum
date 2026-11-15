@@ -40,6 +40,7 @@ Look for at least:
 - Coverage gaps: a requirement with no task, a task with no requirement, a success criterion with no task where it needs work.
 - Inconsistency: one concept with two names across spec, plan, data model and contracts, an entity in one file but not the other, tasks out of order, conflicting requirements.
 - Task order: a test task placed after its build task. Also `[P]` tasks that touch the same file.
+- Gates: a task that names an operator check as a gate without naming the action it gates (the build or the first release), or a gate in tasks.md that quickstart.md words differently or lacks.
 
 Offer each fix, never apply it. Say for each finding whether it needs a user decision or goes to st-plan.
 
@@ -85,6 +86,8 @@ F1. <file:line> <finding> -> <fix or decision needed>
 
 - Edit anything except the `## Validate` section of `plan.md`.
 - Install packages, run migrations, or change config.
+- Write or change a file through Bash (a heredoc, or an echo or printf redirect). Use the Write
+  or Edit tool. The git guard reads Bash text and stops on git words it cannot parse.
 - Run `git add` or `git commit`.
 
 ## Report

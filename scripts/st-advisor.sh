@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -o pipefail
+source "$(dirname -- "${BASH_SOURCE[0]}")/common.sh"
 SECONDS=0
 usage() { echo "usage: st-advisor.sh plan|test|diff|decisions|change|review|round|check|continued|waive|note|talk|count|answer|watch ..."; exit 2; }
 tabs=${XDG_STATE_HOME:-$HOME/.local/state}/stratum/codex-tabs
@@ -266,7 +267,15 @@ lim=540
 [ $point = review ] && lim=1800
 left=$((lim - SECONDS))
 [ $rc != 0 ] && [ $left -lt 60 ] && block "timed out"
-[ $rc = 0 ] || { rc=0; timeout -k 10 $left codex exec -s read-only --ignore-user-config "${opts[@]}" --ephemeral --output-schema "$tmp/schema.json" -o "$tmp/answer.json" - < "$tmp/prompt" > "$tmp/out" 2> "$tmp/err" || rc=$?; }
+if [ $rc != 0 ]; then
+  rc=0 gw=
+  [ "$(git rev-parse --is-inside-work-tree 2>/dev/null)" = true ] && { gw=1; before=$(snap) || block "cannot read git status"; }
+  timeout -k 10 $left codex exec -s read-only --ignore-user-config "${opts[@]}" --ephemeral --output-schema "$tmp/schema.json" -o "$tmp/answer.json" - < "$tmp/prompt" > "$tmp/out" 2> "$tmp/err" || rc=$?
+  if [ -n "$gw" ]; then
+    after=$(snap) || block "cannot read git status"
+    [ "$before" = "$after" ] || block "files or HEAD changed during the review: $(snapdiff "$before" "$after")"
+  fi
+fi
 
 python3 -I - "$label" "$rec" "$hash" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$tmp/answer.json" "$rc" "$tmp/err" <<'PY'
 import json, os, sys

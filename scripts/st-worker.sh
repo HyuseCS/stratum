@@ -291,7 +291,7 @@ brief() {
   printf '%s\n\n' "# Brief: $N" "You are worker $N, started by the Stratum orchestrator. Read this file first and follow it." "## Task $id"
   cat -- "$task"
   printf '\n%s\n\n' '## Facts'
-  printf '%s\n' "- Test command: \`$test\`" '- Test lock: if your task is marked [lock], run its test command as `bash <plugin root>/scripts/st-lock.sh -- <test command>`, with the plugin root of the Stratum plugin. Never write a wait loop of your own.' "- Lane: $lane. If it names a skill, start it with the Skill tool. Run only task $id; skip every other task, ticked or not." "- Branch: $BR" "- Model: ${model:-default}"
+  printf '%s\n' "- Test command: \`$test\`" '- Test lock: if your task is marked [lock], run its test command as `bash <plugin root>/scripts/st-lock.sh -- <test command>`, with the plugin root of the Stratum plugin. Never write a wait loop of your own.' '- Files: change a file only with the Write or Edit tool, never with a shell write in Bash (`<<`, `cat >`, `tee`, `sed -i`, an echo or printf redirect).' "- Lane: $lane. If it names a skill, start it with the Skill tool. Run only task $id; skip every other task, ticked or not." "- Branch: $BR" "- Model: ${model:-default}"
   [ -n "$m" ] || printf '%s\n' "- Plugin root: $(cd "$(dirname "$0")/.." && pwd)"
   printf '%s\n' "- Your machine: ${m:-local}. \`local\` is the orchestrator's machine." "- Result file: $WT/result.md"
   printf '\n%s\n\n%s\n%s\n' '## Roster' '| Name | Machine | Branch | Task |' '|------|---------|--------|------|'

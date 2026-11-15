@@ -51,6 +51,8 @@ Report: `Move up a lane: <reason>`. Never grow a quick fix.
 
 - Touch a second file (state.json in step 4 does not count).
 - Refactor, rename, or "improve" nearby code.
+- Write or change a file through Bash (a heredoc, or an echo or printf redirect). Use the Write
+  or Edit tool. The git guard reads Bash text and stops on git words it cannot parse.
 - Run `git add` or `git commit`.
 
 ## Report

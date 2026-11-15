@@ -20,3 +20,19 @@ summary: /advisor on #95 diff: no hidden regression; asked for a clean-repo chec
 
 ## change | 2026-11-12T16:28:59Z | sha256 edb1373f191b98dd7f6be78b19a907ead775dca7375889d6646221a4e627fd52 | APPROVED
 summary: The plan addresses both flake causes without changing runtime behavior. The elapsed-time bounds match the contracts, the private scripts copy isolates the write checks, and the planned negative controls preserve meaningful coverage. No files changed and no tests run.
+
+## change | 2026-11-15T13:47:04Z | sha256 9c236e74928d3970778f187de6d7b4e780cc89b476ed2c8bba04febf6a959f3e | REVISE
+summary: The approach is focused, but the fingerprint misses index changes and the test plan violates the feature's test-scope rule. No files changed.
+- [MEDIUM] specs/010-workflow-overhaul/changes/004-lane-rules-103.md:11: Include index contents in the fingerprint and test index-only changes. Evidence: The proposed fingerprint includes HEAD, porcelain status and working-file hashes. Replacing an already-modified staged blob while leaving the working file unchanged can preserve all three, allowing approval despite a repository change. The existing snap() explicitly captures staged object IDs with git diff --cached --raw --no-abbrev (scripts/st-codex-agent.sh:56-59). Preserve that coverage, preferably by sharing the snapshot implementation, and add an index-only regression case.
+- [MEDIUM] specs/010-workflow-overhaul/changes/004-lane-rules-103.md:25: Remove the unconditional full-suite command or explicitly require a user request before running it. Evidence: The Tests section schedules every shell test and Python unittest discovery. FR-005 forbids planned tasks from running the full suite unless the user asks in their own words (spec.md:261-262); agents/st-build.md:46 repeats that restriction. The named targeted commands already provide the intended default verification.
+
+## change | 2026-11-15T13:53:15Z | sha256 4d2210b3095890a08589d5495c50f8a74419eef228629e4074e9c7607a0d577c | REVISE
+summary: The shared snapshot and index-only test resolve the earlier fingerprint gap. Two remaining issues need correction. No files changed.
+- [MEDIUM] specs/010-workflow-overhaul/changes/004-lane-rules-103.md:15: Preserve the existing user-controlled recovery for a BLOCKED review instead of automatically retrying. Evidence: The new handling line says to wait until no lane runs and then rerun the point. Existing skills/st-build/SKILL.md:120-122 requires the user to inspect changes and choose recovery, and forbids retrying a BLOCKED point in the same gate pass; line 109 also ends a talk on a BLOCKED round. The proposed unconditional retry conflicts with these rules and can repeat reviews while external edits continue. Use the existing recovery policy and retain the run limits.
+- [MEDIUM] specs/010-workflow-overhaul/changes/004-lane-rules-103.md:19: Add README.md to the file list to register the new test. Evidence: The plan creates tests/test_shell_writes.sh but does not update README.md. tests/test_inspect.sh:128-131 checks that every tests/test_* file is named in README.md, so the planned new file makes the existing 'README tests' check fail.
+
+## diff | 2026-11-15T14:22:32Z | /advisor
+summary: /advisor on the diff: G-fp3 passed without the index lines; fixed by an MM start state, proven red with the index loop removed. Search old rule text repo-wide, commit plan and advisor.md.
+
+## decisions | 2026-11-15T14:22:32Z | /advisor
+summary: /advisor on decisions: devnull redirect not flagged, test rows A15 A17 on-demand 18 updated to new text, harness model entry with no relationship, die spacing restored: all fine, none to the user.

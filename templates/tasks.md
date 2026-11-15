@@ -20,6 +20,7 @@ description: "Task list template for feature implementation"
 - **[screen: <mode>]**: New screen; Build sends it to the Design lane in that mode
 - **[Story]**: Which user story this task belongs to (e.g., US1, US2, US3)
 - Include exact file paths in descriptions
+- A task with an operator check as a gate names its action (the build or the first release); quickstart.md carries the same gate
 
 ## Path Conventions
 

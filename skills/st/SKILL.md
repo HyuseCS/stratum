@@ -48,6 +48,8 @@ Then run the lane. If the user overrides, use their lane.
   If the agent reports "Needs the Fast lane", run `/stratum:st-fast`.
 - **Design:** run `/stratum:st-design`.
 
+Every brief for a code or docs lane says: "Change a file only with the Write or Edit tool, never with a shell write in Bash."
+
 ## 3. Moving up a lane
 
 If any subagent reports that the work touches a higher impact area than its lane allows, stop,
@@ -62,6 +64,7 @@ tell the user in one line, and restart at the higher lane with what was learned.
   the files the work already touches. Do not stop for them. When the run is done, list each one:
   what you found, what you did.
   Write each small decision in a list as you make it. At each story review, and at the end of a Fast change, the list goes to the advisors the matrix names. A decision an advisor sends to the user is undone if the user says no.
+  While an advisor point runs, run no `st-git`, start no lane and change no file in the review folder. The next lane starts after the point returns.
 - Findings from any agent or review are hypotheses. Before acting, check each one against the
   source: the defect exists at that `file:line`, and the stated cause is the real one. Drop the
   false ones. A real finding is a decision like any other: small ones get fixed, big ones go to
@@ -73,7 +76,7 @@ tell the user in one line, and restart at the higher lane with what was learned.
 - Before accepting code from a subagent, run
   `bash <plugin root>/scripts/st-verify.sh '<test command>' <files it touched>`
   from the project root. It re-runs the tests and greps the diff for added comment lines. Send
-  back any `FAIL`.
+  back any `FAIL`. Then run `bash <plugin root>/scripts/st-shell-writes.sh <the lane's output file>`; a match sends the lane back. A lane sent back is checked again on its new lines only: note `wc -l < <file>` before you send it back, then run the script on `<(tail -n +<that count plus 1> <file>)`.
 - On `Needs a test choice: <why>`, ask the user: say why in short words, and offer a named list of tests or the full suite.
 - Push only when the user says "push". An Approve at the `/stratum:st-pr` gate counts as that word.
 - Every merge into main goes through its GitHub PR (`gh pr merge --merge`), never a local merge

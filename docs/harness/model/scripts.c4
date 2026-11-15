@@ -54,6 +54,12 @@ model {
         path 'scripts/st-lock.sh'
       }
     }
+    st-shell-writes-sh = script 'st-shell-writes.sh' {
+      summary 'Reads the transcript of a lane and prints each Bash command that writes a file with the shell. Exits 1 on a match.'
+      metadata {
+        path 'scripts/st-shell-writes.sh'
+      }
+    }
     st-shortcuts-sh = script 'st-shortcuts.sh' {
       summary 'Lists the ponytail marker lines added since the base branch, with file and line, for the shortcut list at the end of a lane.'
       metadata {

@@ -52,5 +52,11 @@ row 27	gone	templates/tasks.md	- [P] tasks = different files, no dependencies
 row 27	gone	templates/tasks.md	Can run in parallel (different files, no dependencies)
 row 28	has	README.md	`{"mode": "auto"}` (the default when the file has no `mode`): the risk level picks the advisors at each point.
 row 29	has	scripts/st-worker.sh	- Test lock: if your task is marked [lock], run its test command as `bash <plugin root>/scripts/st-lock.sh -- <test command>`, with the plugin root of the Stratum plugin. Never write a wait loop of your own.
+row 30	has	skills/st/SKILL.md	Change a file only with the Write or Edit tool, never with a shell write in Bash.
+row 31	has	skills/st/SKILL.md	run `bash <plugin root>/scripts/st-shell-writes.sh <the lane's output file>`; a match sends the lane back.
+row 32	has	skills/st/SKILL.md	While an advisor point runs, run no `st-git`, start no lane and change no file in the review folder. The next lane starts after the point returns.
+row 33	has	skills/st-build/SKILL.md	files or HEAD changed during the review
+row 34	has	skills/st/SKILL.md	A lane sent back is checked again on its new lines only: note `wc -l < <file>` before you send it back, then run the script on `<(tail -n +<that count plus 1> <file>)`.
+row 35	has	skills/st-build/SKILL.md	Then run `bash <plugin root>/scripts/st-shell-writes.sh <the agent's output file>` and send a match back to `st-build`.
 EOF
 exit $fail

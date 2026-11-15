@@ -451,6 +451,7 @@ bash tests/test_st_update.sh
 bash tests/test_update_rules.sh
 bash tests/test_update_items.sh
 bash tests/test_harness_model.sh
+bash tests/test_shell_writes.sh
 node tests/test_token_weather.mjs
 node tests/test_pr_workflow.mjs
 claude plugin validate .claude-plugin/plugin.json

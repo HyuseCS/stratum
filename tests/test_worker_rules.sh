@@ -53,6 +53,10 @@ S3|specs/014-prompt-answers/research.md|https://code.claude.com/docs/en/hooks.md
 S4|specs/014-prompt-answers/research.md|7. Not documented: any way for the parent model to answer, approve or deny a subagent's permission prompt.
 S5|specs/014-prompt-answers/research.md|`hooks/st-models.py:76` prints `updatedInput` with no `permissionDecision`
 S6|specs/014-prompt-answers/research.md|9. Passing `model` and `effort` yourself.
+W30|scripts/st-worker.sh|- Files: change a file only with the Write or Edit tool, never with a shell write in Bash
+W31|agents/st-quick.md|Write or change a file through Bash (a heredoc, or an echo or printf redirect). Use the Write
+W32|agents/st-inspect.md|Write or change a file through Bash (a heredoc, or an echo or printf redirect). Use the Write
+W33|agents/st-research.md|Write or change a file through Bash (a heredoc, or an echo or printf redirect). Use the Write
 TABLE
 if [ "$(grep -cF 'Never approve a push' "$root/skills/st-worker/SKILL.md")" = 1 ]; then echo "ok   O1 never list once"; else echo "FAIL O1 never list once"; fail=1; fi
 off=$(grep -nF 'autonomous build mode is on for this session: before you write' "$root/skills/st-handoff/SKILL.md" | cut -d: -f1)

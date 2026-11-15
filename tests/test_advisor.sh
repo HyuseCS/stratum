@@ -619,5 +619,47 @@ fi
 chmod 600 "$tmp/plan000.md"
 rm -rf "$rdir"
 
+fp="$tmp/fp"
+mkdir -p "$fp/specs/001-demo/changes" "$fp/.stratum" "$tmp/fpbin"
+git -C "$fp" init -q
+printf '# spec\n' > "$fp/specs/001-demo/spec.md"
+printf '# change\n' > "$fp/specs/001-demo/changes/001-x.md"
+printf 'x = 1\n' > "$fp/a.py"
+printf '{"mode": "codex"}' > "$fp/.stratum/advisor.json"
+git -C "$fp" add -A
+git -C "$fp" -c user.name=t -c user.email=t@t commit -q -m first
+printf 'x = 2\n' > "$fp/a.py"
+git -C "$fp" add a.py
+cat > "$tmp/fpbin/codex" <<'FAKE'
+#!/usr/bin/env bash
+cat > /dev/null
+o=
+while [ $# -gt 0 ]; do
+  case $1 in -o) o=$2;; esac
+  shift
+done
+printf '%s' '{"verdict":"APPROVED","summary":"fine","findings":[]}' > "$o"
+case ${FP_CASE:-} in
+  commit) git -c user.name=t -c user.email=t@t commit -q -m second;;
+  untracked) printf 'new\n' > untracked.txt;;
+  index) git update-index --cacheinfo 100644,"$(printf 'other\n' | git hash-object -w --stdin)",a.py;;
+esac
+exit 0
+FAKE
+chmod +x "$tmp/fpbin/codex"
+fprun() { out=$(cd "$fp" && FP_CASE=$1 PATH="$tmp/fpbin:$PATH" bash "$repo/scripts/st-advisor.sh" change specs/001-demo specs/001-demo/changes/001-x.md); rc=$?; }
+fpblocked() { [ "$rc" = 1 ] && head -n1 <<<"$out" | grep -qF "BLOCKED: files or HEAD changed during the review" && grep -E "^## change \| " "$fp/specs/001-demo/advisor.md" | tail -n1 | grep -q "| BLOCKED$"; }
+fprun commit
+check "G-fp1 a commit during the point: BLOCKED files or HEAD changed, record" 'fpblocked'
+fprun untracked
+check "G-fp2 an untracked file during the point: BLOCKED files or HEAD changed, record" 'fpblocked'
+printf 'x = 3\n' > "$fp/a.py"
+git -C "$fp" add a.py
+printf 'x = 4\n' > "$fp/a.py"
+fprun index
+check "G-fp3 an index-only change during the point: BLOCKED files or HEAD changed, record" 'fpblocked'
+fprun none
+check "G-fp4 nothing changes during the point: APPROVED, exit 0" '[ "$rc" = 0 ] && [[ "$(head -n1 <<<"$out")" == "APPROVED sha256 "* ]]'
+
 check "no repo writes" '[ "$(repo_files)" = "$repo_before" ]'
 exit $fail
