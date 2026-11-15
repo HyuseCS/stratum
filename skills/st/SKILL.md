@@ -76,7 +76,7 @@ tell the user in one line, and restart at the higher lane with what was learned.
 - Before accepting code from a subagent, run
   `bash <plugin root>/scripts/st-verify.sh '<test command>' <files it touched>`
   from the project root. It re-runs the tests and greps the diff for added comment lines. Send
-  back any `FAIL`. Then run `bash <plugin root>/scripts/st-shell-writes.sh <the lane's output file>`; a match sends the lane back. A lane sent back is checked again on its new lines only: note `wc -l < <file>` before you send it back, then run the script on `<(tail -n +<that count plus 1> <file>)`.
+  back any `FAIL`. Then run `bash <plugin root>/scripts/st-shell-writes.sh <the lane's output file>` and read each printed command. A match sends the lane back only when the command writes or changes a file; drop a heredoc that writes no file. A send-back resumes the same agent (SendMessage), so check it again on its new lines only: note `wc -l < <file>` before you send it back, then run the script on `<(tail -n +<that count plus 1> <file>)`. A new Agent call is checked on its whole output file.
 - On `Needs a test choice: <why>`, ask the user: say why in short words, and offer a named list of tests or the full suite.
 - Push only when the user says "push". An Approve at the `/stratum:st-pr` gate counts as that word.
 - Every merge into main goes through its GitHub PR (`gh pr merge --merge`), never a local merge

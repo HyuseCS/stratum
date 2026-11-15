@@ -2,7 +2,8 @@
 [ $# -ge 1 ] || { echo "usage: st-shell-writes.sh <transcript.jsonl>..."; exit 2; }
 exec python3 -I - "$@" <<'PY'
 import json, re, sys
-pat = re.compile(r"(?<!<)<<(?!<)|\|\s*tee\b|\bsed\b[^|;&\n]*\s(-[a-zA-Z]*i|--in-place)|\b(cat|echo|printf)\b[^|;&\n]*?(?<!>)>>?(?!&|\s*/dev/null)")
+# ponytail: the redirect check covers only cat, echo and printf; upgrade when a lane is seen to write with another command
+pat =re.compile(r"(?<!<)<<(?!<)|\|\s*tee\b|\bsed\b[^|;&\n]*\s(-[a-zA-Z]*i|--in-place)|\b(cat|echo|printf)\b[^|;&\n]*?(?<!>)>>?(?!&|\s*/dev/null)")
 hit = 0
 for path in sys.argv[1:]:
     try:

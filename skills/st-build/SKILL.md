@@ -25,7 +25,7 @@ subagent absolute paths: plugin root, project root, feature dir, and its task ID
 3. **Verify.** From the project root, run
    `bash <plugin root>/scripts/st-verify.sh '<test command>' <files the task touched>`.
    It re-runs the test, greps the diff for added comment lines, and prints one line. Send any
-   `FAIL` back to `st-build`. Then run `bash <plugin root>/scripts/st-shell-writes.sh <the agent's output file>` and send a match back to `st-build`.
+   `FAIL` back to `st-build`. Then run `bash <plugin root>/scripts/st-shell-writes.sh <the agent's output file>` and read each printed command. Send it back to `st-build` only when the command writes or changes a file; drop a heredoc that writes no file. A send-back resumes the same agent (SendMessage), so check it again on its new lines only: note `wc -l < <file>` before you send it back, then run the script on `<(tail -n +<that count plus 1> <file>)`.
    A test marked `[lock]` runs only through the test lock: `bash <plugin root>/scripts/st-lock.sh -- <test command>`.
 4. **Two tries.** If the test is still red after 2 `st-build` tries, run the advisor (see Advisor): save the task text and both failure outputs to files in your scratchpad, then run
    `bash <plugin root>/scripts/st-advisor.sh test <feature dir> <task file> <test path> <failure 1 file> <failure 2 file>`: root cause or rabbit hole?
