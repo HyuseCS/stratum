@@ -52,5 +52,13 @@ row 27	gone	templates/tasks.md	- [P] tasks = different files, no dependencies
 row 27	gone	templates/tasks.md	Can run in parallel (different files, no dependencies)
 row 28	has	README.md	`{"mode": "auto"}` (the default when the file has no `mode`): the risk level picks the advisors at each point.
 row 29	has	scripts/st-worker.sh	- Test lock: if your task is marked [lock], run its test command as `bash <plugin root>/scripts/st-lock.sh -- <test command>`, with the plugin root of the Stratum plugin. Never write a wait loop of your own.
+row 30	has	skills/st/SKILL.md	Change a file only with the Write or Edit tool, never with a shell write in Bash.
+row 31	has	skills/st/SKILL.md	run `bash <plugin root>/scripts/st-shell-writes.sh <the lane's output file>` and read each printed command. A match sends the lane back only when the command writes or changes a file; drop a heredoc that writes no file.
+row 32	has	skills/st/SKILL.md	While an advisor point runs, run no `st-git`, start no lane and change no file in the review folder. The next lane starts after the point returns.
+row 33	has	skills/st-build/SKILL.md	files or HEAD changed during the review
+row 34	has	skills/st/SKILL.md	A send-back resumes the same agent (SendMessage), so check it again on its new lines only: note `wc -l < <file>` before you send it back, then run the script on `<(tail -n +<that count plus 1> <file>)`. A new Agent call is checked on its whole output file.
+row 35	has	skills/st-build/SKILL.md	Then run `bash <plugin root>/scripts/st-shell-writes.sh <the agent's output file>` and read each printed command. Send it back to `st-build` only when the command writes or changes a file; drop a heredoc that writes no file.
+row 36	has	skills/st-build/SKILL.md	A send-back resumes the same agent (SendMessage), so check it again on its new lines only: note `wc -l < <file>` before you send it back, then run the script on `<(tail -n +<that count plus 1> <file>)`.
+row 37	has	scripts/st-shell-writes.sh	# ponytail: the redirect check covers only cat, echo and printf; upgrade when a lane is seen to write with another command
 EOF
 exit $fail

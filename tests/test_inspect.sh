@@ -44,6 +44,7 @@ C8	agent	Severity: critical, high, medium, low
 C9	agent	Coverage line: requirements covered by tasks / total, by tests / total
 C10	agent	Offer each fix, never apply it
 C10	agent	needs a user decision
+C11	agent	a task that names an operator check as a gate without naming the action it gates
 V1	agent	Do not install anything
 V1	agent	read-only commands
 V2	agent	a named test that can fail

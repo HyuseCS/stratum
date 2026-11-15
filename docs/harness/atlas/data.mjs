@@ -148,7 +148,7 @@ export const NODES = [
   { id: 'V', code: 'V', name: 'Verify and lock', short: 'VERIFY', group: 'check', gx: 16, gy: 4, w: 2, d: 2, h: 34, kind: 'job',
     one: 'Re-runs a test after an agent says it passed, and keeps shared runs to one at a time.',
     what: 'An agent can say "green" and be wrong. The verify script runs the test again and also fails when new code has explanation comments. The lock makes a second test run wait while the first one uses the shared test or Codex tab.',
-    how: '<code>scripts/st-verify.sh</code> prints one PASS or FAIL line. <code>scripts/st-lock.sh</code> makes a lock folder <code>.git/stratum-NAME.lock</code> in the git common folder. LikeC4 ids: <code>scripts.st-verify-sh</code>, <code>scripts.st-lock-sh</code>, and the data <code>project.git-stratum-name-lock</code>.' },
+    how: '<code>scripts/st-verify.sh</code> prints one PASS or FAIL line. <code>scripts/st-lock.sh</code> makes a lock folder <code>.git/stratum-NAME.lock</code> in the git common folder. LikeC4 ids: <code>scripts.st-verify-sh</code>, <code>scripts.st-shell-writes-sh</code>, <code>scripts.st-lock-sh</code>, and the data <code>project.git-stratum-name-lock</code>.' },
 
   { id: 'X', code: 'X', name: 'Advisor script', short: 'ADVISOR POINT', group: 'check', gx: 12, gy: 0, w: 2, d: 2, h: 40, kind: 'box',
     one: 'Runs one advisor point: picks the reviewers, sends the review and records the verdict.',

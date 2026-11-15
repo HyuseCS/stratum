@@ -18,6 +18,8 @@ DL8|templates/tasks.md|- [P] tasks = no shared file in the phase and no other ta
 DL9|skills/st-plan/SKILL.md|that every task names its exact test command (`Test:`), that every `[P]` task names the files it owns (`Owns:`) and no two `[P]` tasks in one phase own the same file, and that every `[screen]` task has its mode.
 DL10|skills/st-plan/SKILL.md|A `[screen]` task's Design lane mode is an open decision like the others: the user picks autonomous or new look, and custom design only when `skills/st-design/SKILL.md` names a custom mode.
 DL18|templates/tasks.md|- **[P]**: Can run in parallel: no shared file in the phase and no other task's result; the task ends with `Owns:`
+DL19|agents/st-plan.md|a task that names an operator check as a gate states the action it gates (the build or the first release)
+DL20|templates/tasks.md|an operator check as a gate names its action
 ROWS
 
 while IFS='|' read -r file phrase; do

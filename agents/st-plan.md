@@ -41,6 +41,7 @@ Read first:
 - Every task names its exact file paths. Mark `[P]` every task that shares no file with another task in its phase and needs no other task's result. Each `[P]` task ends with `Owns:` and the files it owns. No two `[P]` tasks in one phase own the same file. Say in Dependencies which user stories share no files: those run at the same time. Mark `[lock]` each test that cannot run at the same time as another.
 - Mark each task that makes a page or view the app does not have yet `[screen]` (not a new part of an existing page, not a dialog). Return each one as an open decision: its Design lane mode, A: autonomous (existing look), B: new look. Offer custom design as a third option only when `skills/st-design/SKILL.md` names a custom mode. After the answer, write the mode in the task line: `[screen: autonomous]`, `[screen: new look]` or `[screen: custom]`.
 - Every task names its exact test command. No task runs the full test suite.
+- Gates: a task that names an operator check as a gate states the action it gates (the build or the first release). tasks.md and quickstart.md carry the same gate.
 - Ground the plan in the code as it is. Read the files the plan touches. Check library calls
   against the installed version, not memory.
 - Call out every task that touches access rules, sign-in, the data model, contracts, secrets,

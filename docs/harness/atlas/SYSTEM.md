@@ -246,7 +246,7 @@ Stratum is a Claude Code plugin that runs a coding task through a lane. You give
 
 **What it does.** An agent can say "green" and be wrong. The verify script runs the test again and also fails when new code has explanation comments. The lock makes a second test run wait while the first one uses the shared test or Codex tab.
 
-**How it's built.** `scripts/st-verify.sh` prints one PASS or FAIL line. `scripts/st-lock.sh` makes a lock folder `.git/stratum-NAME.lock` in the git common folder. LikeC4 ids: `scripts.st-verify-sh`, `scripts.st-lock-sh`, and the data `project.git-stratum-name-lock`.
+**How it's built.** `scripts/st-verify.sh` prints one PASS or FAIL line. `scripts/st-lock.sh` makes a lock folder `.git/stratum-NAME.lock` in the git common folder. LikeC4 ids: `scripts.st-verify-sh`, `scripts.st-shell-writes-sh`, `scripts.st-lock-sh`, and the data `project.git-stratum-name-lock`.
 
 #### X · Advisor script
 
