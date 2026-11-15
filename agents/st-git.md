@@ -34,6 +34,9 @@ If no file list is given, stop and ask for it. Do not guess scope from `git stat
    - Form: `git commit -m 'subject' -m 'body'`. Single quotes. No heredoc, no `-F`, no backticks, no `$(`, `${`, `<(`, `>(` anywhere in the message.
      Write an apostrophe as `'\''`.
    - Subject: `type(scope): what changed`, 72 characters or fewer, lower case type, no final period.
+     These subject rules apply in a project that has `.stratum/commit-standard`, where the git guard enforces them.
+     In other projects, match the subject form the project already uses (see `git log`).
+     Form, body, links and no AI attribution apply everywhere.
      - Types: feat, fix, refactor, docs, style, test, chore, spec, plan, sync.
      - Scope: the feature number (`019`), or an area word (`worker`, `ponytail`). Scope is optional.
      - `spec(NNN)` and `plan(NNN)`: spec and plan files of feature NNN. `sync(name)`: a synced upstream skill. `docs`: other text.

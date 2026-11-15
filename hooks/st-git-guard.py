@@ -129,7 +129,7 @@ def message_problem(args):
     if any(ATTRIBUTION.search(m) for m in msgs) or any(CO_AUTHOR.match(t) or ATTRIBUTION.search(t)
                                                         for t in trailers):
         return NO_AI
-    if not msgs or squash:
+    if not msgs or squash or not STANDARD:
         return ""
     subject = msgs[0].split("\n", 1)[0]
     if MERGE.fullmatch(subject):
@@ -180,19 +180,24 @@ def resolve(base, target, fix=os.path.realpath):
     return fix(os.path.join(base, os.path.expanduser(target)))
 
 
-def guard_file(cwd):
+def stratum_dir(cwd):
     d = cwd
     while not os.path.isdir(os.path.join(d, ".stratum")) and not os.path.exists(os.path.join(d, ".git")) \
             and os.path.dirname(d) != d:
         d = os.path.dirname(d)
+    return os.path.join(d, ".stratum")
+
+
+def guard_file(cwd):
     try:
-        value = json.load(open(os.path.join(d, ".stratum", "git-guard.json")))
+        value = json.load(open(os.path.join(stratum_dir(cwd), "git-guard.json")))
     except (OSError, ValueError):
         value = {}
     return value if isinstance(value, dict) else {}
 
 
 GUARD = {}
+STANDARD = False
 
 
 def mode(key):
@@ -312,6 +317,7 @@ def body_end(lines, start, tag, dash, quoted):
 
 
 def main():
+    global STANDARD
     try:
         data = json.load(sys.stdin)
     except Exception:
@@ -319,6 +325,7 @@ def main():
     command = (data.get("tool_input") or {}).get("command") or ""
     cwd = data.get("cwd") or os.getcwd()
     GUARD.update(guard_file(cwd))
+    STANDARD = os.path.exists(os.path.join(stratum_dir(cwd), "commit-standard"))
     decision, reasons = None, []
     home = git(["rev-parse", "--show-toplevel"], cwd)
 

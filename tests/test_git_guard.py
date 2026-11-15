@@ -550,7 +550,26 @@ class GitGuardTest(unittest.TestCase):
                 self.set_mode("ask")
                 self.assertEqual(self.run_guard(cmd)[0], "ask")
 
+    def opt_in(self):
+        os.makedirs(os.path.join(self.repo, ".stratum"), exist_ok=True)
+        open(os.path.join(self.repo, ".stratum", "commit-standard"), "w").close()
+
+    def test_no_marker_checks_only_attribution(self):
+        self.set_mode("auto")
+        for cmd in ("git commit -m 'did stuff'",
+                    "git commit -m 'VDEV-1345 fix(scanner): a subject that is longer than seventy-two "
+                    "characters for sure'"):
+            with self.subTest(cmd=cmd):
+                self.assertEqual(self.run_guard(cmd), (None, ""))
+        for cmd in ("git commit -m 'fix: x' -m 'Co-Authored-By: A <a@b.c>'",
+                    "git commit -m 'did stuff' --trailer 'Co-authored-by: C <a@b>'"):
+            with self.subTest(cmd=cmd):
+                d, reason = self.run_guard(cmd)
+                self.assertEqual(d, "deny")
+                self.assertTrue(reason.startswith("Commit message denied:"), reason)
+
     def test_bad_message_denied_in_every_mode(self):
+        self.opt_in()
         for mode in ("auto", "ask", "deny", None):
             self.options = {}
             if mode:
@@ -563,6 +582,7 @@ class GitGuardTest(unittest.TestCase):
                     self.assertIn("agents/st-git.md step 6 in the Stratum plugin", reason)
 
     def test_good_message_keeps_mode_decision(self):
+        self.opt_in()
         for cmd in MESSAGE_ALLOWED:
             with self.subTest(cmd=cmd):
                 self.options = {}
