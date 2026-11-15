@@ -24,6 +24,12 @@ FORM_DENY = (r"Commit form denied: a commit with a heredoc, <<, a backtick, $( o
              r"and no <<, backticks, $( or backslash line breaks anywhere, not even in the message. Write an "
              r"apostrophe as '\''.")
 JOIN = re.compile(r"(?<!\\)((?:\\\\)*)\\\n")
+SUBJECT = re.compile(r"(feat|fix|refactor|docs|style|test|chore|spec|plan|sync)(\([A-Za-z0-9._-]+\))?: \S.*"
+                     r"|Bump version to \d+\.\d+\.\d+")
+MERGE = re.compile(r"Merge (branch|pull request|remote-tracking branch) .*|Revert \".*")
+ATTRIBUTION = re.compile(r"(?im)^[^\w\n]*(co-authored-by:|generated (with|by) \[?(claude|anthropic)\b)")
+CO_AUTHOR = re.compile(r"(?i)\s*co-authored-by\s*[:=]")
+NO_AI = "the message has an AI attribution line (Co-Authored-By or Generated with)"
 try:
     _spec = importlib.util.spec_from_file_location(
         "st_approve", os.path.join(os.path.dirname(os.path.realpath(__file__)), "st-approve.py"))
@@ -100,6 +106,48 @@ def config_writes(args):
     return len(pos) >= 2
 
 
+def message_deny(problem):
+    if problem == NO_AI:
+        return "deny", (f"Commit message denied: {problem}. Remove the Co-Authored-By or Generated line "
+                        "and run it again.")
+    return "deny", (f"Commit message denied: {problem}. Run it again as git commit -m 'type(scope): subject' "
+                    "-m 'why' (standard: agents/st-git.md step 6 in the Stratum plugin).")
+
+
+def message_problem(args, standard):
+    msgs, trailers, squash, it = [], [], False, iter(args)
+    for a in it:
+        if a == "--":
+            break
+        squash = squash or a.startswith(("--squash", "--fixup"))
+        name, eq, value = a.partition("=")
+        short = re.fullmatch(r"-[aeinopqsvz]*m(.*)", a, re.S)
+        if short:
+            msgs.append(short[1] or next(it, ""))
+        elif len(name) >= 3 and "--message".startswith(name):
+            msgs.append(value if eq else next(it, ""))
+        elif len(name) >= 4 and "--trailer".startswith(name):
+            trailers.append(value if eq else next(it, ""))
+    # ponytail: a literal " ; " or "\n" reads as a line break git does not store, upgrade if it denies a real message
+    msgs = [m.replace(" ; ", "\n").replace("\\n", "\n") for m in msgs]
+    if any(ATTRIBUTION.search(m) for m in msgs) or any(CO_AUTHOR.match(t) or ATTRIBUTION.search(t)
+                                                        for t in trailers):
+        return NO_AI
+    if not msgs or squash or not standard:
+        return ""
+    subject = msgs[0].split("\n", 1)[0]
+    if MERGE.fullmatch(subject):
+        return ""
+    if not SUBJECT.fullmatch(subject):
+        return f"the subject {subject!r} is not type(scope): what, with a lower case type from feat, fix, " \
+               "refactor, docs, style, test, chore, spec, plan, sync"
+    if len(subject) > 72:
+        return f"the subject is {len(subject)} characters, the limit is 72"
+    if subject.endswith("."):
+        return "the subject ends with a period"
+    return ""
+
+
 def git(args, cwd):
     try:
         return subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True,
@@ -136,13 +184,17 @@ def resolve(base, target, fix=os.path.realpath):
     return fix(os.path.join(base, os.path.expanduser(target)))
 
 
-def guard_file(cwd):
+def stratum_dir(cwd):
     d = cwd
     while not os.path.isdir(os.path.join(d, ".stratum")) and not os.path.exists(os.path.join(d, ".git")) \
             and os.path.dirname(d) != d:
         d = os.path.dirname(d)
+    return os.path.join(d, ".stratum")
+
+
+def guard_file(cwd):
     try:
-        value = json.load(open(os.path.join(d, ".stratum", "git-guard.json")))
+        value = json.load(open(os.path.join(stratum_dir(cwd), "git-guard.json")))
     except (OSError, ValueError):
         value = {}
     return value if isinstance(value, dict) else {}
@@ -165,7 +217,7 @@ def destructive(key, reason):
     return m, f"DESTRUCTIVE ({key}: {m}): {reason}"
 
 
-def judge(sub, args, gitdir, elsewhere=False, conf=()):
+def judge(sub, args, gitdir, elsewhere=False, conf=(), target=None):
     if "--no-verify" in args or "core.hookspath" in conf:
         return "deny", "--no-verify and -c core.hooksPath are blocked: hooks must run."
     if sub == "config":
@@ -176,13 +228,19 @@ def judge(sub, args, gitdir, elsewhere=False, conf=()):
             return "deny", "git add -A / --all / . is blocked: stage exact paths."
         return None, ""
     if sub == "commit":
+        problem = message_problem(args, bool(target) and os.path.exists(
+            os.path.join(stratum_dir(os.path.realpath(target)), "commit-standard")))
+        if problem:
+            return message_deny(problem)
         m = mode("commit")
         amend = "--amend" in args
-        if m == "auto" and not amend and not elsewhere:
+        trailer = any(c.startswith("trailer.") for c in conf)
+        if m == "auto" and not amend and not elsewhere and not trailer:
             return None, ""
         decision = "deny" if m == "deny" else "ask"
         head = f"git commit (commit: {m})" + (" with --amend rewrites the last commit" if amend else "") \
-            + (" may target another folder or branch" if elsewhere else "")
+            + (" may target another folder or branch" if elsewhere else "") \
+            + (" sets -c trailer.*, which can add a trailer the guard cannot read" if trailer else "")
         return decision, head + "\n" + staged_summary(gitdir)
     if sub == "push":
         if "--delete" in args or short_has(args, "d") or any(a.startswith(":") for a in args):
@@ -312,7 +370,7 @@ def main():
             commit = commit or sub == "commit"
             gitdir = resolve(here, cdir) if cdir else here
             note(*judge(sub, args, gitdir or cwd, unknown or env or elsewhere or left
-                        or away(gitdir) or off_branch(gitdir), conf))
+                        or away(gitdir) or off_branch(gitdir), conf, None if env or elsewhere else gitdir))
             left = left or sub in ("switch", "checkout")
         return bool(parsed and re.fullmatch(r"[a-z][a-z0-9-]*", parsed[0]))
 

@@ -38,6 +38,13 @@ check "handoff printed" 'grep -q "Session handoff" <<<"$out" && grep -q "Next st
 check "orchestrator label rule" 'grep -qF "Stratum rule: begin every reply with the label [Orchestrator]." <<<"$out"'
 commitline="Commit with git commit -m 'subject' -m 'body': single quotes, no heredoc, no backticks and no \$(. The git guard denies other forms."
 check "session text names the commit form" 'grep -qF -- "$commitline" <<<"$out"'
+noai="The git guard denies other forms. Add no Co-Authored-By line. Full standard: $root/agents/st-git.md step 6."
+check "no marker: session text has no subject rule, keeps the attribution rule" 'grep -qF -- "$noai" <<<"$out" && ! grep -qF "Write the subject as" <<<"$out"'
+touch "$proj/.stratum/commit-standard"
+std=$(HOME="$tmp/home" bash "$root/hooks/st-session-start.sh")
+rm "$proj/.stratum/commit-standard"
+commitrule="The git guard denies other forms. Write the subject as type(scope): what, like fix(019): handle empty list. Add no Co-Authored-By line. Full standard: $root/agents/st-git.md step 6."
+check "marker: session text names the commit subject standard" 'grep -qF -- "$commitrule" <<<"$std"'
 check "agent description is the task only" 'grep -qF "Set each Agent call'"'"'s description to only the task, like \"US1 review\" or \"T004 test\"." <<<"$out" && ! grep -qF "Full lane | Build ·" <<<"$out" && grep -qF "keep its [tag]" <<<"$out"'
 for a in "$root"/agents/*.md; do
   n=$(basename "$a" .md)

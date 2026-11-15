@@ -183,6 +183,7 @@ model {
   hooks.st-approve-py -[passes]-> claude 'deny for locked paths, allow after an ok answer'
 
   hooks.st-git-guard-py -[reads]-> stratum.git-guard-json 'commit mode, destructive git modes and guarded branch'
+  hooks.st-git-guard-py -[reads]-> stratum.commit-standard 'exists check for the subject checks'
   hooks.st-git-guard-py -[passes]-> claude 'ask or deny decision with the reason'
 
   hooks.st-handoff-facts-sh -[reads]-> stratum.state-json 'phase, lane and feature directory'
@@ -199,6 +200,7 @@ model {
 
   hooks.st-session-start-sh -[reads]-> plugin.sr-opus-5-md 'communication rules'
   hooks.st-session-start-sh -[reads]-> stratum.handoff-md 'last session handoff'
+  hooks.st-session-start-sh -[reads]-> stratum.commit-standard 'exists check for the subject sentence'
   hooks.st-session-start-sh -[writes]-> stratum.constitution-md 'worktree link to the main checkout file'
   hooks.st-session-start-sh -[writes]-> stratum.lessons-md 'worktree link to the main checkout file'
   hooks.st-session-start-sh -[writes]-> stratum.templates 'worktree link to the main checkout folder'

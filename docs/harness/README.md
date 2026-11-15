@@ -860,6 +860,7 @@ graph TB
   ProjectDesign_md@{ shape: rectangle, label: "DESIGN.md" }
   ProjectGraphify_out_graph_report_md@{ shape: rectangle, label: "graphify-out/GRAPH_REPORT.md" }
   ProjectSpecs@{ shape: rectangle, label: "specs" }
+  StratumCommit_standard@{ shape: rectangle, label: ".stratum/commit-standard" }
   StratumHandoff_md@{ shape: rectangle, label: ".stratum/handoff.md" }
   StratumLessons_md@{ shape: rectangle, label: ".stratum/lessons.md" }
   StratumAdvisor_dir@{ shape: rectangle, label: ".stratum/advisor" }
@@ -1060,12 +1061,14 @@ checkout`" .-> StratumAutonomous
   HooksSt_approve_py -. "`worker session marker`" .-> StratumWorker
   HooksSt_git_guard_py -. "`commit mode, destructive git modes and 
 guarded branch`" .-> StratumGit_guard_json
+  HooksSt_git_guard_py -. "`exists check for the subject checks`" .-> StratumCommit_standard
   HooksSt_handoff_facts_sh -. "`facts block: phase, lane, tasks, branch, 
 last commits, uncommitted files`" .-> StratumHandoff_md
   HooksSt_handoff_facts_sh -. "`phase, lane and feature directory`" .-> StratumState_json
   HooksSt_models_py -. "`model and effort per agent`" .-> StratumModels_json
   HooksSt_phase_py -. "`[...]`" .-> StratumState_json
   HooksSt_session_start_sh -. "`worktree link to the main checkout file`" .-> StratumConstitution_md
+  HooksSt_session_start_sh -. "`exists check for the subject sentence`" .-> StratumCommit_standard
   HooksSt_session_start_sh -. "`last session handoff`" .-> StratumHandoff_md
   HooksSt_session_start_sh -. "`worktree link to the main checkout file`" .-> StratumLessons_md
   HooksSt_session_start_sh -. "`worktree link to the main checkout 

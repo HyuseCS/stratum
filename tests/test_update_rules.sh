@@ -56,8 +56,12 @@ GI5|skills/st-update/SKILL.md|Built-in git instructions, once per run:
 GI5b|skills/st-update/SKILL.md|or for "not at all" the marker in each listed folder
 GI6|skills/st-update/SKILL.md|ponytail: one-time step for checkouts set up before 019, remove it when every Stratum checkout on the PC and the laptop has run this update
 GI7|skills/st-update/SKILL.md|and `.claude/settings.json` or `.stratum/git-instructions-kept` when the git instructions paragraph wrote it,
-GI8|agents/st-git.md|Run it as `git commit -m 'subject' -m 'body'`: single quotes, no heredoc, no backticks, no `$(`, no `-F`.
+GI8|agents/st-git.md|Form: `git commit -m 'subject' -m 'body'`. Single quotes. No heredoc, no `-F`, no backticks, no `$(`, `${`, `<(`, `>(` anywhere in the message.
+GI8b|agents/st-git.md|Subject: `type(scope): what changed`, 72 characters or fewer, lower case type, no final period.
+GI8c|agents/st-git.md|Types: feat, fix, refactor, docs, style, test, chore, spec, plan, sync.
+GI8d|agents/st-git.md|`spec(NNN)` and `plan(NNN)`: spec and plan files of feature NNN. `sync(name)`: a synced upstream skill.
 GI9|agents/st-git.md|Exception: a deny that starts with `Commit form denied:`.
+GI9b|agents/st-git.md|Exception: a deny that starts with `Commit message denied:`.
 ROWS
 
 check "front matter skills/st-update/SKILL.md" 'head -n 5 "$root/skills/st-update/SKILL.md" | grep -qx "name: st-update"'
