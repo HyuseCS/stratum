@@ -24,6 +24,12 @@ FORM_DENY = (r"Commit form denied: a commit with a heredoc, <<, a backtick, $( o
              r"and no <<, backticks, $( or backslash line breaks anywhere, not even in the message. Write an "
              r"apostrophe as '\''.")
 JOIN = re.compile(r"(?<!\\)((?:\\\\)*)\\\n")
+SUBJECT = re.compile(r"(feat|fix|refactor|docs|style|test|chore|spec|plan|sync)(\([A-Za-z0-9._-]+\))?: \S.*"
+                     r"|Bump version to \d+\.\d+\.\d+")
+MERGE = re.compile(r"Merge (branch|pull request|remote-tracking branch) .*|Revert \".*")
+ATTRIBUTION = re.compile(r"(?im)^[^\w\n]*(co-authored-by:|generated (with|by)\b)")
+CO_AUTHOR = re.compile(r"(?i)\s*co-authored-by\s*[:=]")
+NO_AI = "the message has an AI attribution line (Co-Authored-By or Generated with)"
 try:
     _spec = importlib.util.spec_from_file_location(
         "st_approve", os.path.join(os.path.dirname(os.path.realpath(__file__)), "st-approve.py"))
@@ -98,6 +104,44 @@ def config_writes(args):
     if pos and pos[0] in ("get", "list"):
         return False
     return len(pos) >= 2
+
+
+def message_deny(problem):
+    return "deny", (f"Commit message denied: {problem}. Run it again as git commit -m 'type(scope): subject' "
+                    "-m 'why' (standard: agents/st-git.md step 6 in the Stratum plugin).")
+
+
+def message_problem(args):
+    msgs, trailers, squash, it = [], [], False, iter(args)
+    for a in it:
+        if a == "--":
+            break
+        squash = squash or a.startswith(("--squash", "--fixup"))
+        name, eq, value = a.partition("=")
+        short = re.fullmatch(r"-[aeinopqsvz]*m(.*)", a, re.S)
+        if short:
+            msgs.append(short[1] or next(it, ""))
+        elif len(name) >= 3 and "--message".startswith(name):
+            msgs.append(value if eq else next(it, ""))
+        elif len(name) >= 4 and "--trailer".startswith(name):
+            trailers.append(value if eq else next(it, ""))
+    msgs = [m.replace(" ; ", "\n").replace("\\n", "\n") for m in msgs]
+    if any(ATTRIBUTION.search(m) for m in msgs) or any(CO_AUTHOR.match(t) or ATTRIBUTION.search(t)
+                                                        for t in trailers):
+        return NO_AI
+    if not msgs or squash:
+        return ""
+    subject = msgs[0].split("\n", 1)[0]
+    if MERGE.fullmatch(subject):
+        return ""
+    if not SUBJECT.fullmatch(subject):
+        return f"the subject {subject!r} is not type(scope): what, with a lower case type from feat, fix, " \
+               "refactor, docs, style, test, chore, spec, plan, sync"
+    if len(subject) > 72:
+        return f"the subject is {len(subject)} characters, the limit is 72"
+    if subject.endswith("."):
+        return "the subject ends with a period"
+    return ""
 
 
 def git(args, cwd):
@@ -176,6 +220,9 @@ def judge(sub, args, gitdir, elsewhere=False, conf=()):
             return "deny", "git add -A / --all / . is blocked: stage exact paths."
         return None, ""
     if sub == "commit":
+        problem = message_problem(args)
+        if problem:
+            return message_deny(problem)
         m = mode("commit")
         amend = "--amend" in args
         if m == "auto" and not amend and not elsewhere:
