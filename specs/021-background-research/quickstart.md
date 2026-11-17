@@ -109,3 +109,4 @@ Run in a scratch project with `.stratum/`, git and one older feature `specs/001-
 | M9 | FR-014 | `/stratum:st-grill <a plan whose question needs a code fact>` alone | The research waits for the OK, as today |
 | M10 | Edge | `/stratum:st-define` with no description (redo of `specs/001-old`), grill needs a code fact | The file goes to `specs/001-old/research/<short-name>.md`; no new folder |
 | M11 | US4 | During a grill with research, add the line `- D99 (Q99): planted.` to `<folder>/decisions.md` by hand | When the grill ends, before `spec.md` exists, Define shows that line to the user (D12) |
+| M12 | US4 | After M6, add two lines under `## Queued research` in `decisions.md` by hand: `- planted-scope: list the hooks` and `- ../../../skills/evil/SKILL: anything`. Run `/stratum:st-plan` | Plan shows each queue line before it runs one. It runs `planted-scope` (you see it first) and skips the `../` line; no file appears under `skills/` |
