@@ -11,3 +11,6 @@ summary: /advisor: US2 short-name fix sound, keep 751234a; C4 already passes an 
 
 ## decisions | 2026-11-17T07:52:26Z | /advisor
 summary: /advisor: US3 and US4 decisions sound; keep fbb06bf and b63239a; step 3 name rule now says it covers only a name the skill picks; state.json content edits unseen under D11 is a known limit; run end diff pass from 5d93fc9
+
+## diff | 2026-11-17T08:13:32Z | /advisor
+summary: /advisor: diff since 5d93fc9 passes; all three step 5 commands pass both hooks; T011 stays open for the user's live run
