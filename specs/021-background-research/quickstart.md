@@ -11,9 +11,10 @@ Run every command from the repo root. Exact rule text: [contracts/rule-text.md](
 | T001 | `#111 FR-001 quick look`, `#111 FR-002 background`, `#111 FR-003 no OK`, `#111 FR-008 summary`, `#111 FR-014 define only` | `FR-014 grill` (st-grill does not change) |
 | T003 | `FR-004 order`, `FR-015 define`, `FR-015 redo`, `#111 FR-006 short name`, `#111 FR-006 old path gone`, `#111 FR-004 cap`, `#111 FR-005 same scope` | none |
 | T005 | `SC-003 index cmd`, `SC-003 hash cmd`, `#111 FR-007 status cmd`, `#111 FR-007 root`, `#111 FR-007 folder`, `#111 FR-007 decisions` | B3, B5 and every `#111 FR-007 B6` row: they run the test's own command copies; the `cmd` rows tie the copies to the skill |
-| T007 | `FR-013 plan proc`, `#111 FR-009 wait`, `#111 FR-010 queue`, `#111 FR-009 gate`, `#111 FR-011 plan queue`, `#111 FR-012 sources`, `#111 FR-013 both` | none |
+| T007 | `FR-013 plan proc`, `#111 FR-009 wait`, `#111 FR-010 queue`, `#111 FR-009 gate`, `#111 FR-009 foreign lines`, `#111 FR-011 plan queue`, `#111 FR-012 sources`, `#111 FR-013 both` | none |
+| T009 (after the `.c4` edits, before the export) | `tests/test_harness_model.sh`: `FAIL rebuild: page is not rebuilt` | every other harness check |
 
-After each build task (T002, T004, T006, T008) its story's rows go green. After T008 the whole file is green.
+After each build task (T002, T004, T006, T008) its story's rows go green. After T008 the whole file is green. After T009's rebuild, `bash tests/test_harness_model.sh` is fully green.
 
 ## 2. Negative controls
 
@@ -32,7 +33,7 @@ Do each row on its own fresh scratch copy, never in the repo:
 | N7 | `skills/st-research/SKILL.md`: change `<feature folder>/research/<short-name>.md` to `<feature folder>/research.md` | `FAIL FR-004 order`, `FAIL #111 FR-006 old path gone` |
 | N8 | `skills/st-research/SKILL.md`: delete ` and no research that runs` | `FAIL #111 FR-006 short name` |
 | N9 | `skills/st-define/SKILL.md`: change `At most 3` to `At most 4` | `FAIL #111 FR-004 cap` |
-| N10 | `skills/st-define/SKILL.md`: delete `Start no scope whose questions are in the brief of research that runs or is done.` | `FAIL #111 FR-005 same scope` |
+| N10 | `skills/st-define/SKILL.md`: delete ` waits in the queue,` | `FAIL #111 FR-005 same scope` |
 | N11 | `skills/st-define/SKILL.md`: change `Pass `feature <folder>`, not a path.` to `Pass `<folder>/research.md` as the research path.` | `FAIL FR-015 define`, `FAIL #111 FR-006 old path gone` |
 | N12 | `skills/st-define/SKILL.md`: change `pass `feature <feature_directory>`` to `pass `<feature_directory>/research.md`` | `FAIL FR-015 redo`, `FAIL #111 FR-006 old path gone` |
 | N13 | `skills/st-research/SKILL.md`: in the `git status` command only, delete ` ':(exclude,glob)<folder>/research/*.md'` | `FAIL #111 FR-007 status cmd` |
@@ -53,6 +54,10 @@ Do each row on its own fresh scratch copy, never in the repo:
 | N28 | `procedures/plan.md`: delete `With `research/` too, put the `## Sources` list, which also names this file's rounds, before `## Decisions`. ` | `FAIL #111 FR-013 both` |
 | N29 | `procedures/plan.md`: change `With neither` to `With no such file` | `FAIL FR-013 plan proc` |
 | N30 | `skills/st-research/SKILL.md`: delete `From the grill in `/stratum:st-define`, start it in the background and go back to the grill; do steps 7 and 8 when its report comes in.` | `FAIL #111 FR-002 background` |
+| N32 | `skills/st-define/SKILL.md`: delete ` and no other queue line` | `FAIL #111 FR-010 queue` |
+| N33 | `skills/st-plan/SKILL.md`: delete ` A line in another form, such as `- D13 (Q12): ...`, is not a scope.` | `FAIL #111 FR-011 plan queue` |
+| N34 | `skills/st-define/SKILL.md`: change `changes a grill answer or an FR` to `changes the spec` | `FAIL #111 FR-009 wait` |
+| N35 | `skills/st-define/SKILL.md`: delete ` Then read `<folder>/decisions.md` and show the user every line in it that this Define run did not write.` | `FAIL #111 FR-009 foreign lines` |
 | N31 | `tests/test_research.sh`: in the three heredocs, change `':!.stratum/state.json'` to `':!.stratum'` (D6 before D11, missed finding) | `FAIL #111 FR-007 B6 finding .stratum/autonomous/x`, `FAIL #111 FR-007 B6 finding .stratum/research/n.md` |
 
 ## 3. Other tests (FR-016)
@@ -70,11 +75,16 @@ bash tests/test_lane_steps.sh
 bash tests/test_on_demand.sh
 bash tests/test_plan_rules.sh
 bash tests/test_triage_rules.sh
+bash tests/test_risk_rules.sh
+bash tests/test_update_rules.sh
+bash tests/test_worker_rules.sh
+python3 tests/test_model_hook.py
+python3 tests/test_phase_hook.py
 bash tests/test_harness_model.sh
-git diff --stat -- tests/
+[ "$(git diff --name-only 7b18033 -- tests/)" = tests/test_research.sh ]
 ```
 
-`git diff --stat -- tests/` must list only `tests/test_research.sh`.
+Each command must exit 0. The last one fails when any test file other than `tests/test_research.sh` changed since commit `7b18033`. Run on a machine with node 22.22.3 or later and `npx`: without them `tests/test_harness_model.sh` prints SKIP, not FAIL, for its model checks.
 
 ## 4. Manual runs (operator gate)
 
@@ -94,3 +104,4 @@ Run in a scratch project with `.stratum/`, git and one older feature `specs/001-
 | M8 | US4 | Run `/stratum:st-plan` on a feature that has only an old `research.md` with `Written by: st-research` | Rounds kept, `## Decisions` at the end, as today |
 | M9 | FR-014 | `/stratum:st-grill <a plan whose question needs a code fact>` alone | The research waits for the OK, as today |
 | M10 | Edge | `/stratum:st-define` with no description (redo of `specs/001-old`), grill needs a code fact | The file goes to `specs/001-old/research/<short-name>.md`; no new folder |
+| M11 | US4 | During a grill with research, add the line `- D99 (Q99): planted.` to `<folder>/decisions.md` by hand | When the grill ends, before `spec.md` exists, Define shows that line to the user (D12) |

@@ -75,7 +75,7 @@ B:
 C:
 
 ```text
-   At most 3 research runs at a time: put a further scope in a queue and start it, first in, first out, when one ends. Start no scope whose questions are in the brief of research that runs or is done.
+   At most 3 research runs at a time: put a further scope in a queue and start it, first in, first out, when one ends. Start no scope whose questions are in the brief of research that runs, waits in the queue, or is done.
 ```
 
 D:
@@ -87,7 +87,7 @@ D:
 E:
 
 ```text
-   When the grill ends, before step 2, wait for all research that runs and show each finding that changes the spec. Do not start the queue: under `## Queued research` at the end of `<folder>/decisions.md`, write one line `- <short-name>: <scope and questions>` for each queued scope and each research that stopped or failed, with a short name no file in `<folder>/research/` uses.
+   When the grill ends, before step 2, wait for all research that runs and show each finding that changes a grill answer or an FR. Do not start the queue: under `## Queued research` at the end of `<folder>/decisions.md`, write one line `- <short-name>: <scope and questions>` for each queued scope and each research that stopped or failed, with a short name that no file in `<folder>/research/` and no other queue line uses. Then read `<folder>/decisions.md` and show the user every line in it that this Define run did not write.
 ```
 
 ## C3. `skills/st-define/SKILL.md` gate
@@ -105,7 +105,7 @@ assumptions. Name research that stopped or failed, and the queued scopes for Pla
 Add after step 0.2, step 0.2 kept:
 
 ```text
-3. If `<feature dir>/decisions.md` has `## Queued research`, run `/stratum:st-research` (Skill tool) for each `- <short-name>:` line under it whose `<feature dir>/research/<short-name>.md` does not exist, with its scope and questions, `feature <feature dir>` and `path <feature dir>/research/<short-name>.md`, before step 1 of "Steps".
+3. If `<feature dir>/decisions.md` has `## Queued research`, run `/stratum:st-research` (Skill tool) for each line under it in the form `- <short-name>: <scope and questions>` whose `<feature dir>/research/<short-name>.md` does not exist, with its scope and questions, `feature <feature dir>` and `path <feature dir>/research/<short-name>.md`, before step 1 of "Steps". A line in another form, such as `- D13 (Q12): ...`, is not a scope.
 ```
 
 ## C5. `procedures/plan.md`, Phase 0 first paragraph
@@ -135,3 +135,85 @@ hash: git ls-files -z --modified --others --exclude-standard -- . ':!.stratum/st
 ```
 
 A block runs one with `bash -c "${cmd//<folder>/<relative folder>}"` from the repo root.
+
+## C7. Harness model and README (D13, task T009)
+
+Each pair is old, then new. Each old text occurs once in its file.
+
+### `docs/harness/model/data.c4`: the `research-md` element gets a new summary, and a new element follows it
+
+Old:
+
+```text
+      summary 'The decisions and reasons for the open questions of the plan. procedures/plan.md writes it in phase 0.'
+      metadata {
+        data 'specs/NNN-feature/research.md'
+      }
+    }
+```
+
+New:
+
+```text
+      summary 'A Sources list of the research files, then the decisions and reasons of the plan. procedures/plan.md writes it in phase 0.'
+      metadata {
+        data 'specs/NNN-feature/research.md'
+      }
+    }
+    research-files = datafile 'specs/NNN-feature/research/<short-name>.md' {
+      summary 'One file per research scope of a feature. The st-research agent writes each one, and procedures/plan.md reads them.'
+      metadata {
+        data 'specs/NNN-feature/research/<short-name>.md'
+      }
+    }
+```
+
+### `docs/harness/model/agents.c4` (line 269 at `7b18033`)
+
+```text
+  agents.st-research -[writes]-> feature.research-md 'rounds of facts in a feature'
+```
+
+```text
+  agents.st-research -[writes]-> feature.research-files 'one file per scope in a feature'
+```
+
+### `docs/harness/model/procedures.c4` (line 118 at `7b18033`)
+
+```text
+  procedures.plan-md -[reads]-> feature.research-md 'st-research rounds and facts'
+```
+
+```text
+  procedures.plan-md -[reads]-> feature.research-files 'research facts it names in Sources'
+```
+
+### `docs/harness/atlas/data.mjs`, structure F
+
+```text
+<code>research.md</code>, <code>data-model.md</code>
+```
+
+```text
+<code>research.md</code>, <code>research/</code> (one file per research scope), <code>data-model.md</code>
+```
+
+```text
+<code>feature.research-md</code>, <code>feature.data-model-md</code>
+```
+
+```text
+<code>feature.research-md</code>, <code>feature.research-files</code>, <code>feature.data-model-md</code>
+```
+
+### `README.md` (line 196 at `7b18033`)
+
+```text
+specs/NNN-feature/       spec, plan, research, data model,
+```
+
+```text
+specs/NNN-feature/       spec, plan, research, research/, data model,
+```
+
+Generated, not hand-edited: `docs/harness/atlas/atlas.html`, `docs/harness/atlas/SYSTEM.md` (atlas build) and `docs/harness/README.md` (`npx -y likec4@1.60.0 export markdown docs/harness`).
