@@ -15,7 +15,7 @@ Old:
 New:
 
 ```text
-3. Output path, in this order: the path the caller gives; else `<feature folder>/research/<short-name>.md` when the caller names a feature folder; else `.stratum/research/<short-name>.md`. A short name is 2 to 4 lowercase words joined by hyphens; in a feature folder, it is one that no file in `<feature folder>/research/`, no queue line in `<feature folder>/decisions.md` and no research that runs uses. Never take the feature folder from `.stratum/state.json`.
+3. Output path, in this order: the path the caller gives; else `<feature folder>/research/<short-name>.md` when the caller names a feature folder; else `.stratum/research/<short-name>.md`. A short name is 2 to 4 lowercase words joined by hyphens; in a feature folder, a short name the skill picks itself is one that no file in `<feature folder>/research/`, no queue line in `<feature folder>/decisions.md` and no research that runs uses. Never take the feature folder from `.stratum/state.json`.
 ```
 
 The second paragraph of step 3 (quote rule and `realpath` command): keep.

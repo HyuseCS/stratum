@@ -8,3 +8,6 @@ summary: The earlier opportunity to simplify the implementation sequence remains
 
 ## decisions | 2026-11-17T07:34:58Z | /advisor
 summary: /advisor: US2 short-name fix sound, keep 751234a; C4 already passes an explicit path so the Plan skip matches; spec 'that folder' wording left for Close
+
+## decisions | 2026-11-17T07:52:26Z | /advisor
+summary: /advisor: US3 and US4 decisions sound; keep fbb06bf and b63239a; step 3 name rule now says it covers only a name the skill picks; state.json content edits unseen under D11 is a known limit; run end diff pass from 5d93fc9
