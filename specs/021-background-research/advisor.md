@@ -5,3 +5,6 @@ summary: The approach is compact, but the implementation sequence can be simplif
 ## plan | 2026-11-17T07:10:59Z | sha256 64961e92ef9941e74b4eb467b636e0c742e695c2eaa409aae39590a7fe943a75 | REVISE
 summary: The earlier opportunity to simplify the implementation sequence remains.
 - [LOW] specs/021-background-research/tasks.md:131: Merge US1–US3 into one test-first implementation batch, retaining all acceptance checks. Evidence: T001–T006 still alternate edits to the same test and rule files, with the broad <SK> suite repeated after each build task. The implementation strategy explicitly says these stories ship together. Combining their test tasks and then their implementation tasks would reduce repeated editing and validation.
+
+## decisions | 2026-11-17T07:34:58Z | /advisor
+summary: /advisor: US2 short-name fix sound, keep 751234a; C4 already passes an explicit path so the Plan skip matches; spec 'that folder' wording left for Close

@@ -88,7 +88,7 @@ None.
 
 **Independent Test**: T007 rows green after T008; quickstart.md M6, M7, M8.
 
-- [ ] T007 [US4] Tests for FR-009 to FR-013 (FR-015, FR-016) in tests/test_research.sh, red until T008. Replace the phrase of the `FR-013 plan proc` row ``With no such file, follow steps 1 to 3.`` with ``With neither, follow steps 1 to 3.``. Add rows after the T005 rows:
+- [X] T007 [US4] Tests for FR-009 to FR-013 (FR-015, FR-016) in tests/test_research.sh, red until T008. Replace the phrase of the `FR-013 plan proc` row ``With no such file, follow steps 1 to 3.`` with ``With neither, follow steps 1 to 3.``. Add rows after the T005 rows:
   `#111 FR-009 wait` / `skills/st-define/SKILL.md` / ``When the grill ends, before step 2, wait for all research that runs and show each finding that changes a grill answer or an FR.``;
   `#111 FR-010 queue` / `skills/st-define/SKILL.md` / ``Do not start the queue: under `## Queued research` at the end of `<folder>/decisions.md`, write one line `- <short-name>: <scope and questions>` for each queued scope and each research that stopped or failed, with a short name that no file in `<folder>/research/` and no other queue line uses.``;
   `#111 FR-009 gate` / `skills/st-define/SKILL.md` / ``Name research that stopped or failed, and the queued scopes for Plan.``;
@@ -97,7 +97,7 @@ None.
   `#111 FR-012 sources` / `procedures/plan.md` / ``If `FEATURE_DIR/research/` has files, read each one and use its facts. Do not research again what they answer. Research only the unknowns they do not cover.``;
   `#111 FR-012 sources` / `procedures/plan.md` / ``Write `research.md` as your own file: a `## Sources` list that names each research file, then your Decision/Rationale/Alternatives items. Never copy their facts into it.``;
   `#111 FR-013 both` / `procedures/plan.md` / ``With `research/` too, put the `## Sources` list, which also names this file's rounds, before `## Decisions`.``. Test: bash tests/test_research.sh.
-- [ ] T008 [US4] Build FR-009 to FR-013. In skills/st-define/SKILL.md add C2 line E right after line D, and apply C3 in the gate. In skills/st-plan/SKILL.md add C4 as step 3 of "0. Start", after step 2. In procedures/plan.md replace the `**Research from st-research.**` paragraph of Phase 0 with the two C5 paragraphs. Test: `<SK>` && bash tests/test_advisor_rules.sh && bash tests/test_plan_rules.sh.
+- [X] T008 [US4] Build FR-009 to FR-013. In skills/st-define/SKILL.md add C2 line E right after line D, and apply C3 in the gate. In skills/st-plan/SKILL.md add C4 as step 3 of "0. Start", after step 2. In procedures/plan.md replace the `**Research from st-research.**` paragraph of Phase 0 with the two C5 paragraphs. Test: `<SK>` && bash tests/test_advisor_rules.sh && bash tests/test_plan_rules.sh.
 
 **Checkpoint**: tests/test_research.sh fully green.
 

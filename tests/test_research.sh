@@ -102,7 +102,7 @@ FR-012 plan skill	skills/st-plan/SKILL.md	give its file to the `st-plan` subagen
 FR-013 plan proc	procedures/plan.md	has the line `Written by: st-research`, keep all its rounds and sections as they are and use its facts
 FR-013 plan proc	procedures/plan.md	Research only the unknowns it does not cover
 FR-013 plan proc	procedures/plan.md	under a `## Decisions` heading at the end of the file
-FR-013 plan proc	procedures/plan.md	With no such file, follow steps 1 to 3.
+FR-013 plan proc	procedures/plan.md	With neither, follow steps 1 to 3.
 FR-009 web scope	procedures/research.md	only for a question about something outside the repo (a library, a tool, an API, a version) or one the code cannot answer
 FR-009 web source	procedures/research.md	Prefer official docs and primary sources.
 FR-009 web cite	procedures/research.md	(<url>, read YYYY-MM-DD)
@@ -130,6 +130,14 @@ SC-003 ignored	skills/st-research/SKILL.md	The check does not cover git-ignored 
 #111 FR-007 root	skills/st-research/SKILL.md	5. From the project root, note `git rev-parse HEAD`
 #111 FR-007 folder	skills/st-research/SKILL.md	`<folder>` is the feature folder the caller names, as a path from the project root, else `.stratum`.
 #111 FR-007 decisions	skills/st-define/SKILL.md	From the time the folder exists, the grill writes its decisions to `<folder>/decisions.md`.
+#111 FR-009 wait	skills/st-define/SKILL.md	When the grill ends, before step 2, wait for all research that runs and show each finding that changes a grill answer or an FR.
+#111 FR-010 queue	skills/st-define/SKILL.md	Do not start the queue: under `## Queued research` at the end of `<folder>/decisions.md`, write one line `- <short-name>: <scope and questions>` for each queued scope and each research that stopped or failed, with a short name that no file in `<folder>/research/` and no other queue line uses.
+#111 FR-009 gate	skills/st-define/SKILL.md	Name research that stopped or failed, and the queued scopes for Plan.
+#111 FR-009 foreign lines	skills/st-define/SKILL.md	Then read `<folder>/decisions.md` and show the user every line in it that this Define run did not write.
+#111 FR-011 plan queue	skills/st-plan/SKILL.md	3. If `<feature dir>/decisions.md` has `## Queued research`, run `/stratum:st-research` (Skill tool) for each line under it in the form `- <short-name>: <scope and questions>` whose `<feature dir>/research/<short-name>.md` does not exist, with its scope and questions, `feature <feature dir>` and `path <feature dir>/research/<short-name>.md`, before step 1 of "Steps". A line in another form, such as `- D13 (Q12): ...`, is not a scope.
+#111 FR-012 sources	procedures/plan.md	If `FEATURE_DIR/research/` has files, read each one and use its facts. Do not research again what they answer. Research only the unknowns they do not cover.
+#111 FR-012 sources	procedures/plan.md	Write `research.md` as your own file: a `## Sources` list that names each research file, then your Decision/Rationale/Alternatives items. Never copy their facts into it.
+#111 FR-013 both	procedures/plan.md	With `research/` too, put the `## Sources` list, which also names this file's rounds, before `## Decisions`.
 EOF
 
 check "FR-002 auto cmd" 'grep -qF -- "$auto" "$s"'

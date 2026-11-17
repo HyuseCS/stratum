@@ -13,6 +13,7 @@ Plugin root (`<plugin root>`) is two levels up from this skill's base directory.
 1. Read `<project>/.stratum/state.json`. If there is no `feature_directory`, stop and tell the
    user to run `/stratum:st-define`.
 2. If the spec leaves facts about the code unclear, or the user asks for research first, run `/stratum:st-research` (Skill tool) with the feature dir before step 1 of "Steps", and give its file to the `st-plan` subagent as input.
+3. If `<feature dir>/decisions.md` has `## Queued research`, run `/stratum:st-research` (Skill tool) for each line under it in the form `- <short-name>: <scope and questions>` whose `<feature dir>/research/<short-name>.md` does not exist, with its scope and questions, `feature <feature dir>` and `path <feature dir>/research/<short-name>.md`, before step 1 of "Steps". A line in another form, such as `- D13 (Q12): ...`, is not a scope.
 
 ## Steps
 
