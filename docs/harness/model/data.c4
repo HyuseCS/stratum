@@ -142,9 +142,15 @@ model {
       }
     }
     research-md = datafile 'specs/NNN-feature/research.md' {
-      summary 'The decisions and reasons for the open questions of the plan. procedures/plan.md writes it in phase 0.'
+      summary 'A Sources list of the research files, then the decisions and reasons of the plan. procedures/plan.md writes it in phase 0.'
       metadata {
         data 'specs/NNN-feature/research.md'
+      }
+    }
+    research-files = datafile 'specs/NNN-feature/research/<short-name>.md' {
+      summary 'One file per research scope of a feature. The st-research agent writes each one, and procedures/plan.md reads them.'
+      metadata {
+        data 'specs/NNN-feature/research/<short-name>.md'
       }
     }
     data-model-md = datafile 'specs/NNN-feature/data-model.md' {
