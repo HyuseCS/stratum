@@ -4,7 +4,7 @@ No `research/` folder and no `st-research` file for this feature. Facts below co
 
 ## R1. How the git check ignores paths
 
-- Decision: add the git exclude pathspec `-- . ':!.stratum/state.json' ':!<folder>/decisions.md' ':(exclude,glob)<folder>/research/*.md'` to the `git status`, `git ls-files -s` and `git ls-files -z --modified --others` commands of `skills/st-research/SKILL.md` step 5. With no feature folder, `<folder>` is `.stratum`.
+- Decision: add the git exclude pathspec `-- . ':(exclude,glob).stratu[m]/state.json' ':(exclude,glob)<folder>/decisions.m[d]' ':(exclude,glob)<folder>/research/*.md'` to the `git status`, `git ls-files -s` and `git ls-files -z --modified --others` commands of `skills/st-research/SKILL.md` step 5. With no feature folder, `<folder>` is `.stratum`.
 - Rationale: one command form for every run, testable by exact grep and by running it in a real repo. Probe: writes to `<folder>/research/a-b.md` (also staged), `<folder>/decisions.md` and `.stratum/state.json` give the same snapshot; a change to a code file, a new `.stratum/autonomous/x`, a new `.stratum/research/n.md` in a feature run, another feature's `spec.md`, this feature's `spec.md`, a staged spec, `research/notes.txt` and `research/sub/z.md` each change it. `git status` and the two `ls-files` commands accept only exclude-style specs after `.`; the hooks `st-git-guard.py` and `st-approve.py` pass all three commands with no deny.
 - Alternatives considered: plain `:!<folder>/research/*.md` (also hides `research/sub/z.md`, because `*` crosses `/` without glob magic); filtering the output by eye (the index hash is one line for all files and cannot be filtered); a new snapshot script (rejected: the rule fits in text).
 

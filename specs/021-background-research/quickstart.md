@@ -37,12 +37,12 @@ Do each row on its own fresh scratch copy, never in the repo:
 | N11 | `skills/st-define/SKILL.md`: change `Pass `feature <folder>`, not a path.` to `Pass `<folder>/research.md` as the research path.` | `FAIL FR-015 define`, `FAIL #111 FR-006 old path gone` |
 | N12 | `skills/st-define/SKILL.md`: change `pass `feature <feature_directory>`` to `pass `<feature_directory>/research.md`` | `FAIL FR-015 redo`, `FAIL #111 FR-006 old path gone` |
 | N13 | `skills/st-research/SKILL.md`: in the `git status` command only, delete ` ':(exclude,glob)<folder>/research/*.md'` | `FAIL #111 FR-007 status cmd` |
-| N14 | `skills/st-research/SKILL.md`: in the `git ls-files -s` command only, delete ` ':!.stratum/state.json'` | `FAIL SC-003 index cmd` |
-| N15 | `skills/st-research/SKILL.md`: in the `git ls-files -z` command only, delete ` ':!<folder>/decisions.md'` | `FAIL SC-003 hash cmd` |
-| N16 | `tests/test_research.sh`: in the `st`, `idx` and `hash` heredocs, delete ` ':!<folder>/decisions.md'` (false finding) | `FAIL #111 FR-007 B6 ignored` |
-| N17 | `tests/test_research.sh`: in the `st`, `idx` and `hash` heredocs, change `':!<folder>/decisions.md'` to `':!specs'` (missed finding) | `FAIL #111 FR-007 B6 finding specs/020-y/spec.md`, `FAIL #111 FR-007 B6 finding specs/021-x/spec.md` |
+| N14 | `skills/st-research/SKILL.md`: in the `git ls-files -s` command only, delete ` ':(exclude,glob).stratu[m]/state.json'` | `FAIL SC-003 index cmd` |
+| N15 | `skills/st-research/SKILL.md`: in the `git ls-files -z` command only, delete ` ':(exclude,glob)<folder>/decisions.m[d]'` | `FAIL SC-003 hash cmd` |
+| N16 | `tests/test_research.sh`: in the `st`, `idx` and `hash` heredocs, delete ` ':(exclude,glob)<folder>/decisions.m[d]'` (false finding) | `FAIL #111 FR-007 B6 ignored` |
+| N17 | `tests/test_research.sh`: in the `st`, `idx` and `hash` heredocs, change `':(exclude,glob)<folder>/decisions.m[d]'` to `':!specs'` (missed finding) | `FAIL #111 FR-007 B6 finding specs/020-y/spec.md`, `FAIL #111 FR-007 B6 finding specs/021-x/spec.md` |
 | N18 | `tests/test_research.sh`: in the three heredocs, change `':(exclude,glob)<folder>/research/*.md'` to `':!<folder>/research/*.md'` | `FAIL #111 FR-007 B6 finding specs/021-x/research/sub/z.md` |
-| N19 | `tests/test_research.sh`: in the three heredocs, delete ` ':!.stratum/state.json'` | `FAIL #111 FR-007 B6 ignored`, `FAIL #111 FR-007 B6 no folder ignored` |
+| N19 | `tests/test_research.sh`: in the three heredocs, delete ` ':(exclude,glob).stratu[m]/state.json'` | `FAIL #111 FR-007 B6 ignored`, `FAIL #111 FR-007 B6 no folder ignored` |
 | N20 | `skills/st-research/SKILL.md`: delete `From the project root, ` in step 5 | `FAIL #111 FR-007 root` |
 | N21 | `skills/st-research/SKILL.md`: delete `, as a path from the project root,` | `FAIL #111 FR-007 folder` |
 | N22 | `skills/st-define/SKILL.md`: delete the line `From the time the folder exists, the grill writes its decisions to `<folder>/decisions.md`.` | `FAIL #111 FR-007 decisions` |
@@ -58,7 +58,7 @@ Do each row on its own fresh scratch copy, never in the repo:
 | N33 | `skills/st-plan/SKILL.md`: delete ` A line in another form, such as `- D13 (Q12): ...`, is not a scope.` | `FAIL #111 FR-011 plan queue` |
 | N34 | `skills/st-define/SKILL.md`: change `changes a grill answer or an FR` to `changes the spec` | `FAIL #111 FR-009 wait` |
 | N35 | `skills/st-define/SKILL.md`: delete ` Then read `<folder>/decisions.md` and show the user every line in it that this Define run did not write.` | `FAIL #111 FR-009 foreign lines` |
-| N31 | `tests/test_research.sh`: in the three heredocs, change `':!.stratum/state.json'` to `':!.stratum'` (D6 before D11, missed finding) | `FAIL #111 FR-007 B6 finding .stratum/autonomous/x`, `FAIL #111 FR-007 B6 finding .stratum/research/n.md` |
+| N31 | `tests/test_research.sh`: in the three heredocs, change `':(exclude,glob).stratu[m]/state.json'` to `':!.stratum'` (D6 before D11, missed finding) | `FAIL #111 FR-007 B6 finding .stratum/autonomous/x`, `FAIL #111 FR-007 B6 finding .stratum/research/n.md` |
 
 ## 3. Other tests (FR-016)
 

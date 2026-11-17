@@ -35,7 +35,7 @@ New start (one sentence added before it, rest of the step kept):
 New, whole step:
 
 ```text
-5. From the project root, note `git rev-parse HEAD`, `git status --porcelain --untracked-files=all -- . ':!.stratum/state.json' ':!<folder>/decisions.md' ':(exclude,glob)<folder>/research/*.md'`, `git ls-files -s -- . ':!.stratum/state.json' ':!<folder>/decisions.md' ':(exclude,glob)<folder>/research/*.md' | sha256sum` (the staged contents) and `git ls-files -z --modified --others --exclude-standard -- . ':!.stratum/state.json' ':!<folder>/decisions.md' ':(exclude,glob)<folder>/research/*.md' | xargs -0 -r sh -c 'for f; do [ ! -e "$f" ] || sha256sum -- "$f"; done' _` (the contents of changed and untracked files that exist). `<folder>` is the feature folder the caller names, as a path from the project root, else `.stratum`.
+5. From the project root, note `git rev-parse HEAD`, `git status --porcelain --untracked-files=all -- . ':(exclude,glob).stratu[m]/state.json' ':(exclude,glob)<folder>/decisions.m[d]' ':(exclude,glob)<folder>/research/*.md'`, `git ls-files -s -- . ':(exclude,glob).stratu[m]/state.json' ':(exclude,glob)<folder>/decisions.m[d]' ':(exclude,glob)<folder>/research/*.md' | sha256sum` (the staged contents) and `git ls-files -z --modified --others --exclude-standard -- . ':(exclude,glob).stratu[m]/state.json' ':(exclude,glob)<folder>/decisions.m[d]' ':(exclude,glob)<folder>/research/*.md' | xargs -0 -r sh -c 'for f; do [ ! -e "$f" ] || sha256sum -- "$f"; done' _` (the contents of changed and untracked files that exist). `<folder>` is the feature folder the caller names, as a path from the project root, else `.stratum`.
 ```
 
 ### Step 6
@@ -129,9 +129,9 @@ If `FEATURE_DIR/research.md` has the line `Written by: st-research`, keep all it
 The heredocs hold the step 5 commands with the literal `<folder>`:
 
 ```text
-st:   git status --porcelain --untracked-files=all -- . ':!.stratum/state.json' ':!<folder>/decisions.md' ':(exclude,glob)<folder>/research/*.md'
-idx:  git ls-files -s -- . ':!.stratum/state.json' ':!<folder>/decisions.md' ':(exclude,glob)<folder>/research/*.md' | sha256sum
-hash: git ls-files -z --modified --others --exclude-standard -- . ':!.stratum/state.json' ':!<folder>/decisions.md' ':(exclude,glob)<folder>/research/*.md' | xargs -0 -r sh -c 'for f; do [ ! -e "$f" ] || sha256sum -- "$f"; done' _
+st:   git status --porcelain --untracked-files=all -- . ':(exclude,glob).stratu[m]/state.json' ':(exclude,glob)<folder>/decisions.m[d]' ':(exclude,glob)<folder>/research/*.md'
+idx:  git ls-files -s -- . ':(exclude,glob).stratu[m]/state.json' ':(exclude,glob)<folder>/decisions.m[d]' ':(exclude,glob)<folder>/research/*.md' | sha256sum
+hash: git ls-files -z --modified --others --exclude-standard -- . ':(exclude,glob).stratu[m]/state.json' ':(exclude,glob)<folder>/decisions.m[d]' ':(exclude,glob)<folder>/research/*.md' | xargs -0 -r sh -c 'for f; do [ ! -e "$f" ] || sha256sum -- "$f"; done' _
 ```
 
 A block runs one with `bash -c "${cmd//<folder>/<relative folder>}"` from the repo root.

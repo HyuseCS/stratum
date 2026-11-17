@@ -29,13 +29,13 @@ IFS= read -r wbr <<'EOF'
 python3 <plugin root>/hooks/st-approve.py --worker
 EOF
 IFS= read -r idx <<'EOF'
-git ls-files -s -- . ':!.stratum/state.json' ':!<folder>/decisions.md' ':(exclude,glob)<folder>/research/*.md' | sha256sum
+git ls-files -s -- . ':(exclude,glob).stratu[m]/state.json' ':(exclude,glob)<folder>/decisions.m[d]' ':(exclude,glob)<folder>/research/*.md' | sha256sum
 EOF
 IFS= read -r hash <<'EOF'
-git ls-files -z --modified --others --exclude-standard -- . ':!.stratum/state.json' ':!<folder>/decisions.md' ':(exclude,glob)<folder>/research/*.md' | xargs -0 -r sh -c 'for f; do [ ! -e "$f" ] || sha256sum -- "$f"; done' _
+git ls-files -z --modified --others --exclude-standard -- . ':(exclude,glob).stratu[m]/state.json' ':(exclude,glob)<folder>/decisions.m[d]' ':(exclude,glob)<folder>/research/*.md' | xargs -0 -r sh -c 'for f; do [ ! -e "$f" ] || sha256sum -- "$f"; done' _
 EOF
 IFS= read -r st <<'EOF'
-git status --porcelain --untracked-files=all -- . ':!.stratum/state.json' ':!<folder>/decisions.md' ':(exclude,glob)<folder>/research/*.md'
+git status --porcelain --untracked-files=all -- . ':(exclude,glob).stratu[m]/state.json' ':(exclude,glob)<folder>/decisions.m[d]' ':(exclude,glob)<folder>/research/*.md'
 EOF
 
 s=$root/skills/st-research/SKILL.md
@@ -250,6 +250,12 @@ rm "$g/.stratum/autonomous/x"
 mkdir -p "$g/.stratum/research" && printf 'n\n' > "$g/.stratum/research/n.md"
 check "#111 FR-007 B6 finding .stratum/research/n.md" '[ "$(snap "$f")" != "$base" ]'
 rm "$g/.stratum/research/n.md"
+rm "$g/$f/decisions.md" && mkdir "$g/$f/decisions.md" && printf 'p\n' > "$g/$f/decisions.md/p.sh"
+check "#111 FR-007 B6 finding specs/021-x/decisions.md/p.sh" '[ "$(snap "$f")" != "$base" ]'
+rm -r "$g/$f/decisions.md" && git -C "$g" checkout -q -- "$f/decisions.md"
+rm "$g/.stratum/state.json" && mkdir "$g/.stratum/state.json" && printf 'p\n' > "$g/.stratum/state.json/p.sh"
+check "#111 FR-007 B6 finding .stratum/state.json/p.sh" '[ "$(snap "$f")" != "$base" ]'
+rm -r "$g/.stratum/state.json" && git -C "$g" checkout -q -- .stratum/state.json
 check "#111 FR-007 B6 back to base" '[ "$(snap "$f")" = "$base" ]'
 printf 'changed\n' > "$g/src/a.sh" && git -C "$g" add src/a.sh && git -C "$g" show HEAD:src/a.sh > "$g/src/a.sh"
 check "#111 FR-007 B6 staged" '[ "$(snap "$f")" != "$base" ]'
