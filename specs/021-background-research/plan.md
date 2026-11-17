@@ -14,7 +14,7 @@ The change is text in four rule files and the checks in `tests/test_research.sh`
 
 **Language/Version**: Markdown rule files (skills, procedures). Bash for the tests. git 2.56.1 on this machine.
 
-**Primary Dependencies**: Claude Code 2.1.325 (Agent tool runs subagents in the background and notifies on end), git pathspec magic `:!` and `:(exclude,glob)`.
+**Primary Dependencies**: Claude Code 2.1.325 (Agent tool runs subagents in the background and notifies on end), git pathspec magic `:(exclude,glob)`.
 
 **Storage**: Files only: `specs/NNN-name/research/<short-name>.md`, `specs/NNN-name/decisions.md`, `specs/NNN-name/research.md`.
 
@@ -40,11 +40,11 @@ No `.stratum/constitution.md` in this repo (base repo, by choice) and no `apps/*
 |------|--------|----|
 | `skills/st-define/SKILL.md` step 1 | Quick look first, then background research with `feature <folder>`, cap 3 and FIFO queue, no same scope twice, summary on report, replaces the `st-grill` research rule, decisions go to `<folder>/decisions.md` once the folder exists, wait at grill end, `## Queued research` lines | FR-001 to FR-006, FR-008 to FR-010, FR-014 |
 | `skills/st-define/SKILL.md` gate | Name stopped or failed research and the queued scopes | FR-009 |
-| `skills/st-research/SKILL.md` step 3 | Feature folder path becomes `<feature folder>/research/<short-name>.md`, short name unique in the folder and among runs | FR-006 |
+| `skills/st-research/SKILL.md` step 3 | Feature folder path becomes `<feature folder>/research/<short-name>.md`, a short name the skill picks is unique in the folder, among queue lines and among runs | FR-006 |
 | `skills/st-research/SKILL.md` step 4 | From the Define grill: brief in one line, no OK | FR-003 |
 | `skills/st-research/SKILL.md` step 5 | Three git commands gain the exclude pathspec, run from the project root, `<folder>` rule | FR-007 |
 | `skills/st-research/SKILL.md` step 6 | From the Define grill: start in the background, steps 7 and 8 on the report | FR-002 |
-| `skills/st-plan/SKILL.md` step 0.3 (new) | Run each `## Queued research` line with no file yet, before the agent | FR-011 |
+| `skills/st-plan/SKILL.md` step 0.3 (new) | Show each `## Queued research` line, then run each one with no file yet before the agent; skip a short name that is not 2 to 4 lowercase words joined by hyphens | FR-011 |
 | `procedures/plan.md` Phase 0 | Read `research/`, `## Sources` list, no copy of facts; old `Written by: st-research` rule kept; both cases | FR-012, FR-013 |
 | `skills/st-define/SKILL.md` step 1, line E | Before Specify, show the user every line of `<folder>/decisions.md` this Define run did not write | FR-009 (D12) |
 | `tests/test_research.sh` | New `#111` rows, replaced rows, new git block B6, B3 and B5 use the new commands | FR-015, FR-016 |

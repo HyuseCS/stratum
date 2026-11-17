@@ -3,7 +3,7 @@
 ## Research file
 
 - Path: `<folder>/research/<short-name>.md`. `<folder>` is the feature folder (the new one, or the one being redone). With no feature folder: `.stratum/research/<short-name>.md`. A path the caller gives wins.
-- Short name: 2 to 4 lowercase words joined by hyphens. In a feature folder, used by no file in `<folder>/research/`, by no queue line in `<folder>/decisions.md` and by no research that runs. In `.stratum/research/`, a name may repeat, and the run adds a round.
+- Short name: 2 to 4 lowercase words joined by hyphens. In a feature folder, a short name the skill picks itself is one that no file in `<folder>/research/`, no queue line in `<folder>/decisions.md` and no research that runs uses. In `.stratum/research/`, a name may repeat, and the run adds a round.
 - Content: as today (`procedures/research.md`): `# Research: <topic>`, `Written by: st-research`, `## Round <n>` with Scope, Key facts, optional Drift, open questions, Commands.
 - Writer: one `st-research` agent. No other file changes.
 
@@ -18,7 +18,7 @@
 
 - Place: a heading at the end of `<folder>/decisions.md`.
 - Line: `- <short-name>: <scope and questions>`, one per scope. The short name is used by no file in `<folder>/research/` and no other queue line.
-- Reader: `skills/st-plan/SKILL.md` step 0.3 runs each line in this form (not a `- D13 (Q12): ...` decision line) whose `<folder>/research/<short-name>.md` does not exist, with `path <folder>/research/<short-name>.md`.
+- Reader: `skills/st-plan/SKILL.md` step 0.3 shows the user each line in this form (not a `- D13 (Q12): ...` decision line), then runs each one whose short name is 2 to 4 lowercase words joined by hyphens and whose `<folder>/research/<short-name>.md` does not exist, with `path <folder>/research/<short-name>.md`.
 
 ## `research.md` (Plan's own file)
 
