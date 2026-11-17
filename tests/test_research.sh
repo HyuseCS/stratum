@@ -115,6 +115,12 @@ FR-002 worker	skills/st-research/SKILL.md	In a worker session the mode is on: st
 FR-002 worker exit	skills/st-research/SKILL.md	Only exit 3 means this is not a worker session; any other exit code counts as a worker session.
 SC-003 four	skills/st-research/SKILL.md	run the four git commands of step 5 again
 SC-003 ignored	skills/st-research/SKILL.md	The check does not cover git-ignored files.
+#111 FR-001 quick look	skills/st-define/SKILL.md	For a fact a grill question or the plan needs, take a quick look first (a file or two, or a search).
+#111 FR-002 background	skills/st-define/SKILL.md	run `/stratum:st-research` (Skill tool) in the background with the fact as its scope, and ask the next question that does not need the fact.
+#111 FR-002 background	skills/st-research/SKILL.md	From the grill in `/stratum:st-define`, start it in the background and go back to the grill; do steps 7 and 8 when its report comes in.
+#111 FR-003 no OK	skills/st-research/SKILL.md	From the grill in `/stratum:st-define`: show the brief in one line and start the research at once, with no OK; skip the rest of this step.
+#111 FR-008 summary	skills/st-define/SKILL.md	When a report comes in, show a short summary of its findings before the next question.
+#111 FR-014 define only	skills/st-define/SKILL.md	These rules replace the research rule of `st-grill`.
 EOF
 
 check "FR-002 auto cmd" 'grep -qF -- "$auto" "$s"'

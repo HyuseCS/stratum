@@ -34,7 +34,7 @@ None.
 
 **Independent Test**: T001 rows green after T002; quickstart.md M1, M2, M9.
 
-- [ ] T001 [US1] Tests for FR-001, FR-002, FR-003, FR-008, FR-014 (FR-015) in tests/test_research.sh, red until T002. Add these rows to the `phrases` heredoc (tab between name, target and phrase), after the row `SC-003 ignored`:
+- [X] T001 [US1] Tests for FR-001, FR-002, FR-003, FR-008, FR-014 (FR-015) in tests/test_research.sh, red until T002. Add these rows to the `phrases` heredoc (tab between name, target and phrase), after the row `SC-003 ignored`:
   `#111 FR-001 quick look` / `skills/st-define/SKILL.md` / ``For a fact a grill question or the plan needs, take a quick look first (a file or two, or a search).``;
   `#111 FR-002 background` / `skills/st-define/SKILL.md` / ``run `/stratum:st-research` (Skill tool) in the background with the fact as its scope, and ask the next question that does not need the fact.``;
   `#111 FR-002 background` / `skills/st-research/SKILL.md` / ``From the grill in `/stratum:st-define`, start it in the background and go back to the grill; do steps 7 and 8 when its report comes in.``;
@@ -42,7 +42,7 @@ None.
   `#111 FR-008 summary` / `skills/st-define/SKILL.md` / ``When a report comes in, show a short summary of its findings before the next question.``;
   `#111 FR-014 define only` / `skills/st-define/SKILL.md` / ``These rules replace the research rule of `st-grill`.``
   Keep the `FR-014 grill` rows as they are. Test: bash tests/test_research.sh.
-- [ ] T002 [US1] Build FR-001, FR-002, FR-003, FR-008, FR-014. In skills/st-define/SKILL.md insert contracts/rule-text.md C2 line A as a new line right before the line that starts `   When the grill needs `/stratum:st-research``. In skills/st-research/SKILL.md, step 4 gets the C1 "Step 4" first sentence before `Show the scope`, and step 6 gets the C1 "Step 6" sentence at its end. Test: `<SK>`.
+- [X] T002 [US1] Build FR-001, FR-002, FR-003, FR-008, FR-014. In skills/st-define/SKILL.md insert contracts/rule-text.md C2 line A as a new line right before the line that starts `   When the grill needs `/stratum:st-research``. In skills/st-research/SKILL.md, step 4 gets the C1 "Step 4" first sentence before `Show the scope`, and step 6 gets the C1 "Step 6" sentence at its end. Test: `<SK>`.
 
 **Checkpoint**: T001 rows green.
 
