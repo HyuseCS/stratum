@@ -89,8 +89,8 @@ None.
 **Independent Test**: T007 rows green after T008; quickstart.md M6, M7, M8.
 
 - [X] T007 [US4] Tests for FR-009 to FR-013 (FR-015, FR-016) in tests/test_research.sh, red until T008. Replace the phrase of the `FR-013 plan proc` row ``With no such file, follow steps 1 to 3.`` with ``With neither, follow steps 1 to 3.``. Add rows after the T005 rows:
-  `#111 FR-009 wait` / `skills/st-define/SKILL.md` / ``When the grill ends, before step 2, wait for all research that runs and show each finding that changes a grill answer or the scope.``;
-  `#111 FR-010 queue` / `skills/st-define/SKILL.md` / ``Do not start the queue: under `## Queued research` at the end of `<folder>/decisions.md`, write one line `- <short-name>: <scope and questions>` for each queued scope and each research that stopped or failed, with a short name that no file in `<folder>/research/` and no other queue line uses.``;
+  `#111 FR-009 wait` / `skills/st-define/SKILL.md` / ``If the grill ran research (in a redo, `<folder>` is the `<feature_directory>` that step 0.2 redoes): when the grill ends, before step 2, wait for all research that runs and show each finding that changes a grill answer or the scope.``;
+  `#111 FR-010 queue` / `skills/st-define/SKILL.md` / ``Do not start the queue: under `## Queued research` at the end of `<folder>/decisions.md`, write one line `- <short-name>: <scope and questions>` for each queued scope and each research that stopped or failed, with a short name of 2 to 4 lowercase words joined by hyphens that no file in `<folder>/research/` and no other queue line uses.``;
   `#111 FR-009 gate` / `skills/st-define/SKILL.md` / ``Name research that stopped or failed, and the queued scopes for Plan.``;
   `#111 FR-009 foreign lines` / `skills/st-define/SKILL.md` / ``Then read `<folder>/decisions.md` and show the user every line in it that this Define run did not write.``;
   `#111 FR-011 plan queue` / `skills/st-plan/SKILL.md` / the whole contracts/rule-text.md C4 line;

@@ -12,13 +12,13 @@
 - Fields: scope, questions, short name, state.
 - States: `queued` -> `running` -> `done` | `stopped` | `failed`.
 - Rules: at most 3 `running`. A `queued` run starts, first in, first out, when one ends. A scope whose questions are already in the brief of a `running`, `queued` or `done` run is not added.
-- At the end of the grill: wait for every `running` run. `queued`, `stopped` and `failed` runs go to `## Queued research`.
+- At the end of the grill, when the grill ran research: wait for every `running` run. `queued`, `stopped` and `failed` runs go to `## Queued research`.
 
 ## `## Queued research` (in `<folder>/decisions.md`)
 
 - Place: a heading at the end of `<folder>/decisions.md`.
-- Line: `- <short-name>: <scope and questions>`, one per scope. The short name is used by no file in `<folder>/research/` and no other queue line.
-- Reader: `skills/st-plan/SKILL.md` step 0.3 shows the user each line in this form (not a `- D13 (Q12): ...` decision line), then runs each one whose short name is 2 to 4 lowercase words joined by hyphens and whose `<folder>/research/<short-name>.md` does not exist, with `path <folder>/research/<short-name>.md`.
+- Line: `- <short-name>: <scope and questions>`, one per scope. The short name is 2 to 4 lowercase words joined by hyphens, used by no file in `<folder>/research/` and no other queue line.
+- Reader: `skills/st-plan/SKILL.md` step 0.3 shows the user each line in this form (not a `- D13 (Q12): ...` decision line), then runs each one whose short name is 2 to 4 lowercase words joined by hyphens and whose `<folder>/research/<short-name>.md` does not exist, with `path <folder>/research/<short-name>.md`. It runs before Plan's own research (step 0.2), which then covers only what the files in `<folder>/research/` do not answer.
 
 ## `research.md` (Plan's own file)
 

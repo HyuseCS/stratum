@@ -87,7 +87,7 @@ D:
 E:
 
 ```text
-   When the grill ends, before step 2, wait for all research that runs and show each finding that changes a grill answer or the scope. Do not start the queue: under `## Queued research` at the end of `<folder>/decisions.md`, write one line `- <short-name>: <scope and questions>` for each queued scope and each research that stopped or failed, with a short name that no file in `<folder>/research/` and no other queue line uses. Then read `<folder>/decisions.md` and show the user every line in it that this Define run did not write.
+   If the grill ran research (in a redo, `<folder>` is the `<feature_directory>` that step 0.2 redoes): when the grill ends, before step 2, wait for all research that runs and show each finding that changes a grill answer or the scope. Do not start the queue: under `## Queued research` at the end of `<folder>/decisions.md`, write one line `- <short-name>: <scope and questions>` for each queued scope and each research that stopped or failed, with a short name of 2 to 4 lowercase words joined by hyphens that no file in `<folder>/research/` and no other queue line uses. Then read `<folder>/decisions.md` and show the user every line in it that this Define run did not write.
 ```
 
 ## C3. `skills/st-define/SKILL.md` gate
@@ -105,7 +105,7 @@ assumptions. Name research that stopped or failed, and the queued scopes for Pla
 Add after step 0.2, step 0.2 kept:
 
 ```text
-3. If `<feature dir>/decisions.md` has `## Queued research`, run `/stratum:st-research` (Skill tool) for each line under it in the form `- <short-name>: <scope and questions>` whose `<feature dir>/research/<short-name>.md` does not exist, with its scope and questions, `feature <feature dir>` and `path <feature dir>/research/<short-name>.md`, before step 1 of "Steps". A line in another form, such as `- D13 (Q12): ...`, is not a scope. Show the user each queue line before you run it. A short name that is not 2 to 4 lowercase words joined by hyphens is not a scope.
+3. If `<feature dir>/decisions.md` has `## Queued research`, run `/stratum:st-research` (Skill tool) for each line under it in the form `- <short-name>: <scope and questions>` whose `<feature dir>/research/<short-name>.md` does not exist, with its scope and questions, `feature <feature dir>` and `path <feature dir>/research/<short-name>.md`, before step 1 of "Steps". A line in another form, such as `- D13 (Q12): ...`, is not a scope. Show the user each queue line before you run it. A short name that is not 2 to 4 lowercase words joined by hyphens is not a scope. Do this step before step 2, and in step 2 research only what the files in `<feature dir>/research/` do not answer.
 ```
 
 ## C5. `procedures/plan.md`, Phase 0 first paragraph
