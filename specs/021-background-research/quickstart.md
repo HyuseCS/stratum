@@ -56,9 +56,13 @@ Do each row on its own fresh scratch copy, never in the repo:
 | N30 | `skills/st-research/SKILL.md`: delete `From the grill in `/stratum:st-define`, start it in the background and go back to the grill; do steps 7 and 8 when its report comes in.` | `FAIL #111 FR-002 background` |
 | N32 | `skills/st-define/SKILL.md`: delete ` and no other queue line` | `FAIL #111 FR-010 queue` |
 | N33 | `skills/st-plan/SKILL.md`: delete ` A line in another form, such as `- D13 (Q12): ...`, is not a scope.` | `FAIL #111 FR-011 plan queue` |
-| N34 | `skills/st-define/SKILL.md`: change `changes a grill answer or an FR` to `changes the spec` | `FAIL #111 FR-009 wait` |
+| N34 | `skills/st-define/SKILL.md`: change `changes a grill answer or the scope` to `changes the spec` | `FAIL #111 FR-009 wait` |
 | N35 | `skills/st-define/SKILL.md`: delete ` Then read `<folder>/decisions.md` and show the user every line in it that this Define run did not write.` | `FAIL #111 FR-009 foreign lines` |
-| N31 | `tests/test_research.sh`: in the three heredocs, change `':(exclude,glob).stratu[m]/state.json'` to `':!.stratum'` (D6 before D11, missed finding) | `FAIL #111 FR-007 B6 finding .stratum/autonomous/x`, `FAIL #111 FR-007 B6 finding .stratum/research/n.md` |
+| N31 | `tests/test_research.sh`: in the three heredocs, change `':(exclude,glob).stratu[m]/state.json'` to `':!.stratum'` (D6 before D11, missed finding) | `FAIL #111 FR-007 B6 finding .stratum/autonomous/x`, `FAIL #111 FR-007 B6 finding .stratum/research/n.md`, `FAIL #111 FR-007 B6 finding .stratum/state.json/p.sh` |
+| N36 | `skills/st-plan/SKILL.md`: delete ` Show the user each queue line before you run it.` | `FAIL #111 FR-011 plan queue` |
+| N37 | `skills/st-plan/SKILL.md`: delete ` A short name that is not 2 to 4 lowercase words joined by hyphens is not a scope.` | `FAIL #111 FR-011 plan queue` |
+| N38 | `skills/st-research/SKILL.md`: delete `, no queue line in `<feature folder>/decisions.md`` | `FAIL #111 FR-006 short name` |
+| N39 | `skills/st-research/SKILL.md` and `tests/test_research.sh`: in the three step 5 commands and the `st`, `idx` and `hash` heredocs, change `':(exclude,glob)<folder>/decisions.m[d]'` to `':!<folder>/decisions.md'` (prefix match, missed finding) | `FAIL #111 FR-007 B6 finding specs/021-x/decisions.md/p.sh` |
 
 ## 3. Other tests (FR-016)
 

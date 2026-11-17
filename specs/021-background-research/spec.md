@@ -40,7 +40,7 @@ before the research ends, and that the summary shows before the question after t
 
 When the grill has more than one independent fact to find, the orchestrator starts one
 `st-research` agent for each scope, up to 3 at a time. Each agent writes its own file,
-`<folder>/research/<short-name>.md`, with a short name no other file in that folder uses.
+`<folder>/research/<short-name>.md`, with a short name no other file in `<folder>/research/` uses.
 The orchestrator never starts the same scope twice. A fourth scope waits in a queue and starts
 when one of the 3 agents ends.
 
@@ -87,7 +87,7 @@ Then change a file in the code, `spec.md` of any feature, or write a file in `.s
 ### User Story 4 - Define waits at the end of the grill, and Plan uses the files (Priority: P2)
 
 At the end of the grill, before Specify writes any file, Define waits for every research agent
-that runs. It shows each finding that changes a grill answer or an FR, so the spec is written with it. The gate
+that runs. It shows each finding that changes a grill answer or the scope, so the spec is written with it. The gate
 names research that stopped or failed, and the queued scopes it hands to Plan. Scopes still in the
 queue do not start: Define writes them under `## Queued research` in `decisions.md` for Plan. Plan runs those scopes through
 `/stratum:st-research` into `<folder>/research/` before the `st-plan` agent starts. The
@@ -104,7 +104,7 @@ copies no fact from them.
 
 **Acceptance Scenarios**:
 
-1. **Given** research that still runs at the end of the grill, **When** the grill ends, **Then** Define waits for it before Specify writes any file, and shows each finding that changes a grill answer or an FR.
+1. **Given** research that still runs at the end of the grill, **When** the grill ends, **Then** Define waits for it before Specify writes any file, and shows each finding that changes a grill answer or the scope.
 2. **Given** research that stopped or failed, **When** the gate shows, **Then** it names that research.
 3. **Given** scopes in the queue at the end of the grill, **When** the grill ends, **Then** they do not start, Define writes them for Plan, and the gate names them.
 4. **Given** queued scopes from Define, **When** Plan starts, **Then** it runs them through `/stratum:st-research` into `<folder>/research/` before the `st-plan` agent starts.
@@ -132,12 +132,12 @@ copies no fact from them.
 - **FR-003**: Research that the grill in Define starts MUST need no OK. The orchestrator MUST show its brief in one line.
 - **FR-004**: At most 3 research agents from the grill MUST run at a time. A further scope MUST wait in a queue and start when one agent ends, first in, first out.
 - **FR-005**: The orchestrator MUST NOT start the same scope twice in one Define run. A scope is the same when research that runs, waits in the queue, or is done already has its questions in its brief.
-- **FR-006**: Every research file for a feature MUST go to `<folder>/research/<short-name>.md`, with a short name no other file in that folder uses. This holds for the grill, for Plan's own research, and for a hand run of `/stratum:st-research` that names a feature folder.
+- **FR-006**: Every research file for a feature MUST go to `<folder>/research/<short-name>.md`, with a short name no other file in that folder and no queue line in `<folder>/decisions.md` uses. This holds for the grill, for Plan's own research, and for a hand run of `/stratum:st-research` that names a feature folder.
 - **FR-007**: The before and after git check of a research run MUST ignore `.stratum/state.json`, `<folder>/decisions.md` and `<folder>/research/*.md`, where `<folder>` is the feature folder this run writes to (the new one, or the one being redone), or `.stratum` when the run has no feature folder. It MUST show every other change as a finding, all of `specs/` and the rest of `.stratum/` included.
 - **FR-008**: When a research report comes in during the grill, the orchestrator MUST show a short summary of its findings before its next question.
-- **FR-009**: At the end of the grill, before Specify writes any file, Define MUST wait for every research agent that runs and show each finding that changes a grill answer or an FR. The gate MUST name any research that stopped or failed, and the queued scopes handed to Plan. Before Specify writes, Define MUST show the user every line of `<folder>/decisions.md` that this Define run did not write.
+- **FR-009**: At the end of the grill, before Specify writes any file, Define MUST wait for every research agent that runs and show each finding that changes a grill answer or the scope. The gate MUST name any research that stopped or failed, and the queued scopes handed to Plan. Before Specify writes, Define MUST show the user every line of `<folder>/decisions.md` that this Define run did not write.
 - **FR-010**: Scopes still in the queue at the end of the grill MUST NOT start. Define MUST write them, and the questions of research that stopped or failed, under a `## Queued research` heading at the end of `<folder>/decisions.md`, so they reach Plan in a later session too.
-- **FR-011**: Plan MUST run the scopes under `## Queued research` in `<folder>/decisions.md` through `/stratum:st-research` into `<folder>/research/` before the `st-plan` agent starts.
+- **FR-011**: Plan MUST run the scopes under `## Queued research` in `<folder>/decisions.md` through `/stratum:st-research` into `<folder>/research/` before the `st-plan` agent starts. Plan MUST show each queue line to the user before it runs it, and MUST skip a line whose short name is not 2 to 4 lowercase words joined by hyphens.
 - **FR-012**: The `st-plan` agent MUST read every file in `<folder>/research/`, MUST NOT research again a question those files answer, and MUST write `research.md` with a `Sources` list that names each research file, then its decisions. It MUST NOT copy their facts into `research.md`.
 - **FR-013**: For a feature with no `<folder>/research/` folder whose `research.md` has the line `Written by: st-research`, Plan MUST work as it does today. When both exist, the `<folder>/research/` rule (FR-012) applies, and `Sources` also names the old `research.md` rounds, which Plan keeps as they are.
 - **FR-014**: These rules MUST apply only to the grill inside Define. `/stratum:st-grill` run alone MUST keep today's rule, with the OK step.
