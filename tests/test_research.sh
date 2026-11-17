@@ -124,7 +124,7 @@ SC-003 ignored	skills/st-research/SKILL.md	The check does not cover git-ignored 
 #111 FR-003 no OK	skills/st-research/SKILL.md	From the grill in `/stratum:st-define`: show the brief in one line and start the research at once, with no OK; skip the rest of this step.
 #111 FR-008 summary	skills/st-define/SKILL.md	When a report comes in, show a short summary of its findings before the next question.
 #111 FR-014 define only	skills/st-define/SKILL.md	These rules replace the research rule of `st-grill`.
-#111 FR-006 short name	skills/st-research/SKILL.md	A short name is 2 to 4 lowercase words joined by hyphens that no file in that folder and no research that runs uses.
+#111 FR-006 short name	skills/st-research/SKILL.md	A short name is 2 to 4 lowercase words joined by hyphens; in a feature folder, it is one that no file in `<feature folder>/research/` and no research that runs uses.
 #111 FR-004 cap	skills/st-define/SKILL.md	At most 3 research runs at a time: put a further scope in a queue and start it, first in, first out, when one ends.
 #111 FR-005 same scope	skills/st-define/SKILL.md	Start no scope whose questions are in the brief of research that runs, waits in the queue, or is done.
 #111 FR-007 root	skills/st-research/SKILL.md	5. From the project root, note `git rev-parse HEAD`

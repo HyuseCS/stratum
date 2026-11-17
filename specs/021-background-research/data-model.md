@@ -3,7 +3,7 @@
 ## Research file
 
 - Path: `<folder>/research/<short-name>.md`. `<folder>` is the feature folder (the new one, or the one being redone). With no feature folder: `.stratum/research/<short-name>.md`. A path the caller gives wins.
-- Short name: 2 to 4 lowercase words joined by hyphens, used by no file in that folder and by no research that runs.
+- Short name: 2 to 4 lowercase words joined by hyphens. In a feature folder, used by no file in `<folder>/research/` and by no research that runs. In `.stratum/research/`, a name may repeat, and the run adds a round.
 - Content: as today (`procedures/research.md`): `# Research: <topic>`, `Written by: st-research`, `## Round <n>` with Scope, Key facts, optional Drift, open questions, Commands.
 - Writer: one `st-research` agent. No other file changes.
 
