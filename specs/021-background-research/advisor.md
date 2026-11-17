@@ -1,0 +1,3 @@
+## plan | 2026-11-17T06:52:28Z | sha256 60e5c493834a27d75620663f345e033695cea39aef28e72620de6535332d5b68 | REVISE
+summary: The approach is compact, but the implementation sequence can be simplified.
+- [LOW] specs/021-background-research/tasks.md:129: Merge US1–US3 into one test-first implementation batch while retaining their acceptance checks. Evidence: Tasks T001–T006 repeatedly edit the same research test and rule files and run the same broad <SK> suite after each build task. The execution strategy already requires these stories to ship together. One combined red-test task followed by one implementation task would reduce repeated editing and validation without changing the deliverable.

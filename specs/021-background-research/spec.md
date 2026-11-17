@@ -63,9 +63,9 @@ look cannot find. Check that two agents run at the same time, that two files exi
 ### User Story 3 - The safety check stays real with agents in parallel (Priority: P1)
 
 Each research run takes a git snapshot before and after. While several agents run and the
-grill writes `decisions.md`, the check ignores `.stratum/`, `<folder>/decisions.md` and
-`<folder>/research/*.md`. Any other change, all of `specs/` and the code included, is a
-finding that the orchestrator shows to the user.
+grill writes `decisions.md`, the check ignores `.stratum/state.json`, `<folder>/decisions.md` and
+`<folder>/research/*.md`. Any other change, all of `specs/`, the rest of `.stratum/` and the
+code included, is a finding that the orchestrator shows to the user.
 
 **Why this priority**: Without this, each agent sees the other agents' files and the
 grill's `decisions.md` as changes, so every run shows false findings and the check gets
@@ -73,13 +73,14 @@ ignored.
 
 **Independent Test**: Take the snapshot, write a file in `<folder>/research/`, change
 `<folder>/decisions.md` and `.stratum/state.json`, and take the snapshot again: no finding.
-Then change a file in the code, or `spec.md` of any feature: a finding.
+Then change a file in the code, `spec.md` of any feature, or write a file in `.stratum/autonomous/`: a finding.
 
 **Acceptance Scenarios**:
 
 1. **Given** another agent writes its research file, **When** the check runs, **Then** it shows no finding for that file.
 2. **Given** the grill writes `<folder>/decisions.md` and a hook changes `.stratum/state.json`, **When** the check runs, **Then** it shows no finding for those files.
 3. **Given** a code file or any file in `specs/` outside those two paths changes, **When** the check runs, **Then** it shows a finding.
+4. **Given** a file in `.stratum/` other than `state.json` changes (for example `.stratum/autonomous/<session>` or `.stratum/constitution.md`), **When** the check runs, **Then** it shows a finding.
 
 ---
 
@@ -131,7 +132,7 @@ copies no fact from them.
 - **FR-004**: At most 3 research agents from the grill MUST run at a time. A further scope MUST wait in a queue and start when one agent ends, first in, first out.
 - **FR-005**: The orchestrator MUST NOT start the same scope twice in one Define run. A scope is the same when an agent that runs or is done already has its questions in its brief.
 - **FR-006**: Every research file for a feature MUST go to `<folder>/research/<short-name>.md`, with a short name no other file in that folder uses. This holds for the grill, for Plan's own research, and for a hand run of `/stratum:st-research` that names a feature folder.
-- **FR-007**: The before and after git check of a research run MUST ignore `.stratum/`, `<folder>/decisions.md` and `<folder>/research/*.md`, where `<folder>` is the feature folder this run writes to (the new one, or the one being redone). It MUST show every other change as a finding, all of `specs/` included.
+- **FR-007**: The before and after git check of a research run MUST ignore `.stratum/state.json`, `<folder>/decisions.md` and `<folder>/research/*.md`, where `<folder>` is the feature folder this run writes to (the new one, or the one being redone), or `.stratum` when the run has no feature folder. It MUST show every other change as a finding, all of `specs/` and the rest of `.stratum/` included.
 - **FR-008**: When a research report comes in during the grill, the orchestrator MUST show a short summary of its findings before its next question.
 - **FR-009**: At the end of the grill, before Specify writes any file, Define MUST wait for every research agent that runs and show each finding that changes the spec. The gate MUST name any research that stopped or failed, and the queued scopes handed to Plan.
 - **FR-010**: Scopes still in the queue at the end of the grill MUST NOT start. Define MUST write them, and the questions of research that stopped or failed, under a `## Queued research` heading at the end of `<folder>/decisions.md`, so they reach Plan in a later session too.
@@ -155,7 +156,7 @@ copies no fact from them.
 - **SC-001**: In a grill with two independent facts the quick look cannot find, two research agents run at the same time and two research files exist after, each with only its own scope.
 - **SC-002**: While research runs, the grill asks its next question with no wait and no OK prompt.
 - **SC-003**: At most 3 research agents from one grill run at the same time.
-- **SC-004**: In a grill where agents run in parallel and `decisions.md` changes, the git check shows zero false findings. A change to a code file or a spec file outside the ignore list shows as a finding every time.
+- **SC-004**: In a grill where agents run in parallel and `decisions.md` changes, the git check shows zero false findings. A change to a code file, a spec file or a `.stratum/` file outside the ignore list shows as a finding every time.
 - **SC-005**: Plan researches zero questions that the research files already answer, and `research.md` names every research file.
 - **SC-006**: Every new check in `tests/test_research.sh` fails on its negative control, and all other existing tests pass with no change.
 
