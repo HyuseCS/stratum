@@ -29,10 +29,13 @@ IFS= read -r wbr <<'EOF'
 python3 <plugin root>/hooks/st-approve.py --worker
 EOF
 IFS= read -r idx <<'EOF'
-git ls-files -s | sha256sum
+git ls-files -s -- . ':!.stratum/state.json' ':!<folder>/decisions.md' ':(exclude,glob)<folder>/research/*.md' | sha256sum
 EOF
 IFS= read -r hash <<'EOF'
-git ls-files -z --modified --others --exclude-standard | xargs -0 -r sh -c 'for f; do [ ! -e "$f" ] || sha256sum -- "$f"; done' _
+git ls-files -z --modified --others --exclude-standard -- . ':!.stratum/state.json' ':!<folder>/decisions.md' ':(exclude,glob)<folder>/research/*.md' | xargs -0 -r sh -c 'for f; do [ ! -e "$f" ] || sha256sum -- "$f"; done' _
+EOF
+IFS= read -r st <<'EOF'
+git status --porcelain --untracked-files=all -- . ':!.stratum/state.json' ':!<folder>/decisions.md' ':(exclude,glob)<folder>/research/*.md'
 EOF
 
 s=$root/skills/st-research/SKILL.md
@@ -124,6 +127,9 @@ SC-003 ignored	skills/st-research/SKILL.md	The check does not cover git-ignored 
 #111 FR-006 short name	skills/st-research/SKILL.md	A short name is 2 to 4 lowercase words joined by hyphens that no file in that folder and no research that runs uses.
 #111 FR-004 cap	skills/st-define/SKILL.md	At most 3 research runs at a time: put a further scope in a queue and start it, first in, first out, when one ends.
 #111 FR-005 same scope	skills/st-define/SKILL.md	Start no scope whose questions are in the brief of research that runs, waits in the queue, or is done.
+#111 FR-007 root	skills/st-research/SKILL.md	5. From the project root, note `git rev-parse HEAD`
+#111 FR-007 folder	skills/st-research/SKILL.md	`<folder>` is the feature folder the caller names, as a path from the project root, else `.stratum`.
+#111 FR-007 decisions	skills/st-define/SKILL.md	From the time the folder exists, the grill writes its decisions to `<folder>/decisions.md`.
 EOF
 
 check "FR-002 auto cmd" 'grep -qF -- "$auto" "$s"'
@@ -131,6 +137,7 @@ check "FR-005 path cmd" 'grep -qF -- "$path" "$s"'
 check "SC-003 hash cmd" 'grep -qF -- "$hash" "$s"'
 check "FR-002 worker cmd" 'grep -qF -- "$wbr" "$s"'
 check "SC-003 index cmd" 'grep -qF -- "$idx" "$s"'
+check "#111 FR-007 status cmd" 'grep -qF -- "$st" "$s"'
 check "#111 FR-006 old path gone" '! grep -qF -- "/research.md" "$root/skills/st-define/SKILL.md" && ! grep -qF -- "<feature folder>/research.md" "$s"'
 
 arun() { (cd "$1" && CLAUDE_CODE_SESSION_ID="$2" bash -c "$auto") >/dev/null 2>&1; echo $?; }
@@ -169,7 +176,7 @@ h=$tmp/h
 git init -q "$h" && printf 'a\n' > "$h/kept" && printf 'b\n' > "$h/gone"
 git -C "$h" add kept gone && git -C "$h" -c user.name=t -c user.email=t@t commit -q -m i
 printf 'c\n' > "$h/kept" && rm "$h/gone" && printf 'd\n' > "$h/new"
-out=$(cd "$h" && bash -c "$hash" 2>&1); rc=$?
+out=$(cd "$h" && bash -c "${hash//<folder>/.stratum}" 2>&1); rc=$?
 check "SC-003 B3 deleted file exit" '[ "$rc" = 0 ]'
 check "SC-003 B3 deleted file output" '[ "$(sort <<<"$out")" = "$(cd "$h" && sha256sum kept new | sort)" ]'
 
@@ -195,9 +202,54 @@ mkdir -p "$tmp/nohook"
 check "FR-002 B4 missing hook is not exit 3" 'c=$(wrun "$m" "$tmp/nohook"); [ "$c" != 0 ] && [ "$c" != 3 ]'
 
 printf 'b\n' > "$h/kept" && git -C "$h" add kept
-i1=$(cd "$h" && bash -c "$idx")
+i1=$(cd "$h" && bash -c "${idx//<folder>/.stratum}")
 printf 'e\n' > "$h/kept" && git -C "$h" add kept
-i2=$(cd "$h" && bash -c "$idx")
+i2=$(cd "$h" && bash -c "${idx//<folder>/.stratum}")
 check "SC-003 B5 index change" '[ -n "$i1" ] && [ "$i1" != "$i2" ]'
+
+g=$tmp/g
+git init -q "$g" && mkdir -p "$g/src" "$g/.stratum" "$g/specs/020-y" "$g/specs/021-x"
+printf 'a\n' > "$g/src/a.sh" && printf '{}\n' > "$g/.stratum/state.json" && printf 'd\n' > "$g/specs/021-x/decisions.md"
+printf 's\n' > "$g/specs/021-x/spec.md" && printf 's\n' > "$g/specs/020-y/spec.md"
+git -C "$g" add . && git -C "$g" -c user.name=t -c user.email=t@t commit -q -m i
+snap() { for x in "$st" "$idx" "$hash"; do (cd "$g" && bash -c "${x//<folder>/$1}" 2>&1); done; }
+f=specs/021-x
+base=$(snap "$f")
+mkdir -p "$g/$f/research" && printf 'r\n' > "$g/$f/research/a-b.md" && git -C "$g" add "$f/research/a-b.md"
+printf 'r\n' > "$g/$f/research/c-d.md" && printf 'more\n' >> "$g/$f/decisions.md" && printf '{"n":1}\n' > "$g/.stratum/state.json"
+check "#111 FR-007 B6 ignored" '[ -n "$base" ] && [ "$(snap "$f")" = "$base" ]'
+printf 'x\n' >> "$g/src/a.sh"
+check "#111 FR-007 B6 finding src/a.sh" '[ "$(snap "$f")" != "$base" ]'
+git -C "$g" checkout -q -- src/a.sh
+printf 'x\n' >> "$g/specs/020-y/spec.md"
+check "#111 FR-007 B6 finding specs/020-y/spec.md" '[ "$(snap "$f")" != "$base" ]'
+git -C "$g" checkout -q -- specs/020-y/spec.md
+printf 'x\n' >> "$g/$f/spec.md"
+check "#111 FR-007 B6 finding specs/021-x/spec.md" '[ "$(snap "$f")" != "$base" ]'
+git -C "$g" checkout -q -- "$f/spec.md"
+mkdir -p "$g/$f/research/sub" && printf 'z\n' > "$g/$f/research/sub/z.md"
+check "#111 FR-007 B6 finding specs/021-x/research/sub/z.md" '[ "$(snap "$f")" != "$base" ]'
+rm -r "$g/$f/research/sub"
+printf 'n\n' > "$g/$f/research/notes.txt"
+check "#111 FR-007 B6 finding specs/021-x/research/notes.txt" '[ "$(snap "$f")" != "$base" ]'
+rm "$g/$f/research/notes.txt"
+printf 'n\n' > "$g/src/new.sh"
+check "#111 FR-007 B6 finding src/new.sh" '[ "$(snap "$f")" != "$base" ]'
+rm "$g/src/new.sh"
+mkdir -p "$g/.stratum/autonomous" && printf 'x\n' > "$g/.stratum/autonomous/x"
+check "#111 FR-007 B6 finding .stratum/autonomous/x" '[ "$(snap "$f")" != "$base" ]'
+rm "$g/.stratum/autonomous/x"
+mkdir -p "$g/.stratum/research" && printf 'n\n' > "$g/.stratum/research/n.md"
+check "#111 FR-007 B6 finding .stratum/research/n.md" '[ "$(snap "$f")" != "$base" ]'
+rm "$g/.stratum/research/n.md"
+check "#111 FR-007 B6 back to base" '[ "$(snap "$f")" = "$base" ]'
+printf 'changed\n' > "$g/src/a.sh" && git -C "$g" add src/a.sh && git -C "$g" show HEAD:src/a.sh > "$g/src/a.sh"
+check "#111 FR-007 B6 staged" '[ "$(snap "$f")" != "$base" ]'
+git -C "$g" reset -q -- src/a.sh
+base2=$(snap .stratum)
+printf '{"n":2}\n' > "$g/.stratum/state.json" && mkdir -p "$g/.stratum/research" && printf 'm\n' > "$g/.stratum/research/m.md"
+check "#111 FR-007 B6 no folder ignored" '[ -n "$base2" ] && [ "$(snap .stratum)" = "$base2" ]'
+printf 'x\n' >> "$g/src/a.sh"
+check "#111 FR-007 B6 no folder finding" '[ "$(snap .stratum)" != "$base2" ]'
 
 exit $fail
