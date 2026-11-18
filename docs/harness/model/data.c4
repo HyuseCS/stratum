@@ -85,7 +85,7 @@ model {
       }
     }
     models-json = datafile '.stratum/models.json' {
-      summary 'Model and effort overrides per agent. st-init and /st-model write it, st-models.py applies it when an agent starts.'
+      summary 'Model and effort overrides per agent. st-init and /st-model write it, st-models.py applies it when an agent starts, st-worker.sh copies it into a new worker worktree.'
       metadata {
         data '.stratum/models.json'
       }

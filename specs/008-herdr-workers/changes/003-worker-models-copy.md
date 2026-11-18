@@ -26,14 +26,14 @@ FR-017, at the end, after "(D27, D28).":
 - specs/008-herdr-workers/contracts/script.md:
   - Section 3 (:84-92): one paragraph with the rules above.
   - Step 4 (:195): "write brief.md and .stratum/git-guard.json (section 3), copy .stratum/models.json, the autonomous files, then worker-setup.sh".
-  - New rows MD1 to MD7 in the test table, after M3 (:567).
+  - New rows MD1 to MD9 in the test table, after M3 (:567).
 - specs/008-herdr-workers/decisions.md: D39, with the rules above. Rejected: send this machine's models.json over ssh to a `--machine` worker (the way `G` is sent). The request names the main checkout on the machine, and `worker-setup.sh` also runs from there.
 
 ## Tests (written first, must fail before the build)
 Command: `bash tests/test_st_worker.sh`
 
 Red before the build:
-- MD1 local: `$mfile` = `{"st-review":{"model":"opus","effort":"high"}}`, then `start`. Checks: exit 0. `cmp "$mfile" "$(wt)/.stratum/models.json"`. The copy is a plain file, not a symlink. `git -C "$repo" status --porcelain` is empty (the test repo excludes models.json, :243).
+- MD1 local: `$mfile` = `{"st-review":{"model":"opus","effort":"high"}}`, then `start`. Checks: exit 0. `cmp "$mfile" "$(wt)/.stratum/models.json"`. The copy is a plain file, not a symlink.
 - MD3 local: `models:.stratum/models.json` is added to the S12 loop (:466). The present S12 checks apply: exit 1, one `stopped: <WT>/.stratum/models.json is a symlink` line, no agent start, `outside.json` unchanged.
 - MD5 `--machine`, SU3 shape (`rfresh; xsetup`, `STUB_SSH_EXEC=1`, `--repo "$rrepo"`): `$rrepo/.stratum/models.json` exists. Checks: exit 0. `cmp "$rrepo/.stratum/models.json" "$rw/.stratum/models.json"`. Two ssh calls.
 - MD6 `--machine`, `STUB_SSH_EXEC=1`, `STUB_WT_LINK=models`: exit 1. One stopped line: `cannot write brief.md and .stratum/git-guard.json in $rw on laptop: $rw/.stratum/models.json is a symlink`. `outside.json` unchanged. No agent start.

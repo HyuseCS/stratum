@@ -99,7 +99,8 @@ in the worktree stays as committed and the start goes on. A symlink at `<WT>/.st
 stops the start with `<WT>/.stratum/models.json is a symlink`, also when there is no source. Only
 `models.json` is copied, before `worker-setup.sh`. On a saved machine the check runs after the `for`
 loop and the copy after the `.stratum/worker` write, in the same ssh call; a failure gives the
-`cannot write brief.md and .stratum/git-guard.json in <WT> on <m>: <reason>` stop.
+`cannot write brief.md and .stratum/git-guard.json in <WT> on <m>: <reason>` stop. A local copy that
+fails gives `stopped: cannot copy .stratum/models.json to <WT>`.
 
 Exact text, with `<...>` filled in. `<plugin root>` is the parent of the script's own folder,
 `$(cd "$(dirname "$0")/.." && pwd)`. The advisor block is written only when `st-advisor.sh` exists

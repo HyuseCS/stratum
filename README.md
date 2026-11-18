@@ -315,7 +315,10 @@ read the `.c4` text, or run `npx -y likec4@1.60.0 export json docs/harness`.
   The per-call `effort` needs Claude Code 2.1.292 or later. On an older client, remove the
   `effort` keys from the file.
   A linked worktree has no `models.json`: it is git-ignored and `scripts/st-worktree.sh` does not
-  link it, so agents there use the plugin defaults, as with `git-guard.json`.
+  link it, so agents there use the plugin defaults, as with `git-guard.json`. The exception is a
+  worker worktree from `st-worker.sh start`: it gets a copy of the main checkout's file (on a saved
+  machine, that machine's), made once at start, so a later edit does not reach a worker that already
+  started. No copy is made when the main checkout has no file or the worktree already has one.
   To change an entry, run `/stratum:st-model st-close opus`, say it in plain words ("make
   st-close use opus"), or edit the file.
 - **Session handoff.** `st-handoff` writes the goal, decisions, open questions, and next step.
