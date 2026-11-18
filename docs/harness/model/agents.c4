@@ -266,7 +266,7 @@ model {
   agents.st-research -[reads]-> project.graphify-out-graph-report-md 'file map'
   agents.st-research -[reads]-> procedures.research-md 'research steps to follow'
   agents.st-research -[reads]-> git 'tracked files and log'
-  agents.st-research -[writes]-> feature.research-md 'rounds of facts in a feature'
+  agents.st-research -[writes]-> feature.research-files 'one file per scope in a feature'
   agents.st-research -[writes]-> stratum.research 'rounds of facts with no feature'
   agents.st-research -[passes]-> skills.st-research 'answers, open questions and the file path'
 }

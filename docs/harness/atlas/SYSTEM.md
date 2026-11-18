@@ -152,7 +152,7 @@ Stratum is a Claude Code plugin that runs a coding task through a lane. You give
 
 **What it does.** Each feature gets its own folder. The spec says what to build, the plan says how, and the tasks list the work with a test for each. The next phase, and the next session, read these files instead of remembering.
 
-**How it's built.** `specs/NNN-feature/`: `spec.md`, `plan.md`, `research.md`, `data-model.md`, `contracts/`, `quickstart.md`, `tasks.md`, `checklists/`, `changes/` (Fast-lane plans), `decisions.md` (grill answers), `advisor.md` (advisor records) and `gaps.md`. LikeC4 ids: `project.specs`, `feature.spec-md`, `feature.plan-md`, `feature.research-md`, `feature.data-model-md`, `feature.contracts`, `feature.quickstart-md`, `feature.tasks-md`, `feature.checklists`, `feature.changes`, `feature.decisions-md`, `feature.advisor-md`, `feature.gaps-md`.
+**How it's built.** `specs/NNN-feature/`: `spec.md`, `plan.md`, `research.md`, `research/` (one file per research scope), `data-model.md`, `contracts/`, `quickstart.md`, `tasks.md`, `checklists/`, `changes/` (Fast-lane plans), `decisions.md` (grill answers), `advisor.md` (advisor records) and `gaps.md`. LikeC4 ids: `project.specs`, `feature.spec-md`, `feature.plan-md`, `feature.research-md`, `feature.research-files`, `feature.data-model-md`, `feature.contracts`, `feature.quickstart-md`, `feature.tasks-md`, `feature.checklists`, `feature.changes`, `feature.decisions-md`, `feature.advisor-md`, `feature.gaps-md`.
 
 **Questions.**
 

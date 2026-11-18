@@ -193,7 +193,7 @@ search, then read. Code-writing agents carry the ponytail rule and add no explan
 ├── git-guard.json       git guard modes for this repo (git-ignored, per machine)
 ├── models.json         agent model and effort overrides (git-ignored, per machine)
 └── weather.json         Token Weather growth and compact point (git-ignored)
-specs/NNN-feature/       spec, plan, research, data model, contracts, quickstart, tasks, checklists/, changes/, advisor.md
+specs/NNN-feature/       spec, plan, research, research/, data model, contracts, quickstart, tasks, checklists/, changes/, advisor.md
 AGENTS.md, CLAUDE.md     point every tool at the constitution
 ```
 

@@ -36,7 +36,9 @@ Then list **open decisions**: choices that change scope, data, privacy, or cost 
 
 ### Phase 0: Outline & Research
 
-**Research from st-research.** If `FEATURE_DIR/research.md` has the line `Written by: st-research`, keep all its rounds and sections as they are and use its facts. Do not research again what it answers. Research only the unknowns it does not cover, and add your Decision/Rationale/Alternatives items under a `## Decisions` heading at the end of the file (add to it if it exists). With no such file, follow steps 1 to 3.
+**Research from st-research.** If `FEATURE_DIR/research/` has files, read each one and use its facts. Do not research again what they answer. Research only the unknowns they do not cover. Write `research.md` as your own file: a `## Sources` list that names each research file, then your Decision/Rationale/Alternatives items. Never copy their facts into it.
+
+If `FEATURE_DIR/research.md` has the line `Written by: st-research`, keep all its rounds and sections as they are and use its facts. Do not research again what it answers. Research only the unknowns it does not cover, and add your Decision/Rationale/Alternatives items under a `## Decisions` heading at the end of the file (add to it if it exists). With `research/` too, put the `## Sources` list, which also names this file's rounds, before `## Decisions`. With neither, follow steps 1 to 3.
 
 1. **Extract unknowns from Technical Context** above:
    - For each NEEDS CLARIFICATION → research task

@@ -882,6 +882,7 @@ graph TB
   ProjectDesign@{ shape: rectangle, label: "design" }
   ProjectGit_stratum_name_lock@{ shape: rectangle, label: ".git/stratum-NAME.lock" }
   ProjectClaude_settings_local_json@{ shape: rectangle, label: ".claude/settings.local.json" }
+  FeatureResearch_files@{ shape: rectangle, label: "specs/NNN-feature/research/<short-name>.md" }
   StratumState_json@{ shape: rectangle, label: ".stratum/state.json" }
   FeatureChecklists@{ shape: rectangle, label: "specs/NNN-feature/checklists" }
   StratumConstitution_md@{ shape: rectangle, label: ".stratum/constitution.md" }
@@ -1037,7 +1038,7 @@ questions`" .-> ProjectGraphify_out_graph_report_md
   AgentsSt_test -. "`entities the test checks`" .-> FeatureData_model_md
   AgentsSt_test -. "`contracts the test checks`" .-> FeatureContracts
   AgentsSt_test -. "`task text`" .-> FeatureTasks_md
-  AgentsSt_research -. "`rounds of facts in a feature`" .-> FeatureResearch_md
+  AgentsSt_research -. "`one file per scope in a feature`" .-> FeatureResearch_files
   AgentsSt_build -. "`design rules for screen tasks`" .-> ProjectDesign_md
   AgentsSt_build -. "`file map`" .-> ProjectGraphify_out_graph_report_md
   AgentsSt_close -. "`file map`" .-> ProjectGraphify_out_graph_report_md
@@ -1159,7 +1160,8 @@ appended`" .-> FeatureChecklists
   ProceduresPlan_md -. "`feature spec`" .-> FeatureSpec_md
   ProceduresPlan_md -. "`technical context, constitution check, 
 phases`" .-> FeaturePlan_md
-  ProceduresPlan_md -. "`[...]`" .-> FeatureResearch_md
+  ProceduresPlan_md -. "`decisions, reasons, alternatives`" .-> FeatureResearch_md
+  ProceduresPlan_md -. "`research facts it names in Sources`" .-> FeatureResearch_files
   ProceduresPlan_md -. "`entities, fields, rules`" .-> FeatureData_model_md
   ProceduresPlan_md -. "`interface contracts`" .-> FeatureContracts
   ProceduresPlan_md -. "`validation scenarios`" .-> FeatureQuickstart_md
