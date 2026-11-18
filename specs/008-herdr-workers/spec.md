@@ -242,7 +242,10 @@ the change is in the working tree, nothing is committed by the worker, and no pr
   applies. The value MUST be one token matching `[A-Za-z0-9._-]+`, starting with a letter or digit, checked before any command
   line. The brief MUST say `Model: <model or default>`. `hooks/st-models.py` accepts `st-worker`
   beside the agent names, `tests/test_model_hook.py` covers it, and `skills/st-model/SKILL.md`
-  lists `st-worker` (D27, D28).
+  lists `st-worker` (D27, D28). `start` also copies `.stratum/models.json` of the main checkout
+  (with `--machine`, of the main checkout on that machine) into the new worktree when that file
+  exists and the worktree has none, so the Stratum agents of the worker session use the
+  project's model and effort. A symlink at `<WT>/.stratum/models.json` stops the start (D39).
 - **FR-018**: The script MAY read `HERDR_WORKSPACE_ID` only in `start`, to open the tab there. It
   MUST close only the one tab labelled with the worker's name, at most once, and MUST close a
   workspace (never `--group`) only on a saved machine, only when its label is `st-workers` and no

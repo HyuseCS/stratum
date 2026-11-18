@@ -202,7 +202,7 @@ dependency.
   | `.stratum/approve` | own | `st-worker.sh start` writes each worker's own. |
   | `.stratum/git-instructions-kept` | own | Committed. `st-init` and `st-update` write the empty marker on the "not at all" answer to turning off the built-in git instructions, and read it in each checkout to skip that question. |
   | `.stratum/commit-standard` | own | Committed. The empty marker turns on the commit subject checks of `st-git-guard.py` and the subject sentence of the session text. |
-  | `.stratum/models.json` | own | Worktree agents use the plugin defaults. |
+  | `.stratum/models.json` | own | Worktree agents use the plugin defaults, except a new worker worktree: `st-worker.sh start` copies the main checkout's file into it once (on a saved machine, that machine's file), if the file exists and the worktree has none. |
   | `.stratum/powerline.json` | own | The statusline look of that checkout. |
   | `.stratum/weather.json` | own | The statusline cache of that checkout. |
   | `.stratum/handoff.md` | own | Each checkout's session writes its own. |

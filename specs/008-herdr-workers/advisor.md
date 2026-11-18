@@ -21,3 +21,6 @@ summary: The Enter change is well scoped, but the dialog plan has two correctnes
 
 ## change | 2026-11-12T17:42:32Z | sha256 21cb63a4fc6f4bf9a584c0c6bd57d0a90591a7a1632e3952c353a141225a0a2b | APPROVED
 summary: The revised plan resolves both previous findings with qlive(), per-call metadata resets, and targeted regression tests. The working-only answer gate preserves the permission checks, and the Enter change covers its callers and remote routing. No files changed and no tests run.
+
+## change | 2026-11-18T05:34:47Z | sha256 e6adc6ffad30d7590709021b9b0f3c0173769f877df256fed7fb726cae89cc41 | APPROVED
+summary: The plan uses a minimal copy in the existing local and remote setup paths, preserves tracked files, rejects destination symlinks, and runs before worker setup. The proposed tests cover the principal behaviors. No actionable findings; no files changed or tests run.

@@ -1097,7 +1097,7 @@ worktree or the main checkout`" .-> StratumAdvisor_json
   ScriptsSt_worker_sh -. "`[...]`" .-> StratumApprove
   ScriptsSt_worker_sh -. "`[...]`" .-> StratumAutonomous
   ScriptsSt_worker_sh -. "`[...]`" .-> StratumGit_guard_json
-  ScriptsSt_worker_sh -. "`st-worker model`" .-> StratumModels_json
+  ScriptsSt_worker_sh -. "`[...]`" .-> StratumModels_json
   ScriptsSt_worker_sh -. "`worker id, deleted at close`" .-> StratumWorker
   ScriptsSt_worker_sh -. "`main checkout path, in the new worktree`" .-> StratumWorker_setup_sh
   ScriptsCheck_prerequisites_sh -. "`exists check for --require-spec`" .-> FeatureSpec_md
