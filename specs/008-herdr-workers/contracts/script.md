@@ -91,6 +91,16 @@ ssh call, with `G` quoted by `printf %q`:
 `ponytail:` on a saved machine `G` comes from this machine's repo file; the saved machine's own
 repo guard file is not read. The script never writes `git-guard.json` anywhere else.
 
+After `.stratum/worker`, `start` copies `<repo>/.stratum/models.json` to `<WT>/.stratum/models.json`
+(D39). `<repo>` is the main checkout (`--git-common-dir`) for a local start and the main checkout on
+that machine for `--machine`. The brief `Model:` line still reads the calling folder. The copy runs
+only when the source is a file (`-f`) and the destination does not exist, so a tracked `models.json`
+in the worktree stays as committed and the start goes on. A symlink at `<WT>/.stratum/models.json`
+stops the start with `<WT>/.stratum/models.json is a symlink`, also when there is no source. Only
+`models.json` is copied, before `worker-setup.sh`. On a saved machine the check runs after the `for`
+loop and the copy after the `.stratum/worker` write, in the same ssh call; a failure gives the
+`cannot write brief.md and .stratum/git-guard.json in <WT> on <m>: <reason>` stop.
+
 Exact text, with `<...>` filled in. `<plugin root>` is the parent of the script's own folder,
 `$(cd "$(dirname "$0")/.." && pwd)`. The advisor block is written only when `st-advisor.sh` exists
 in the same folder as `st-worker.sh`. On a saved machine the brief has no `- Plugin root:` line and
@@ -192,7 +202,7 @@ No match in F1, F2 or F3: `No worker <N> on <m or local>.`, exit 1. More than on
                                          -> TAB (.result.tab.tab_id), PANE (.result.root_pane.pane_id)
   fails -> git -C <repo> worktree remove <path> && git -C <repo> branch -D N >/dev/null   (saved machine: one ssh call)
            then the stop below with the herdr line (D33)
-4 write brief.md and .stratum/git-guard.json (section 3), the autonomous files, then worker-setup.sh
+4 write brief.md and .stratum/git-guard.json (section 3), copy .stratum/models.json, the autonomous files, then worker-setup.sh
 5 H pane split PANE --direction right --cwd <path> --no-focus -> p (.result.pane.pane_id); H pane run p lazygit
 6 H agent start N --kind claude --pane PANE --timeout 120000 -- --permission-mode auto -n N [--model M]
 7 H agent prompt N P --wait --until working --until blocked --timeout 30000
@@ -565,6 +575,15 @@ stub log, never from built ids.
 | M1 | `start --model opus`: `agent start` argv ends `-n worker-t004 --model opus`; the brief has `- Model: opus` |
 | M2 | `start` with no `--model`, models.json `{"st-worker":{"model":"sonnet"}}`: `--model sonnet` in the `agent start` argv; brief `- Model: sonnet` |
 | M3 | `start` with no `--model` and no models.json: no `--model` in any argv; brief `- Model: default` (S1 stays as it is) |
+| MD1 | local, main checkout `models.json` `{"st-review":{"model":"opus","effort":"high"}}`: exit 0, the worktree copy is a plain file equal to it |
+| MD2 | local, no main checkout `models.json`: no `<WT>/.stratum/models.json` (a check in M3) |
+| MD3 | local, `<WT>/.stratum/models.json` is a symlink (S12 row `models`): exit 1, one `stopped: <WT>/.stratum/models.json is a symlink` line, no agent start, `outside.json` unchanged |
+| MD4 | local, the worktree has a tracked `models.json` and the main checkout another one: exit 0, the worktree file is still `TRACKED MODELS` |
+| MD5 | `--machine`, the machine's main checkout has `models.json`: exit 0, the worker folder has a copy, two ssh calls |
+| MD6 | `--machine`, `<WT>/.stratum/models.json` is a symlink: exit 1, one `stopped: cannot write brief.md and .stratum/git-guard.json in <WT> on laptop: <WT>/.stratum/models.json is a symlink` line, `outside.json` unchanged, no agent start |
+| MD7 | `--machine`, no `models.json` in the machine's main checkout: exit 0, no `<WT>/.stratum/models.json` |
+| MD8 | `--machine`, the worker folder has a tracked `models.json` and the machine's main checkout another one: exit 0, the worker folder file is still `TRACKED MODELS` |
+| MD9 | local, main checkout `models.json` and a `worker-setup.sh` that runs `cat .stratum/models.json`: exit 0, its output has the copy (the copy is made before `worker-setup.sh`) |
 | M4 | `start --model 'a b'` and `start --model 'x;y'`: the row 13 line, exit 1, no herdr call |
 | M4d | models.json `{"st-worker":{"model":"--dangerously-skip-permissions"}}`, no `--model`: `start` and `headless` each print the row 13 line, exit 1, no herdr or claude call |
 | M5 | `headless --model opus`: the claude argv has `--model opus` right after `-n worker-t004` |

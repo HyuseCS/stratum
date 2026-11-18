@@ -365,10 +365,12 @@ start)
   if [ -z "$m" ]; then
     [ ! -L "$WT/.stratum" ] || stop "$WT/.stratum is a symlink"
     for p in "$WT/brief.md" "$WT/result.md" "$WT/.stratum/git-guard.json" "$WT/.stratum/worker" ${auto:+"$WT/.stratum/approve"}; do [ ! -L "$p" ] || stop "$p is a symlink"; [ ! -e "$p" ] || stop "$p already exists"; done
+    [ ! -L "$WT/.stratum/models.json" ] || stop "$WT/.stratum/models.json is a symlink"
     brief >"$WT/brief.md" || stop "cannot write $WT/brief.md"
     mkdir -p "$WT/.stratum" || stop "cannot make $WT/.stratum"
     printf '%s\n' "$G" >"$WT/.stratum/git-guard.json" || stop "cannot write the commit guard file in $WT/.stratum"
     printf '%s\n' "${id,,}" > "$WT/.stratum/worker" || stop "cannot write $WT/.stratum/worker"
+    [ ! -f "$repo/.stratum/models.json" ] || [ -e "$WT/.stratum/models.json" ] || cp -- "$repo/.stratum/models.json" "$WT/.stratum/models.json" || stop "cannot copy .stratum/models.json to $WT"
     [ -z "$auto" ] || { mkdir "$WT/.stratum/approve" && owns >"$WT/.stratum/approve/owns" && printf '%s\n' "$SID" >"$WT/.stratum/approve/session"; } || stop "cannot write $WT/.stratum/approve"
   else
     quote "$WT"
@@ -384,7 +386,7 @@ start)
     qr=$Q
     Q=$qw
     U=" && { [ ! -f $qr/.stratum/worker-setup.sh ] || { echo 'setup output:' && cd $Q && bash $qr/.stratum/worker-setup.sh $qr 2>&1 || { echo \"worker-setup.sh exited \$? on $m\" >&2; exit 4; }; }; }"
-    rsh "[ ! -L $Q/.stratum ] || { echo \"$Q/.stratum is a symlink\" >&2; exit 3; }; for p in $Q/brief.md $Q/result.md $Q/.stratum/git-guard.json $Q/.stratum/worker${auto:+ $Q/.stratum/approve}; do [ ! -L \"\$p\" ] || { echo \"\$p is a symlink\" >&2; exit 3; }; [ ! -e \"\$p\" ] || { echo \"\$p already exists\" >&2; exit 3; }; done && cat > $Q/brief.md && mkdir -p $Q/.stratum && printf '%s\n' $(printf %q "$G") > $Q/.stratum/git-guard.json && printf '%s\n' ${id,,} > $Q/.stratum/worker$A$U" < <(brief) || { rc=$? msg=$(head -1 "$e"); [ "$rc" != 4 ] || stop "$msg"; stop "cannot write brief.md and .stratum/git-guard.json in $WT on $m: ${msg:-exit $rc}"; }
+    rsh "[ ! -L $Q/.stratum ] || { echo \"$Q/.stratum is a symlink\" >&2; exit 3; }; for p in $Q/brief.md $Q/result.md $Q/.stratum/git-guard.json $Q/.stratum/worker${auto:+ $Q/.stratum/approve}; do [ ! -L \"\$p\" ] || { echo \"\$p is a symlink\" >&2; exit 3; }; [ ! -e \"\$p\" ] || { echo \"\$p already exists\" >&2; exit 3; }; done && { [ ! -L $Q/.stratum/models.json ] || { echo \"$Q/.stratum/models.json is a symlink\" >&2; exit 3; }; } && cat > $Q/brief.md && mkdir -p $Q/.stratum && printf '%s\n' $(printf %q "$G") > $Q/.stratum/git-guard.json && printf '%s\n' ${id,,} > $Q/.stratum/worker && { [ ! -f $qr/.stratum/models.json ] || [ -e $Q/.stratum/models.json ] || cp -- $qr/.stratum/models.json $Q/.stratum/models.json; }$A$U" < <(brief) || { rc=$? msg=$(head -1 "$e"); [ "$rc" != 4 ] || stop "$msg"; stop "cannot write brief.md and .stratum/git-guard.json in $WT on $m: ${msg:-exit $rc}"; }
   fi
   [ -n "$m" ] || [ ! -f "$repo/.stratum/worker-setup.sh" ] || { echo 'setup output:' && (cd "$WT" && bash "$repo/.stratum/worker-setup.sh" "$repo" 2>&1); } || stop "worker-setup.sh exited $?"
   h pane split "$PANE" --direction right --cwd "$WT" --no-focus

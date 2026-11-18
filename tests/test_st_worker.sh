@@ -164,6 +164,8 @@ if [ "$1" = -C ] && [ "$3" = worktree ] && [ "$4" = add ] && [ "$5" = -q ] && [ 
     brieffile) mkdir -p "$p/.stratum" && printf 'TRACKED BRIEF\n' > "$p/brief.md" ;;
     marker) mkdir -p "$p/.stratum" && ln -s "$T/outside.txt" "$p/.stratum/worker" ;;
     markerfile) mkdir -p "$p/.stratum" && printf 'TRACKED MARKER\n' > "$p/.stratum/worker" ;;
+    models) mkdir -p "$p/.stratum" && ln -s "$T/outside.json" "$p/.stratum/models.json" ;;
+    modelsfile) mkdir -p "$p/.stratum" && printf 'TRACKED MODELS\n' > "$p/.stratum/models.json" ;;
     *) mkdir -p "$p/.stratum" ;;
   esac
   jq -c --arg p "$p" --arg b "$b" '. + [{path:$p,branch:$b,is_linked_worktree:true}]' "$T/wt.json" > "$T/wt.new" && mv "$T/wt.new" "$T/wt.json"
@@ -463,7 +465,7 @@ printf '{"outside":true}\n' > "$tmp/outside.json"
 printf 'KEEP\n' > "$tmp/outside-dir/keep"
 snap() { ls -A "$tmp/outside-dir"; cat "$tmp/outside.txt" "$tmp/outside.json" "$tmp/outside-dir/keep"; }
 before=$(snap)
-for k in brief:brief.md stratum:.stratum guard:.stratum/git-guard.json result:result.md; do
+for k in brief:brief.md stratum:.stratum guard:.stratum/git-guard.json result:result.md models:.stratum/models.json; do
   fresh
   STUB_WT_LINK=${k%%:*} run bash "$script" start "${sargs[@]}"
   check "S12 ${k%%:*} exit 1" '[ $rc = 1 ]'
@@ -1085,7 +1087,7 @@ check "R12 --machine rule, never-list" 'rnever 0 0'
 rfresh; rrun bash "$script" start "${rsargs[@]}"
 c=$(sshs | sed -n 3p); pre=${c%%cat > *}
 check "R13 exit 0, three ssh calls" '[ $rc = 0 ] && [ "$(grep -c . "$tmp/ssh")" = 3 ]'
-check "R13 ssh refuses a .stratum symlink, then a link or any existing brief.md, result.md, git-guard.json, before the cat > write" '[ "$pre" != "$c" ] && [ "${pre#*u@stubhost }" = "[ ! -L /stubhome/proj-t004/.stratum ] || { echo \"/stubhome/proj-t004/.stratum is a symlink\" >&2; exit 3; }; for p in /stubhome/proj-t004/brief.md /stubhome/proj-t004/result.md /stubhome/proj-t004/.stratum/git-guard.json /stubhome/proj-t004/.stratum/worker; do [ ! -L \"\$p\" ] || { echo \"\$p is a symlink\" >&2; exit 3; }; [ ! -e \"\$p\" ] || { echo \"\$p already exists\" >&2; exit 3; }; done && " ]'
+check "R13 ssh refuses a .stratum symlink, then a link or any existing brief.md, result.md, git-guard.json, before the cat > write" '[ "$pre" != "$c" ] && [ "${pre#*u@stubhost }" = "[ ! -L /stubhome/proj-t004/.stratum ] || { echo \"/stubhome/proj-t004/.stratum is a symlink\" >&2; exit 3; }; for p in /stubhome/proj-t004/brief.md /stubhome/proj-t004/result.md /stubhome/proj-t004/.stratum/git-guard.json /stubhome/proj-t004/.stratum/worker; do [ ! -L \"\$p\" ] || { echo \"\$p is a symlink\" >&2; exit 3; }; [ ! -e \"\$p\" ] || { echo \"\$p already exists\" >&2; exit 3; }; done && { [ ! -L /stubhome/proj-t004/.stratum/models.json ] || { echo \"/stubhome/proj-t004/.stratum/models.json is a symlink\" >&2; exit 3; }; } && " ]'
 
 rfresh; rrun bash "$script" start T004 --task "$task" --test "$testcmd" --lane "$lane" --roster "$rxroster" --machine laptop --repo "$tmp/rrepo"
 check "R14 exit 0, ssh writes brief.md under the sibling of --repo" '[ $rc = 0 ] && sshs | grep -qF -- "cat > $tmp/rrepo-t004/brief.md"'
@@ -1231,6 +1233,22 @@ run bash "$script" start "${sargs[@]}"
 check "M3 exit 0" '[ $rc = 0 ]'
 check "M3 args after -- have no --model" 'hascall "$(startargv "--permission-mode	auto	-n	worker-t004")"'
 check "M3 brief has Model: default" 'grep -qxF -- "- Model: default" "$(wt)/brief.md"'
+check "MD2 no models.json in the worktree when the main checkout has none" '[ -f "$(wt)/brief.md" ] && [ ! -e "$(wt)/.stratum/models.json" ]'
+
+fresh
+printf '{"st-review":{"model":"opus","effort":"high"}}\n' > "$mfile"
+run bash "$script" start "${sargs[@]}"
+check "MD1 exit 0" '[ $rc = 0 ]'
+check "MD1 the worktree copy is a plain file, not a symlink" '[ -f "$(wt)/.stratum/models.json" ] && [ ! -L "$(wt)/.stratum/models.json" ]'
+check "MD1 the worktree copy is the main checkout models.json" 'cmp -s "$mfile" "$(wt)/.stratum/models.json"'
+rm -f "$mfile"
+
+fresh
+printf '{"st-review":{"model":"opus"}}\n' > "$mfile"
+STUB_WT_LINK=modelsfile run bash "$script" start "${sargs[@]}"
+check "MD4 exit 0" '[ $rc = 0 ]'
+check "MD4 the tracked worktree models.json is kept" '[ "$(cat "$(wt)/.stratum/models.json")" = "TRACKED MODELS" ]'
+rm -f "$mfile"
 
 fresh
 run bash "$script" start "${sargs[@]}" --model 'a b'
@@ -2077,6 +2095,34 @@ check "SU5 saved machine setup fails: exit 1, its output, the stopped line, no a
 rm -f "$su"
 fresh; run bash "$script" start "${sargs[@]}"
 check "SU4 no setup script: no setup output" '[ $rc = 0 ] && ! grep -q "setup output" <<<"$out"'
+printf '{"st-review":{"model":"opus"}}\n' > "$mfile"; printf '%s\n' 'cat .stratum/models.json' > "$su"
+fresh; run bash "$script" start "${sargs[@]}"
+check "MD9 worker-setup.sh already sees the models.json copy" '[ $rc = 0 ] && hasline "{\"st-review\":{\"model\":\"opus\"}}"'
+rm -f "$su" "$mfile"
+
+rfresh; xsetup; printf '{"st-review":{"model":"opus","effort":"high"}}\n' > "$rrepo/.stratum/models.json"
+STUB_SSH_EXEC=1 rrun bash "$script" start "${rxargs[@]}"
+check "MD5 exit 0" '[ $rc = 0 ]'
+check "MD5 the worker folder on the machine has a copy of the machine's models.json" 'cmp -s "$rrepo/.stratum/models.json" "$rw/.stratum/models.json"'
+check "MD5 two ssh calls" '[ "$(grep -c . "$tmp/ssh")" = 2 ]'
+
+rfresh; xsetup; printf '{"st-review":{"model":"opus","effort":"high"}}\n' > "$rrepo/.stratum/models.json"
+STUB_SSH_EXEC=1 STUB_WT_LINK=models rrun bash "$script" start "${rxargs[@]}"
+check "MD6 exit 1" '[ $rc = 1 ]'
+check "MD6 one stopped line naming the models.json symlink on the machine" '[ "$(grep -c "^stopped:" <<<"$out")" = 1 ] && hasline "stopped: cannot write brief.md and .stratum/git-guard.json in %s on laptop: %s/.stratum/models.json is a symlink" "$rw" "$rw"'
+check "MD6 outside.json unchanged" '[ "$(cat "$tmp/outside.json")" = "{\"outside\":true}" ]'
+check "MD6 no agent start" '[ "$(cnt "^--machine\tlaptop\tagent\tstart\t")" = 0 ]'
+
+rfresh; xsetup
+STUB_SSH_EXEC=1 rrun bash "$script" start "${rxargs[@]}"
+check "MD7 exit 0" '[ $rc = 0 ]'
+check "MD7 the brief is written on the machine" '[ -f "$rw/brief.md" ]'
+check "MD7 no models.json in the worker folder without a machine source" '[ ! -e "$rw/.stratum/models.json" ]'
+
+rfresh; xsetup; printf '{"st-review":{"model":"opus"}}\n' > "$rrepo/.stratum/models.json"
+STUB_SSH_EXEC=1 STUB_WT_LINK=modelsfile rrun bash "$script" start "${rxargs[@]}"
+check "MD8 exit 0" '[ $rc = 0 ]'
+check "MD8 the tracked models.json in the worker folder on the machine is kept" '[ "$(cat "$rw/.stratum/models.json")" = "TRACKED MODELS" ]'
 
 round="$tmp/round.md"
 printf 'Fix the null check in src/a.py.\nOwns: `src/b.py`.\n' > "$round"
