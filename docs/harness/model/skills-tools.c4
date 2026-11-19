@@ -120,6 +120,12 @@ model {
         path 'skills/st-theme'
       }
     }
+    st-autonomous = skill '/st-autonomous' {
+      summary 'Turns autonomous build mode on or off for this session with st-worker.sh. Only the user starts it.'
+      metadata {
+        path 'skills/st-autonomous'
+      }
+    }
   }
 
   skills.st-review -[reads]-> stratum.state-json 'feature directory'
@@ -263,4 +269,7 @@ model {
 
   skills.st-theme -[writes]-> stratum.powerline-json 'theme'
   skills.st-theme -[passes]-> user 'theme line'
+
+  skills.st-autonomous -[runs]-> scripts.st-worker-sh 'autonomous-on, or autonomous-off with the roster file'
+  skills.st-autonomous -[passes]-> user 'script lines and the mode line'
 }

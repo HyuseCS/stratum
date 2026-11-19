@@ -113,7 +113,7 @@ In the Full lane, a task that makes a new screen goes to the Design lane (`st-de
 
 **Build with workers:** say `build with workers`, or name a machine ("US2 on the laptop"). Build sends each phase's `[P]` tasks to `st-worker`, one worker per task.
 
-**Autonomous mode:** say `autonomous mode` to turn on autonomous build mode for this run only, and `stop autonomous` to turn it off. The statusline shows `autonomous` while it is on.
+**Autonomous mode:** run `/stratum:st-autonomous on` to turn on autonomous build mode for this run only, and `/stratum:st-autonomous off` to turn it off. Only you turn it on: the orchestrator, a worker or a subagent never does. It also ends by itself when the Build or worker run ends, and before the handoff. The statusline shows `autonomous` while it is on.
 In normal mode the orchestrator answers a worker's permission prompt only for an action on the worker allow list, with the one-time yes. Every other prompt goes to you with the worker's workspace, tab and the exact prompt text.
 
 **Test scope:** agents run the tests of the changed files and of the files that import them. The full suite runs only when you ask.
@@ -133,6 +133,7 @@ When a change touches shared config, test setup, a schema or migration, middlewa
 | `st-research <words>` | Research on demand: a scope and numbered questions, facts with cites from the code and the web, one research file. No plan or feature needed. |
 | `st-herdr-workspace <folder>` | Open a project folder as a new herdr workspace with the full or basic layout, here or on a saved machine. |
 | `st-worker <task>...` | Run tasks in worker sessions (a `claude` in its own herdr pane and worktree, here or on a saved machine, or headless), then review and merge their branches. |
+| `st-autonomous on\|off` | Turn autonomous build mode on or off for this session. Only you start it. |
 | `st-status` | Feature, phase, lane, tasks done, git guard options, next gate, missing tools, duplicate installs, days since the last upstream sync, model overrides. |
 | `st-shape arrow\|rounded\|slanted\|blocks\|flat` | Set the statusline shape. |
 | `st-theme <name>` | Set the color theme of the statusline and Token Weather. |

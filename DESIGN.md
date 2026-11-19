@@ -77,7 +77,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 
 ## 3. Skills
 
-- **D9.** Twenty-seven entry skills:
+- **D9.** Twenty-eight entry skills:
 
 | Skill | Job |
 |-------|-----|
@@ -99,6 +99,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 | `st-research <words>` | Research on demand: scope and numbered questions, facts with cites from the code and the web, one research file. No plan needed. |
 | `st-herdr-workspace <folder>` | Open a project folder as a new herdr workspace with the full or basic layout, here or on a saved machine. |
 | `st-worker <task>...` | Run tasks in worker sessions (a `claude` in its own herdr pane and worktree, here or on a saved machine, or headless), then review and merge their branches. |
+| `st-autonomous on\|off` | Turn autonomous build mode on or off for this session. Only the user starts it (`disable-model-invocation: true`). |
 
   The Spec Kit commands are folded into the phase skills. `st-constitution` (amend rules) and
   `st-issues` (tasks to GitHub issues) stay callable alone, as do the forked tools (`st-grill`,

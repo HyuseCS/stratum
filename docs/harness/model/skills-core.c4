@@ -87,7 +87,6 @@ model {
   skills.st -[starts]-> agents.st-build 'brief, plugin root and project root'
   skills.st -[starts]-> agents.st-git 'exact files to commit'
   skills.st -[runs]-> scripts.st-verify-sh 'test command and touched files'
-  skills.st -[writes]-> stratum.autonomous 'session id for autonomous build mode'
   skills.st -[runs]-> scripts.st-worker-sh 'autonomous-off and roster file'
   skills.st -[starts]-> skills.st-worker 'tasks for workers in autonomous build mode'
   skills.st -[starts]-> skills.st-pr 'branch to open a PR for'
