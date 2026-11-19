@@ -10,6 +10,8 @@ overwrite an existing file; report it and move on.
 
 1. **Data files.** Create `.stratum/` and `specs/`. Write `.stratum/state.json` as
    `{"feature_directory": null, "phase": null, "lane": null}`.
+   If `.stratum/commit-standard` is missing, ask one question: "Turn on the commit subject check (optional, default no)? The git guard then denies a commit subject that is not `type(scope): what`, like `fix(019): handle empty list`."
+   Yes: write the empty file `.stratum/commit-standard`. It is committed. No: write nothing. Say how to change it later: add or delete the file.
 2. **Git ignore.** Ensure `.gitignore` has these lines: `.stratum/handoff.md`,
    `.stratum/lessons.md`, `.stratum/weather.json`, `.stratum/powerline.json`,
    `.stratum/git-guard.json`, `.stratum/worker`, `.stratum/models.json`, `graphify-out/`.
@@ -86,5 +88,5 @@ overwrite an existing file; report it and move on.
 12. **Git instructions.** Claude Code's built-in git instructions teach commit messages in a heredoc, which the git guard denies. If `.stratum/git-instructions-kept` exists, or the setting is already set at any level (`CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS` is set, or `includeGitInstructions` is in `.claude/settings.json`, `.claude/settings.local.json` or `<config folder>/settings.json`, where the config folder is `$CLAUDE_CONFIG_DIR`, else `~/.claude`), skip this step. Else ask one question: turn them off in the project (`.claude/settings.json`, recommended: all machines), for the user (`<config folder>/settings.json`: all projects on this machine), only locally (`.claude/settings.local.json`: this repo on this machine), or not at all? Merge `"includeGitInstructions": false` with jq into only that file. Keep every other key. A missing file is made as `{"includeGitInstructions": false}`. A file that is not valid JSON: write nothing, and name the file in the report. Not at all: write no settings file, and write the empty file `.stratum/git-instructions-kept` so the question is not asked again. The user answer is the only time st-init writes a global file.
 13. **Report** in one block: files created, files skipped because they existed, what the user
    still needs to do. Commit only the created or changed project files (`.stratum/state.json`,
-   `.stratum/constitution.md`, `.stratum/advisor.json`, `.stratum/git-instructions-kept`, `.gitignore`, `AGENTS.md`, `CLAUDE.md`, `.claude/settings.json`),
-   through the commit guard.
+   `.stratum/constitution.md`, `.stratum/advisor.json`, `.stratum/git-instructions-kept`, `.stratum/commit-standard`, `.gitignore`, `AGENTS.md`, `CLAUDE.md`, `.claude/settings.json`),
+   through the commit guard. When `.stratum/commit-standard` exists, the commit subject is `chore(stratum): set up Stratum`.

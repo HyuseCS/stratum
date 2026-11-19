@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import shlex
 import shutil
 import subprocess
@@ -556,6 +557,15 @@ class GitGuardTest(unittest.TestCase):
     def opt_in(self):
         os.makedirs(os.path.join(self.repo, ".stratum"), exist_ok=True)
         open(os.path.join(self.repo, ".stratum", "commit-standard"), "w").close()
+
+    def test_st_init_commit_subject_passes_the_standard(self):
+        self.opt_in()
+        self.set_mode("auto")
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "skills", "st-init", "SKILL.md")
+        with open(path) as f:
+            m = re.search(r"the commit subject is `([^`]+)`", f.read())
+        self.assertIsNotNone(m)
+        self.assertEqual(self.run_guard("git commit -m " + shlex.quote(m[1])), (None, ""))
 
     def test_no_marker_checks_only_attribution(self):
         self.set_mode("auto")

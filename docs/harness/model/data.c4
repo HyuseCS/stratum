@@ -67,7 +67,7 @@ model {
       }
     }
     commit-standard = datafile '.stratum/commit-standard' {
-      summary 'A committed empty marker that turns on the commit subject checks. st-git-guard.py and the session start hook read it.'
+      summary 'A committed empty marker that turns on the commit subject checks. st-init writes it on a yes, and st-git-guard.py and the session start hook read it.'
       metadata {
         data '.stratum/commit-standard'
       }
