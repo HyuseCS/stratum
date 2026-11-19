@@ -3,7 +3,7 @@
 exec python3 -I - "$@" <<'PY'
 import json, re, sys
 # ponytail: the redirect check covers only cat, echo and printf; upgrade when a lane is seen to write with another command
-pat =re.compile(r"(?<!<)<<(?!<)|\|\s*tee\b|\bsed\b[^|;&\n]*\s(-[a-zA-Z]*i|--in-place)|\b(cat|echo|printf)\b[^|;&\n]*?(?<!>)>>?(?!&|\s*/dev/null)")
+pat = re.compile(r"(?<!<)<<(?!<)|\|\s*tee\b|\bsed\b[^|;&\n]*\s(-[a-zA-Z]*i|--in-place)|\b(cat|echo|printf)\b[^|;&\n]*?(?<!>)>>?(?!&|\s*/dev/null)")
 hit = 0
 for path in sys.argv[1:]:
     try:
