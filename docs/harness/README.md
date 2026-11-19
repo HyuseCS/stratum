@@ -926,6 +926,7 @@ questions, blockers and next step`" .-> StratumHandoff_md
   SkillsSt_init -. "`advisor mode`" .-> StratumAdvisor_json
   SkillsSt_init -. "`eight guard modes set to ask`" .-> StratumGit_guard_json
   SkillsSt_init -. "`[...]`" .-> StratumGit_instructions_kept
+  SkillsSt_init -. "`[...]`" .-> StratumCommit_standard
   SkillsSt_init -. "`agent model and effort`" .-> StratumModels_json
   SkillsSt_init -. "`theme, shape and weather`" .-> StratumPowerline_json
   SkillsSt_init -. "`empty feature directory, phase and lane`" .-> StratumState_json

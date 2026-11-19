@@ -95,7 +95,7 @@ rename skills/st-plan/SKILL.md:35	skills/st-plan/SKILL.md	Next phase: `/stratum:
 rename skills/st-status/SKILL.md:13	skills/st-status/SKILL.md	Inspect → "you OK the
 rename skills/st-status/SKILL.md:37	skills/st-status/SKILL.md	stratum:st-inspect
 rename skills/st-model/SKILL.md:35	skills/st-model/SKILL.md	stratum:st-inspect
-rename skills/st-init/SKILL.md:26	skills/st-init/SKILL.md	Show a table of the 16 agents
+rename skills/st-init/SKILL.md:28	skills/st-init/SKILL.md	Show a table of the 16 agents
 rename tests/test_model_files.sh:31	tests/test_model_files.sh	stratum:st-inspect
 rename README.md:75	README.md	| 3 | Inspect | `st-inspect` checks the files agree and the plan can be built | You OK the build |
 rename README.md:90	README.md	`st-define`, `st-plan`, `st-inspect`, `st-build`, `st-close`

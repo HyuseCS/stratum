@@ -62,7 +62,16 @@ GI8c|agents/st-git.md|Types: feat, fix, refactor, docs, style, test, chore, spec
 GI8d|agents/st-git.md|`spec(NNN)` and `plan(NNN)`: spec and plan files of feature NNN. `sync(name)`: a synced upstream skill.
 GI9|agents/st-git.md|Exception: a deny that starts with `Commit form denied:`.
 GI9b|agents/st-git.md|Exception: a deny that starts with `Commit message denied:`.
+CS1b|skills/st-init/SKILL.md|The git guard then denies a commit subject that is not `type(scope): what`, like `fix(019): handle empty list`."
+CS2|skills/st-init/SKILL.md|`.stratum/git-instructions-kept`, `.stratum/commit-standard`, `.gitignore`,
+CS4|README.md|A project with the empty, committed file `.stratum/commit-standard` also gets its commit subjects checked
+CS4b|README.md|`st-init` asks whether to write it (default no). Delete the file to turn the check off.
 ROWS
+
+check "CS5 st-init step 1 asks the commit standard question" 'sed -n "/^1\. /,/^2\. /p" "$root/skills/st-init/SKILL.md" | grep -qF "If \`.stratum/commit-standard\` is missing, ask one question: \"Turn on the commit subject check (optional, default no)?"'
+check "CS1c st-init step 1 writes the commit standard file on yes" 'sed -n "/^1\. /,/^2\. /p" "$root/skills/st-init/SKILL.md" | grep -qF "Yes: write the empty file \`.stratum/commit-standard\`. It is committed. No: write nothing."'
+check "CS3 st-init step 13 sets the commit subject" 'sed -n "/^13\. /,\$p" "$root/skills/st-init/SKILL.md" | grep -qF "When \`.stratum/commit-standard\` exists, the commit subject is \`chore(stratum): set up Stratum\`."'
+check "CS6 st-update does not ask the commit standard question" '[ -f "$root/skills/st-update/SKILL.md" ] && ! grep -qF -- commit-standard "$root/skills/st-update/SKILL.md"'
 
 check "front matter skills/st-update/SKILL.md" 'head -n 5 "$root/skills/st-update/SKILL.md" | grep -qx "name: st-update"'
 

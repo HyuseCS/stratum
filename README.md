@@ -285,6 +285,7 @@ read the `.c4` text, or run `npx -y likec4@1.60.0 export json docs/harness`.
   they move a branch with no commit. `-c core.hooksPath` is blocked like `--no-verify`, and
   `-c alias.*` asks. A command the guard cannot parse asks. Known gap: an `env`, `export`,
   `sudo`, `nice`, `nohup` or `timeout` wrapper, or a `GIT_CONFIG_*` override, is not checked.
+  A project with the empty, committed file `.stratum/commit-standard` also gets its commit subjects checked: the guard denies a `git commit -m` subject that is not `type(scope): what` (`agents/st-git.md` step 6). `st-init` asks whether to write it (default no). Delete the file to turn the check off.
 - **Worker guard.** `st-worker` writes the worker's guard file with `commit: auto` and its
   branch. Commit and the merge family run without a question only while that branch is checked
   out. `st-worker.sh close` deletes the file, and refuses while the branch has an open PR.

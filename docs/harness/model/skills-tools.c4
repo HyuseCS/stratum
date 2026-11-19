@@ -218,6 +218,8 @@ model {
   skills.st-init -[runs]-> scripts.st-advisor-sh 'codex-home'
   skills.st-init -[reads]-> stratum.git-instructions-kept 'exists check'
   skills.st-init -[writes]-> stratum.git-instructions-kept 'empty marker on not at all'
+  skills.st-init -[reads]-> stratum.commit-standard 'exists check'
+  skills.st-init -[writes]-> stratum.commit-standard 'empty marker on yes'
   skills.st-init -[passes]-> user 'setup questions and the report'
   skills.st-init -[passes]-> git 'commit of the created project files'
 
