@@ -898,7 +898,6 @@ graph TB
   StratumGit_guard_json@{ shape: rectangle, label: ".stratum/git-guard.json" }
   StratumPowerline_json@{ shape: rectangle, label: ".stratum/powerline.json" }
   StratumWeather_json@{ shape: rectangle, label: ".stratum/weather.json" }
-  SkillsSt -. "`session id for autonomous build mode`" .-> StratumAutonomous
   SkillsSt -. "`last session handoff`" .-> StratumHandoff_md
   SkillsSt -. "`feature, phase and lane`" .-> StratumState_json
   SkillsSt_define -. "`feature to redo and lane`" .-> StratumState_json

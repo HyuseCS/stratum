@@ -34,3 +34,7 @@ summary: US2/US3/D21 D1-D7 accepted; D4 handoff flow wording and D6 pane match g
 
 ## diff | 2026-11-08T12:20:11Z | /advisor
 summary: end-of-Build diff approved; D21 narrowing to paths only goes to decisions.md at Close; step-6 Else wording noted
+
+## change | 2026-11-19T18:17:54Z | sha256 33643ce58c8844e24a2d42618a6f039b971eff8a21ebc07aa26d34f2fbe4f4fd | REVISE
+summary: The command approach is reasonable, but its standalone entry path misses the promised automatic shutdown rule.
+- [MEDIUM] specs/018-autonomous-sessions/changes/001-autonomous-command.md:29: Make end-of-run shutdown available when the new command is invoked without /stratum:st, and test that path. Evidence: The new skill only enables or explicitly disables the mode. The plan itself notes at line 147 that st's rules load only through /stratum:st. General end-of-run cleanup remains in skills/st/SKILL.md:93; skills/st-worker/SKILL.md:43 scopes its cleanup to saved-machine workers, and skills/st-build/SKILL.md:71-79 finishes without disabling the mode. Consequently, a fresh session using st-autonomous on followed directly by a local worker run has no loaded instruction to remove its entry when the run ends. Include the lifecycle rule in the new skill or ensure the relevant callers load it, and add a live check for automatic shutdown without first invoking st.
