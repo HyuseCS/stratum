@@ -36,8 +36,9 @@ Line numbers below are those of the files before the edit. Step 1 adds two lines
   `skills.st-init -[writes]-> stratum.commit-standard 'empty marker on yes'`. No st-update edge.
 - `docs/harness/model/data.c4:70` - the summary becomes `A committed empty marker that turns on the commit subject checks. st-init writes it on a yes, and st-git-guard.py and the session start hook read it.` (2 sentences, 149 characters, `c_summaries` allows 200).
 - `docs/harness/README.md` - regenerate with `npx -y likec4@1.60.0 export markdown docs/harness`. The `rebuild` check of `tests/test_harness_model.sh` needs this.
-- `specs/019-autonomous-prompts/decisions.md` - one line after D21: `- D22 (change 003): st-init step 1 asks once, when `.stratum/commit-standard` is missing, whether to write it (default no). st-update does not ask it. When the marker exists, the st-init commit subject is `chore(stratum): set up Stratum`. Rejected: the question in st-update, a "kept" marker for a no answer.`
+- `specs/019-autonomous-prompts/decisions.md` - one line after D21: `- D22 (change 003): st-init step 1 asks one question, when `.stratum/commit-standard` is missing, whether to write it (default no). st-update does not ask it. When the marker exists, the st-init commit subject is `chore(stratum): set up Stratum`. Rejected: the question in st-update, a "kept" marker for a no answer.`
 - `tests/test_update_rules.sh` and `tests/test_git_guard.py` - the tests below.
+- `tests/test_inspect.sh:98` - the expected row for `Show a table of the 16 agents` changes from `skills/st-init/SKILL.md:26` to `:28`, because step 1 got two new lines.
 
 Not in scope:
 - `/stratum:st-update` does not ask this question in existing projects. R7 (`skills/st-update/SKILL.md:47`) and GI5 (`:51`) do not change. The `st-update -[reads]-> st-init 'questions of steps 3, 4, 7 and 11'` edge stays.
@@ -48,17 +49,16 @@ Not in scope:
 ## Tests (written first, must fail before the build)
 - `tests/test_update_rules.sh` - new rows in the `ROWS` block, after GI9b. Each is red today because the text is not there. A deleted or reworded phrase turns it red again:
   ```
-  CS1|skills/st-init/SKILL.md|If `.stratum/commit-standard` is missing, ask one question: "Turn on the commit subject check (optional, default no)?
   CS1b|skills/st-init/SKILL.md|The git guard then denies a commit subject that is not `type(scope): what`, like `fix(019): handle empty list`."
-  CS1c|skills/st-init/SKILL.md|Yes: write the empty file `.stratum/commit-standard`. It is committed. No: write nothing.
   CS2|skills/st-init/SKILL.md|`.stratum/git-instructions-kept`, `.stratum/commit-standard`, `.gitignore`,
-  CS3|skills/st-init/SKILL.md|When `.stratum/commit-standard` exists, the commit subject is `chore(stratum): set up Stratum`.
   CS4|README.md|A project with the empty, committed file `.stratum/commit-standard` also gets its commit subjects checked
   CS4b|README.md|`st-init` asks whether to write it (default no). Delete the file to turn the check off.
   ```
-  Breaks: CS1 and CS1b go red when the question is removed or reworded. CS1c goes red when the yes branch does not write the file. CS2 goes red when the marker is left out of the commit list. CS3 goes red when the subject sentence is removed. CS4 and CS4b go red when the README line is removed.
-- `tests/test_update_rules.sh` - two `check` lines after the `ROWS` block:
-  - `check "CS5 st-init step 1 asks the commit standard question" 'sed -n "/^1\. /,/^2\. /p" "$root/skills/st-init/SKILL.md" | grep -qF "If \`.stratum/commit-standard\` is missing, ask one question"'`. Red today. Red again if the question moves into step 12, where the skip rule skips it, or into any other step.
+  Breaks: CS1b goes red when its sentence is removed or reworded. CS2 goes red when the marker is left out of the commit list. CS4 and CS4b go red when the README line is removed.
+- `tests/test_update_rules.sh` - four `check` lines after the `ROWS` block. CS1 became CS5. CS1c and CS3 are scoped to one step each, because a whole-file row stayed green when the sentence moved to another step:
+  - CS5 `st-init step 1 asks the commit standard question`: the step 1 range (`sed -n "/^1\. /,/^2\. /p"`) of `skills/st-init/SKILL.md` contains the question up to `(optional, default no)?`. Red today. Red again if the question moves into step 12, where the skip rule skips it, or into any other step.
+  - CS1c `st-init step 1 writes the commit standard file on yes`: the same range contains ``Yes: write the empty file `.stratum/commit-standard`. It is committed. No: write nothing.``. Red today. It goes red when the yes branch does not write the file.
+  - CS3 `st-init step 13 sets the commit subject`: the range `sed -n "/^13\. /,\$p"` (step 13 to the end of the file; step 13 is the last step) contains ``When `.stratum/commit-standard` exists, the commit subject is `chore(stratum): set up Stratum`.``. Red today. It goes red when the subject sentence is removed or moves out of step 13.
   - `check "CS6 st-update does not ask the commit standard question" '[ -f "$root/skills/st-update/SKILL.md" ] && ! grep -qF -- commit-standard "$root/skills/st-update/SKILL.md"'`. This is a guard, so it is green before and after the build. It goes red if `.stratum/commit-standard` is added to st-update.
 - Existing rows stay green with no edit: GI1 `12. **Git instructions.**`, GI4 `13. **Report**`, GI4c `` `.stratum/advisor.json`, `.stratum/git-instructions-kept`, ``, R7, and the step-range checks of `tests/test_model_files.sh:23-26`.
 - `tests/test_git_guard.py` - new method `test_st_init_commit_subject_passes_the_standard` in `GitGuardTest`. It calls `self.opt_in()` and `self.set_mode("auto")`, and reads `skills/st-init/SKILL.md` from `os.path.dirname(os.path.abspath(__file__))/..`. It finds the subject with `re.search(r"the commit subject is `([^`]+)`", text)` (add `import re`). The step 1 question says "commit subject that is not", so it does not match. Then it asserts the match is not `None` and `self.run_guard("git commit -m " + shlex.quote(m[1])) == (None, "")`. Red today: no match. Break: a subject such as `Set up Stratum` gets `deny` and turns it red. This links the skill text to the guard regex.
@@ -72,6 +72,6 @@ Not in scope:
 - R5: `docs/harness/README.md` must be regenerated with likec4 1.60.0 on node 22.22.3 or later. When node is older, the `rebuild` check prints SKIP and does not catch a stale page.
 
 ## Open decisions
-- Q1: Default answer of the new question. My pick is no. A wrong default yes denies every commit of a project that uses another subject form. A wrong no is fixed by adding one file. Also, D21 made the check opt-in.
-  - Default no (in this plan): `Turn on the commit subject check (optional, default no)? The git guard then denies a commit subject that is not `type(scope): what`, like `fix(019): handle empty list`.`
-  - Default yes: `Turn on the commit subject check (recommended, default yes)? The git guard then denies a commit subject that is not `type(scope): what`, like `fix(019): handle empty list`.` With yes, these change to match: the CS1 pin, the README line and its CS4b pin (`(default yes)`), and the D22 line.
+- Q1, decided by the user on 2026-11-20: default no, as built. Reason: a wrong default yes denies every commit of a project that uses another subject form. A wrong no is fixed by adding one file. Also, D21 made the check opt-in.
+  - Default no (chosen, built): `Turn on the commit subject check (optional, default no)? The git guard then denies a commit subject that is not `type(scope): what`, like `fix(019): handle empty list`.`
+  - Default yes (not taken): `Turn on the commit subject check (recommended, default yes)? The git guard then denies a commit subject that is not `type(scope): what`, like `fix(019): handle empty list`.` With yes, these would change to match: the CS5 pin, the README line and its CS4b pin (`(default yes)`), and the D22 line.
