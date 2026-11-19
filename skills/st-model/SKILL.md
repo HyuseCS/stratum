@@ -33,8 +33,8 @@ named means `default`.
    the values to the entry. Remove the entry if it is left as `{}`. Keep every other entry and key.
 5. Write the file.
 6. From the project root, run `echo '{"tool_input":{"subagent_type":"stratum:st-inspect"}}' | python3 <plugin root>/hooks/st-models.py`.
-   If it prints a deny, show its reason instead of "Applies on the next start." below.
+   If it prints a deny, show its reason instead of "Applies on the next start." and the worker sentence below.
    If step 3 copied the template, say so and list its entries. Then reply in one line:
    `<agent>: model <model or "default (<frontmatter model>)">, effort <effort or "default">.
-   Applies on the next start.` The frontmatter model is the `model:` line in
+   Applies on the next start. A worker that already started keeps its copy.` The frontmatter model is the `model:` line in
    `<plugin root>/agents/<agent>.md`; for `st-worker` it is `default (the user's claude default)`.
