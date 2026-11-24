@@ -615,7 +615,7 @@ close)
     [ $c != 0 ] || fail "close left ${k%:*} $N"
     [ $c = 1 ] || fail "close left ${k%:*} $N: cannot read the list"
   done
-  rx "[ ! -L $Q/.stratum ] && rm -f $Q/.stratum/git-guard.json && rm -rf $Q/.stratum/approve" || fail "Worker $N: closed, but cannot remove .stratum/git-guard.json."
+  rx "[ ! -L $Q/.stratum ] && rm -rf $Q/.stratum/approve && rm -f $Q/.stratum/git-guard.json" || fail "Worker $N: closed, but cannot remove .stratum/git-guard.json."
   rx "rm -f $Q/.stratum/worker" || fail "Worker $N: closed, but cannot remove .stratum/worker."
   printf 'closed\t%s\nfolder\t%s\tready to remove\n' "$N" "$WT"
   ;;

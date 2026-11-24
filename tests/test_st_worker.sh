@@ -699,6 +699,14 @@ reset
 STUB_FAIL="agent get" STUB_FAIL_CODE=agent_not_found run bash "$script" close T004
 check "A1b retry after the tab is closed by hand finds the worker by its marker: exit 0, closed and folder lines, files gone, only cleanup: zero tab close, zero workspace close, zero prompt" '[ $rc = 0 ] && hasline "closed\tworker-t004" && hasline "folder\t%s\tready to remove" "$(wt)" && [ ! -e "$(wt)/.stratum/git-guard.json" ] && [ ! -e "$(wt)/.stratum/worker" ] && never 0 0'
 
+mk; states done; mkdir -p "$(wt)/.stratum/approve"; : > "$(wt)/.stratum/approve/stuck"; chmod 555 "$(wt)/.stratum/approve"
+run bash "$script" close T004
+chmod 755 "$(wt)/.stratum/approve"
+check "A1c approve folder cannot be removed: exit 1, cannot-remove line, guard file and marker stay" '[ $rc = 1 ] && grep -q "cannot remove .stratum/" <<<"$out" && [ -e "$(wt)/.stratum/git-guard.json" ] && [ -e "$(wt)/.stratum/worker" ]'
+reset
+STUB_FAIL="agent get" STUB_FAIL_CODE=agent_not_found run bash "$script" close T004
+check "A1c retry after the permissions are back: exit 0, closed line, guard file, approve folder and marker gone, zero tab close, zero workspace close" '[ $rc = 0 ] && hasline "closed\tworker-t004" && [ ! -e "$(wt)/.stratum/git-guard.json" ] && [ ! -e "$(wt)/.stratum/approve" ] && [ ! -e "$(wt)/.stratum/worker" ] && never 0 0'
+
 fresh
 run bash "$script" close T004
 check "C4 exit 1" '[ $rc = 1 ]'
