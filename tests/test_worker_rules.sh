@@ -33,7 +33,7 @@ W32|skills/st-worker/SKILL.md|answer <id> [--machine <m>] --screen <hash> --keys
 W20|skills/st/SKILL.md|Watch each agent you summon. Answer its permission prompt when the answer keeps it in its brief. Bring every other prompt to the user with the exact text.
 W21|skills/st-build/SKILL.md|Watch each agent you summon. Answer its permission prompt when the answer keeps it in its brief. Bring every other prompt to the user with the exact text.
 W22|skills/st-worker/SKILL.md|Watch each agent you summon. Answer its permission prompt when the answer keeps it in its brief. Bring every other prompt to the user with the exact text.
-W23|skills/st/SKILL.md|The lists: the Codex tab in `/stratum:st-build` (Advisor), herdr workers in `/stratum:st-worker` (step 6), in-session subagents in the next lines.
+W23|skills/st/SKILL.md|The lists: the Codex tab in `<plugin root>/skills/st-build/advisor.md`, herdr workers in `/stratum:st-worker` (step 6), in-session subagents in the next lines.
 W26|skills/st-build/SKILL.md|The Codex tab lists are under Advisor. The worker lists are in the st-worker skill, step 6.
 W27|skills/st-worker/SKILL.md|The worker lists are in step 6, under `approval`.
 W33|skills/st-build/SKILL.md|In-session subagents: see the note under this rule in `/stratum:st`.

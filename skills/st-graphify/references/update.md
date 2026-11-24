@@ -38,7 +38,7 @@ if new_total > 0:
 "
 ```
 
-Then populate `.graphify_detect.json` so Steps 3A–6 (which read it unconditionally) see the right state for an incremental run. `files` carries the changed subset (drives Step 3A AST + Step 3B0 cache check on only what changed); `all_files` carries the full corpus for any step that needs corpus-wide context:
+Then populate `.graphify_detect.json` so Steps 3–6 of `references/build.md` (which read it unconditionally) see the right state for an incremental run. Do not run build.md Steps 0–2: this detect file stands in for Step 2. `files` carries the changed subset (drives Step 3 Part A AST + Step B0 cache check on only what changed); `all_files` carries the full corpus for any step that needs corpus-wide context:
 
 ```bash
 $(cat graphify-out/.graphify_python) -c "
@@ -72,9 +72,9 @@ print('code_only:', code_only)
 "
 ```
 
-If `code_only` is True: print `[graphify update] Code-only changes detected - skipping semantic extraction (no LLM needed)`, run Step 3A (AST) on the changed files, then follow only Part B's **Fast path** to overwrite `.graphify_semantic.json` with an empty result and run Part C to create `.graphify_extract.json` from the fresh AST result. Skip semantic cache checks/writes and subagents (Steps B0–B3); do not reuse semantic sidecars from a prior run. Continue to the incremental merge and Steps 4–8 only after Part C has completed.
+If `code_only` is True: print `[graphify update] Code-only changes detected - skipping semantic extraction (no LLM needed)`, run Step 3 Part A (Structural extraction for code files) of `references/build.md` on the changed files, then follow only its Part B **Fast path** to overwrite `.graphify_semantic.json` with an empty result and run its Part C (Merge AST + semantic into final extraction) to create `.graphify_extract.json` from the fresh AST result. Skip semantic cache checks/writes and subagents (Steps B0–B3); do not reuse semantic sidecars from a prior run. Continue to the incremental merge and Steps 4–8 only after Part C has completed.
 
-If `code_only` is False (any changed file is a doc/paper/image/video): **first, if any changed file is in `new_files['video']`, run `references/transcribe.md` (Step 2.5) on those files, then rewrite `.graphify_detect.json` to move the resulting transcript paths into `files['document']` and drop `files['video']`** — otherwise raw `.mp4/.mp3` paths are fed to semantic subagents as unreadable media (#1392). Then run the full Steps 3A–3C pipeline as normal.
+If `code_only` is False (any changed file is a doc/paper/image/video): **first, if any changed file is in `new_files['video']`, run `references/transcribe.md` (Step 2.5) on those files, then rewrite `.graphify_detect.json` to move the resulting transcript paths into `files['document']` and drop `files['video']`** — otherwise raw `.mp4/.mp3` paths are fed to semantic subagents as unreadable media (#1392). Then run Step 3 of `references/build.md` (Part A, Part B with Steps B0–B3.5, and Part C) on the changed files. Do not go back to Steps 0–2.
 
 
 If no new files exist (only deletions), create an empty extraction so the merge step can prune:
@@ -176,7 +176,7 @@ print('[graphify update] Manifest saved.')
 "
 ```
 
-Then run Steps 4–8 on the merged graph as normal.
+Then run Steps 4–8 of `references/build.md` on the merged graph. Do not go back to Steps 0–2, and do not run Step 9: the manifest is saved above, and its full-build cleanup deletes `.graphify_extract.json`, which the graph diff below reads.
 
 After Step 4, show the graph diff:
 

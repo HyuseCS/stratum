@@ -70,7 +70,7 @@ tell the user in one line, and restart at the higher lane with what was learned.
   false ones. A real finding is a decision like any other: small ones get fixed, big ones go to
   the user. The end-of-run list names what was fixed and what was dropped, and why.
 - Watch each agent you summon. Answer its permission prompt when the answer keeps it in its brief. Bring every other prompt to the user with the exact text.
-  The lists: the Codex tab in `/stratum:st-build` (Advisor), herdr workers in `/stratum:st-worker` (step 6), in-session subagents in the next lines.
+  The lists: the Codex tab in `<plugin root>/skills/st-build/advisor.md`, herdr workers in `/stratum:st-worker` (step 6), in-session subagents in the next lines.
   An in-session subagent (the Agent tool) asks the user, not you: you cannot answer, approve or deny its permission prompt. Never run an action a subagent was denied in its place: bring the denial to the user.
   First put the `model` and `effort` from `.stratum/models.json` in the Agent call yourself, so the hook changes nothing. An Agent call denied because a hook changed its input after auto mode reviewed it: send it once more with exactly the input the denial quotes. Denied again: tell the user.
 - Before accepting code from a subagent, run

@@ -24,11 +24,11 @@ rows <<'EOF'
 row 2	gone	skills/st-worker/SKILL.md	a tool permission for the task's own command
 row 3	gone	skills/st-worker/SKILL.md	The build loop (/stratum:st-build) does not use workers.
 row 4	gone	skills/st-build/SKILL.md	merge it into `main`
-row 5	gone	skills/st-build/SKILL.md	consult the advisor if one is set (`/advisor`) on the feature's full
-row 6	gone	skills/st-build/SKILL.md	It runs at two points
-row 7	gone	skills/st-build/SKILL.md	Then run the same point once more on the changed input.
-row 8	gone	skills/st-build/SKILL.md	The mode comes from `.stratum/advisor.json` (`codex`, `both` or `off`).
-row 9	has	skills/st-build/SKILL.md	`WAIVED sha256 <hash>`: the plan changed only by fixes, and `check plan` passes until the input changes again.
+row 5	gone	skills/st-build/advisor.md	consult the advisor if one is set (`/advisor`) on the feature's full
+row 6	gone	skills/st-build/advisor.md	It runs at two points
+row 7	gone	skills/st-build/advisor.md	Then run the same point once more on the changed input.
+row 8	gone	skills/st-build/advisor.md	The mode comes from `.stratum/advisor.json` (`codex`, `both` or `off`).
+row 9	has	skills/st-build/advisor.md	`WAIVED sha256 <hash>`: the plan changed only by fixes, and `check plan` passes until the input changes again.
 row 10	has	skills/st-build/SKILL.md	A test marked `[lock]` runs only through the test lock: `bash <plugin root>/scripts/st-lock.sh -- <test command>`.
 row 11	has	skills/st-inspect/SKILL.md	If the plan changed at Inspect only by fixes of findings, with no approach change, run `bash <plugin root>/scripts/st-advisor.sh waive plan <feature dir> "<reason>"` in place of the plan point.
 row 12	gone	skills/st-plan/SKILL.md	then offer GitHub issues
@@ -55,7 +55,7 @@ row 29	has	scripts/st-worker.sh	- Test lock: if your task is marked [lock], run 
 row 30	has	skills/st/SKILL.md	Change a file only with the Write or Edit tool, never with a shell write in Bash.
 row 31	has	skills/st/SKILL.md	run `bash <plugin root>/scripts/st-shell-writes.sh <the lane's output file>` and read each printed command. A match sends the lane back only when the command writes or changes a file; drop a heredoc that writes no file.
 row 32	has	skills/st/SKILL.md	While an advisor point runs, run no `st-git`, start no lane and change no file in the review folder. The next lane starts after the point returns.
-row 33	has	skills/st-build/SKILL.md	files or HEAD changed during the review
+row 33	has	skills/st-build/advisor.md	files or HEAD changed during the review
 row 34	has	skills/st/SKILL.md	A send-back resumes the same agent (SendMessage), so check it again on its new lines only: note `wc -l < <file>` before you send it back, then run the script on `<(tail -n +<that count plus 1> <file>)`. A new Agent call is checked on its whole output file.
 row 35	has	skills/st-build/SKILL.md	Then run `bash <plugin root>/scripts/st-shell-writes.sh <the agent's output file>` and read each printed command. Send it back to `st-build` only when the command writes or changes a file; drop a heredoc that writes no file.
 row 36	has	skills/st-build/SKILL.md	A send-back resumes the same agent (SendMessage), so check it again on its new lines only: note `wc -l < <file>` before you send it back, then run the script on `<(tail -n +<that count plus 1> <file>)`.
