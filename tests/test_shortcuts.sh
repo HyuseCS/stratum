@@ -114,6 +114,13 @@ commit "$r" feat
 out=$(run "$r" main); rc=$?
 check "block comment marker: one row at line 1" '[ $rc = 0 ] && [ "$out" = "c.js:1:  * ponytail: block" ]'
 
+r="$tmp/doc"; mkrepo "$r"
+git -C "$r" checkout -q -b feat
+printf '%s\n' '/** ponytail: x */' > "$r/e.js"
+commit "$r" feat
+out=$(run "$r" main); rc=$?
+check "doc block marker: one row at line 1" '[ $rc = 0 ] && [ "$out" = "e.js:1: /** ponytail: x */" ]'
+
 r="$tmp/str"; mkrepo "$r"
 git -C "$r" checkout -q -b feat
 printf '%s\n' 's = "ponytail: text"' > "$r/d.py"

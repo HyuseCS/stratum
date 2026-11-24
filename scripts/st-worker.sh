@@ -234,12 +234,15 @@ find_worker() {
   [ -n "$WT" ] && [ -n "$BR" ] || fail "No worker $N on ${m:-local}."
   quote "$WT"
 }
+marked() {
+  quote "$1/.stratum/worker"
+  rx "[ -f $Q ] && [ ! -L $Q ] && head -n 1 -- $Q" >"$t" && [ "worker-$(head -n 1 "$t")" = "$N" ]
+}
 bymark() { # ponytail: local only, a remote close whose tab is gone is cleaned by hand, upgrade by reading the repo path from the roster
   local p
   h worktree list --cwd "$PWD"
   while IFS=$'\t' read -r -u 3 p BR; do
-    quote "$p/.stratum/worker"
-    rx "[ -f $Q ] && [ ! -L $Q ] && head -n 1 -- $Q" >"$t" && [ "worker-$(head -n 1 "$t")" = "$N" ] && WT=$p && return
+    marked "$p" && WT=$p && return
   done 3< <(jq -r '.result.worktrees[] | select(.is_linked_worktree == true) | [.path, .branch] | @tsv' <<<"$r" 2>/dev/null)
   BR=
   return 1
@@ -247,10 +250,7 @@ bymark() { # ponytail: local only, a remote close whose tab is gone is cleaned b
 pick() {
   WT= BR=
   BR=$(jq -er --arg c "$1" 'first(.result.worktrees[] | select(.path == $c and .is_linked_worktree == true) | .branch)' <<<"$r" 2>/dev/null) && WT=$1 || BR=
-  if [ -n "$WT" ]; then
-    quote "$WT/.stratum/worker"
-    rx "[ -f $Q ] && [ ! -L $Q ] && head -n 1 -- $Q" >"$t" && [ "worker-$(head -n 1 "$t")" = "$N" ] || WT= BR=
-  fi
+  [ -z "$WT" ] || marked "$WT" || WT= BR=
   [ -n "$WT" ] || { WT=$(jq -er --arg n "$N" 'first(.result.worktrees[] | select(.branch == $n) | .path)' <<<"$r" 2>/dev/null) && BR=$N; } || WT=
 }
 ownbr() {
