@@ -269,7 +269,7 @@ Stratum is a Claude Code plugin that runs a coding task through a lane. You give
 
 **What it does.** Codex reads what it is sent and answers with a verdict and findings. It runs in a read-only sandbox, so it cannot build or fix anything.
 
-**How it's built.** The `codex` CLI, run with its own home `~/.local/state/stratum/codex-home` that links your Codex login and marks each project untrusted. LikeC4 ids: `codex`, `outside.local-state-stratum-codex-home`, `outside.codex-auth-json`.
+**How it's built.** The `codex` CLI, run headless with `codex exec -s read-only --ignore-user-config --ephemeral`, or in a herdr Codex tab. LikeC4 id: `codex`.
 
 #### D · /advisor
 

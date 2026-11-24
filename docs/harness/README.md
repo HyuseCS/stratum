@@ -748,8 +748,8 @@ statusline setup note`" .-> Claude
   Claude -. "`module on session.start and 
 turn.complete`" .-> Hooks.Token_weather_mjs
   Claude -. "`session JSON on stdin`" .-> Statusline.St_statusline_sh
-  Scripts.St_advisor_sh -. "`feature dir, prompt file, answer file, 
-Codex home, model and effort`" .-> Scripts.St_codex_agent_sh
+  Scripts.St_advisor_sh -. "`tab name, prompt file, answer file, 
+state dir, model and effort`" .-> Scripts.St_codex_agent_sh
   Scripts.St_codex_agent_sh -. "`answer JSON in the answer file and the 
 Codex tab line`" .-> Scripts.St_advisor_sh
   Scripts.St_advisor_sh -. "`review prompt for the point and the 

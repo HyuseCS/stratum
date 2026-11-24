@@ -26,7 +26,7 @@ If no file list is given, stop and ask for it. Do not guess scope from `git stat
 
 1. `git status` and `git diff --stat`. Compare with the file list.
 2. Dirty files not in the list: do not stage them. Name them in the report.
-3. A listed file is clean or missing: stop and report.
+3. A listed file is clean, or missing and not a tracked deletion: stop and report.
 4. Stage each listed path by name: `git add <path> <path>`.
 5. `git diff --cached --check` and `git diff --cached --stat`. Confirm only the listed files
    are staged.

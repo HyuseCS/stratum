@@ -420,12 +420,6 @@ model {
   }
 
   extend outside {
-    local-state-stratum-codex-home = datafile '~/.local/state/stratum/codex-home' {
-      summary 'The Stratum Codex home: a link to the user Codex login and a config.toml that marks each project untrusted. st-advisor.sh codex-home makes it.'
-      metadata {
-        data '~/.local/state/stratum/codex-home'
-      }
-    }
     claude-settings-json = datafile '~/.claude/settings.json' {
       summary 'The user Claude Code settings: enabled plugins and plugin options. Stratum reads it and never changes it.'
       metadata {
@@ -448,12 +442,6 @@ model {
       summary 'The user ponytail settings: default mode, quiet startup and hide status. ponytail-config.js reads and writes it.'
       metadata {
         data '~/.config/ponytail/config.json'
-      }
-    }
-    codex-auth-json = datafile '~/.codex/auth.json' {
-      summary 'The user Codex login. st-advisor.sh links it into the Stratum Codex home.'
-      metadata {
-        data '~/.codex/auth.json'
       }
     }
     xdg-runtime-dir-st-figcraft-port = datafile '$XDG_RUNTIME_DIR/st-figcraft-PORT' {
@@ -494,6 +482,5 @@ model {
   claude -[reads]-> project.claude-settings-json 'plugins turned off and allowed tools'
   claude -[reads]-> project.claude-settings-local-json 'statusline command'
   claude -[reads]-> outside.claude-settings-json 'enabled plugins and plugin options'
-  codex -[reads]-> outside.local-state-stratum-codex-home 'Codex login link and project trust level'
   plugin.claude-plugin-plugin-json -[runs]-> scripts.st-figcraft-sh 'mcp server'
 }
