@@ -53,8 +53,8 @@ case "$1 $2" in
 "workspace close")
   : > "$T/closed"
   upd ws.json --arg w "$3" 'map(select(.workspace_id!=$w))'
-  upd tabs.json --arg w "$3" 'map(select(.workspace_id!=$w))'
-  upd panes.json --arg w "$3" 'map(select(.workspace_id!=$w))'
+  [ -n "${STUB_KEEP_TAB:-}" ] || upd tabs.json --arg w "$3" 'map(select(.workspace_id!=$w))'
+  [ -n "${STUB_KEEP_TAB:-}" ] || upd panes.json --arg w "$3" 'map(select(.workspace_id!=$w))'
   [ -n "${STUB_KEEP_AGENT:-}" ] || upd agents.json --arg w "$3" 'map(select(.workspace_id!=$w))'
   jq -nc --arg w "$3" '{result:{type:"workspace_closed",workspace_id:$w}}' ;;
 "agent start")
@@ -677,6 +677,28 @@ check "C3 exit 1" '[ $rc = 1 ]'
 check "C3 close left agent line" 'grep -qxF "close left agent worker-t004" <<<"$out"'
 check "C3 one workspace close of the worker's workspace, zero tab close" 'hascall "workspace\tclose\t%s" "$(wsid)" && never 0 0 1'
 
+mk; states done
+STUB_FAIL="workspace close" run bash "$script" close T004
+check "C3c workspace close call fails: exit 1, guard file and marker stay" '[ $rc = 1 ] && [ -e "$(wt)/.stratum/git-guard.json" ] && [ -e "$(wt)/.stratum/worker" ]'
+run bash "$script" close T004
+check "C3c retry after the failed close call: exit 0, closed line" '[ $rc = 0 ] && hasline "closed\tworker-t004"'
+
+mk; states done; chmod 555 "$(wt)/.stratum"
+run bash "$script" close T004
+chmod 755 "$(wt)/.stratum"
+check "A1a removal of .stratum files fails: exit 1, cannot-remove line, guard file and marker stay" '[ $rc = 1 ] && grep -q "cannot remove .stratum/" <<<"$out" && [ -e "$(wt)/.stratum/git-guard.json" ] && [ -e "$(wt)/.stratum/worker" ]'
+reset
+STUB_FAIL="agent get" STUB_FAIL_CODE=agent_not_found run bash "$script" close T004
+check "A1a retry after the tab is gone finds the worker by its marker: exit 0, closed and folder lines, files gone, only cleanup: zero tab close, zero workspace close, zero prompt" '[ $rc = 0 ] && hasline "closed\tworker-t004" && hasline "folder\t%s\tready to remove" "$(wt)" && [ ! -e "$(wt)/.stratum/git-guard.json" ] && [ ! -e "$(wt)/.stratum/worker" ] && never 0 0'
+
+mk; states done
+STUB_KEEP_TAB=1 run bash "$script" close T004
+check "A1b tab survives the close: exit 1, close left tab line, guard file and marker stay" '[ $rc = 1 ] && grep -qxF "close left tab worker-t004" <<<"$out" && [ -e "$(wt)/.stratum/git-guard.json" ] && [ -e "$(wt)/.stratum/worker" ]'
+STUB_T=$tmp "$tmp/bin/herdr" tab close "$(tabid)" > /dev/null
+reset
+STUB_FAIL="agent get" STUB_FAIL_CODE=agent_not_found run bash "$script" close T004
+check "A1b retry after the tab is closed by hand finds the worker by its marker: exit 0, closed and folder lines, files gone, only cleanup: zero tab close, zero workspace close, zero prompt" '[ $rc = 0 ] && hasline "closed\tworker-t004" && hasline "folder\t%s\tready to remove" "$(wt)" && [ ! -e "$(wt)/.stratum/git-guard.json" ] && [ ! -e "$(wt)/.stratum/worker" ] && never 0 0'
+
 fresh
 run bash "$script" close T004
 check "C4 exit 1" '[ $rc = 1 ]'
@@ -1175,12 +1197,17 @@ check "H11 success JSON but exit 1: exit 1, claude exited line, no headless line
 
 for k in tracked untracked; do
   fresh; rm -f "$tmp/claude_args"
-  if [ $k = tracked ]; then printf '{"dirty":1}\n' > "$repo/.stratum/state.json"; else : > "$repo/stray.txt"; fi
+  if [ $k = tracked ]; then printf 'dirty\n' > "$repo/src/keep"; else : > "$repo/stray.txt"; fi
   run bash "$script" headless T004 --task "$task" --test "$testcmd"
   check "H12 $k change: exit 1, one line, no claude call" '[ $rc = 1 ] && [ "$out" = "Working tree is not clean." ] && [ ! -e "$tmp/claude_args" ]'
-  printf '{}\n' > "$repo/.stratum/state.json"; rm -f "$repo/stray.txt"
+  : > "$repo/src/keep"; rm -f "$repo/stray.txt"
 done
 check "H12 repo tree is clean again" '[ -z "$(git -C "$repo" status --porcelain)" ]'
+
+fresh; rm -f "$tmp/claude_args"; printf '{"dirty":1}\n' > "$repo/.stratum/state.json"
+run bash "$script" headless T004 --task "$task" --test "$testcmd"
+check "H12b only .stratum/state.json changed: exit 0, claude is called, no Working tree line" '[ $rc = 0 ] && [ -e "$tmp/claude_args" ] && ! grep -qxF "Working tree is not clean." <<<"$out"'
+printf '{}\n' > "$repo/.stratum/state.json"
 
 fresh; rm -f "$tmp/claude_nums"
 NOENV=1 run bash "$script" headless T004 --task "$task" --test "$testcmd"
@@ -1917,7 +1944,7 @@ mk; rm -f "$wr.seen"; states idle; sentpane > "$tmp/pane.txt"
 wrun
 check "WC6 idle with no result, question or prompt for three polls: exit 5, stopped" '[ $rc = 5 ] && [ "$(sleeps)" = 2 ] && hasline "state\tstopped\tworker-t004\t%s" "$(pane)"'
 mk; rm -f "$wr.seen"
-STUB_FAIL="agent get" run bash "$script" watch --roster "$wr"
+STUB_FAIL="agent get" STUB_FAIL_CODE=agent_not_found run bash "$script" watch --roster "$wr"
 check "WC7 a worker that is gone and never seen: exit 5, the gone line" '[ $rc = 5 ] && [ "$out" = "$(printf "state\tgone\tworker-t004\t-")" ]'
 apx; rm -f "$wr.seen"; states blocked; mkreq "$rid" 'npm test'
 wrun
@@ -1932,11 +1959,17 @@ printf 'ROUND2\n' > "$lw/result.md"; reset
 wrun
 check "WC11 a new result.md after a reported finish is a new finish: exit 0, finished" '[ $rc = 0 ] && hasline "state\tfinished\tworker-t004\t%s" "$(pane)"'
 mk; printf 'worker-t004\tblocked 123\n' > "$wr.seen"
-STUB_FAIL="agent get" run "$rto" 60 bash "$script" watch --roster "$wr"
+STUB_FAIL="agent get" STUB_FAIL_CODE=agent_not_found run "$rto" 60 bash "$script" watch --roster "$wr"
 check "WC12 a blocked worker that is gone is reported: exit 5, the gone line" '[ $rc = 5 ] && [ "$out" = "$(printf "state\tgone\tworker-t004\t-")" ]'
 printf 'worker-t004\tlocal\tworker-t004\tT004\nworker-t005\tlocal\tworker-t005\tT005\n' > "$tmp/wr2"; printf 'worker-t004\tfinished 1 2\n' > "$tmp/wr2.seen"
-STUB_FAIL="agent get" run "$rto" 60 bash "$script" watch --roster "$tmp/wr2"
+STUB_FAIL="agent get" STUB_FAIL_CODE=agent_not_found run "$rto" 60 bash "$script" watch --roster "$tmp/wr2"
 check "WC12 a finished worker that is gone (closed) is skipped: only the other worker is reported" '[ $rc = 5 ] && [ "$out" = "$(printf "state\tgone\tworker-t005\t-")" ]'
+mk; rm -f "$wr.seen"
+STUB_FAIL="agent get" STUB_FAIL_CODE=timeout run bash "$script" watch --roster "$wr"
+check "WC13 agent get fails with another code: exit 1, one stopped line, no gone line, seen holds no gone" '[ $rc = 1 ] && [ "$(grep -c "^stopped: " <<<"$out")" = 1 ] && ! grep -qP "^state\tgone" <<<"$out" && ! grep -qs gone "$wr.seen"'
+mk; rm -f "$wr.seen"
+STUB_NO_STATUS=1 run bash "$script" watch --roster "$wr"
+check "WC14 agent get answers no status: exit 1, the stopped line, no gone line" '[ $rc = 1 ] && [ "$out" = "stopped: no .result.agent.agent_status in the herdr answer" ] && ! grep -qP "^state\tgone" <<<"$out"'
 printf 'worker-t004\tnowhere\tworker-t004\tT004\n' > "$tmp/wbad"
 fresh; run bash "$script" watch --roster "$tmp/wbad"
 check "WC10 unknown machine: exit 1, the line, no agent call" '[ $rc = 1 ] && [ "$out" = "Unknown machine: nowhere." ] && [ "$(cnt "^agent\t")" = 0 ]'

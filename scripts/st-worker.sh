@@ -220,7 +220,11 @@ find_worker() {
   h tab list
   local c C
   c=$(jq -er --arg n "$N" '[.result.tabs[] | select(.label == $n)] | length' <<<"$r") || stop "no .result.tabs in the herdr answer"
-  [ "$c" != 0 ] || fail "No worker $N on ${m:-local}."
+  if [ "$c" = 0 ]; then
+    [ "$cmd" = close ] && [ -z "$m" ] && bymark || fail "No worker $N on ${m:-local}."
+    quote "$WT"
+    return
+  fi
   [ "$c" = 1 ] || fail "More than one tab is labelled $N."
   TAB=$(jq -er --arg n "$N" 'first(.result.tabs[] | select(.label == $n) | .tab_id)' <<<"$r") && WS=$(jq -er --arg n "$N" 'first(.result.tabs[] | select(.label == $n) | .workspace_id)' <<<"$r") || fail "No worker $N on ${m:-local}."
   h pane list --workspace "$WS" # ponytail: only the first pane's cwd is used, a cd in a stopped worker's pane breaks the find, upgrade by falling back to <repo parent>/<repo name>-N
@@ -229,6 +233,16 @@ find_worker() {
   pick "$C"
   [ -n "$WT" ] && [ -n "$BR" ] || fail "No worker $N on ${m:-local}."
   quote "$WT"
+}
+bymark() { # ponytail: local only, a remote close whose tab is gone is cleaned by hand, upgrade by reading the repo path from the roster
+  local p
+  h worktree list --cwd "$PWD"
+  while IFS=$'\t' read -r -u 3 p BR; do
+    quote "$p/.stratum/worker"
+    rx "[ -f $Q ] && [ ! -L $Q ] && head -n 1 -- $Q" >"$t" && [ "worker-$(head -n 1 "$t")" = "$N" ] && WT=$p && return
+  done 3< <(jq -r '.result.worktrees[] | select(.is_linked_worktree == true) | [.path, .branch] | @tsv' <<<"$r" 2>/dev/null)
+  BR=
+  return 1
 }
 pick() {
   WT= BR=
@@ -580,17 +594,19 @@ close)
     [ "$p" = 0 ] || fail "Worker $N has an open PR. Close refused."
   fi
   rx "[ ! -L $Q/.stratum ]" || fail "Worker $N: .stratum is a symlink. Close refused."
-  h agent list
-  k=st-codex-$N
-  k=$(jq -er --arg n "${k:0:32}" --arg w "$WS" '.result.agents | arrays | first(.[] | select(.name == $n and .workspace_id == $w) | .tab_id | strings) // ""' <<<"$r" 2>/dev/null) || stop "no .result.agents in the herdr answer"
-  h tab list --workspace "$WS"
-  c=0
-  jq -e --arg n "$N" --arg k "$k" 'any(.result.tabs[]; .label == $n) and all(.result.tabs[]; .label == $n or .tab_id == $k)' <<<"$r" >/dev/null 2>&1 || c=$?
-  [ $c -le 1 ] || stop "no .result.tabs in the herdr answer"
-  if [ $c = 0 ] && { [ -n "$m" ] || { [ -n "${HERDR_WORKSPACE_ID:-}" ] && [ "$WS" != "$HERDR_WORKSPACE_ID" ]; }; }; then
-    h workspace close "$WS"
-  else
-    h tab close "$TAB"
+  if [ -n "$TAB" ]; then
+    h agent list
+    k=st-codex-$N
+    k=$(jq -er --arg n "${k:0:32}" --arg w "$WS" '.result.agents | arrays | first(.[] | select(.name == $n and .workspace_id == $w) | .tab_id | strings) // ""' <<<"$r" 2>/dev/null) || stop "no .result.agents in the herdr answer"
+    h tab list --workspace "$WS"
+    c=0
+    jq -e --arg n "$N" --arg k "$k" 'any(.result.tabs[]; .label == $n) and all(.result.tabs[]; .label == $n or .tab_id == $k)' <<<"$r" >/dev/null 2>&1 || c=$?
+    [ $c -le 1 ] || stop "no .result.tabs in the herdr answer"
+    if [ $c = 0 ] && { [ -n "$m" ] || { [ -n "${HERDR_WORKSPACE_ID:-}" ] && [ "$WS" != "$HERDR_WORKSPACE_ID" ]; }; }; then
+      h workspace close "$WS"
+    else
+      h tab close "$TAB"
+    fi
   fi
   for k in agent:name tab:label; do
     h "${k%:*}" list
@@ -663,12 +679,14 @@ watch)
       N=${f[0]} m= H=(herdr) target=
       [ "${f[1]}" = local ] || { m=${f[1]}; H=(herdr --machine "$m"); target=${tg[$m]}; }
       old=$(awk -F'\t' -v n="$N" '$1 == n { v = $2 } END { print v }' "$sf")
-      if ! r=$("${H[@]}" agent get "$N" 2>"$e") || ! S=$(jq -er '.result.agent.agent_status' <<<"$r" 2>/dev/null); then
+      if ! r=$("${H[@]}" agent get "$N" 2>"$e"); then
+        [ "$(code)" = agent_not_found ] || stop "$(head -1 "$e")"
         case $old in gone | finished*) continue ;; esac
         mark gone
         printf 'state\tgone\t%s\t-\n' "$N"
         exit 5
       fi
+      S=$(jq -er '.result.agent.agent_status' <<<"$r" 2>/dev/null) || stop "no .result.agent.agent_status in the herdr answer"
       PANE=$(jq -r '.result.agent.pane_id // "-"' <<<"$r")
       key= dlg=
       [ "$S" != working ] || ! shown || { S=blocked; dlg=1; }
@@ -837,7 +855,7 @@ headless)
     printf '%s\n' "- Test command: \`$test\`" "- Model: ${model:-default}" '- Work in this folder. Leave the change uncommitted: never commit, never push.' '- Run the test command exactly as written, as one Bash call.' '- You cannot ask questions. If you need a decision, stop and say in your last reply what is missing.'
   } >"$t"
   cd "$top"
-  [ -z "$(git status --porcelain)" ] || fail "Working tree is not clean."
+  [ -z "$(git status --porcelain -- . ':(exclude).stratum/state.json')" ] || fail "Working tree is not clean."
   HP="/goal \`$test\` exits 0 and the change is left uncommitted; read $t first and follow it"
   bound=540 # ponytail: fixed 540 s bound to stay under the Bash tool's 600 s cap, raise it if the cap moves
   turns=30 # ponytail: fixed 30-turn cap per headless run, raise it if quickstart section 5 measures goal runs that need more
