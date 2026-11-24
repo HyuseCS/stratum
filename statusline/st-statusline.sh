@@ -8,7 +8,7 @@ while [ -z "$width" ] && [ "${pid:-1}" -gt 1 ]; do
 done
 
 ST_INPUT="$(cat)" ST_PLUGIN="$(cd "$(dirname "$0")/.." && pwd)" ST_WIDTH="$width" exec python3 - <<'PY'
-import json, os, re, shutil, subprocess, tempfile, unicodedata
+import json, os, re, shutil, signal, subprocess, tempfile, unicodedata
 
 ARROW = ""
 plugin = os.environ["ST_PLUGIN"]
@@ -46,8 +46,8 @@ except OSError:
 level = level or "off"
 try:
     common = subprocess.run(["git", "-C", data.get("cwd") or cwd, "rev-parse", "--path-format=absolute", "--git-common-dir"],
-                            capture_output=True, text=True).stdout.strip()
-except OSError:
+                            capture_output=True, text=True, timeout=2).stdout.strip()
+except (OSError, subprocess.TimeoutExpired):
     common = ""
 folder = f"{os.path.dirname(common)}/.stratum/autonomous" if common else f"{proj}/.stratum/autonomous"
 sid = data.get("session_id")
@@ -65,8 +65,10 @@ def merge(base, over):
 
 
 cfg = json.load(open(f"{plugin}/statusline/powerline.json"))
-if os.path.isfile(f"{proj}/.stratum/powerline.json"):
+try:
     merge(cfg, json.load(open(f"{proj}/.stratum/powerline.json")))
+except (OSError, ValueError):
+    pass
 themes = json.load(open(f"{plugin}/statusline/themes.json"))
 theme = cfg.get("theme", "rose-pine")
 custom = cfg.get("colors", {}).get("custom", {})
@@ -93,8 +95,13 @@ if shutil.which("bunx"):
     with tempfile.NamedTemporaryFile("w", suffix=".json") as f:
         json.dump(cfg, f)
         f.flush()
-        line = subprocess.run(["bunx", "@owloops/claude-powerline@1.30.3", f"--config={f.name}"],
-                              input=raw, capture_output=True, text=True).stdout
+        # ponytail: 2 s guess, a cold bunx download that needs more is killed on each refresh, so run `bunx @owloops/claude-powerline@1.30.3 --help` once by hand
+        with subprocess.Popen(["bunx", "@owloops/claude-powerline@1.30.3", f"--config={f.name}"], stdin=subprocess.PIPE,
+                              stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, start_new_session=True) as p:
+            try:
+                line = p.communicate(raw, timeout=2)[0]
+            except subprocess.TimeoutExpired:
+                os.killpg(p.pid, signal.SIGKILL)
 
 segs = {}
 for bg, fg, text in re.findall(r"\x1b\[48;2;([\d;]+)m\x1b\[38;2;([\d;]+)m([^\x1b]+)", line):
