@@ -742,6 +742,111 @@ class GitGuardTest(unittest.TestCase):
                 with self.subTest(folder=folder, cmd="echo hi"):
                     self.assertEqual(self.run_guard("echo hi", guard), (None, ""))
 
+    def test_wrappers_hide_push_delete_deny(self):
+        for cmd in ("env git push --delete origin x", "/usr/bin/env git push --delete origin x",
+                    "env -u FOO git push --delete origin x", "env -i git push --delete origin x",
+                    "nice git push --delete origin x", "nice -n 5 git push --delete origin x",
+                    "nohup git push --delete origin x", "time git push --delete origin x",
+                    "if true; then git push --delete origin x; fi",
+                    "while false; do git push --delete origin x; done",
+                    "{ git push --delete origin x; }", "! git push --delete origin x"):
+            with self.subTest(cmd=cmd):
+                self.assertEqual(self.run_guard(cmd)[0], "deny", cmd)
+
+    def test_env_chdir_elsewhere_asks_in_auto(self):
+        self.set_mode("auto")
+        with tempfile.TemporaryDirectory() as other:
+            subprocess.run(["git", "init", "-q", other], check=True)
+            o = shlex.quote(other)
+            for cmd in (f"env -C {o} git commit -m 'fix: x'", f"env --chdir={o} git commit -m 'fix: x'"):
+                with self.subTest(cmd=cmd):
+                    self.assertEqual(self.run_guard(cmd)[0], "ask", cmd)
+
+    def test_wrapper_negative_controls_no_decision(self):
+        for cmd in ("env FOO=1 ls", "nice make", "time true", "if true; then echo git; fi"):
+            with self.subTest(cmd=cmd):
+                self.assertEqual(self.run_guard(cmd), (None, ""), cmd)
+
+    def test_hook_flags_deny_in_auto(self):
+        self.set_mode("auto")
+        for cmd in ("git -ccore.hooksPath=/dev/null commit -m 'fix: x'", "git commit -n -m 'fix: x'",
+                    "git commit -nm 'fix: x'", "git commit -anm 'fix: x'", "git commit --no-veri -m 'fix: x'"):
+            with self.subTest(cmd=cmd):
+                self.assertEqual(self.run_guard(cmd)[0], "deny", cmd)
+
+    def test_hook_config_env_asks_in_auto(self):
+        self.set_mode("auto")
+        cmd = ("GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=core.hooksPath GIT_CONFIG_VALUE_0=/dev/null "
+               "git commit -m 'fix: x'")
+        self.assertEqual(self.run_guard(cmd)[0], "ask", cmd)
+
+    def test_hook_flag_negative_controls(self):
+        self.set_mode("auto")
+        for cmd in ("git commit -m 'fix: no n here'", "git commit -m'fix: note'", "git commit -m '-n'",
+                    "git log -n 3", "git clean -n"):
+            with self.subTest(cmd=cmd):
+                self.assertEqual(self.run_guard(cmd), (None, ""), cmd)
+        self.assertEqual(self.run_guard("git push -n origin main"),
+                         ("ask", "git push sends commits to the remote."))
+
+    def test_forced_checkout_and_switch_asks(self):
+        cmds = ("git checkout -f main", "git checkout --force main", "git switch --discard-changes main",
+                "git switch --discard main", "git switch -f main")
+        for cmd in cmds:
+            with self.subTest(cmd=cmd):
+                d, reason = self.run_guard(cmd)
+                self.assertEqual(d, "ask", cmd)
+                self.assertIn("DESTRUCTIVE (discard", reason, cmd)
+        self.set_mode("deny", "discard")
+        for cmd in cmds:
+            with self.subTest(cmd=cmd, mode="deny"):
+                self.assertEqual(self.run_guard(cmd)[0], "deny", cmd)
+        self.set_mode("auto", "discard")
+        for cmd in cmds:
+            with self.subTest(cmd=cmd, mode="auto"):
+                self.assertEqual(self.run_guard(cmd), (None, ""), cmd)
+
+    def test_checkout_and_switch_without_force_no_decision(self):
+        cmds = ("git checkout main", "git switch -c fix-f", "git switch -cfeature", "git checkout -bfix")
+        for cmd in cmds:
+            with self.subTest(cmd=cmd):
+                self.assertEqual(self.run_guard(cmd), (None, ""), cmd)
+        self.set_mode("deny", "discard")
+        for cmd in cmds:
+            with self.subTest(cmd=cmd, mode="deny"):
+                self.assertEqual(self.run_guard(cmd), (None, ""), cmd)
+
+    def test_plus_refspec_is_force_push(self):
+        cmds = ("git push origin +main", "git push origin +refs/heads/a:refs/heads/a",
+                "git push --force-w origin main", "git push --force-w=main origin main",
+                "git push --force-if origin main")
+        for cmd in cmds:
+            with self.subTest(cmd=cmd):
+                d, reason = self.run_guard(cmd)
+                self.assertEqual(d, "ask", cmd)
+                self.assertIn("DESTRUCTIVE", reason, cmd)
+        self.set_mode("deny", "force_push")
+        for cmd in cmds:
+            with self.subTest(cmd=cmd, mode="deny"):
+                self.assertEqual(self.run_guard(cmd)[0], "deny", cmd)
+
+    def test_push_mirror_prune_and_del_prefix_deny(self):
+        for cmd in ("git push --mirror origin", "git push --mir origin", "git push --prune origin",
+                    "git push --del origin x"):
+            with self.subTest(cmd=cmd):
+                self.assertEqual(self.run_guard(cmd)[0], "deny", cmd)
+
+    def test_push_plain_and_progress_stay_ask(self):
+        for cmd in ("git push origin main", "git push --progress origin main"):
+            with self.subTest(cmd=cmd):
+                self.assertEqual(self.run_guard(cmd), ("ask", "git push sends commits to the remote."), cmd)
+
+    def test_option_values_are_not_flags(self):
+        self.set_mode("auto")
+        self.assertEqual(self.run_guard("git commit -m 'fix: x' -m '--no-veri'"), (None, ""))
+        self.set_mode("deny", "discard")
+        self.assertEqual(self.run_guard("git checkout -- --force"), (None, ""))
+
 
 if __name__ == "__main__":
     unittest.main()

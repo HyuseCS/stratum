@@ -14,6 +14,16 @@ RANK = {None: 0, "ask": 1, "deny": 2}
 GIT_WORD = re.compile(r"(?<![^\s;&|()\[\],`/$=])git(?![^\s;&|()\[\],`<>])")
 UNQUOTE = str.maketrans("", "", "\\'\"")
 PREFIX = ("command", "builtin", "exec")
+LEAD = {"if", "then", "elif", "else", "do", "while", "until", "{", "!"}
+# ponytail: env -S '<cmd>' is not split, so a git command inside it is not judged; split it if agents use it
+WRAP = {"env": ("auCS", ("--argv0", "--unset", "--chdir", "--split-string")), "nice": ("n", ("--adjustment",)),
+        "nohup": ("", ()), "time": ("fo", ("--format", "--output"))}
+VALUES = {"commit": ("mFCct", ("--message", "--file", "--reuse-message", "--reedit-message", "--template",
+                               "--author", "--date", "--trailer", "--fixup", "--squash", "--cleanup",
+                               "--pathspec-from-file")),
+          "checkout": ("bB", ("--orphan", "--conflict", "--pathspec-from-file")),
+          "switch": ("cC", ("--orphan", "--conflict")),
+          "push": ("o", ("--push-option", "--repo", "--receive-pack", "--exec", "--recurse-submodules"))}
 TOKEN = re.compile(r"""[ \t]*(?:(\d*(?:<<-|<<<|<>|>\||[<>][<>&]?)|&>>?)|([;&|]+)|([()])"""
                    r"""|((?:[^\s;&|()<>'"\\]|\\.|'[^']*'|"(?:[^"\\]|\\.)*")+))""")
 COMPOUND = {"{", "if", "then", "else", "elif", "do", "while", "until", "for", "case", "select", "function",
@@ -76,6 +86,8 @@ def parse_git(seg):
                 cdir.append(seg[i][2:])
             if seg[i].startswith("--config-env="):
                 conf.append(seg[i][13:].split("=", 1)[0].lower())
+            if seg[i].startswith("-c") and len(seg[i]) > 2:
+                conf.append(seg[i][2:].split("=", 1)[0].lower())
             i += 1
     if i >= len(seg):
         return None
@@ -84,6 +96,27 @@ def parse_git(seg):
 
 def short_has(args, letter):
     return any(a.startswith("-") and not a.startswith("--") and letter in a[1:] for a in args)
+
+
+def abbrev(word, flag):
+    name = word.split("=", 1)[0]
+    return len(name) >= 4 and flag.startswith(name)
+
+
+def opts(args, short="", longs=(), stop=False):
+    i = 0
+    while i < len(args) and args[i] != "--":
+        a = args[i]
+        i += 1
+        if a.startswith("--"):
+            i += "=" not in a and any(abbrev(a, f) for f in longs)
+            yield i, a
+        elif a.startswith("-"):
+            k = next((k for k, c in enumerate(a[1:], 1) if c in short), len(a))
+            i += k == len(a) - 1
+            yield i, a[:k + 1]
+        elif stop:
+            return
 
 
 def config_writes(args):
@@ -218,7 +251,9 @@ def destructive(key, reason):
 
 
 def judge(sub, args, gitdir, elsewhere=False, conf=(), target=None):
-    if "--no-verify" in args or "core.hookspath" in conf:
+    flags = [o for _, o in opts(args, *VALUES.get(sub, ("", ())))]
+    if "--no-verify" in args or "core.hookspath" in conf or any(abbrev(o, "--no-verify") for o in flags) \
+            or sub == "commit" and any(re.match(r"-[aeiopqsvz]*n", o) for o in flags):
         return "deny", "--no-verify and -c core.hooksPath are blocked: hooks must run."
     if sub == "config":
         return ("deny", "git config writes are blocked: change git config yourself.") \
@@ -243,10 +278,12 @@ def judge(sub, args, gitdir, elsewhere=False, conf=(), target=None):
             + (" sets -c trailer.*, which can add a trailer the guard cannot read" if trailer else "")
         return decision, head + "\n" + staged_summary(gitdir)
     if sub == "push":
-        if "--delete" in args or short_has(args, "d") or any(a.startswith(":") for a in args):
+        if "--delete" in args or short_has(args, "d") or any(a.startswith(":") for a in args) \
+                or any(abbrev(o, f) for o in flags for f in ("--delete", "--mirror", "--prune")):
             return "deny", "Deleting a remote branch is blocked: the user deletes remote branches."
-        if any(a in ("--force", "-f") or a.startswith("--force-with-lease") for a in args) \
-                or short_has(args, "f"):
+        if any(a in ("--force", "-f") or a.startswith(("--force-with-lease", "+")) for a in args) \
+                or short_has(args, "f") or any(abbrev(o, f) for o in flags
+                                               for f in ("--force", "--force-with-lease", "--force-if-includes")):
             return destructive("force_push", "force push can overwrite remote history.")
         return "ask", "git push sends commits to the remote."
     if sub == "reset" and "--hard" in args:
@@ -255,6 +292,9 @@ def judge(sub, args, gitdir, elsewhere=False, conf=(), target=None):
         return destructive("clean", "git clean -f deletes untracked files.")
     if sub in ("checkout", "restore") and "." in args:
         return destructive("discard", f"git {sub} . discards working tree changes.")
+    if sub in ("checkout", "switch") and any(abbrev(o, "--force") or abbrev(o, "--discard-changes")
+                                             or not o.startswith("--") and "f" in o for o in flags):
+        return destructive("discard", f"git {sub} --force discards working tree changes.")
     if sub == "branch" and (short_has(args, "D") or short_has(args, "d") or "--delete" in args):
         return destructive("branch_delete", "deleting a local branch needs the user's OK.")
     if sub == "update-ref" or sub == "branch" and ("--force" in args or any(short_has(args, c) for c in "fMC")) \
@@ -350,11 +390,20 @@ def main():
 
     def check(seg, unknown=False):
         nonlocal here, left, commit
-        i = 0
-        while i < len(seg) and (seg[i] in PREFIX
-                                or "=" in seg[i] and not seg[i].startswith("-")):
-            i += 1
-        env = any(w.startswith(("GIT_DIR=", "GIT_WORK_TREE=")) for w in seg[:i])
+        i, moved = 0, False
+        while i < len(seg):
+            name = os.path.basename(seg[i])
+            if seg[i] in PREFIX or seg[i] in LEAD or "=" in seg[i] and not seg[i].startswith("-"):
+                i += 1
+            elif name in WRAP:
+                end = 0
+                for end, o in opts(seg[i + 1:], *WRAP[name], stop=True):
+                    moved = moved or name == "env" and (abbrev(o, "--chdir") or not o.startswith("--") and "C" in o)
+                i += 1 + end
+                i += seg[i:i + 1] == ["--"]
+            else:
+                break
+        env = moved or any(w.startswith(("GIT_DIR=", "GIT_WORK_TREE=", "GIT_CONFIG")) for w in seg[:i])
         seg = seg[i:]
         if not seg:
             return False
