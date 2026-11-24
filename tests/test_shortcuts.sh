@@ -93,6 +93,34 @@ commit "$r" feat
 out=$(run "$r" main); rc=$?
 check "path with spaces: one row, exact path" '[ $rc = 0 ] && [ "$out" = "dir x/s p.py:1: # ponytail: sp" ]'
 
+r="$tmp/sql"; mkrepo "$r"
+git -C "$r" checkout -q -b feat
+printf '%s\n' '-- ponytail: sql' > "$r/q.sql"
+commit "$r" feat
+out=$(run "$r" main); rc=$?
+check "sql comment marker: one row at line 1" '[ $rc = 0 ] && [ "$out" = "q.sql:1: -- ponytail: sql" ]'
+
+r="$tmp/html"; mkrepo "$r"
+git -C "$r" checkout -q -b feat
+printf '%s\n' '<!-- ponytail: html -->' > "$r/p.html"
+commit "$r" feat
+out=$(run "$r" main); rc=$?
+check "html comment marker: one row at line 1" '[ $rc = 0 ] && [ "$out" = "p.html:1: <!-- ponytail: html -->" ]'
+
+r="$tmp/block"; mkrepo "$r"
+git -C "$r" checkout -q -b feat
+printf '%s\n' ' * ponytail: block' > "$r/c.js"
+commit "$r" feat
+out=$(run "$r" main); rc=$?
+check "block comment marker: one row at line 1" '[ $rc = 0 ] && [ "$out" = "c.js:1:  * ponytail: block" ]'
+
+r="$tmp/str"; mkrepo "$r"
+git -C "$r" checkout -q -b feat
+printf '%s\n' 's = "ponytail: text"' > "$r/d.py"
+commit "$r" feat
+out=$(run "$r" main); rc=$?
+check "ponytail inside a string literal: no row" '[ $rc = 0 ] && [ "$out" = "No new ponytail: markers." ]'
+
 check "agents/st-close.md names scripts/st-shortcuts.sh" 'grep -qF "scripts/st-shortcuts.sh" "$root/agents/st-close.md"'
 check "skills/st-close names scripts/st-shortcuts.sh" 'grep -qF "scripts/st-shortcuts.sh" "$root/skills/st-close/SKILL.md"'
 check "skills/st-close has --diff-filter=A" 'grep -qF -- "--diff-filter=A" "$root/skills/st-close/SKILL.md"'

@@ -57,6 +57,27 @@ for case in 'a.c|*ptr = 1;|0' 'b.py|# see #!/bin/sh note|1' 'c.sql|-- sql note|1
   rm "$proj/$name"
 done
 
+printf 'x = 1\n# explains x\n' > "$proj/a.py"
+git -C "$proj" add a.py
+out=$(verify "true" "${files[@]}"); rc=$?
+check "staged comment: FAIL, exit 1, names it" '[ $rc = 1 ] && grep -q "^FAIL" <<<"$out" && grep -q "explains x" <<<"$out"'
+git -C "$proj" reset -q -- a.py
+printf 'x = 1\n' > "$proj/a.py"
+
+printf '# c\n' > "$proj/n.py"
+git -C "$proj" add n.py
+out=$(verify "true" n.py); rc=$?
+check "staged new file with comment: FAIL, names file" '[ $rc = 1 ] && grep -q "^FAIL" <<<"$out" && grep -q "n.py" <<<"$out"'
+git -C "$proj" reset -q -- n.py
+rm "$proj/n.py"
+
+printf 'x = 1\n# ponytail: x\n' > "$proj/a.py"
+git -C "$proj" add a.py
+out=$(verify "true" "${files[@]}"); rc=$?
+check "staged ponytail line: passes" '[ $rc = 0 ] && grep -q "^ok" <<<"$out"'
+git -C "$proj" reset -q -- a.py
+printf 'x = 1\n' > "$proj/a.py"
+
 out=$(verify "true"); rc=$?
 check "no file list: exit 2" '[ $rc = 2 ]'
 
