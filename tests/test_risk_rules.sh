@@ -10,7 +10,6 @@ done <<'TABLE'
 R1|skills/st/SKILL.md|Before the first lane skill or agent starts, Quick too, say it in one line: `Lane: <lane>, risk <level> (<area>: <why>). Say "full", "fast", "quick" or "design" to override. Say "risk high", "risk normal" or "risk low" to change the risk.`
 R2|skills/st/SKILL.md|Risk level: High for privacy and access, the data model, contracts, secrets, money, or work that cannot be undone. Normal for other Full work. Low for Fast. None for Quick and Design.
 R3|skills/st/SKILL.md|Put the `Lane:` line at the start of its own line: the Stratum hook writes the risk from it. On the user's "risk <level>", say the `Lane:` line again with the new level.
-R4|skills/st-build/advisor.md|The mode comes from `.stratum/advisor.json`: `auto` (the default when the file has no `mode`), `codex`, `both` or `off`.
 R5|skills/st-build/advisor.md|`advisors: codex`: Codex runs. `advisors: both`: Codex runs, then consult `/advisor` on the same input, then hold the talk. `advisors: /advisor`: consult `/advisor` only. `advisors: none`: no advisor at this point, and skip `check plan`.
 R6|skills/st-build/advisor.md|| test red after 2 tries | Codex, then both if still red | Codex | `/advisor` | none |
 R7|skills/st-build/advisor.md|Never run `codex` to build or fix. In herdr, Codex runs as the `st-codex-<workspace label>` agent (in a worker, `st-codex-worker-<id>`, in the worker's own workspace) in the `Codex` tab of this workspace, with the user's own Codex setup, and the user can watch it there. Otherwise it runs in the background in the read-only sandbox. The last line says which: `codex: tab st-codex-<workspace label>` (`st-codex-worker-<id>` in a worker) or `codex: headless (<reason>)`. Show it to the user.
@@ -18,29 +17,16 @@ R8|skills/st-build/advisor.md|At a High point both advisors first answer alone. 
 R9|skills/st-build/advisor.md|In round 3 each advisor proposes a compromise for every open point. A compromise both accept is a combined finding. A point with no compromise both accept goes to the user with both views, in short, simple words.
 R10|skills/st-build/advisor.md|If one advisor has no answer (`no advisor`, mode off), the point runs with the one left, and the talk record says so.
 R11|skills/st-build/advisor.md|After the talk, record it: `bash <plugin root>/scripts/st-advisor.sh talk <point> <feature dir> <file>` with the rounds, the agreed points, the compromises, the points sent to the user and the calls.
-R12|skills/st/SKILL.md|Write each small decision in a list as you make it. At each story review, and at the end of a Fast change, the list goes to the advisors the matrix names. A decision an advisor sends to the user is undone if the user says no.
 R13|skills/st-build/SKILL.md|Send the story's small-decision list to the advisors: `bash <plugin root>/scripts/st-advisor.sh decisions <feature dir> <list file>`.
-R14|skills/st-fast/SKILL.md|At the end of the change, send the small-decision list to `/advisor` if one is set. A decision it sends to the user is undone if the user says no.
-R15|skills/st-init/SKILL.md|advisor mode `auto` (recommended: the risk level picks Codex, `/advisor` or both at each point; needs `codex` logged in for Codex), `codex` (Codex reviews the plan and a test red after 2 tries), `both` (Codex, then `/advisor` if set), or `off` (no Codex, nothing sent to OpenAI)?
-R16|README.md|`{"mode": "auto"}` (the default when the file has no `mode`): the risk level picks the advisors at each point.
 R17|README.md|Inside herdr, Codex runs as the agent `st-codex-<workspace label>` (in a worker, `st-codex-worker-<id>`, in the worker's own workspace) in a `Codex` tab of your workspace, one per workspace, with your own Codex setup: your Codex home, config, login, history, skills, trust and approvals. You can watch each review there and use the tab yourself between points. Review prompts and the files Codex reads land in your own Codex history.
 R18|README.md|With no file in either, the point prints `no advisor: mode not set. Write .stratum/advisor.json with "mode": "auto", "codex", "both" or "off".`
-R21|README.md|The background call runs with `--ignore-user-config`: neither `~/.codex/config.toml` nor a project `.codex/config.toml` is read
 R22|skills/st-build/advisor.md|`codex: the Codex tab runs with ...`: show the line to the user word for word. The tab keeps its old values until the user closes it.
-K1|skills/st-build/advisor.md|First line `mode both: also consult /advisor if one is set`
 TABLE
 
 while IFS='|' read -r id file phrase; do
   check "$id gone" '[ -f "$root/$file" ] && ! grep -qF -- "$phrase" "$root/$file"'
 done <<'TABLE'
-G1|skills/st-build/advisor.md|It runs at two points
-G2|skills/st-build/advisor.md|The mode comes from `.stratum/advisor.json` (`codex`, `both` or `off`).
-G3|skills/st/SKILL.md|Lane: <lane> (<area>: <why>).
-G4|skills/st-init/SKILL.md|advisor mode `codex` (recommended
-G5|skills/st-init/SKILL.md|st-advisor.sh codex-home
 G6|skills/st-build/advisor.md|st-advisor.sh codex-home
-G7|README.md|st-advisor.sh codex-home
-G8|README.md|marks the project untrusted
 TABLE
 
 exit $fail
