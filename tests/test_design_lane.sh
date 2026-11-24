@@ -84,7 +84,7 @@ phrases <<'EOF'
 FR-008 engine.md	skills/st-design/engine.md	Each passes with 0 `FAIL` and 0
 FR-008 engine.md	skills/st-design/engine.md	Render check: findings whose evidence starts with `[<width>px]` or whose `gate` is `render`.
 FR-008 engine.md	skills/st-design/engine.md	Lint: every other finding.
-FR-008 engine.md	skills/st-design/engine.md	Do not run its Step 1 questions, its hero review, its finish review,
+FR-008 engine.md	skills/st-design/engine.md	Do not run its Step 1 questions, its hero review or its finish review.
 FR-008 engine.md	skills/st-design/engine.md	`summary.render` other than `ran` fails the render check.
 FR-016 engine.md	skills/st-design/engine.md	Never ask for, print or set the key.
 FR-016 engine.md	skills/st-design/engine.md	Test only `[ -n "${TOGETHER_API_KEY:-}" ]`.

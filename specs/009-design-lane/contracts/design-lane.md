@@ -145,8 +145,7 @@ vendored skill, its `vendor.lock` entry, its `licenses/` file and `THIRD_PARTY_N
   with `--dir <folder>` when the project has a stylesheet folder. It writes `tokens.css` and
   `base.css`.
 - **Build.** Follow the skill's Flow with the theme named by the brief and `DESIGN.md` as the
-  locked system. Do not run its Step 1 questions, its hero review, its finish review,
-  `scripts/install.mjs` or `scripts/install-hook.mjs`.
+  locked system. Do not run its Step 1 questions, its hero review or its finish review.
 - **Image key.** With `TOGETHER_API_KEY` set, its comp step may run: take the first comp and ask
   nothing. Report "hallmark may have used your TOGETHER_API_KEY to make images; the brief went to
   Together AI." With no key: "No image key set." Test only `[ -n "${TOGETHER_API_KEY:-}" ]`.
