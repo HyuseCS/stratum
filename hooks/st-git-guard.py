@@ -23,7 +23,10 @@ VALUES = {"commit": ("mFCct", ("--message", "--file", "--reuse-message", "--reed
                                "--pathspec-from-file")),
           "checkout": ("bB", ("--orphan", "--conflict", "--pathspec-from-file")),
           "switch": ("cC", ("--orphan", "--conflict")),
-          "push": ("o", ("--push-option", "--repo", "--receive-pack", "--exec", "--recurse-submodules"))}
+          "push": ("o", ("--push-option", "--repo", "--receive-pack", "--exec", "--recurse-submodules")),
+          "am": ("Cp", ("--patch-format", "--resolvemsg", "--directory", "--exclude", "--include", "--whitespace",
+                        "--quoted-cr", "--empty"))}
+NO_VERIFY = {"commit": re.compile(r"-[aeiopqsvz]*n"), "am": re.compile(r"-[3ckimqrsu]*n")}
 TOKEN = re.compile(r"""[ \t]*(?:(\d*(?:<<-|<<<|<>|>\||[<>][<>&]?)|&>>?)|([;&|]+)|([()])"""
                    r"""|((?:[^\s;&|()<>'"\\]|\\.|'[^']*'|"(?:[^"\\]|\\.)*")+))""")
 COMPOUND = {"{", "if", "then", "else", "elif", "do", "while", "until", "for", "case", "select", "function",
@@ -100,7 +103,7 @@ def short_has(args, letter):
 
 def abbrev(word, flag):
     name = word.split("=", 1)[0]
-    return len(name) >= 4 and flag.startswith(name)
+    return len(name) >= 3 and flag.startswith(name)
 
 
 def opts(args, short="", longs=(), stop=False):
@@ -110,13 +113,18 @@ def opts(args, short="", longs=(), stop=False):
         i += 1
         if a.startswith("--"):
             i += "=" not in a and any(abbrev(a, f) for f in longs)
-            yield i, a
+            yield i, a, True
         elif a.startswith("-"):
             k = next((k for k, c in enumerate(a[1:], 1) if c in short), len(a))
             i += k == len(a) - 1
-            yield i, a[:k + 1]
+            yield i, a[:k + 1], True
         elif stop:
             return
+        else:
+            yield i, a, False
+    if not stop:
+        for a in args[i + 1:]:
+            yield i, a, False
 
 
 def config_writes(args):
@@ -251,9 +259,10 @@ def destructive(key, reason):
 
 
 def judge(sub, args, gitdir, elsewhere=False, conf=(), target=None):
-    flags = [o for _, o in opts(args, *VALUES.get(sub, ("", ())))]
+    words = list(opts(args, *VALUES.get(sub, ("", ()))))
+    flags = [o for _, o, flag in words if flag]
     if "--no-verify" in args or "core.hookspath" in conf or any(abbrev(o, "--no-verify") for o in flags) \
-            or sub == "commit" and any(re.match(r"-[aeiopqsvz]*n", o) for o in flags):
+            or sub in NO_VERIFY and any(NO_VERIFY[sub].match(o) for o in flags):
         return "deny", "--no-verify and -c core.hooksPath are blocked: hooks must run."
     if sub == "config":
         return ("deny", "git config writes are blocked: change git config yourself.") \
@@ -278,11 +287,11 @@ def judge(sub, args, gitdir, elsewhere=False, conf=(), target=None):
             + (" sets -c trailer.*, which can add a trailer the guard cannot read" if trailer else "")
         return decision, head + "\n" + staged_summary(gitdir)
     if sub == "push":
-        if "--delete" in args or short_has(args, "d") or any(a.startswith(":") for a in args) \
+        if short_has(args, "d") or any(a.startswith(":") for a in args) \
                 or any(abbrev(o, f) for o in flags for f in ("--delete", "--mirror", "--prune")):
             return "deny", "Deleting a remote branch is blocked: the user deletes remote branches."
-        if any(a in ("--force", "-f") or a.startswith(("--force-with-lease", "+")) for a in args) \
-                or short_has(args, "f") or any(abbrev(o, f) for o in flags
+        if short_has(args, "f") or any(a.startswith("+") for _, a, flag in words if not flag) \
+                or any(abbrev(o, f) for o in flags
                                                for f in ("--force", "--force-with-lease", "--force-if-includes")):
             return destructive("force_push", "force push can overwrite remote history.")
         return "ask", "git push sends commits to the remote."
@@ -292,7 +301,7 @@ def judge(sub, args, gitdir, elsewhere=False, conf=(), target=None):
         return destructive("clean", "git clean -f deletes untracked files.")
     if sub in ("checkout", "restore") and "." in args:
         return destructive("discard", f"git {sub} . discards working tree changes.")
-    if sub in ("checkout", "switch") and any(abbrev(o, "--force") or abbrev(o, "--discard-changes")
+    if sub in ("checkout", "switch") and any(abbrev(o, "--force") or sub == "switch" and abbrev(o, "--discard-changes")
                                              or not o.startswith("--") and "f" in o for o in flags):
         return destructive("discard", f"git {sub} --force discards working tree changes.")
     if sub == "branch" and (short_has(args, "D") or short_has(args, "d") or "--delete" in args):
@@ -397,7 +406,7 @@ def main():
                 i += 1
             elif name in WRAP:
                 end = 0
-                for end, o in opts(seg[i + 1:], *WRAP[name], stop=True):
+                for end, o, _ in opts(seg[i + 1:], *WRAP[name], stop=True):
                     moved = moved or name == "env" and (abbrev(o, "--chdir") or not o.startswith("--") and "C" in o)
                 i += 1 + end
                 i += seg[i:i + 1] == ["--"]

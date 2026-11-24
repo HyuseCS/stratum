@@ -749,7 +749,8 @@ class GitGuardTest(unittest.TestCase):
                     "nohup git push --delete origin x", "time git push --delete origin x",
                     "if true; then git push --delete origin x; fi",
                     "while false; do git push --delete origin x; done",
-                    "{ git push --delete origin x; }", "! git push --delete origin x"):
+                    "{ git push --delete origin x; }", "! git push --delete origin x",
+                    "env --u FOO git push --delete origin x", "nice --a 5 git push --delete origin x"):
             with self.subTest(cmd=cmd):
                 self.assertEqual(self.run_guard(cmd)[0], "deny", cmd)
 
@@ -758,7 +759,8 @@ class GitGuardTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as other:
             subprocess.run(["git", "init", "-q", other], check=True)
             o = shlex.quote(other)
-            for cmd in (f"env -C {o} git commit -m 'fix: x'", f"env --chdir={o} git commit -m 'fix: x'"):
+            for cmd in (f"env -C {o} git commit -m 'fix: x'", f"env --chdir={o} git commit -m 'fix: x'",
+                        f"env --c {o} git commit -m 'fix: x'"):
                 with self.subTest(cmd=cmd):
                     self.assertEqual(self.run_guard(cmd)[0], "ask", cmd)
 
@@ -770,7 +772,8 @@ class GitGuardTest(unittest.TestCase):
     def test_hook_flags_deny_in_auto(self):
         self.set_mode("auto")
         for cmd in ("git -ccore.hooksPath=/dev/null commit -m 'fix: x'", "git commit -n -m 'fix: x'",
-                    "git commit -nm 'fix: x'", "git commit -anm 'fix: x'", "git commit --no-veri -m 'fix: x'"):
+                    "git commit -nm 'fix: x'", "git commit -anm 'fix: x'", "git commit --no-veri -m 'fix: x'",
+                    "git am -n x.patch"):
             with self.subTest(cmd=cmd):
                 self.assertEqual(self.run_guard(cmd)[0], "deny", cmd)
 
@@ -791,7 +794,7 @@ class GitGuardTest(unittest.TestCase):
 
     def test_forced_checkout_and_switch_asks(self):
         cmds = ("git checkout -f main", "git checkout --force main", "git switch --discard-changes main",
-                "git switch --discard main", "git switch -f main")
+                "git switch --discard main", "git switch -f main", "git checkout --f main")
         for cmd in cmds:
             with self.subTest(cmd=cmd):
                 d, reason = self.run_guard(cmd)
@@ -807,7 +810,8 @@ class GitGuardTest(unittest.TestCase):
                 self.assertEqual(self.run_guard(cmd), (None, ""), cmd)
 
     def test_checkout_and_switch_without_force_no_decision(self):
-        cmds = ("git checkout main", "git switch -c fix-f", "git switch -cfeature", "git checkout -bfix")
+        cmds = ("git checkout main", "git switch -c fix-f", "git switch -cfeature", "git checkout -bfix",
+                "git checkout --d HEAD")
         for cmd in cmds:
             with self.subTest(cmd=cmd):
                 self.assertEqual(self.run_guard(cmd), (None, ""), cmd)
@@ -832,12 +836,13 @@ class GitGuardTest(unittest.TestCase):
 
     def test_push_mirror_prune_and_del_prefix_deny(self):
         for cmd in ("git push --mirror origin", "git push --mir origin", "git push --prune origin",
-                    "git push --del origin x"):
+                    "git push --del origin x", "git push --m origin"):
             with self.subTest(cmd=cmd):
                 self.assertEqual(self.run_guard(cmd)[0], "deny", cmd)
 
     def test_push_plain_and_progress_stay_ask(self):
-        for cmd in ("git push origin main", "git push --progress origin main"):
+        for cmd in ("git push origin main", "git push --progress origin main", "git push -o +x origin main",
+                    "git push --repo +x main"):
             with self.subTest(cmd=cmd):
                 self.assertEqual(self.run_guard(cmd), ("ask", "git push sends commits to the remote."), cmd)
 
