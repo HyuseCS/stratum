@@ -53,6 +53,16 @@ mkdir -p "$tmp/nobunx"
 for c in bash python3 cat stty cut dirname ps tr; do ln -s "$(command -v $c)" "$tmp/nobunx/$c"; done
 nob=$(printf '%s' "$input" | PATH="$tmp/nobunx" HOME="$tmp/home" CLAUDE_CONFIG_DIR= COLUMNS=80 "$tmp/nobunx/bash" "$root/statusline/st-statusline.sh" | plain)
 check "no bunx: own segments only" 'grep -q "Stratum" <<<"$nob" && grep -q " ~/proj " <<<"$nob" && grep -q "Ponytail" <<<"$nob" && grep -q "commit: deny" <<<"$nob" && ! grep -q "Opus" <<<"$nob"'
+mkdir -p "$tmp/slow"
+for c in bunx git; do printf '#!/usr/bin/env bash\nsleep 10\n' > "$tmp/slow/$c"; chmod +x "$tmp/slow/$c"; done
+runslow() { printf '%s' "$input" | PATH="$tmp/slow:$PATH" HOME="$tmp/home" CLAUDE_CONFIG_DIR= COLUMNS=200 bash "$root/statusline/st-statusline.sh"; }
+s=$SECONDS; slowout=$(runslow | plain); slowsecs=$((SECONDS-s))
+check "slow bunx and git: own segments still print" 'grep -q "Stratum" <<<"$slowout" && grep -q " ~/proj " <<<"$slowout"'
+check "slow bunx and git: statusline prints within 6 s" '[ "$slowsecs" -lt 6 ]'
+mkdir -p "$tmp/hang"
+printf '#!/usr/bin/env bash\nsleep 30.0173 &\nwait\n' > "$tmp/hang/bunx"; chmod +x "$tmp/hang/bunx"
+printf '%s' "$input" | PATH="$tmp/hang:$PATH" HOME="$tmp/home" CLAUDE_CONFIG_DIR= COLUMNS=200 bash "$root/statusline/st-statusline.sh" >/dev/null
+check "slow bunx: its children are killed on timeout" '! pgrep -f "^sleep 30.0173" >/dev/null'
 
 ctx() { printf '{%s,"context_window":{"total_input_tokens":%s,"context_window_size":1000000,"used_percentage":%s}}' "$ws" "$1" "$2"; }
 wfile="$tmp/home/proj/.stratum/weather.json"
@@ -98,6 +108,9 @@ check "session started in a subfolder: project settings found" '! runi 100 "{\"w
 check "cd into a subfolder: project settings kept" '! runi 100 "{\"workspace\":{\"current_dir\":\"$tmp/home/proj/sub\",\"project_dir\":\"$tmp/home/proj\"}}" | grep -qF "[48;2;"'
 echo '{"shape":"blocks"}' > "$tmp/home/proj/.stratum/powerline.json"
 check "shape blocks: no shaped edges" 'out=$(run 100); ! grep -qP "[\x{e0b0}-\x{e0bc}]" <<<"$out" && grep -qF "[48;2;" <<<"$out"'
+rm "$tmp/home/proj/.stratum/powerline.json"
+echo '{"theme":"nord",}' > "$tmp/home/proj/.stratum/powerline.json"
+check "broken powerline.json: statusline still prints" 'out=$(run 200 | plain); grep -q "Stratum" <<<"$out" && grep -q "commit:" <<<"$out"'
 rm "$tmp/home/proj/.stratum/powerline.json"
 ad="$tmp/home/proj/.stratum/autonomous"
 sid() { printf '{%s,"session_id":"%s"}' "$ws" "$1"; }

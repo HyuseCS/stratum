@@ -374,7 +374,7 @@ with any other label (the main checkout one included) is never closed.
 ```text
 1 cd "$(git rev-parse --show-toplevel)"; old=$(git rev-parse HEAD)
 2 brief to a mktemp file outside the repo (headless text below), removed on exit
-2b git status --porcelain is not empty   -> "Working tree is not clean.", exit 1, no claude call
+2b git status --porcelain, except .stratum/state.json, is not empty   -> "Working tree is not clean.", exit 1, no claude call
 3 timeout -k 10 540 claude -p <HP> --output-format json --max-turns 30 -n N [--model M]
     --tools Read,Edit,Write,Glob,Grep,Bash
     --allowedTools Read Edit Write Glob Grep "Bash(<test>)"
@@ -572,7 +572,7 @@ stub log, never from built ids.
 | H8 | `headless --machine laptop`: exit 2, no herdr, ssh or claude call |
 | H9 | run from a subfolder of the repo: the script `cd`s to the toplevel first, the brief is outside the repo, the `HEAD` compare works (H2's commit is still caught) |
 | H10 | `headless --test 'a *'`: one line `Test command must not contain * for headless.`, no claude call, exit 1 |
-| H12 | the repo has an uncommitted change, a modified tracked file or an untracked file: one line `Working tree is not clean.`, no claude call, exit 1. The test repo ignores `.stratum/models.json` (as st-init does), so M6 keeps a clean tree |
+| H12 | the repo has an uncommitted change, a modified tracked file or an untracked file, except `.stratum/state.json`: one line `Working tree is not clean.`, no claude call, exit 1. The test repo ignores `.stratum/models.json` (as st-init does), so M6 keeps a clean tree |
 | M1 | `start --model opus`: `agent start` argv ends `-n worker-t004 --model opus`; the brief has `- Model: opus` |
 | M2 | `start` with no `--model`, models.json `{"st-worker":{"model":"sonnet"}}`: `--model sonnet` in the `agent start` argv; brief `- Model: sonnet` |
 | M3 | `start` with no `--model` and no models.json: no `--model` in any argv; brief `- Model: default` (S1 stays as it is) |

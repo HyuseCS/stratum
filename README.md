@@ -272,20 +272,22 @@ read the `.c4` text, or run `npx -y likec4@1.60.0 export json docs/harness`.
   Stratum no longer uses `~/.local/state/stratum/codex-home`. You may delete that folder. Close any old `st-codex-<feature>` Codex tab yourself: points no longer use or close it.
   The background call runs with `--ignore-user-config`: neither `~/.codex/config.toml` nor a project `.codex/config.toml` is read, so no MCP server, hook or notify command from them runs during a review, and the model and effort come only from this file. Your Codex login works as before.
 - **Git guard.** One mode per command: `commit`, `worktree_remove`, `worktree_prune`,
-  `branch_delete`, `reset_hard`, `clean` (`clean -f`), `discard` (`checkout .`, `restore .`), and
-  `force_push`. Each is `auto` (runs), `ask`, or `deny` (blocked). The guard reads the repo's
+  `branch_delete`, `reset_hard`, `clean` (`clean -f`), `discard` (`checkout .`, `restore .`,
+  `checkout -f`, `switch --discard-changes`), and `force_push` (a `+` refspec counts too). Each is `auto` (runs), `ask`, or `deny` (blocked). The guard reads the repo's
   `.stratum/git-guard.json` first (`st-init` writes it), then the plugin option of the same name
   from `/config` or `/plugin config`, which is global to the machine. The default is `ask`. A commit that asks or is blocked shows a
   staged-file summary. Push, `rebase`, and `commit --amend` always ask. `git config` writes,
-  `git add -A`, `git add .`, and `--no-verify` are always blocked. Remote branch delete is
-  blocked: you delete remote branches yourself.
+  `git add -A`, `git add .`, `--no-verify` (also short, such as `--no-veri`), and `commit -n`
+  (also in a group, such as `-anm`) are always blocked. Remote branch delete, `push --mirror` and
+  `push --prune` are blocked: you delete remote branches yourself.
   `commit: auto` runs only in this checkout. A commit asks when `cd`, `pushd` or `-C` points at
-  another checkout, or with `--git-dir`, `--work-tree`, or a `GIT_DIR=` or `GIT_WORK_TREE=`
-  prefix. `merge`, `pull`, `cherry-pick`, `revert` and `am` there ask too. `update-ref`,
+  another checkout, or with `--git-dir`, `--work-tree`, `env -C`, or a `GIT_DIR=`, `GIT_WORK_TREE=`
+  or `GIT_CONFIG_*=` prefix. `merge`, `pull`, `cherry-pick`, `revert` and `am` there ask too. `update-ref`,
   `branch -f`, `-M` or `-C`, and a `fetch` or `pull` with a `<src>:<dst>` refspec always ask:
   they move a branch with no commit. `-c core.hooksPath` is blocked like `--no-verify`, and
-  `-c alias.*` asks. A command the guard cannot parse asks. Known gap: an `env`, `export`,
-  `sudo`, `nice`, `nohup` or `timeout` wrapper, or a `GIT_CONFIG_*` override, is not checked.
+  `-c alias.*` asks. A command the guard cannot parse asks. The guard looks through
+  `env`, `nice`, `nohup` and `time`. Known gap: an `export`, `sudo`, `timeout` or `xargs`
+  wrapper, or `env -S`, is not checked.
   A project with the empty, committed file `.stratum/commit-standard` also gets its commit subjects checked: the guard denies a `git commit -m` subject that is not `type(scope): what` (`agents/st-git.md` step 6). `st-init` asks whether to write it (default no). Delete the file to turn the check off.
 - **Worker guard.** `st-worker` writes the worker's guard file with `commit: auto` and its
   branch. Commit and the merge family run without a question only while that branch is checked
@@ -436,6 +438,7 @@ bash tests/test_state.sh
 bash tests/test_st_worker.sh
 bash tests/test_statusline.sh
 bash tests/test_verify.sh
+bash tests/test_prereq.sh
 bash tests/test_lane_steps.sh
 bash tests/test_advisor_waive.sh
 bash tests/test_advisor_rules.sh

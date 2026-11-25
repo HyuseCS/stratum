@@ -159,7 +159,7 @@ export const NODES = [
   { id: 'K', code: 'K', name: 'Codex', short: 'CODEX', group: 'check', gx: 16, gy: 0, w: 2, d: 2, h: 40, kind: 'box',
     one: 'A second model from OpenAI that reviews the work and never changes it.',
     what: 'Codex reads what it is sent and answers with a verdict and findings. It runs in a read-only sandbox, so it cannot build or fix anything.',
-    how: 'The <code>codex</code> CLI, run with its own home <code>~/.local/state/stratum/codex-home</code> that links your Codex login and marks each project untrusted. LikeC4 ids: <code>codex</code>, <code>outside.local-state-stratum-codex-home</code>, <code>outside.codex-auth-json</code>.' },
+    how: 'The <code>codex</code> CLI, run headless with <code>codex exec -s read-only --ignore-user-config --ephemeral</code>, or in a herdr Codex tab. LikeC4 id: <code>codex</code>.' },
 
   { id: 'D', code: 'D', name: '/advisor', short: '/ADVISOR', group: 'check', gx: 8, gy: 0, w: 2, d: 2, h: 40, kind: 'box',
     one: 'The reviewer model you set in Claude Code, asked at the same points as Codex.',

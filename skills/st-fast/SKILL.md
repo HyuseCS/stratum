@@ -13,7 +13,7 @@ to `/stratum:st-full`.
    root, project root, the feature dir, and the change.
    It writes `specs/<feature>/changes/NNN-<name>.md` and stops.
 2. Run `bash <plugin root>/scripts/st-advisor.sh change <feature dir> <change file>` and handle its
-   answer as in "Advisor" in `<plugin root>/skills/st-build/SKILL.md`.
+   answer as in `<plugin root>/skills/st-build/advisor.md`.
    **Gate:** show the user the change plan in short form, with the advisor's verdict. Continue only on their OK.
 3. For each test in the change plan: the `stratum:st-test` agent writes it and shows it fails; the `stratum:st-build` agent makes it
    pass. A test still red after 2 tries goes to the `stratum:st-debug` agent, with the advisor's answer

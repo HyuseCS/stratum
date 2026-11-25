@@ -92,10 +92,6 @@ Two edge cases: the archive has written nothing yet (say so and wait; do not sta
 
 `--fast`, or a prompt that says quick, rough or prototype: "go ahead" at Step 1 with a one-line disclosure, narration capped at three lines, the Finish tier skipped, Reflex gates waivable with a one-line reason. Not relaxed: the Floor, the stamp, `tokens.css`, the log, contrast.
 
-## Edit-time linting
-
-On Claude Code, `node <skill-dir>/scripts/install-hook.mjs` wires sloplint as a PostToolUse hook that reports Floor findings the moment an artifact is written and stays quiet otherwise; Step 7 still runs.
-
 ## Comp before build (signal 9)
 
 Fires only when `TOGETHER_API_KEY` is set. After the Picks block, load `comp.md`: two comps of the first viewport at 1280 x 800, built from the idea or the theme line rather than the prompt, varied on one compositional axis, one approval, then a medium inventory naming how each region gets built. Reproduction is checked against the comp at its own size before anything below the fold exists. The comp never overrides the Floor (an image generator has read no gates; take its composition, not its compliance) and never blocks: two comp rounds is the ceiling, then build unconstrained and say so.
@@ -107,7 +103,6 @@ Hallmark is tuned for Claude Code, Codex CLI and OpenCode. This section tunes ex
 | Lever | Claude Code | Codex CLI | OpenCode |
 | --- | --- | --- | --- |
 | Skill path | `~/.claude/skills/hallmark`, `/hallmark` | `~/.agents/skills/hallmark`, `$hallmark` (implicit invocation on) | `~/.config/opencode/skills` plus the Claude and Codex paths; `/hallmark` |
-| Edit-time hook | PostToolUse via `install-hook.mjs` | none; Step 7 sloplint is the only mechanical sweep | none; same |
 | Subagents | yes | none; the fresh-context review runs in-thread and says so | yes (`@general`); parallel work allowed |
 | Questions | AskUserQuestion | plain chat text, once, then wait | plain chat text, once, then wait |
 | Browser preview | preview pane | none; relay paths | none; relay paths |

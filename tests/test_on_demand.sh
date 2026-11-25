@@ -260,26 +260,26 @@ check "#17 FR-014 build skill" '[ "$(grep -cF -- "/stratum:st-worker" "$root/ski
 
 phrases <<'EOF'
 #18 FR-001 build test point	skills/st-build/SKILL.md	bash <plugin root>/scripts/st-advisor.sh test <feature dir> <task file> <test path> <failure 1 file> <failure 2 file>
-#18 FR-001 build quick	skills/st-build/SKILL.md	The Quick lane has no advisor.
+#18 FR-001 build quick	skills/st-build/advisor.md	The Quick lane has no advisor.
 #18 FR-001 build worktree	skills/st-build/SKILL.md	with the working directory at that worktree's root and `<feature dir>` as the main checkout's absolute path, so the record lands in the main checkout.
 #18 FR-001 plan point	skills/st-plan/SKILL.md	bash <plugin root>/scripts/st-advisor.sh plan <feature dir>
-#18 FR-002 wait build	skills/st-build/SKILL.md	Change no file in that folder and run no `st-git` until the point ends. When it ends, stop the watch and handle the point's output.
-#18 FR-002 wait plan	skills/st-plan/SKILL.md	as "Advisor" in `<plugin root>/skills/st-build/SKILL.md` says: the watch first, then the point in the background.
-#18 FR-005 revise	skills/st-build/SKILL.md	Two rounds at most per point per gate pass, then the user decides.
-#18 FR-006 blocked	skills/st-build/SKILL.md	stop and show the user the reason. Nothing passes the gate.
-#18 FR-006 blocked	skills/st-build/SKILL.md	bash <plugin root>/scripts/st-advisor.sh continued <point> <feature dir>
-#18 FR-007 record	skills/st-build/SKILL.md	Each run appends a record to `<feature dir>/advisor.md`
-#18 FR-008 stale build	skills/st-build/SKILL.md	`advisor approval is stale` or `no record` counts as no approval
+#18 FR-002 wait build	skills/st-build/advisor.md	Change no file in that folder and run no `st-git` until the point ends. When it ends, stop the watch and handle the point's output.
+#18 FR-002 wait plan	skills/st-plan/SKILL.md	as `<plugin root>/skills/st-build/advisor.md` says: the watch first, then the point in the background.
+#18 FR-005 revise	skills/st-build/advisor.md	Two rounds at most per point per gate pass, then the user decides.
+#18 FR-006 blocked	skills/st-build/advisor.md	stop and show the user the reason. Nothing passes the gate.
+#18 FR-006 blocked	skills/st-build/advisor.md	bash <plugin root>/scripts/st-advisor.sh continued <point> <feature dir>
+#18 FR-007 record	skills/st-build/advisor.md	Each run appends a record to `<feature dir>/advisor.md`
+#18 FR-008 stale build	skills/st-build/advisor.md	`advisor approval is stale` or `no record` counts as no approval
 #18 FR-008 stale inspect	skills/st-inspect/SKILL.md	bash <plugin root>/scripts/st-advisor.sh check plan <feature dir>
-#18 FR-010 modes	skills/st-build/SKILL.md	The mode comes from `.stratum/advisor.json`: `auto` (the default when the file has no `mode`), `codex`, `both` or `off`.
-#18 FR-010 modes	skills/st-build/SKILL.md	First line `mode both: also consult /advisor if one is set`
-#18 FR-010 no file	skills/st-build/SKILL.md	A worktree with no file reads the main checkout's file. No file in either gives the `mode not set` line.
+#18 FR-010 modes	skills/st-build/advisor.md	The mode comes from `.stratum/advisor.json`: `auto` (the default when the file has no `mode`), `codex`, `both` or `off`.
+#18 FR-010 modes	skills/st-build/advisor.md	First line `mode both: also consult /advisor if one is set`
+#18 FR-010 no file	skills/st-build/advisor.md	A worktree with no file reads the main checkout's file. No file in either gives the `mode not set` line.
 #18 FR-010 no file	README.md	the point prints `no advisor: mode not set. Write .stratum/advisor.json with "mode": "auto", "codex", "both" or "off".`
 #18 FR-010 no file	README.md	the lane stops to ask you the mode, then writes it to the main checkout.
-#18 FR-010 no file	skills/st-build/SKILL.md	`no advisor: mode not set`: stop. Ask the user the advisor question of `/stratum:st-init` step 11
-#18 FR-011 no codex	skills/st-build/SKILL.md	`no advisor: codex not found` or `no advisor: mode off`: go on as before
-#18 FR-012 review only	skills/st-build/SKILL.md	Never run `codex` to build or fix.
-#18 FR-016 plan rules	skills/st-plan/SKILL.md	Handle its answer as in "Advisor" in `<plugin root>/skills/st-build/SKILL.md`
+#18 FR-010 no file	skills/st-build/advisor.md	`no advisor: mode not set`: stop. Ask the user the advisor question of `/stratum:st-init` step 11
+#18 FR-011 no codex	skills/st-build/advisor.md	`no advisor: codex not found` or `no advisor: mode off`: go on as before
+#18 FR-012 review only	skills/st-build/advisor.md	Never run `codex` to build or fix.
+#18 FR-016 plan rules	skills/st-plan/SKILL.md	Handle its answer as in `<plugin root>/skills/st-build/advisor.md`
 #18 FR-015 init	skills/st-init/SKILL.md	advisor mode `auto` (recommended: the risk level picks Codex, `/advisor` or both at each point; needs `codex` logged in for Codex), `codex` (Codex reviews the plan and a test red after 2 tries), `both` (Codex, then `/advisor` if set), or `off` (no Codex, nothing sent to OpenAI)?
 #18 FR-015 init	skills/st-init/SKILL.md	Write `.stratum/advisor.json` as `{"mode": "<answer>"}`.
 #18 FR-016 readme	README.md	The orchestrator starts `scripts/st-advisor.sh watch`, runs `scripts/st-advisor.sh` in the background, and waits for the answer.
@@ -301,13 +301,13 @@ FR-002 readme	README.md	Stratum no longer uses `~/.local/state/stratum/codex-hom
 #18 D27 plan advice only	skills/st-plan/SKILL.md	It does not validate; st-inspect does.
 #18 L18 commit inspect	skills/st-inspect/SKILL.md	Have `st-git` commit `<feature dir>/advisor.md` if it changed.
 #18 L19 debug worktree	skills/st-build/SKILL.md	Start `st-debug` from the main session too, with the worktree path; it diagnoses, fixes and verifies in that worktree.
-#18 exit 2	skills/st-build/SKILL.md	Exit 2 with a `usage:` line or `cannot hash inputs`: the script could not read or hash its inputs.
-#18 exit 2	skills/st-build/SKILL.md	Nothing was recorded and nothing was sent. Fix the input or the tool and run the point again.
+#18 exit 2	skills/st-build/advisor.md	Exit 2 with a `usage:` line or `cannot hash inputs`: the script could not read or hash its inputs.
+#18 exit 2	skills/st-build/advisor.md	Nothing was recorded and nothing was sent. Fix the input or the tool and run the point again.
 #18 plan-only st-fast diff point	skills/st-fast/SKILL.md	advisor is set, consult it on the diff: hidden regressions? Handle its notes like findings.
 EOF
 check "#18 plan-only st-inspect no plan run" '! grep -qF "st-advisor.sh plan <feature dir>" "$root/skills/st-inspect/SKILL.md" && grep -qF "st-advisor.sh check plan <feature dir>" "$root/skills/st-inspect/SKILL.md"'
 check "#18 st-fast runs only the change point" '[ "$(grep -oE "st-advisor\.sh [a-z]+" "$root/skills/st-fast/SKILL.md" | sort -u)" = "st-advisor.sh change" ]'
-check "#18 plan-only st-build no diff point" '! grep -F "st-advisor.sh diff" "$root/skills/st-build/SKILL.md" | grep -qvF "the changes after the last review only" && ! grep -qF "check diff" "$root/skills/st-build/SKILL.md"'
+check "#18 plan-only st-build no diff point" '! grep -hF "st-advisor.sh diff" "$root/skills/st-build/SKILL.md" "$root/skills/st-build/advisor.md" | grep -qvF "the changes after the last review only" && ! grep -qF "check diff" "$root/skills/st-build/SKILL.md" "$root/skills/st-build/advisor.md"'
 check "#18 FR-001 quick lane" '! grep -qF st-advisor "$root/skills/st-quick/SKILL.md"'
 check "#18 FR-016 st-inspect old advisor text gone" '! grep -qF "If an advisor is set (\`/advisor\`)" "$root/skills/st-inspect/SKILL.md"'
 check "#18 D27 st-plan no validation risk text" '! grep -qF "missed auth invariants" "$root/skills/st-plan/SKILL.md"'
@@ -338,7 +338,7 @@ phrases <<'EOF'
 #79 FR-014 run	skills/st-advisor/SKILL.md	Monitor tool
 #79 FR-014 run	skills/st-advisor/SKILL.md	st-advisor.sh review <base>
 #79 FR-014 run	skills/st-advisor/SKILL.md	run_in_background
-#79 FR-014 run	skills/st-advisor/SKILL.md	Advisor section of `skills/st-build/SKILL.md`
+#79 FR-014 run	skills/st-advisor/SKILL.md	by `<plugin root>/skills/st-build/advisor.md`
 #79 FR-015 check	skills/st-advisor/SKILL.md	Check each finding against the source before you show it
 #79 FR-015 show	skills/st-advisor/SKILL.md	the dropped ones with why
 #79 FR-015 show	skills/st-advisor/SKILL.md	`record:` path

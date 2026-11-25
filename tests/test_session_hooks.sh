@@ -36,6 +36,10 @@ marker=$(grep -m1 -v '^\s*$' "$root/sr-opus-5.md")
 out=$(HOME="$tmp/home" bash "$root/hooks/st-session-start.sh")
 check "handoff printed" 'grep -q "Session handoff" <<<"$out" && grep -q "Next step: write tests." <<<"$out"'
 check "orchestrator label rule" 'grep -qF "Stratum rule: begin every reply with the label [Orchestrator]." <<<"$out"'
+touch "$proj/.stratum/worker"
+wk=$(HOME="$tmp/home" bash "$root/hooks/st-session-start.sh")
+rm "$proj/.stratum/worker"
+check "worker folder: worker label rule" 'grep -qF "Stratum rule: begin every reply with the label [Worker]." <<<"$wk" && ! grep -qF "[Orchestrator]" <<<"$wk"'
 commitline="Commit with git commit -m 'subject' -m 'body': single quotes, no heredoc, no backticks and no \$(. The git guard denies other forms."
 check "session text names the commit form" 'grep -qF -- "$commitline" <<<"$out"'
 noai="The git guard denies other forms. Add no Co-Authored-By line. Full standard: $root/agents/st-git.md step 6."

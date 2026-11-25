@@ -7,9 +7,10 @@ if [ $rc -ne 0 ]; then
   echo "FAIL test exited $rc: $cmd"
   exit 1
 fi
+base=$(git rev-parse -q --verify HEAD || git hash-object -t tree /dev/null)
 hits=$(for f in "$@"; do
   case $f in *.md) continue ;; esac
-  if git ls-files --error-unmatch -- "$f" >/dev/null 2>&1; then git diff -U0 -- "$f"; elif [ -e "$f" ]; then git diff --no-index -U0 /dev/null "$f"; fi
+  if git ls-files --error-unmatch -- "$f" >/dev/null 2>&1; then git diff -U0 "$base" -- "$f"; elif [ -e "$f" ]; then git diff --no-index -U0 /dev/null "$f"; fi
 done | awk '/^\+\+\+ /{f=substr($0,7); next} (/^\+[ \t]*(\/\/|#[ \t]|\/\*|\*[ \t\/]|--[ \t]|<!--)/ || /^\+[ \t]*(#|\*|--)$/) && !/ponytail:/ {print f ": " $0}')
 if [ -n "$hits" ]; then
   printf '%s\n' "$hits"
