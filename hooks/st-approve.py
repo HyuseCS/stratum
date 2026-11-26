@@ -53,10 +53,11 @@ MONITOR = "stratum:st-monitor"
 MONITOR_REASON = ("st-monitor runs only st-worker.sh wait, answer, approve, pass and resend, and HERDR_ENV=0 "
                   "st-advisor.sh round decisions <folder> 1 <file>. It acts only in the monitor folder that its own "
                   "agent id owns, writes only spec.md and views-<n>.md there, and reads no result file.")
+MONITOR_OWNER_REASON = MONITOR_REASON + " Another agent id owns this monitor folder."
 MONITOR_SUBS = {"wait": ("--beat",), "answer": ("--screen", "--record"), "approve": ("--record",),
                 "pass": ("--record",), "resend": ("--record",)}
 MONITOR_ONCE = ("--record", "--beat", "--screen", "--machine", "--request")
-MONITOR_BAD = re.compile(r"[\x00-\x1f\x7f;&|<>`$(){}#]")
+MONITOR_CHARS = re.compile(r"[A-Za-z0-9 _./:=@%+,'\"-]*")
 
 
 def git(args, cwd):
@@ -361,6 +362,7 @@ def lexists(path):
     return True
 
 
+# ponytail: the guard judges monitor paths by rules; on one more hole let the main session record one base folder and compare exact paths (plan.md Shortcuts)
 def monitor_folder(folder, wid):
     ident = re.escape(wid.lower()) if wid else "[a-z0-9][a-z0-9-]{0,24}"
     if not re.fullmatch(f"monitor-{ident}-[A-Za-z0-9]{{16}}", posixpath.basename(folder)):
@@ -381,23 +383,29 @@ def monitor_path(path, name, wid=None):
     return folder
 
 
+# ponytail: the first call owns the folder, a tricked monitor can race it (research.md R11); switch to an owner the main session writes if the takeover fires in real runs
 def monitor_owner(folder, agent_id):
     path = os.path.join(folder, "owner")
+    tmp = f"{path}.{os.getpid()}"
     want = agent_id.encode("utf-8")
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
     try:
-        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+        with os.fdopen(fd, "wb") as f:
+            f.write(want)
+        os.link(tmp, path)
+        return True
     except FileExistsError:
-        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
-        with os.fdopen(fd, "rb") as f:
-            return stat.S_ISREG(os.fstat(f.fileno()).st_mode) and f.read() == want
-    with os.fdopen(fd, "wb") as f:
-        f.write(want)
-    return True
+        pass
+    finally:
+        os.remove(tmp)
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    with os.fdopen(fd, "rb") as f:
+        return stat.S_ISREG(os.fstat(f.fileno()).st_mode) and f.read() == want
 
 
 def monitor_folder_of(ti, cwd):
     command = ti.get("command")
-    if not isinstance(command, str) or MONITOR_BAD.search(command):
+    if not isinstance(command, str) or not MONITOR_CHARS.fullmatch(command):
         return None
     words = shlex.split(command)
     if len(words) == 8 and words[:2] == ["HERDR_ENV=0", "bash"] \
@@ -433,14 +441,14 @@ def monitor_ok(data, cwd):
     if tool == "Read":
         path = ti.get("file_path")
         return isinstance(path, str) and not re.fullmatch(r"result(?:-round[0-9]+)?\.md",
-                                                         posixpath.basename(posixpath.normpath(path)))
+                                                         posixpath.basename(posixpath.normpath(path.strip())), re.I)
     if tool == "Write":
         folder = monitor_path(ti.get("file_path"), r"spec\.md|views-[0-9]+\.md")
     elif tool == "Bash":
         folder = monitor_folder_of(ti, cwd)
     else:
         return False
-    return folder is not None and monitor_owner(folder, agent_id)
+    return folder is not None and (monitor_owner(folder, agent_id) or "owner")
 
 
 def deny(reason):
@@ -473,7 +481,8 @@ def main():
         sys.exit(0 if worker_session(os.getcwd()) else 3)
     if sys.argv[1:2] == ["--never"]:
         text = sys.stdin.buffer.read().decode("utf-8", "replace").replace(LOCK, "")
-        sys.exit(0 if NEVER.search(text) or NEVER.search(strip_quotes(text)) else 4)
+        joined = re.sub(r"[ \t│]*\n[ \t│]*", " ", re.sub(r"\\\n[ \t│]*", "", text))
+        sys.exit(0 if any(NEVER.search(t) or NEVER.search(strip_quotes(t)) for t in (text, joined)) else 4)
     monitor = False
     try:
         data = json.loads(sys.stdin.buffer.read())
@@ -485,8 +494,10 @@ def main():
         if event == "PreToolUse":
             if worker_session(cwd) and lock2(data, cwd):
                 deny(REASON)
-            elif monitor and not monitor_ok(data, cwd):
-                deny(MONITOR_REASON)
+            elif monitor:
+                ok = monitor_ok(data, cwd)
+                if ok is not True:
+                    deny(MONITOR_OWNER_REASON if ok == "owner" else MONITOR_REASON)
         elif event == "PermissionRequest":
             request(data, cwd)
     except Exception:

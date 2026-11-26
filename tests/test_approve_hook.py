@@ -28,12 +28,23 @@ Run = collections.namedtuple("Run", "rc out err reqs leftover")
 MONITOR_REASON = ("st-monitor runs only st-worker.sh wait, answer, approve, pass and resend, and HERDR_ENV=0 "
                   "st-advisor.sh round decisions <folder> 1 <file>. It acts only in the monitor folder that its own "
                   "agent id owns, writes only spec.md and views-<n>.md there, and reads no result file.")
+MONITOR_OWNER_REASON = MONITOR_REASON + " Another agent id owns this monitor folder."
 MONITOR = "stratum:st-monitor"
 ID_A = "a0123456789abcdef"
 ID_B = "afedcba9876543210"
 WORKER_SH = os.path.join(os.path.realpath(PLUGIN), "scripts", "st-worker.sh")
 ADVISOR_SH = os.path.join(os.path.realpath(PLUGIN), "scripts", "st-advisor.sh")
 LOCK_SH = os.path.join(os.path.realpath(PLUGIN), "scripts", "st-lock.sh")
+SLOW_CREATE = ("import os, runpy, sys, time\n"
+               "real = os.open\n"
+               "def slow(path, flags, *args, **kw):\n"
+               "    fd = real(path, flags, *args, **kw)\n"
+               "    if flags & os.O_EXCL:\n"
+               "        time.sleep(0.05)\n"
+               "    return fd\n"
+               "os.open = slow\n"
+               "sys.argv = sys.argv[1:]\n"
+               "runpy.run_path(sys.argv[0], run_name='__main__')\n")
 
 NEVER_BASH = [
     "git push",
@@ -906,13 +917,13 @@ class ApproveHookTest(unittest.TestCase):
             body["agent_id"] = agent_id
         return self.run_hook(json.dumps(body).encode(), cwd)
 
-    def assertMonitorDeny(self, run):
+    def assertMonitorDeny(self, run, reason=MONITOR_REASON):
         self.assertEqual((run.rc, run.err, run.reqs, run.leftover), (0, "", {}, []))
         self.assertTrue(run.out.strip(), "no output")
         self.assertEqual(json.loads(run.out), {"hookSpecificOutput": {
             "hookEventName": "PreToolUse",
             "permissionDecision": "deny",
-            "permissionDecisionReason": MONITOR_REASON,
+            "permissionDecisionReason": reason,
         }})
 
     def sh(self, sub, wid, *args):
@@ -931,10 +942,36 @@ class ApproveHookTest(unittest.TestCase):
             self.sh("resend", wid, "--record", record),
         ]] + [("Write views-1.md", "Write", {"file_path": os.path.join(folder, "views-1.md"), "content": "x"})]
 
-    def deny_rows(self, rows, **kw):
+    def deny_rows(self, rows, reason=MONITOR_REASON, **kw):
         for label, tool, tool_input, *cwd in rows:
             with self.subTest(label):
-                self.assertMonitorDeny(self.monitor(tool, tool_input, cwd=cwd[0] if cwd else None, **kw))
+                self.assertMonitorDeny(self.monitor(tool, tool_input, cwd=cwd[0] if cwd else None, **kw), reason)
+
+    def at_once(self, folder, agent_ids):
+        env = {k: v for k, v in os.environ.items() if k not in ("CLAUDE_PROJECT_DIR", "ST_APPROVE_WAIT")}
+        command = self.sh("wait", "T004", "--beat", folder + "/beat")
+        second, first = [subprocess.Popen(args, cwd=self.plain, env=env, stdin=subprocess.PIPE,
+                                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                          for args in ([sys.executable, HOOK], [sys.executable, "-c", SLOW_CREATE, HOOK])]
+        body = lambda agent_id: json.dumps({"hook_event_name": "PreToolUse", "session_id": "S1", "cwd": self.plain,
+                                            "tool_name": "Bash", "tool_input": {"command": command},
+                                            "agent_type": MONITOR, "agent_id": agent_id}).encode()
+        first.stdin.write(body(agent_ids[0]))
+        first.stdin.close()
+        deadline = time.monotonic() + 20
+        while first.poll() is None and not any(n.startswith("owner") for n in listing(folder)):
+            if time.monotonic() > deadline:
+                first.kill()
+                second.kill()
+                self.fail("the first call made no owner file within 20 s")
+            time.sleep(0.001)
+        second.stdin.write(body(agent_ids[1]))
+        second.stdin.close()
+        runs = []
+        for proc in (first, second):
+            out, err = proc.communicate(timeout=20)
+            runs.append((proc.returncode, out.decode(), err.decode()))
+        return runs
 
     def test_monitor_first_call_makes_owner(self):
         self.monitors(owner_a=None)
@@ -957,6 +994,22 @@ class ApproveHookTest(unittest.TestCase):
         self.assertSilent(self.monitor("Bash", {"command": self.sh("wait", "T004", "--beat", via + "/beat")}))
         self.assertTrue(os.path.isfile(os.path.join(folder, "owner")), "no owner file")
 
+    def test_monitor_same_id_first_calls_at_once_are_both_allowed(self):
+        self.monitors()
+        for i in range(100):
+            folder = self.mon_dir("t004", f"R{i}")
+            runs = self.at_once(folder, [ID_A, ID_A])
+            self.assertEqual(runs, [(0, "", "")] * 2, f"round {i}")
+            self.assertEqual(sorted(n for n in listing(folder) if n.startswith("owner")), ["owner"], f"round {i}")
+
+    def test_monitor_two_ids_at_once_are_never_both_allowed(self):
+        self.monitors()
+        for i in range(100):
+            folder = self.mon_dir("t004", f"R{i}")
+            runs = self.at_once(folder, [ID_A, ID_B])
+            self.assertLessEqual(runs.count((0, "", "")), 1, f"round {i}: {runs}")
+            self.assertEqual(sorted(n for n in listing(folder) if n.startswith("owner")), ["owner"], f"round {i}")
+
     def test_monitor_allows_its_own_calls_with_empty_stdout(self):
         self.monitors()
         for label, tool, tool_input in self.forms(self.A, "T004"):
@@ -972,6 +1025,20 @@ class ApproveHookTest(unittest.TestCase):
         for path in (os.path.join(self.root, "src", "a.py"), os.path.join(self.tmp, "any.txt"), "/etc/hostname"):
             with self.subTest(path=path):
                 self.assertSilent(self.monitor("Read", {"file_path": path}))
+        record, beat = self.A + "/record.tsv", self.A + "/beat"
+        for command in [
+            self.sh("answer", "T004", "--screen", "h1", "--record", record, "--keys", "1"),
+            self.sh("answer", "T004", "--screen", "h1", "--record", record, "--keys", "1", "2"),
+            self.sh("answer", "T004", "--screen", "h1", "--record", record, "--text", '"use main"'),
+            self.sh("answer", "T004", "--machine", "laptop", "--screen", "h1", "--record", record, "--keys", "2"),
+            self.sh("wait", "T004", "--machine", "laptop", "--beat", beat),
+            self.sh("pass", "T004", "--machine", "laptop", "--request", "1-1", "--record", record),
+            self.sh("resend", "T004", "--machine", "laptop", "--record", record),
+        ]:
+            with self.subTest(command):
+                self.assertSilent(self.monitor("Bash", {"command": command}))
+        with self.subTest("B round call"):
+            self.assertSilent(self.monitor("Bash", {"command": self.rnd(self.B)}, agent_id=ID_B))
 
     def test_monitor_allows_a_folder_under_a_symlinked_parent(self):
         self.monitors()
@@ -994,6 +1061,12 @@ class ApproveHookTest(unittest.TestCase):
             ("Read result.md", "Read", {"file_path": os.path.join(self.tmp, "wt", "result.md")}),
             ("Read result-round2.md", "Read", {"file_path": os.path.join(self.tmp, "wt", "result-round2.md")}),
         ])
+
+    def test_monitor_denies_a_result_read_with_end_space_or_any_case(self):
+        self.monitors()
+        wt = os.path.join(self.tmp, "wt")
+        self.deny_rows([("Read " + repr(name), "Read", {"file_path": wt + "/" + name})
+                        for name in ("result.md ", "result.md\n", "Result.md", "RESULT-ROUND2.MD")])
 
     def test_monitor_denies_fr013_control_commands(self):
         self.monitors()
@@ -1052,14 +1125,14 @@ class ApproveHookTest(unittest.TestCase):
             ("Write settings.json", "Write", {"file_path": os.path.expanduser("~/.claude/settings.json"), "content": "x"}),
             ("Write A/x.sh", "Write", {"file_path": self.A + "/x.sh", "content": "x"}),
             ("Write no-beat spec.md", "Write", {"file_path": no_beat + "/spec.md", "content": "x"}),
-            ("Write symlinked folder spec.md", "Write", {"file_path": sym_folder + "/spec.md", "content": "x"}),
+            ("Write symlinked folder views-2.md", "Write", {"file_path": sym_folder + "/views-2.md", "content": "x"}),
             ("Write in-tree spec.md", "Write", {"file_path": in_tree + "/spec.md", "content": "x"}),
             ("Edit A/spec.md", "Edit", {"file_path": self.A + "/spec.md", "old_string": "a", "new_string": "b"}),
             ("MultiEdit A/spec.md", "MultiEdit", {"file_path": self.A + "/spec.md", "edits": []}),
             ("NotebookEdit A/n.ipynb", "NotebookEdit", {"notebook_path": self.A + "/spec.md", "new_source": "x"}),
             ("Grep", "Grep", {"pattern": "x", "path": self.A}),
             ("Glob", "Glob", {"pattern": "*", "path": self.A}),
-            ("Write relative", "Write", {"file_path": name_a + "/spec.md", "content": "x"}, self.tmp),
+            ("Write relative", "Write", {"file_path": name_a + "/views-2.md", "content": "x"}, self.tmp),
             self.bash_row(answer(name_a + "/record.tsv")) + (self.tmp,),
             self.bash_row(self.sh("wait", "T004", "--beat", name_a + "/beat")) + (self.tmp,),
             self.bash_row(answer(os.path.join(self.tmp, "x", "..", name_a, "record.tsv"))),
@@ -1069,6 +1142,13 @@ class ApproveHookTest(unittest.TestCase):
             self.bash_row(answer(os.path.join(self.tmp, ".", name_a, "record.tsv"))),
         ]
         self.deny_rows(rows)
+
+    def test_monitor_denies_a_doubled_slash_in_a_path(self):
+        self.monitors()
+        self.deny_rows([
+            ("Write A//spec.md", "Write", {"file_path": self.A + "//spec.md", "content": "x"}),
+            self.bash_row(self.sh("answer", "T004", "--screen", "h1", "--record", self.A + "//record.tsv")),
+        ])
 
     def test_monitor_denies_fr015_other_advisor_points_and_scripts(self):
         self.monitors()
@@ -1087,19 +1167,61 @@ class ApproveHookTest(unittest.TestCase):
             self.sh("resend", "T004"),
             self.sh("pass", "T004", "--request", "1-1"),
             self.sh("wait", "T004"),
+            self.sh("answer", "T004", "--screen", "h1", "--text", "--record", record),
+            self.sh("answer", "T004", "--text", "--screen", "--record", record),
+            self.sh("wait", "T004", "--machine", "--beat", self.A + "/beat"),
+            self.sh("pass", "T004", "--machine", "--record", record, "--request", "1-1"),
+            self.sh("pass", "T004", "--request", "1-1", "--machine", "--record", record),
+            self.sh("pass", "T004", "--request", "1-1", "x", "--record", record),
+            self.sh("pass", "T004", "--request", "--record", record, "1-1"),
+            self.sh("answer", "T004", "--screen", "h1", "--keys", "1", "--record", record),
+            self.sh("answer", "T004", "--record", record, "--keys", "1", "--screen", "h1"),
+            self.sh("wait", "T004", "--keys", "--beat", self.A + "/beat"),
+            self.sh("pass", "T004", "--request", "1-1", "--beat", self.A + "/beat"),
+            self.sh("approve", "T004", "--request", "1-1", "--input-hash", "a" * 64, "--beat", self.A + "/beat"),
+            self.sh("resend", "T004", "--beat", self.A + "/beat"),
+            self.sh("answer", "T004", "--screen", "h1", "--beat", self.A + "/beat", "--keys", "1"),
         ]])
 
     def test_monitor_denies_shell_operators_and_unparsable_input(self):
         self.monitors()
         base = self.sh("wait", "T004", "--beat", self.A + "/beat")
         self.deny_rows([self.bash_row(base + tail) for tail in (" ; echo x", " | cat", " $(echo x)", "\necho x",
-                                                          " & touch x", " > out", " < in", " `id`", " ( true )")])
+                                                          " & touch x", " > out", " < in", " `id`", " ( true )",
+                                                          " #x", " --machine {a,b}", "\r", " --machine a\x01b",
+                                                          " --machine a\x7fb")])
+        self.deny_rows([self.bash_row(base.replace(" --beat", "\t--beat"))])
+        answer = self.sh("answer", "T004", "--screen", "h1", "--record", self.A + "/record.tsv", "--text")
+        self.deny_rows([self.bash_row(answer + text) for text in (' "see #51"', ' "a (b)"')])
         self.deny_rows([self.bash_row(base + " '")])
         self.deny_rows([("tool_input is a string", "Bash", "x"), ("command is a list", "Bash", {"command": ["a"]})])
 
+    def test_monitor_denies_a_character_outside_the_command_set(self):
+        self.monitors()
+        base = self.sh("wait", "T004", "--beat", self.A + "/beat")
+        self.deny_rows([self.bash_row(base + tail) for tail in (
+            " --machine m*", " --machine m?", " --machine [m]", " --machine ~m", " --machine m!", " --machine é",
+            " --machine a\\b")])
+        self.deny_rows([self.bash_row(self.sh("answer", "T004", "--screen", "h1", "--record", self.A + "/record.tsv",
+                                              "--text", '"x?"'))])
+        write(os.path.join(self.plain, "--beat"))
+        self.deny_rows([self.bash_row(base + " --machine m --b* " + self.tmp + "/x")])
+
     def test_monitor_denies_another_agents_folder(self):
         self.monitors()
-        self.deny_rows(self.forms(self.B, "T005"), agent_id=ID_A)
+        self.deny_rows(self.forms(self.B, "T005"), MONITOR_OWNER_REASON, agent_id=ID_A)
+
+    def test_monitor_other_denies_keep_the_general_reason(self):
+        self.monitors()
+        self.deny_rows([self.bash_row(c) for c in [
+            f"bash {WORKER_SH} list",
+            self.sh("answer", "T004", "--record", self.A + "/record.tsv"),
+            self.sh("answer", "T004", "--screen", "h1", "--record", self.A + "/record.tsv", "--text", '"see #51"'),
+        ]])
+        fresh = self.mon_dir("t004", "F2")
+        self.deny_rows([self.bash_row(self.sh("answer", "T004", "--record", fresh + "/record.tsv"))],
+                       agent_id="a5555555555555555")
+        self.assertFalse(os.path.lexists(os.path.join(fresh, "owner")), "owner was made")
 
     def test_monitor_denies_a_call_with_no_agent_id_or_an_empty_one(self):
         self.monitors(owner_a="")
@@ -1116,7 +1238,11 @@ class ApproveHookTest(unittest.TestCase):
 
     def test_monitor_compares_the_owner_as_exact_bytes(self):
         self.monitors(owner_a=ID_A + "\n")
-        self.deny_rows(self.forms(self.A, "T004"))
+        self.deny_rows(self.forms(self.A, "T004"), MONITOR_OWNER_REASON)
+        write(os.path.join(self.A, "owner"), ID_A)
+        for agent_id in (" " + ID_A, ID_A + " "):
+            with self.subTest(agent_id=agent_id):
+                self.deny_rows(self.forms(self.A, "T004"), MONITOR_OWNER_REASON, agent_id=agent_id)
 
     def test_monitor_denies_worker_id_and_record_mismatch(self):
         self.monitors()
@@ -1125,6 +1251,19 @@ class ApproveHookTest(unittest.TestCase):
             self.sh("wait", "T005", "--beat", self.A + "/beat"),
             self.sh("answer", "T005", "--screen", "h1", "--record", self.A + "/record.tsv"),
         ]])
+        dot = self.mon_dir("t.4", "D2", owner=ID_A)
+        long = self.mon_dir("a" * 26, "L1", owner=ID_A)
+        upper = self.mon_dir("T004", "U1", owner=ID_A)
+        under = self.mon_dir("t_04", "G4", owner=ID_A)
+        self.deny_rows([self.bash_row(c) for c in [
+            self.sh("wait", "t.4", "--beat", dot + "/beat"),
+            self.sh("wait", "a" * 26, "--beat", long + "/beat"),
+            self.sh("wait", "T004", "--beat", upper + "/beat"),
+            self.sh("wait", "t_04", "--beat", under + "/beat"),
+        ]] + [
+            ("Write spec.md in monitor-t.4", "Write", {"file_path": dot + "/spec.md", "content": "x"}),
+            ("Write spec.md in monitor-T004", "Write", {"file_path": upper + "/spec.md", "content": "x"}),
+        ])
 
     def test_monitor_denies_a_revoked_folder_of_any_kind(self):
         self.monitors()
@@ -1150,6 +1289,8 @@ class ApproveHookTest(unittest.TestCase):
             self.sh("answer", "T004", "--screen", "h1", "--screen", "h2", "--record", a + "/record.tsv"),
             self.sh("wait", "T004", "--beat", a + "/beat", "--machine", "m1", "--machine", "m2"),
             self.sh("pass", "T004", "--request", "1-1", "--request", "1-2", "--record", a + "/record.tsv"),
+            self.sh("wait", "T004", "--beat", b + "/beat", "--beat", a + "/beat"),
+            self.sh("answer", "T004", "--screen", "h1", "--record", b + "/record.tsv", "--record", a + "/record.tsv"),
         ]])
 
     def test_monitor_denies_an_agent_id_with_a_control_character(self):
@@ -1173,6 +1314,16 @@ class ApproveHookTest(unittest.TestCase):
         with self.subTest("folder with no beat"):
             self.assertMonitorDeny(self.monitor("Bash", {"command": self.sh("wait", "T004", "--beat", no_beat + "/beat")}))
             self.assertFalse(os.path.lexists(os.path.join(no_beat, "owner")), "owner was made")
+        sym_beat = self.mon_dir("t004", "N4", beat=False)
+        write(os.path.join(self.tmp, "beat-target"))
+        os.symlink(os.path.join(self.tmp, "beat-target"), os.path.join(sym_beat, "beat"))
+        for label, tool, tool_input in [
+            self.bash_row(self.sh("answer", "T004", "--screen", "h1", "--record", sym_beat + "/record.tsv")),
+            ("Write spec.md", "Write", {"file_path": sym_beat + "/spec.md", "content": "x"}),
+        ]:
+            with self.subTest("beat is a symlink: " + label):
+                self.assertMonitorDeny(self.monitor(tool, tool_input))
+                self.assertFalse(os.path.lexists(os.path.join(sym_beat, "owner")), "owner was made")
 
     def test_monitor_fails_closed_when_lock2_raises(self):
         self.monitors()
@@ -1201,7 +1352,7 @@ class ApproveHookTest(unittest.TestCase):
 
     def test_monitor_denies_the_round_call_on_another_agents_folder(self):
         self.monitors()
-        self.assertMonitorDeny(self.monitor("Bash", {"command": self.rnd(self.B)}, agent_id=ID_A))
+        self.assertMonitorDeny(self.monitor("Bash", {"command": self.rnd(self.B)}, agent_id=ID_A), MONITOR_OWNER_REASON)
 
     def test_monitor_denies_other_forms_of_the_round_call(self):
         self.monitors()
@@ -1221,6 +1372,10 @@ class ApproveHookTest(unittest.TestCase):
             self.rnd(a, views=a + "/views-1.md.bak"),
             self.rnd(a, views=a + "/sub/views-1.md"),
             self.rnd(a, extra="extra"),
+            self.rnd(self.B, views=a + "/views-1.md"),
+            self.rnd(self.plain, views=a + "/views-1.md"),
+            self.rnd(self.root, views=a + "/views-1.md"),
+            self.rnd(a + "/", views=a + "/views-1.md"),
             f"bash {ADVISOR_SH} review main",
             f"HERDR_ENV=0 bash {ADVISOR_SH} review main",
         ]])
@@ -1265,12 +1420,18 @@ class ApproveHookTest(unittest.TestCase):
     def test_never_exits_0_on_the_never_list(self):
         clean = "bash tests/test_x.sh"
         for text in ("git push origin x", "cat .env", "curl https://x", "git pu'sh' origin x",
-                     f"bash {LOCK_SH} -- git push origin x"):
+                     f"bash {LOCK_SH} -- git push origin x", "x && git\n  push origin x", "git \\\n  push origin x",
+                     "git -C /home/u/Desktop/a-long-project-name/repo-t004\n  push origin worker-t004",
+                     "git reset \\\n  --hard HEAD~3"):
             with self.subTest(text=text):
                 self.assertEqual((self.never(text), self.never(clean)), (0, 4))
 
     def test_never_exits_4_when_clean(self):
-        for text in ("bash tests/test_x.sh", f"bash {LOCK_SH} -- bash tests/test_x.sh"):
+        for text in ("bash tests/test_x.sh", f"bash {LOCK_SH} -- bash tests/test_x.sh",
+                     "Bash command\n  bash tests/test_x.sh\n  Run the tests\nDo you want to proceed?\n❯ 1. Yes\n  2. No",
+                     "Rule Bash(test -f specs/022-worker-monitors/probe.txt) from user settings overrides auto mode.\n"
+                     "Bash command\n  test -f specs/022-worker-monitors/probe.txt\n  Check the probe file\n"
+                     "Do you want to proceed?\n❯ 1. Yes\n  2. No"):
             with self.subTest(text=text):
                 self.assertEqual(self.never(text), 4)
 
