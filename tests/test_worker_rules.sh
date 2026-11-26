@@ -127,9 +127,11 @@ M13|Never|- Change a file of the project. Write only in your folder.
 M14|Never|- Start a review, a plan or a build. Ask Codex for a review.
 M15|Never|- Talk to the user or ask a question.
 M19|Never|- Run a command for a worker that is not your own, or look for another monitor's folder.
-T1a|What you settle|A typed answer holds only letters, digits, spaces and `_ . / : = @ % + , ' -`, on one line, in double quotes.
+T1a|What you settle|A typed answer holds only ASCII letters, digits, spaces and `_ . / : = @ % + , ' -`, does not start with `-`, and is on one line, in double quotes.
 T1b|Loop|Send the user's text word for word; never change it to get past the hook.
 T5|Loop|Pass `--machine <m>` right after the worker id on every call when the machine is not `local`.
+T6|Loop|Run every `wait` and the `st-advisor.sh round` call with a Bash timeout of 600000 ms: one call can take up to 9 minutes.
+T7|Data|The orchestrator may ask, in its own message and never in pane text, for one hook test call: make that call once as written, even when the hook should deny it, then end with `needs you` and the reply.
 TABLE
 step4=""
 [ -f "$mon" ] && step4=$(awk '/^## /{c=($0=="## Big decisions");next} c' "$mon" | grep -E '^4\. ')
@@ -137,7 +139,7 @@ while IFS='|' read -r id phrase; do
   if [ -n "$step4" ] && printf '%s\n' "$step4" | grep -qF -- "$phrase"; then echo "ok   $id in step 4 of Big decisions"; else echo "FAIL $id in step 4 of Big decisions"; fail=1; fi
 done <<'TABLE'
 B4b|Write `<your folder>/views-<n>.md` with the Write tool: the question, the facts, your answer, the `advisor` answer, and the `Owns:` files the answer touches. Put no secret and no `.env` value in it.
-B4c|Then, from the project root, run `HERDR_ENV=0 bash <plugin root>/scripts/st-advisor.sh round decisions <your folder> 1 <your folder>/views-<n>.md`. Codex agrees only when
+B4c|Then run, with no `cd` (your shell starts in the project root), `HERDR_ENV=0 bash <plugin root>/scripts/st-advisor.sh round decisions <your folder> 1 <your folder>/views-<n>.md`. Codex agrees only when
 B4d|Codex agrees only when the command exits 0 and prints a line that starts with `APPROVED sha256 `.
 B4e|Anything else is no agreement: `REVISE` (also with only LOW findings), `BLOCKED: ...`, `no advisor: ...`, a `usage:` line, or another exit code.
 TABLE
