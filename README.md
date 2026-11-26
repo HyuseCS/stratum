@@ -147,7 +147,7 @@ When a change touches shared config, test setup, a schema or migration, middlewa
 | `st-pr [base]` | Open a draft PR from git facts and the spec; ready when CI passes. |
 | `st-sync` | Maintainers: port upstream changes into Stratum's forks. |
 | `st-grill` | Grilling interview, one question at a time. |
-| `st-ui-ux`, `st-impeccable`, `st-hallmark` | Design build rules, design review, new-look engine. `st-ui-ux` is deprecated: a replacement is planned. |
+| `st-ui-ux`, `st-impeccable`, `st-hallmark` | Design build rules, design review, new-look engine. `st-ui-ux` is deprecated: a replacement is planned ([#120](https://github.com/HyuseCS/stratum/issues/120)). |
 | `st-graphify` | Build or query the code graph. |
 | `st-ponytail`, `st-ponytail-review`, `-audit`, `-debt`, `-gain`, `-help` | Minimal-code mode and its reviews. |
 
@@ -469,5 +469,6 @@ claude plugin validate .claude-plugin/plugin.json
 
 Stratum is MIT licensed. It contains modified copies of GitHub Spec Kit, vibecode-pro-max-kit,
 ponytail, mattpocock/skills, ui-ux-pro-max, impeccable, graphify's skill, Token
-Weather, and the theme colors of claude-powerline, each under its own MIT or Apache-2.0 license.
+Weather, hallmark, the theme colors of claude-powerline, and a page built from the system-atlas
+skill, each under its own MIT or Apache-2.0 license.
 See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and `licenses/`.
