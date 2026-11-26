@@ -49,7 +49,7 @@ The user said yes to D20 to D27 after the Codex review of this file (`.stratum/a
 
 ## Build phase
 
-- D39 (user, Build, 2026-11-26): for the T001 probe the user said "add it yourself. I give you permission to do this 1 time". The main session added the `permissions.ask` rule of D29 to `~/.claude/settings.json` one time. The permission covers that one add only. D29 stays in force for every other settings change, and the removal waits for the user's word.
+- D39 (user, Build, 2026-11-26): for the T001 probe the user said "add it yourself. I give you permission to do this 1 time". The main session added the `permissions.ask` rule of D29 to `~/.claude/settings.json` one time. The permission covers that one add only. D29 stays in force for every other settings change. After the probe the user said "remove it", and the main session removed the rule one time.
 
 ## Queued research
 

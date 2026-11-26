@@ -73,6 +73,7 @@ Agreed with the owner in a grilling session on 2026-10-03. First project: Projec
 | `st-ponytail-debt` | ponytail debt | Sonnet | No | Background `ponytail:` ledger. Read-only. |
 | `st-triage` | issue #15 | Opus | No | Checks a GitHub issue against the code and git history. Read-only. |
 | `st-research` | issue #80 | Opus | Research file only | Answers numbered research questions with cites. Writes one research file. |
+| `st-monitor` | issue #51 | Opus | Record file only | Watches one pane worker and settles its routine events; sends the rest up. |
 
 - **D8. Rules every agent carries.** Read `sr-opus-5.md` first. Navigate graph, then search,
   then read. Agents that write code also carry the `[PONYTAIL]` directive and the no-comments

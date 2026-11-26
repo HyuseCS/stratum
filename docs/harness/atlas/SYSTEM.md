@@ -213,7 +213,7 @@ Stratum is a Claude Code plugin that runs a coding task through a lane. You give
 
 **What it does.** One agent writes a test that fails first. Another writes the code until it passes and never commits. A third finds the root cause when a test stays red after two tries. A reviewer reads the diff. The design agent builds a screen from the design file.
 
-**How it's built.** `agents/st-test.md`, `agents/st-build.md`, `agents/st-debug.md`, `agents/st-review.md`, `agents/st-design.md`. LikeC4 ids: `agents.st-test`, `agents.st-build`, `agents.st-debug`, `agents.st-review`, `agents.st-design`.
+**How it's built.** `agents/st-test.md`, `agents/st-build.md`, `agents/st-debug.md`, `agents/st-review.md`, `agents/st-design.md`, `agents/st-monitor.md`. LikeC4 ids: `agents.st-test`, `agents.st-build`, `agents.st-debug`, `agents.st-review`, `agents.st-design`, `agents.st-monitor`.
 
 **Steps in execution.**
 

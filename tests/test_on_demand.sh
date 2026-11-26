@@ -47,8 +47,9 @@ FR-004 st-git	skills/st-git/SKILL.md	git log -1 --name-only --format=
 FR-004 st-git	skills/st-git/SKILL.md	It must list exactly the files given
 EOF
 
-miss=$(for a in "$root"/agents/*.md; do n=$(basename "$a" .md); [ -f "$root/skills/$n/SKILL.md" ] || printf ' %s' "$n"; done)
+miss=$(for a in "$root"/agents/*.md; do n=$(basename "$a" .md); [ -f "$root/skills/$n/SKILL.md" ] || { [ "$n" = st-monitor ] && grep -qF 'stratum:st-monitor' "$root/skills/st-worker/SKILL.md"; } || printf ' %s' "$n"; done)
 check "every agent has a command:$miss" '[ -z "$miss" ]'
+check "D31 st-monitor entry point" '[ -f "$root/agents/st-monitor.md" ] && grep -qF "stratum:st-monitor" "$root/skills/st-worker/SKILL.md"'
 
 bare=$(grep -lE '`st-[a-z-]+` \(`stratum:' "$root"/skills/*/SKILL.md | sed "s|$root/| |" | tr -d '\n')
 check "lane wording no bare agent name:$bare" '[ -z "$bare" ]'

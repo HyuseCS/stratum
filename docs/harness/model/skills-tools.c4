@@ -159,6 +159,7 @@ model {
   skills.st-worker -[reads]-> feature.tasks-md 'task text and test command'
   skills.st-worker -[runs]-> scripts.st-worker-sh 'start, watch, wait, answer, approve, pass, result, followup, close or headless with worker id'
   skills.st-worker -[starts]-> skills.st-review 'range from the base to the worker branch'
+  skills.st-worker -[starts]-> agents.st-monitor 'one per pane worker'
   skills.st-worker -[passes]-> git 'merge of the worker branch'
   skills.st-worker -[passes]-> github 'merge of the worker PR after the user tested it'
   skills.st-worker -[writes]-> feature.tasks-md 'task tick after the merge'
