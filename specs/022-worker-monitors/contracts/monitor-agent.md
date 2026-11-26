@@ -3,7 +3,7 @@
 The file holds the text below, in two steps:
 
 - T003 (P1) writes the whole text except the `## Big decisions` section. In `## Always up` its spec, scope or approach line reads `- A spec, scope or approach question.`: every such question ends with `needs you`.
-- T014 (US3) adds the `## Big decisions` section and adds `, unless all the steps of Big decisions hold` to that line, as below.
+- T015 (US3) adds the `## Big decisions` section and adds `, unless all the steps of Big decisions hold` to that line, as below.
 
 ````markdown
 ---
@@ -30,7 +30,7 @@ Use the lists of `<plugin root>/skills/st-worker/SKILL.md` step 6: the allow lis
 
 Pass `--machine <m>` on every call when the machine is not `local`. Pass `--record <record file>` on every `answer`, `approve` and `resend`, and `--beat <beat file>` on every `wait`.
 
-1. If the orchestrator passed the user's answer, send it first: `bash <plugin root>/scripts/st-worker.sh answer <id> --screen <hash> --record <record file> --keys <key>` (or `--text <text>`). If `answer` refuses it, end with `needs you` and the new screen.
+1. If the orchestrator passed the user's answer, send it first: `bash <plugin root>/scripts/st-worker.sh answer <id> --screen <hash> --record <record file> --keys <key>` (or `--text <text>`). If `answer` refuses it, end with `needs you` and the new screen. If the orchestrator says the user answers in the worker's pane (a dialog on the never list stays the user's, also after a yes), send nothing and go to 2.
 2. Run `bash <plugin root>/scripts/st-worker.sh wait <id> --beat <beat file>`.
 3. `state working` (exit 3): go to 2. A `stopped: <line>`: go to 2 once; the same line again: end with `gone`.
 4. `state finished`: end with `finished`. `state stopped`: end with `stopped`. `No worker ...`: end with `gone`.
@@ -56,7 +56,7 @@ End with `needs you`, and send no yes, for:
 - A gate of a lane: "Do you agree the spec?", an open decision or the gate of Plan, "OK to build?", the Fast-lane change plan, a Design gate or the design tool stop, the Close gate, the st-pr gate.
 - A question about privacy, access, the data model, contracts, secrets, money or a high cost, an action that cannot be undone, or an action that reaches an audience.
 - A spec, scope or approach question, unless all the steps of Big decisions hold.
-- A question you are not sure is small.
+- A question you are not sure about: whether it is small, or whether it is in one of the kinds above.
 
 ## Big decisions
 

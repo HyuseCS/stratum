@@ -25,8 +25,9 @@ Only the parts below change. Every other command, line and exit code stays as it
 
 ## Never check on a one-time yes (FR-011)
 
-- When `answer` is about to send a one-time yes to a dialog (`y=1` at `scripts/st-worker.sh:541`), it checks the dialog block (the lines the screen hash covers) with `python3 <plugin root>/hooks/st-approve.py --never`, which reads the text on stdin, removes every copy of this plugin's own `scripts/st-lock.sh` path (the strip `bash_ok` makes, `hooks/st-approve.py:153-155`), and exits 0 when what is left matches the hook's `NEVER` pattern (`hooks/st-approve.py:27-38`), on the text or on the text with quotes removed, and 1 when it does not.
-- A match prints `The dialog's action is on the never list. Nothing sent. Tell the user the workspace, the tab and the prompt.`, exits 1 and sends nothing.
+- When `answer` is about to send a one-time yes to a dialog (`y=1` at `scripts/st-worker.sh:541`), it checks the dialog block (the lines the screen hash covers) with `python3 <plugin root>/hooks/st-approve.py --never`, which reads the text on stdin, removes every copy of this plugin's own `scripts/st-lock.sh` path (the strip `bash_ok` makes, `hooks/st-approve.py:153-155`), and exits 0 when what is left matches the hook's `NEVER` pattern (`hooks/st-approve.py:27-38`), on the text or on the text with quotes removed, and 4 when it does not. Exit 4 is the only "clean" code: a crash or the SIGTERM handler (`hooks/st-approve.py:358-360`) exits 1, and `answer` must never read that as clean.
+- Exit 0 prints `The dialog's action is on the never list. Nothing sent. Tell the user the workspace, the tab and the prompt.`, exits 1 and sends nothing.
+- Any exit other than 0 and 4 prints `The never check did not run. Nothing sent. Tell the user the workspace, the tab and the prompt.`, exits 1 and sends nothing. `answer` sends the yes only on exit 4.
 - A "No" option is never checked: it is always allowed when the rest of the rules allow it.
 
 ## `--record <file>` (FR-008)

@@ -14,3 +14,6 @@ summary: Reduce work in the main session when workers start, shorten the P1 buil
 ## plan | 2026-11-26T05:50:46Z | sha256 d8d88b11e2ab5d11b636980694bb15ee4c923b937ddba02dcc5a5424aab3c428 | REVISE
 summary: The revised plan addresses the four earlier findings. One small change would simplify how the orchestrator prepares the merge review.
 - [LOW] specs/022-worker-monitors/tasks.md:85: Keep one decision list per worker and add each newly reported decision once, including decisions from a replacement monitor. Evidence: T013 pins the instruction to keep every decision line from every report. Each report already repeats the monitor’s full decision history, so one decision followed by five more reports yields six copies of the same entry. Keeping it once gives the user one item to review at merge.
+
+## plan | 2026-11-26T06:29:30Z | sha256 0069dfb942a0d206f03c3ee93da1da13bea5f42d4d363a304cf5a8146cf8276c | APPROVED
+summary: The revised plan keeps one decision list per worker and adds each decision once, including decisions from a replacement monitor. This resolves the remaining planning finding.

@@ -31,7 +31,7 @@ each answer is in a record, and that the main session ran no `wait` or `watch` f
 
 1. **Given** a pane worker that the orchestrator just started, **When** the start is done, **Then** one monitor runs for that worker, and the orchestrator runs no `wait` and no `watch` for it.
 2. **Given** a worker that shows, in full, a permission dialog for an action on the allow list, **When** its monitor sees it, **Then** the monitor sends the one-time yes for that screen and records it.
-3. **Given** autonomous build mode and a worker's approval request that is small and safe, **When** its monitor sees it, **Then** the monitor approves it one time, and the approval is in the approvals file.
+3. **Given** autonomous build mode and a worker's approval request that is small and safe, **When** its monitor sees it, **Then** the monitor approves it one time, and the approval is in the monitor's record file.
 4. **Given** a worker whose start prompt is still in the input box, **When** its monitor sees it, **Then** the monitor sends it again one time.
 5. **Given** a worker that asks a small work question that the brief or the plan settles, **When** its monitor sees it, **Then** the monitor answers that screen and records the question and the answer.
 6. **Given** two workers that need an answer at the same time, **When** their monitors see it, **Then** each monitor acts for its own worker and neither waits for the other.
@@ -135,7 +135,7 @@ action, and that the answers of the dead monitor are still in its record.
 - A worker that is `stopped` or `gone`: the monitor ends with that state, and the pane stays open for the user.
 - Autonomous build mode goes off while monitors run: a monitor approves nothing through the approve channel and settles no big decision from that time.
 - The Codex tab of a worker waits on a prompt: this is not the monitor's job. The session that started the Codex point handles it, as today.
-- The session ends while workers run: its monitors end with it. A new session finds the workers and starts a monitor for each one.
+- The session ends while workers run: the main orchestrator first shows each monitor's record file so far, then its monitors end with it. A new session finds the workers and starts a monitor for each one, with new record files.
 - An advisor call fails in the middle of a run: the question goes up.
 - A commit request whose staged files are not all owned by the task: it goes up, as today.
 
@@ -156,7 +156,7 @@ action, and that the answers of the dead monitor are still in its record.
 - **FR-006**: A monitor MUST settle alone only these four kinds of events, with the allow list, the never list and the commit rule that the orchestrator uses today: a permission dialog on the allow list, a small and safe approval request in autonomous build mode, a start prompt that was not sent, and a small work question that the brief or the plan settles.
 - **FR-007**: Every answer a monitor sends MUST be tied to the screen it answers. When the screen shows something different, nothing MUST be sent. This holds for an answer to a work question as it holds for a permission answer today.
 - **FR-008**: A monitor MUST record each answer and each approval in a file: the worker, the question or request, and the answer. The record MUST still be there when the monitor dies.
-- **FR-009**: The main orchestrator MUST show the records of all monitors at the end of the run, as it shows its own answers and the approvals file today.
+- **FR-009**: The main orchestrator MUST show the records of all monitors at the end of the run, and before a handoff when workers still run, as it shows its own answers and the approvals file today.
 
 **What a monitor never does**
 
@@ -209,12 +209,12 @@ action, and that the answers of the dead monitor are still in its record.
 
 - **SC-001**: In a live run with two or more pane workers, the main session answers zero worker dialogs and runs zero `wait` or `watch` calls for a worker that has a monitor.
 - **SC-002**: Two workers that show a safe dialog at the same time both get their answers with no action from the main session or the user, and neither waits for the other.
-- **SC-003**: For each kind of action a monitor must never do (FR-010 to FR-016), a monitor sends no yes and ends with `needs you`. The check for each kind goes red when its guard is removed.
+- **SC-003**: For each kind of action a monitor must never do (FR-010 to FR-016), a monitor sends no yes and ends with `needs you`. The check for each kind goes red when its guard is removed, except the gate part of FR-012: a gate question has no script guard, only the agent rule (D32), and it is checked by that rule and the live check of quickstart section 3 step 2. The push part of FR-012 keeps its script guard.
 - **SC-004**: An answer made for one question never reaches a newer question. The check goes red when the tie to the screen is removed.
 - **SC-005**: A monitor that ends with no end state, and a monitor that goes silent, are each detected, and the worker has a watcher again with no user action.
 - **SC-006**: When a monitor cannot start, the worker is still watched, and the user sees one line that says so.
 - **SC-007**: A spec, scope or approach question is settled by a monitor only when both advisors agreed first. With one of them missing, it goes up in 100% of runs.
-- **SC-008**: Every answer of every monitor in a run is in the records that the main orchestrator shows at the end.
+- **SC-008**: Every answer of every monitor in a session is in the records that the main orchestrator shows before that session ends.
 
 ## Assumptions
 

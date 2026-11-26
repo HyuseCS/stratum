@@ -12,7 +12,7 @@ One `stratum:st-monitor` background subagent of the main session.
 | machine | `local` or a saved machine label | Passed as `--machine <m>` on every `st-worker.sh` call when not `local` (FR-005). |
 | model | `opus` by default | From the `model:` line, or `.stratum/models.json` key `st-monitor` (FR-024). Weaker: `sonnet`, `haiku`. Not weaker: `opus`, `fable`. |
 | agent id | the id the Agent tool returns | The main session keeps it, to continue the monitor with SendMessage or stop it with `TaskStop`. |
-| folder | `<scratchpad>/monitor-<id>/` | Main session scratchpad, outside every git work tree (FR-014). |
+| folder | `<scratchpad>/monitor-<id>/` | Main session scratchpad, outside every git work tree (FR-014). It holds the beat file before the monitor's first start, so the monitor guard accepts it as a monitor folder. |
 
 States, from the main session's view:
 

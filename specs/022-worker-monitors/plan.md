@@ -116,14 +116,15 @@ research.md R9: every pin of the agent list and count, the README and DESIGN tab
 
 ## Security notes
 
-- **Access rules.** The monitor approves through the approve channel of the main session (`scripts/st-worker.sh:757`): the session id lock and the `.stratum/autonomous/<session id>` check do not change (FR-032). The monitor guard in `hooks/st-approve.py` is a new rule for one agent type. It cannot widen what any agent may do: it only denies. It fails closed for `stratum:st-monitor`, but it fails open when the hook input does not carry that `agent_type` (known from the docs only), so quickstart section 3 step 3 must pass live before the release. It is a text guard on the same OS user, like `lock2` (`hooks/st-approve.py:104`): a guard against mistakes and simple prompt injection, not a wall.
-- **Prompt injection.** Pane text, request text, result text and advisor answers are data (FR-017). The guard limits what an injected instruction can make a monitor run to the five worker commands and the Codex call. The never check in `answer` refuses a yes to a never-list dialog whatever the monitor decides.
+- **Access rules.** The monitor approves through the approve channel of the main session (`scripts/st-worker.sh:757`): the session id lock and the `.stratum/autonomous/<session id>` check do not change (FR-032). The monitor guard in `hooks/st-approve.py` is a new rule for one agent type. It cannot widen what any agent may do: it runs after `lock2`, only denies, and prints nothing for a call it allows, so the user's permission rules still judge that call. It fails closed for `stratum:st-monitor`, but it fails open when the hook input does not carry that `agent_type` (known from the docs only), so quickstart section 3 step 3 must pass live before the release. It is a text guard on the same OS user, like `lock2` (`hooks/st-approve.py:104`): a guard against mistakes and simple prompt injection, not a wall.
+- **Prompt injection.** Pane text, request text, result text and advisor answers are data (FR-017). The guard limits what an injected instruction can make a monitor run to the five worker commands and the Codex call, and every path it can write (`--record`, `--beat`, Write) to `record.tsv`, `beat`, `spec.md` and `views-<n>.md` in the monitor folder that the main session prepared (contracts/monitor-guard.md). The never check in `answer` refuses a yes to a never-list dialog whatever the monitor decides.
 - **External service.** Codex gets the decision text of a big decision only, through `scripts/st-advisor.sh` in the read-only sandbox (headless). The prompt head tells it never to open secrets (`scripts/st-advisor.sh:217-221`). The monitor must not paste secrets or `.env` values into the decision text.
 - **Personal data and secrets.** The record file holds up to 600 characters of each answered screen. A dialog can show a command with a secret in it. The file stays in the main session's scratchpad on this machine, under the user's own account, and is shown only to the user at the end of the run. No record goes to a remote machine or to Codex.
 - **Data model and contracts.** The record line format and the report format are new contracts inside the harness. No project data model changes.
 
 ## Shortcuts
 
+- Path rules in the monitor guard (contracts/monitor-guard.md, "Monitor folder"): the guard judges paths that the monitor passes, by rules. Limit: this rule got three findings in a row in Inspect (too wide, too strict for macOS, path form). Upgrade trigger: one more hole in the path rule, in review or in a live run. Upgrade: the monitor passes no path; the main session records one monitor base folder, and the script and the hook compute the exact allowed files from it and compare for an exact match.
 - Placeholder `spec.md` in the monitor folder (research.md R8, contracts/monitor-agent.md Big decisions step 4). `scripts/st-advisor.sh` needs a readable `spec.md` in every folder it is given (`:73-76`), and no point is written for a decision that is not made yet, so the monitor uses `round decisions` and writes its task file's text as `spec.md` in its own folder just before its first Codex call. Limit: the `round` prompt speaks of "a talk with another advisor" about views, not of one decision a monitor is about to make, and `spec.md` is not a spec. Upgrade trigger: a new point of its own in `scripts/st-advisor.sh`, if the round wording gives wrong verdicts in real runs (a Codex verdict that does not answer the decision asked).
 
 ## Decisions
@@ -134,6 +135,9 @@ Codes from decisions.md:
 - D30: `round decisions` headless, only `APPROVED` is a yes, placeholder `spec.md`, no new point and no usage line change.
 - D31: one exception in `tests/test_on_demand.sh:50` for `st-monitor`, no `skills/st-monitor/SKILL.md` (research.md R9).
 - D32: the guard for SC-003 is the monitor rule in `hooks/st-approve.py` plus the never check in `answer` (research.md R5). The never check also changes the main session's own `answer`.
+- D33: the record files of monitors cover one session; they are shown before the handoff when workers still run, and a new session starts new ones and says in one line that the earlier records are not shown again.
+- D34: SC-003 leaves out the gate part of FR-012 and names its check: the agent rule and quickstart section 3 step 2; the outward effect of a wrong PR gate answer is still stopped by the push dialog and the never check.
+- D35: the three safety fixes of the first Inspect run: the monitor rule runs after `lock2` and only adds denies, the never check fails closed, and a monitor writes only `record.tsv`, `beat`, `spec.md` and `views-<n>.md` in a prepared `monitor-<id>` folder.
 
 ## Safety checklist items this plan settles
 
@@ -164,3 +168,24 @@ Not settled here: CHK001, CHK004, CHK005, CHK008, CHK018, CHK019, CHK022, CHK027
 ## Complexity Tracking
 
 No constitution, no violations.
+
+## Validate
+
+Date: 2026-11-26 (run 3). Verdict: CONDITIONAL
+
+| Check | Verdict | Findings |
+|-------|---------|----------|
+| 1. Setup and dependencies | PASS | F10 |
+| 2. Test coverage per requirement | PASS | none |
+| 3. Breaking changes | PASS | none |
+| 4. Security and privacy | CONCERN | F24, F29 |
+
+Run 1 findings: F1, F2, F3, F5 to F9, F11 to F16, F18, F20, F21 and F22 are closed. F4 is closed by D34 (O1), which the user must still OK at the build gate. F17 is open (low, accepted), F19 is closed by the "not sure" rule of contracts/monitor-agent.md:59, and F10 has not changed.
+
+Run 2 findings: F23 is closed (contracts/monitor-guard.md:20, with the T006 allow row for a symlinked parent and its negative control). F25 is closed (contracts/monitor-guard.md:11, with the T006 fail-closed row, which also expects no output for `stratum:st-build`, and its negative control). F26 is closed (quickstart.md:59), F27 is closed (quickstart.md:57), and F28 is closed (plan.md:136-138). F24 is open and waits for the user.
+
+F10. tasks.md:40 (low) Every tool is present: bash 5.3.20, Python 3.14.10, jq 1.8.2, Claude Code 2.1.331, herdr 0.9.5, codex-cli 0.172.0, node 24.14.1, and `~/.claude/skills/system-atlas/assets/` for the atlas build line. `npx -y likec4@1.60.0` was not run, because it needs the network. -> none.
+
+F24. contracts/monitor-guard.md:28, :31 (medium, FR-003, FR-017, needs user decision) The rule ties the folder to the worker id named in the same command, not to the monitor that runs it. A monitor that follows an injected instruction can run `wait`, `answer`, `approve` and `resend` for another worker, through that worker's monitor folder, which exists and holds a `beat` file. The never check still applies. -> user: O1, accept this as a known limit and write it down. O2, after the first report, the main session writes the monitor's `agent_id` into its `beat` file, and the hook allows a call only when the hook input's `agent_id` matches. I would take O1 for this feature.
+
+F29. contracts/monitor-guard.md:15-20, tasks.md:53 (low, FR-014) With a symlink now allowed in a parent folder, the contract does not say which form of the path the checks use. Suppose the folder name and the `beat` check use a lexically normalized path, and `/a/x` is a symlink: then `/a/x/../monitor-t004/record.tsv` is checked as `/a/monitor-t004`, but the OS writes to the `monitor-t004` folder next to the target of `/a/x`. That folder can be a symlink itself, and then the write goes to a folder with another name. The file names are still fixed and the real path is still checked against git work trees, so the risk is small, and it needs a symlink that someone else planted. Also, the T006 negative controls name no control for the "folder or file is a symlink itself" deny rows. -> st-plan: deny a path that is not absolute or that has a `.` or `..` part, run the name, `beat` and `islink` checks on the path as given, and add the negative control "drop the `islink` check and the symlinked folder and file rows go red".
