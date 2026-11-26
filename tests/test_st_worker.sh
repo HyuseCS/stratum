@@ -20,6 +20,10 @@ if [ $# -eq 0 ]; then echo BARE >> "$T/calls"; exit 99; fi
 M=; if [ "$1" = --machine ]; then M=$2; shift 2; fi
 if [ "$1 $2" = "agent prompt" ] && [ -e "$T/pane.prompt" ]; then mv "$T/pane.prompt" "$T/pane.txt"; fi
 printf '%s\n' "$1 $2" >> "$T/order"
+if [ -n "${STUB_BEAT:-}" ]; then
+  printf '%s %s\n' "$1 $2" "$(stat -c %Y "$STUB_BEAT" 2>/dev/null || echo missing)" >> "$T/beatlog"
+  [ ! -e "$STUB_BEAT" ] || touch -d @1000000000 "$STUB_BEAT"
+fi
 p=; for a in "$@"; do [ "$p" != --cwd ] || [[ $a != \~* ]] || [ "$1 $2" = "worktree list" ] || { printf '{"error":{"code":"stub_tilde","message":"stub --cwd %s"}}\n' "$a" >&2; exit 1; }; p=$a; done
 if [ "$1 $2" = "agent start" ] && [ -n "${STUB_BUSY:-}" ]; then
   b=$(cat "$T/n_busy" 2>/dev/null || echo 0); b=$((b+1)); echo $b > "$T/n_busy"
@@ -311,6 +315,7 @@ rule=$(printf '─%.0s' {1..40})
 unsentpane() { printf '%s\n' '' "$rule" "❯$nb$P" "$rule" '  [PONYTAIL]' '  ⏵⏵ auto mode on (shift+tab to cycle)'; }
 sentpane() { printf '%s\n' "❯$nb$P" '● Working on it.' "$rule" "❯$nb" "$rule" '  ⏵⏵ auto mode on (shift+tab to cycle)'; }
 dialogpane() { printf '%s\n' ' ☐ Worker folder' '│ Which folder holds the brief.md?' '❯ 1. Newest brief.md folder (Recommended)' '     I pick the newest one.' '  2. I will type the path' '  3. Type something.' "$rule" '  4. Chat about this' 'Enter to select · ↑/↓ to navigate · Esc to cancel'; }
+qhash() { awk '{ print } /Enter to select/ { exit }' "$1" | tail -n 15 | sha256sum | cut -c1-12; }
 paneshown() { grep -qxF 'pane text:' <<<"$out" && grep -qxF "STUB PANE $(rnd)" <<<"$out"; }
 
 prej() {
@@ -1788,9 +1793,9 @@ done
 mk; states blocked; printf '%s\n' "$rule" 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)' > "$tmp/pane.txt"
 run bash "$script" wait T004; h=$(shash)
 check "AN9 permission dialog: wait prints one screen line with a 12 hex hash, after the state line and before pane text:" '[ $rc = 4 ] && [ "$(grep -c "^screen" <<<"$out")" = 1 ] && hasline "screen\t%s" "$h" && [[ "$h" =~ ^[0-9a-f]{12}$ ]] && [ "$(grep -oP "^(state(?=\t)|screen(?=\t)|pane text:$)" <<<"$out")" = "$(printf "state\nscreen\npane text:")" ]'
-mk; states blocked; printf '%s\n' 'Should the helper be named normalizeInput?' '❯ 1. Yes' '  2. No' > "$tmp/pane.txt"
+mk; states blocked; printf '%s\n' 'Should the helper be named normalizeInput?' '❯ 1. Yes' '  2. No' 'Enter to select · ↑/↓ to navigate · Esc to cancel' > "$tmp/pane.txt"
 run bash "$script" wait T004
-check "AN9 question pane: wait prints the state line and no screen line" '[ $rc = 4 ] && hasline "state\tblocked\tworker-t004\t%s" "$(pane)" && ! grep -q "^screen" <<<"$out"'
+check "AN9 question pane: wait prints the state line and one screen line with the question block hash" '[ $rc = 4 ] && hasline "state\tblocked\tworker-t004\t%s" "$(pane)" && [ "$(grep -c "^screen" <<<"$out")" = 1 ] && [ "$(shash)" = "$(qhash "$tmp/pane.txt")" ]'
 mk; states blocked; { seq -f 'line %g' 25; printf '%s\n' "$rule" 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)'; } > "$tmp/pane.txt"
 run bash "$script" wait T004; txt=$(sed -n '/^pane text:$/,$p' <<<"$out" | tail -n +2)
 bb=$(printf '%s\n' "$rule" 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)' | sha256sum | cut -c1-12)
@@ -2045,7 +2050,7 @@ STUB_FAIL="agent wait" STUB_FAIL_CODE=timeout run bash "$script" wait T004
 check "WD2 wait, quoted dialog under an input box: exit 3, state working, no screen line, 54 agent wait calls" '[ $rc = 3 ] && hasline "state\tworking\tworker-t004\t%s" "$(pane)" && ! grep -q "^screen" <<<"$out" && [ "$(cnt "^agent\twait\t")" = 54 ]'
 mk; states working; dialogpane > "$tmp/pane.txt"
 STUB_FAIL="agent wait" STUB_FAIL_CODE=timeout run bash "$script" wait T004
-check "WD3 wait, open question while working: exit 4, state blocked, no screen line" '[ $rc = 4 ] && hasline "state\tblocked\tworker-t004\t%s" "$(pane)" && ! grep -q "^screen" <<<"$out"'
+check "WD3 wait, open question while working: exit 4, state blocked, one screen line with the question block hash" '[ $rc = 4 ] && hasline "state\tblocked\tworker-t004\t%s" "$(pane)" && [ "$(grep -c "^screen" <<<"$out")" = 1 ] && [ "$(shash)" = "$(qhash "$tmp/pane.txt")" ]'
 mk; states working; { dialogpane; printf '%s\n' "${inbox[@]}"; } > "$tmp/pane.txt"
 STUB_FAIL="agent wait" STUB_FAIL_CODE=timeout run bash "$script" wait T004
 check "WD3b wait, open question under an input box: exit 3, state working, 54 agent wait calls" '[ $rc = 3 ] && hasline "state\tworking\tworker-t004\t%s" "$(pane)" && [ "$(cnt "^agent\twait\t")" = 54 ]'
@@ -2464,6 +2469,195 @@ run issue='a b' bash "$script" list
 check "EV2 exported issue with a space: list exits 0" '[ $rc = 0 ] && grep -qP "^found\tworker-t004\t" <<<"$out"'
 fresh; run issue=94 proj=other envn=prod bash "$script" start "${sargs[@]}"
 check "EV3 exported issue=94, proj, envn: start without the flags uses branch repo-t004" '[ $rc = 0 ] && nmadd repo-t004 "$tmp/repo-t004"'
+
+qrec="$tmp/qrec"
+bt="$tmp/beatdir/beat"
+mkdir -p "$tmp/beatdir"
+qlong() { seq -f 'prior %g' 20; dialogpane; printf '%s\n' '  ⏵⏵ auto mode on (shift+tab to cycle)'; }
+qjoin() { awk '{ a[NR] = $0 } END { for (i = 1; i <= NR; i++) printf "%s%s", (i > 1 ? " | " : ""), a[i] }'; }
+blk() { awk '{ print } /Enter to select/ { exit }' "$1" | tail -n 15 | qjoin; }
+lst() { tail -n 15 "$1" | qjoin; }
+qrow() { awk -F'\t' -v w="$1" -v q="$2" -v a="$3" 'NF == 6 && $1 ~ /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$/ && $2 == "worker-t004" && $3 == "tab worker-t004" && $4 == w && $5 == q && $6 == a { f = 1 } END { exit !f }' "$qrec" && [ "$(grep -c . "$qrec")" = 1 ] && [ $(( $(date +%s) - $(date -d "$(cut -f1 "$qrec")" +%s) )) -ge -2 ] && [ $(( $(date +%s) - $(date -d "$(cut -f1 "$qrec")" +%s) )) -le 300 ]; }
+qhashl() { head -n "$(grep -n 'Enter to select' "$1" | tail -n 1 | cut -d: -f1)" "$1" | tail -n 15 | sha256sum | cut -c1-12; }
+bfirst() { awk -v t="$t0" 'NR == 1 { r = (($3 + 0) >= t) } END { exit !r }' "$tmp/beatlog"; }
+bslice() { awk -v t="$t0" '$1 == "agent" && $2 == "wait" { n++ } n > 0 && ($3 + 0) >= t { s[n] = 1 } END { for (i = 1; i <= 54; i++) if (!s[i]) bad = 1; exit !(n == 54 && !bad) }' "$tmp/beatlog"; }
+nosend() { [ "$(cnt "^(agent\tsend-keys|pane\tsend-(text|keys))\t")" = 0 ]; }
+anotherprompt='The pane shows another prompt. Nothing sent. Tell the user the workspace, the tab and the prompt.'
+
+mk; states done; dialogpane > "$tmp/pane.txt"; qh=$(qhash "$tmp/pane.txt")
+run bash "$script" wait T004
+check "QS1 wait, open question: exit 4, one screen line, 12 hex hash of the block that ends at Enter to select, after the state line and before pane text:" '[ $rc = 4 ] && [ "$(grep -c "^screen" <<<"$out")" = 1 ] && [[ "$(shash)" =~ ^[0-9a-f]{12}$ ]] && [ "$(shash)" = "$qh" ] && [ "$(grep -oP "^(state(?=\t)|screen(?=\t)|pane text:$)" <<<"$out")" = "$(printf "state\nscreen\npane text:")" ]'
+mk; rm -f "$wr.seen"; states done; dialogpane > "$tmp/pane.txt"
+wrun
+check "QS2 watch, open question: exit 4, one screen line with the block hash" '[ $rc = 4 ] && [ "$(grep -c "^screen" <<<"$out")" = 1 ] && [ "$(shash)" = "$qh" ]'
+mk; states done; qlong > "$tmp/pane.txt"; qh=$(qhash "$tmp/pane.txt")
+run bash "$script" wait T004; h1=$(shash)
+states done; qlong | sed 's/auto mode on/auto mode off/' > "$tmp/pane.txt"
+run bash "$script" wait T004; h2=$(shash)
+states done; qlong | sed 's/I pick the newest one/I pick the oldest one/' > "$tmp/pane.txt"
+run bash "$script" wait T004; h3=$(shash)
+states done; qlong | sed 's/^prior 1$/prior one/' > "$tmp/pane.txt"
+run bash "$script" wait T004; h4=$(shash)
+check "QS3 a status line below the block changes nothing: the same hash, the 15-line block of the pane" '[ "$h1" = "$qh" ] && [ "$h2" = "$h1" ]'
+check "QS3 a line inside the block changes the hash, a line above the 15 lines does not" '[ -n "$h3" ] && [ "$h3" != "$h1" ] && [ "$h4" = "$h1" ]'
+
+mk; states done; dialogpane > "$tmp/pane.txt"; qh=$(qhash "$tmp/pane.txt"); states done working
+run bash "$script" answer T004 --screen "$qh" --text "use main"
+check "QA1 answer --screen <hash> --text: exit 0, Type something key, text and Enter sent" '[ $rc = 0 ] && [ "$(sendlog)" = "$(printf "agent\tget\tworker-t004\nagent\tsend-keys\tworker-t004\t3\npane\tsend-text\t%s\tuse main\npane\tsend-keys\t%s\tenter\nagent\twait\tworker-t004\t--until\tworking\t--timeout\t5000\nagent\tget\tworker-t004" "$(pane)" "$(pane)")" ]'
+mk; states done working; dialogpane > "$tmp/pane.txt"
+run bash "$script" answer T004 --screen "$qh" --keys 2
+check "QA2 answer --screen <hash> --keys 2: exit 0, key 2 sent" '[ $rc = 0 ] && hascall "agent\tsend-keys\tworker-t004\t2"'
+mk; states done working; dialogpane > "$tmp/pane.txt"; rm -f "$qrec"
+dialogpane | sed 's/folder/dir/' > "$tmp/swap.after"; echo 1 > "$tmp/swap.at"
+run bash "$script" answer T004 --screen "$qh" --record "$qrec" --text "use main"
+check "QR1 the pane shows another question when answer reads it: exit 1, the other-prompt line, no key and no text sent, no record line" '[ $rc = 1 ] && [ "$out" = "$anotherprompt" ] && nosend && [ ! -s "$qrec" ]'
+mk; states done working; dialogpane | sed 's/folder/dir/' > "$tmp/pane.txt"; rm -f "$qrec"
+run bash "$script" answer T004 --screen "$qh" --record "$qrec" --keys 2
+check "QR2 a late answer to a newer question (old hash): exit 1, the other-prompt line, nothing sent, no record line" '[ $rc = 1 ] && [ "$out" = "$anotherprompt" ] && nosend && [ ! -s "$qrec" ]'
+mk; states done working; dialogpane > "$tmp/pane.txt"; rm -f "$qrec"
+printf '%s\n' 'Done. Ran the tests.' 'All green.' > "$tmp/swap.after"; echo 1 > "$tmp/swap.at"
+run bash "$script" answer T004 --screen "$qh" --record "$qrec" --keys 2
+check "QR3 the question is gone when answer reads it: exit 1, the other-prompt line, nothing sent, no record line" '[ $rc = 1 ] && [ "$out" = "$anotherprompt" ] && nosend && [ ! -s "$qrec" ]'
+mk; states done working; dialogpane > "$tmp/pane.txt"
+dialogpane | sed 's/folder/dir/' > "$tmp/swap.after"; echo 1 > "$tmp/swap.at"
+run bash "$script" answer T004 --screen "$qh" --text "use main"
+check "QR4 no --record, the pane shows another question when answer reads it: exit 1, the other-prompt line, no key and no text sent" '[ $rc = 1 ] && [ "$out" = "$anotherprompt" ] && nosend'
+mk; states done working; dialogpane | sed 's/folder/dir/' > "$tmp/pane.txt"
+run bash "$script" answer T004 --screen "$qh" --keys 2
+check "QR5 no --record, a late answer to a newer question (old hash): exit 1, the other-prompt line, nothing sent" '[ $rc = 1 ] && [ "$out" = "$anotherprompt" ] && nosend'
+mk; states done; { dialogpane; printf '%s\n' 'prior output'; dialogpane | sed 's/folder/dir/'; } > "$tmp/pane.txt"
+run bash "$script" wait T004
+check "QS4 two Enter to select lines: the block ends at the last one, not the first" '[ $rc = 4 ] && [ "$(shash)" = "$(qhashl "$tmp/pane.txt")" ] && [ "$(shash)" != "$(qhash "$tmp/pane.txt")" ]'
+
+mk; states done; dialogpane > "$tmp/pane.txt"; states done working; rm -f "$qrec"
+run bash "$script" answer T004 --screen "$qh" --record "$qrec" --keys 2
+check "QD1 answer --keys 2 --record: exit 0, one line: UTC time, worker, tab, answer, the block joined by ' | ', keys 2" '[ $rc = 0 ] && qrow answer "$(blk "$tmp/pane.txt")" "keys 2"'
+mk; states done working; dialogpane > "$tmp/pane.txt"; rm -f "$qrec"
+run bash "$script" answer T004 --screen "$qh" --record "$qrec" --text "use main"
+check "QD2 answer --text --record: exit 0, one line with the answer text use main" '[ $rc = 0 ] && qrow answer "$(blk "$tmp/pane.txt")" "text use main"'
+mk; states done; dialogpane > "$tmp/pane.txt"; rm -f "$qrec"
+STUB_FAIL="agent send-keys" run bash "$script" answer T004 --screen "$qh" --record "$qrec" --keys 2
+check "QD3 the key send fails: exit 1, no record line" '[ $rc = 1 ] && [ ! -s "$qrec" ]'
+mk; states done; dialogpane > "$tmp/pane.txt"; rm -f "$qrec"
+STUB_FAIL="pane send-keys" run bash "$script" answer T004 --screen "$qh" --record "$qrec" --text "use main"
+check "QD4 the Enter of a typed answer fails: exit 1, no record line" '[ $rc = 1 ] && [ ! -s "$qrec" ]'
+mk; states done; qlong > "$tmp/pane.txt"; qh=$(qhash "$tmp/pane.txt"); states done working; rm -f "$qrec"
+run bash "$script" answer T004 --screen "$qh" --record "$qrec" --keys 2
+check "QD5 the question field is the block that the hash covers, not the status line below it" '[ $rc = 0 ] && qrow answer "$(blk "$tmp/pane.txt")" "keys 2" && ! grep -q "auto mode" "$qrec"'
+mk; states done working; qlong > "$tmp/pane.txt"; rm -f "$qrec"
+run bash "$script" answer T004 --record "$qrec" --keys 2
+check "QD6 no --screen: exit 0, the question field is the last 15 screen lines" '[ $rc = 0 ] && qrow answer "$(lst "$tmp/pane.txt")" "keys 2"'
+
+mk; states idle working; unsentpane > "$tmp/pane.txt"; sentpane > "$tmp/pane.after"; rm -f "$qrec"
+run bash "$script" resend T004 --record "$qrec"
+check "QD7 resend --record: exit 0, one line: UTC time, worker, tab, resend, /goal prompt, Enter" '[ $rc = 0 ] && qrow resend "/goal prompt" Enter'
+mk; states idle; sentpane > "$tmp/pane.txt"; rm -f "$qrec"
+run bash "$script" resend T004 --record "$qrec"
+check "QD8 resend with an empty box: exit 1, no record line" '[ $rc = 1 ] && [ ! -s "$qrec" ]'
+mk; states idle; unsentpane > "$tmp/pane.txt"; rm -f "$qrec"
+STUB_FAIL="pane send-keys" run bash "$script" resend T004 --record "$qrec"
+check "QD7b resend, the Enter fails: exit 1, no record line" '[ $rc = 1 ] && [ ! -s "$qrec" ]'
+mk; states blocked; { seq -f 'prior %g' 20; printf '%s\n' "$rule" 'Do you want to proceed?' '❯ 1. Yes' "  2. Yes, and don't ask again for git commands" '  3. No, and tell Claude what to do differently (esc)'; } > "$tmp/pane.txt"
+run bash "$script" wait T004; h=$(shash); states blocked working; rm -f "$qrec"
+run bash "$script" answer T004 --screen "$h" --record "$qrec" --keys 1
+check "QD12 permission dialog, answer --keys 1 --record: exit 0, one line with the dialog block as the question, keys 1" '[ $rc = 0 ] && qrow answer "$(printf "%s\n" "$rule" "Do you want to proceed?" "❯ 1. Yes" "  2. Yes, and don'"'"'t ask again for git commands" "  3. No, and tell Claude what to do differently (esc)" | qjoin)" "keys 1"'
+apx; mkreq "$rid" 'echo hi'; rm -f "$qrec"
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" pass T004 --request "$rid" --record "$qrec"
+check "QD9 pass --record: exit 0, .user written, one line: UTC time, worker, tab, pass, the request id, -" '[ $rc = 0 ] && [ -e "$lw/.stratum/approve/$rid.user" ] && qrow pass "$rid" -'
+syfile user; rm -f "$qrec"
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" pass T004 --request "$rid" --record "$qrec"
+check "QD10 pass --record, $rid.user cannot be written: exit 1, no record line" '[ $rc = 1 ] && [ "$out" = "Cannot write $rid.user for worker-t004." ] && [ ! -s "$qrec" ]'
+rm -rf "$tmp/aptarget"
+apx; mkreq "$rid" 'echo hi'; rm -f "$qrec"
+CLAUDE_CODE_SESSION_ID="$sid" run bash "$script" pass T004 --request "$rid"
+check "QD11 pass with no --record works as today: exit 0, .user written, no record file" '[ $rc = 0 ] && hasline "passed\tworker-t004\t%s" "$rid" && [ -e "$lw/.stratum/approve/$rid.user" ] && [ ! -e "$qrec" ]'
+autoclr
+
+mk; states working; rm -f "$bt" "$tmp/beatlog"; t0=$(date +%s)
+STUB_BEAT="$bt" STUB_FAIL="agent wait" STUB_FAIL_CODE=timeout run bash "$script" wait T004 --beat "$bt"
+check "QB1 wait --beat, a missing file: exit 3, the file is made before the first herdr call and set again at each of the 54 slices" '[ $rc = 3 ] && [ -f "$bt" ] && bfirst && bslice'
+mk; states working; touch -d @1000000000 "$bt"; rm -f "$tmp/beatlog"; t0=$(date +%s)
+STUB_BEAT="$bt" STUB_FAIL="agent wait" STUB_FAIL_CODE=timeout run bash "$script" wait T004 --beat "$bt"
+check "QB2 wait --beat, an old file: exit 3, its mtime is set before the first herdr call and at each of the 54 slices" '[ $rc = 3 ] && bfirst && bslice'
+printf 'x\n' > "$tmp/afile"
+mk; states working
+run bash "$script" wait T004 --beat "$tmp/afile/beat"
+check "QB3 wait --beat, a file that cannot be written: exit 1, the cannot-write line, no herdr call" '[ $rc = 1 ] && [ "$out" = "Cannot write the beat file $tmp/afile/beat." ] && [ ! -s "$tmp/calls" ]'
+
+rmk; states done; dialogpane > "$tmp/pane.txt"; qh=$(qhash "$tmp/pane.txt")
+rrun bash "$script" wait T004 --machine laptop
+check "QM1 --machine laptop, wait: exit 4, one screen line with the block hash" '[ $rc = 4 ] && [ "$(grep -c "^screen" <<<"$out")" = 1 ] && [ "$(shash)" = "$qh" ]'
+rmk; states done working; dialogpane > "$tmp/pane.txt"; rm -f "$qrec"
+rrun bash "$script" answer T004 --machine laptop --screen "$qh" --record "$qrec" --keys 2
+check "QM2 --machine laptop, answer with the hash: exit 0, key 2 sent on laptop, the record line is in the local file, no ssh names it" '[ $rc = 0 ] && rcall "agent\tsend-keys\tworker-t004\t2" && qrow answer "$(blk "$tmp/pane.txt")" "keys 2" && ! grep -qF "$qrec" "$tmp/ssh"'
+rmk; states done working; dialogpane > "$tmp/pane.txt"; rm -f "$qrec"
+dialogpane | sed 's/folder/dir/' > "$tmp/swap.after"; echo 1 > "$tmp/swap.at"
+rrun bash "$script" answer T004 --machine laptop --screen "$qh" --record "$qrec" --keys 2
+check "QM3 --machine laptop, another question: exit 1, the other-prompt line, nothing sent, no record line" '[ $rc = 1 ] && [ "$out" = "$anotherprompt" ] && [ "$(rcnt "(agent\tsend-keys|pane\tsend-(text|keys))\t")" = 0 ] && [ ! -s "$qrec" ]'
+rmk; states working; rm -f "$bt" "$tmp/beatlog"; t0=$(date +%s)
+STUB_BEAT="$bt" STUB_FAIL="agent wait" STUB_FAIL_CODE=timeout rrun bash "$script" wait T004 --machine laptop --beat "$bt"
+check "QM4 --machine laptop, wait --beat: exit 3, the local file is made before the first herdr call and set at each of the 54 slices, no ssh names it" '[ $rc = 3 ] && [ -f "$bt" ] && bfirst && bslice && ! grep -qF "$bt" "$tmp/ssh"'
+rmk
+rrun bash "$script" wait T004 --machine laptop --beat "$tmp/afile/beat"
+check "QM5 --machine laptop, wait --beat, a file that cannot be written: exit 1, the cannot-write line, no herdr call, no ssh" '[ $rc = 1 ] && [ "$out" = "Cannot write the beat file $tmp/afile/beat." ] && [ ! -s "$tmp/calls" ] && [ ! -s "$tmp/ssh" ]'
+
+ndlg() { printf '%s\n' "$rule" 'Bash command' "  $1" 'Do you want to proceed?' '❯ 1. Yes' '  2. No'; }
+nsent() { cnt "^(agent\tsend-keys|pane\tsend-(text|keys))\t"; }
+nnever="The dialog's action is on the never list. Nothing sent. Tell the user the workspace, the tab and the prompt."
+nnorun="The never check did not run. Nothing sent. Tell the user the workspace, the tab and the prompt."
+nans() { mk; states blocked; ndlg "$1" > "$tmp/pane.txt"; run bash "$script" wait T004; h=$(shash); states blocked working; }
+nans 'git push origin worker-t004'
+run bash "$script" answer T004 --screen "$h" --keys 1
+check "ND1 push dialog, --keys 1 (the Yes): exit 1, the never-list line, nothing sent" '[ $rc = 1 ] && [ "$out" = "$nnever" ] && [ "$(nsent)" = 0 ]'
+nans 'git push origin worker-t004'
+run bash "$script" answer T004 --screen "$h" --keys 2
+check "ND2 push dialog, --keys 2 (the No): exit 0, key 2 sent" '[ $rc = 0 ] && hascall "agent\tsend-keys\tworker-t004\t2"'
+nans 'bash tests/test_x.sh'
+run bash "$script" answer T004 --screen "$h" --keys 1
+check "ND3 test command dialog, --keys 1: exit 0, key 1 sent" '[ $rc = 0 ] && hascall "agent\tsend-keys\tworker-t004\t1"'
+rm -rf "$tmp/.claude"; mkdir -p "$tmp/.claude/p"; cp -r "$root/scripts" "$root/hooks" "$tmp/.claude/p/"
+printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$*" >> "$STUB_T/pylog"\nexec %s "$@"\n' "$(command -v python3)" > "$tmp/bin/python3"; chmod +x "$tmp/bin/python3"; : > "$tmp/pylog"
+nans "bash $tmp/.claude/p/scripts/st-lock.sh -- bash tests/test_x.sh"
+run bash "$tmp/.claude/p/scripts/st-worker.sh" answer T004 --screen "$h" --keys 1
+check "ND4 a plugin copy under .claude, dialog of its own st-lock.sh path run, --keys 1: the never check ran (--never), exit 0, key 1 sent" '[ $rc = 0 ] && grep -q -- "st-approve.py --never" "$tmp/pylog" && hascall "agent\tsend-keys\tworker-t004\t1"'
+rm -f "$tmp/bin/python3"; rm -rf "$tmp/.claude"
+rm -rf "$tmp/rcopy"; mkdir -p "$tmp/rcopy"; cp -r "$root/scripts" "$root/hooks" "$tmp/rcopy/"
+printf 'raise RuntimeError("stub")\n' > "$tmp/rcopy/hooks/st-approve.py"
+nans 'bash tests/test_x.sh'
+run bash "$tmp/rcopy/scripts/st-worker.sh" answer T004 --screen "$h" --keys 1
+check "ND5 st-approve.py --never raises, test command dialog, --keys 1: exit 1, the never-check-did-not-run line, nothing sent" '[ $rc = 1 ] && [ "$out" = "$nnorun" ] && [ "$(nsent)" = 0 ]'
+rm -f "$tmp/rcopy/hooks/st-approve.py"
+nans 'bash tests/test_x.sh'
+run bash "$tmp/rcopy/scripts/st-worker.sh" answer T004 --screen "$h" --keys 1
+check "ND5b st-approve.py missing, test command dialog, --keys 1: exit 1, the never-check-did-not-run line, nothing sent" '[ $rc = 1 ] && [ "$out" = "$nnorun" ] && [ "$(nsent)" = 0 ]'
+rm -rf "$tmp/rcopy"
+mk; states blocked; { printf '%s\n' "$rule" 'Bash command' '  git push origin worker-t004 \'; seq -f '    --opt%g \' 17; printf '%s\n' '    --verbose' 'Do you want to proceed?' '❯ 1. Yes' '  2. No'; } > "$tmp/pane.txt"
+run bash "$script" wait T004; h=$(shash); states blocked working
+run bash "$script" answer T004 --screen "$h" --keys 1
+check "ND6 a 24-line push dialog (the push is more than 15 lines above the end), --keys 1: exit 1, the never-list line, nothing sent" '[ $rc = 1 ] && [ "$out" = "$nnever" ] && [ "$(nsent)" = 0 ]'
+mk; states blocked; { printf '%s\n' '● Bash(git push origin main)'; ndlg 'bash tests/test_x.sh'; } > "$tmp/pane.txt"
+run bash "$script" wait T004; h=$(shash); states blocked working
+run bash "$script" answer T004 --screen "$h" --keys 1
+check "ND7 a test command dialog with a git push line above its rule line, --keys 1: exit 0, key 1 sent (the never check reads the dialog block only)" '[ $rc = 0 ] && hascall "agent\tsend-keys\tworker-t004\t1"'
+
+sla="$tmp/slbeat"; mkdir -p "$sla"; slu=$'usage: st-worker.sh'
+slone() { awk -F'\t' -v f="$1" '$1 == "stale" && $2 == f && $3 ~ /^[0-9]+$/ && $3 >= 86400 && $3 <= 86460 { ok = 1 } END { exit !ok }' <<<"$out" && [ "$(grep -c . <<<"$out")" = 1 ]; }
+fresh; : > "$sla/fresh"
+NOENV=1 run bash "$script" stale "$sla/fresh"
+check "SL1 stale, a fresh beat file: exit 0, no output, no herdr call, no HERDR_ENV" '[ $rc = 0 ] && [ -z "$out" ] && [ ! -s "$tmp/calls" ]'
+fresh; : > "$sla/old"; touch -d "@$(($(date +%s) - 86400))" "$sla/old"
+NOENV=1 run bash "$script" stale "$sla/old"
+check "SL2 stale, a beat file aged 1 day: exit 4, one line stale, the file, the age in s (about 86400), no herdr call" '[ $rc = 4 ] && slone "$sla/old" && [ ! -s "$tmp/calls" ]'
+fresh; rm -f "$sla/none"
+NOENV=1 run bash "$script" stale "$sla/none"
+check "SL3 stale, a missing beat file: exit 4, the line stale, the file, -, no herdr call" '[ $rc = 4 ] && [ "$out" = "$(printf "stale\t%s\t-" "$sla/none")" ] && [ ! -s "$tmp/calls" ]'
+fresh
+NOENV=1 run bash "$script" stale "$sla/fresh" "$sla/old"
+check "SL4 stale, one fresh and one aged file: exit 4, only the aged one printed" '[ $rc = 4 ] && slone "$sla/old" && ! grep -qF "$sla/fresh" <<<"$out" && [ ! -s "$tmp/calls" ]'
+fresh
+NOENV=1 run bash "$script" stale
+check "SL5 stale with no argument: exit 2, the usage line naming stale <beat file>..., no herdr call" '[ $rc = 2 ] && [[ $out == "$slu"* ]] && [[ $out == *"stale <beat file>..."* ]] && [ ! -s "$tmp/calls" ]'
+rm -rf "$sla"
 
 sed -E '/must name branch/d' "$script" > "$tmp/NC20.sh" 2>/dev/null
 check "NC20 sed deletes exactly one line" '[ "$(diff "$script" "$tmp/NC20.sh" | grep -c "^<")" = 1 ]'

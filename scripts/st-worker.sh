@@ -1,17 +1,33 @@
 #!/usr/bin/env bash
 set -euo pipefail
-usage() { echo "usage: st-worker.sh start <id> --task <file> --test <cmd> --lane <text> --roster <file> [--machine <m> --repo <path>] [--model <name>] [--autonomous] [--project <p>] [--env <e>] [--issue <n> [--issue-task]] | goal <id> --test <cmd> [--machine <m>] | resend <id> [--machine <m>] | followup <id> --task <file> --test <cmd> [--machine <m>] | wait <id> [--machine <m>] | answer <id> [--machine <m>] [--screen <hash>] --keys <key>... | --text <text> | result <id> [--machine <m>] | close <id> [--machine <m>] | list [--machine <m>] | headless <id> --task <file> --test <cmd> [--model <name>] | approve <id> --request <rid> --input-hash <hash> --record <file> [--machine <m>] | pass <id> --request <rid> [--machine <m>] | autonomous-on | autonomous-off [--roster <file>] | watch --roster <file>" >&2; exit 2; }
+usage() { echo "usage: st-worker.sh start <id> --task <file> --test <cmd> --lane <text> --roster <file> [--machine <m> --repo <path>] [--model <name>] [--autonomous] [--project <p>] [--env <e>] [--issue <n> [--issue-task]] | goal <id> --test <cmd> [--machine <m>] | resend <id> [--machine <m>] [--record <file>] | followup <id> --task <file> --test <cmd> [--machine <m>] | wait <id> [--machine <m>] [--beat <file>] | answer <id> [--machine <m>] [--screen <hash>] [--record <file>] --keys <key>... | --text <text> | result <id> [--machine <m>] | close <id> [--machine <m>] | list [--machine <m>] | headless <id> --task <file> --test <cmd> [--model <name>] | approve <id> --request <rid> --input-hash <hash> --record <file> [--machine <m>] | pass <id> --request <rid> [--record <file>] [--machine <m>] | autonomous-on | autonomous-off [--roster <file>] | watch --roster <file> | stale <beat file>..." >&2; exit 2; }
 fail() { echo "$1" >&2; exit 1; }
 [ $# -gt 0 ] || usage
 cmd=$1; shift
 case $cmd in
+  stale)
+    [ $# -gt 0 ] || usage
+    bound=660 # ponytail: fixed 660 s stale bound from T001 (550 s longest monitor call plus two 40 s gaps, rounded up to a minute), raise it if a monitor call or gap grows (research.md R6)
+    rc=0 now=$(date +%s)
+    for f; do
+      if a=$(date -r "$f" +%s 2>/dev/null); then
+        a=$((now - a))
+        [ "$a" -gt "$bound" ] || continue
+      else
+        a=-
+      fi
+      printf 'stale\t%s\t%s\n' "$f" "$a"
+      rc=4
+    done
+    exit "$rc"
+    ;;
   start | goal | resend | followup | wait | answer | result | close | headless | approve | pass) [ $# -gt 0 ] || usage; id=$1; shift ;;
   list | autonomous-off | watch) ;;
   autonomous-on) [ $# = 0 ] || usage ;;
   *) usage ;;
 esac
 m= repo= auto= itask=
-unset proj envn issue
+unset proj envn issue bf
 while [ $# -gt 0 ]; do
   case "$cmd $1" in
     "start --autonomous") auto=1; shift; continue ;;
@@ -24,7 +40,8 @@ while [ $# -gt 0 ]; do
     "start --lane") lane=$2 ;;
     "start --roster" | "autonomous-off --roster" | "watch --roster") roster=$2 ;;
     "approve --request" | "pass --request") rid=$2 ;;
-    "approve --record") record=$2 ;;
+    "approve --record" | "answer --record" | "resend --record" | "pass --record") record=$2 ;;
+    "wait --beat") bf=$2 ;;
     "approve --input-hash")
       [[ $2 =~ ^[0-9a-f]{64}$ ]] || usage
       ihash=$2
@@ -115,6 +132,8 @@ goalp() {
 [ "$cmd" = headless ] || [ "$cmd" = autonomous-off ] || [ "$cmd" = autonomous-on ] || [ -n "$m" ] || { [ "${HERDR_ENV:-}" = 1 ] && { [ "$cmd" != start ] || [ -n "${HERDR_WORKSPACE_ID:-}" ]; }; } || fail "Not inside a herdr pane. Run it from a herdr pane, or name a --machine."
 [ "$cmd" != start ] || [ -z "$m" ] || [[ $repo == [/~]* ]] || fail "A saved machine needs --repo <path> starting with / or ~."
 
+beat() { [ -z "${bf+x}" ] || touch -- "$bf" 2>/dev/null || fail "Cannot write the beat file $bf."; }
+beat
 H=(herdr)
 WS= TAB= PANE= BR= WT= S= Q=
 e=$(mktemp)
@@ -165,7 +184,7 @@ st() {
     blocked)
       local d
       if [ -n "$m" ]; then d=$Q/.stratum/approve/dropped; sshq "[ -f $d ] && [ ! -L $d ] && head -c 4096 -- $d | head -n 1" >"$t"; else d=$WT/.stratum/approve/dropped; [ -f "$d" ] && [ ! -L "$d" ] && head -c 4096 -- "$d" | head -n 1 >"$t"; fi && { DL=$(LC_ALL=C tr -cd '[:print:]\t' <"$t"); printf 'dropped\t%s\n' "${DL:0:400}"; }
-      ! screen || ! perm || { block; [ -z "$BM" ] || printf 'screen\t%s\n' "$SH"; }
+      ! screen || if perm; then block; [ -z "$BM" ] || printf 'screen\t%s\n' "$SH"; elif qblock; then printf 'screen\t%s\n' "$SH"; fi
       echo 'pane text:'
       [ -z "$SC" ] || printf '%s\n' "$SC"
       ;;
@@ -189,7 +208,20 @@ block() {
   en=$((en + HD))
   while [ "$en" -lt "$n" ] && sed -n "$((en + 1))p" <<<"$SC" | grep -qav '^[[:space:]]*$'; do en=$((en + 1)); done
   tr=$(head -n "$((HD - 1))" <<<"$SC" | grep -naE '^(─)+[[:space:]]*$' | tail -n 1 | cut -d: -f1) || :
-  if [ -n "$tr" ]; then BM=block SH=$(sed -n "$tr,${en}p" <<<"$SC" | sha256sum); else BM=cut SH=$(sha256sum <<<"$SC"); fi
+  if [ -n "$tr" ]; then BM=block BT=$(sed -n "$tr,${en}p" <<<"$SC"); else BM=cut BT=$SC; fi
+  SH=$(sha256sum <<<"$BT")
+  SH=${SH:0:12}
+}
+qblock() {
+  local en o
+  en=$(grep -naE 'Enter to select|Ready to submit your answers\?' <<<"$SC" | tail -n 1 | cut -d: -f1) || :
+  [ -n "$en" ] && live "$en" "$SC" || return 1
+  BT=$(head -n "$en" <<<"$SC" | tail -n 15)
+  if sed -n "${en}p" <<<"$SC" | grep -qa 'Ready to submit your answers?'; then
+    o=$(tail -n "+$((en + 1))" <<<"$SC" | awk '/^([[:space:]]|❯)*[0-9]+\.[[:space:]]/ { print; next } { exit }')
+    [ -z "$o" ] || BT+=$'\n'$o
+  fi
+  SH=$(sha256sum <<<"$BT")
   SH=${SH:0:12}
 }
 live() { awk -v n="$1" 'NR > n && /^([[:space:]]|│)*❯/ && !/^([[:space:]]|│)*❯[[:space:]]*[0-9]+\.[[:space:]]/ { f = 1 } END { exit f }' <<<"$2"; }
@@ -260,6 +292,7 @@ ownbr() {
   [ -n "$g" ] || fail "Worker $N has no branch in .stratum/git-guard.json. $1 refused."
   [ "$g" = "$BR" ] || fail "Worker $N is on branch $BR, not its branch $g. $1 refused."
 }
+rec() { [ -z "${record+x}" ] || { printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$N" "tab $N" "$@" >>"$record"; } 2>/dev/null || fail "Sent, but cannot write the record file $record."; }
 render() { python3 "$(cd "$(dirname "$0")/.." && pwd)/hooks/st-approve.py" --render "$1"; }
 owns() { awk 'f && (/^[[:space:]]*$/ || /^[[:space:]]*- \[/) { exit } !f && /Owns:/ { f = 1; sub(/.*Owns:/, "") } f { if (sub(/Test:.*/, "")) { print; exit } print }' "$task" | grep -o '`[^`]*`' | tr -d '`' || true; }
 chkowns() {
@@ -439,7 +472,8 @@ goal)
 resend)
   look
   unsent || fail "No unsent prompt in $N: $S"
-  push || { st unsent; exit 7; }
+  push || { rec resend '/goal prompt' Enter; st unsent; exit 7; }
+  rec resend '/goal prompt' Enter
   look
   [ "$S" = blocked ] || S=working
   st "$S"
@@ -486,6 +520,7 @@ wait)
       st working
       exit 3
     fi
+    beat
     if ! "${H[@]}" agent wait "$N" --timeout "$((left < slice ? left : slice))" >/dev/null 2>"$e"; then
       [ "$(code)" = timeout ] || stop "$(head -1 "$e")"
       sl=$((sl + 1))
@@ -542,9 +577,21 @@ answer)
         { grep -qaE "^([[:space:]]|│)*(❯[[:space:]]*)?$k\. No([,[:space:]].*)?\$" <<<"${l#*:}" && ! grep -qaiE "don'?t ask|always|this session|in the future|[a-z0-9-]\.[a-z]{2,}" <<<"${l#*:}"; }
     } && ! sed -n "$((${l%%:*} + 1))p" <<<"$b" | grep -qavE '^[[:space:]]*$|^([[:space:]]|│)*(❯[[:space:]]*)?[0-9]+\.[[:space:]]' || fail "Option $k is not a one-time yes. Nothing sent. Tell the user the workspace, the tab and the prompt."
     [ "$BM" = block ] || [ -z "$y" ] || fail "The top of the dialog is not on the screen, so only its No can be sent. Nothing sent. Tell the user the workspace, the tab and the prompt."
+    if [ -n "$y" ]; then
+      python3 "$(cd "$(dirname "$0")/.." && pwd)/hooks/st-approve.py" --never <<<"$BT" >/dev/null 2>&1 && c=0 || c=$?
+      [ "$c" != 0 ] || fail "The dialog's action is on the never list. Nothing sent. Tell the user the workspace, the tab and the prompt."
+      [ "$c" = 4 ] || fail "The never check did not run. Nothing sent. Tell the user the workspace, the tab and the prompt."
+    fi
+    QT=$BT
+  elif [ -n "${scr+x}" ]; then
+    qblock && [ "$SH" = "$scr" ] || fail "The pane shows another prompt. Nothing sent. Tell the user the workspace, the tab and the prompt."
+    QT=$BT
+  else
+    QT=$(tail -n 15 <<<"$SC")
   fi
   if [ -n "${keys+x}" ]; then
     h agent send-keys "$N" "${keys[@]}"
+    a="keys ${keys[*]}"
   else
     if [ -n "$q" ]; then
       readpane || fail "Cannot read the pane of $N."
@@ -554,6 +601,12 @@ answer)
     fi
     h pane send-text "$PANE" "$text"
     h pane send-keys "$PANE" enter
+    a="text $text"
+  fi
+  if [ -n "${record+x}" ]; then
+    QT=$(LC_ALL=C tr -d '[:cntrl:]' <<<"${QT//$'\n'/ | }")
+    [ ${#QT} -le 600 ] || QT=${QT: -600}
+    rec answer "$QT" "$(LC_ALL=C tr -d '[:cntrl:]' <<<"$a")"
   fi
   settle=5000 # ponytail: fixed 5 s wait for blocked to clear after an answer (live T008 saw about 2 s), raise it if a live run measures a longer lag
   "${H[@]}" agent wait "$N" --until working --timeout "$settle" >/dev/null 2>&1 || true
@@ -775,6 +828,7 @@ approve | pass)
   else
     [ ! -L "$WT/.stratum" ] && [ ! -L "$WT/.stratum/approve" ] && [ ! -L "$WT/.stratum/approve/$rid.$x" ] && : >"$WT/.stratum/approve/$rid.$x" || fail "Cannot write $rid.$x for $N."
   fi
+  [ "$cmd" != pass ] || rec pass "$rid" -
   if [ "$cmd" = approve ]; then
     "${H[@]}" agent wait "$N" --until working --timeout 5000 >/dev/null 2>&1 || true
     printf 'approved\t%s\t%s\n' "$N" "$rid"
