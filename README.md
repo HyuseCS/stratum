@@ -147,7 +147,7 @@ When a change touches shared config, test setup, a schema or migration, middlewa
 | `st-pr [base]` | Open a draft PR from git facts and the spec; ready when CI passes. |
 | `st-sync` | Maintainers: port upstream changes into Stratum's forks. |
 | `st-grill` | Grilling interview, one question at a time. |
-| `st-ui-ux`, `st-impeccable`, `st-hallmark` | Design build rules, design review, new-look engine. |
+| `st-ui-ux`, `st-impeccable`, `st-hallmark` | Design build rules, design review, new-look engine. `st-ui-ux` is deprecated: a replacement is planned. |
 | `st-graphify` | Build or query the code graph. |
 | `st-ponytail`, `st-ponytail-review`, `-audit`, `-debt`, `-gain`, `-help` | Minimal-code mode and its reviews. |
 

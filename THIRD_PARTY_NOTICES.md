@@ -23,7 +23,7 @@ keeps its original license. Full license texts are in `licenses/`. Pinned upstre
 - **impeccable, ui-ux-pro-max, graphify skill:** renamed to `st-*` skill names and
   given Stratum's navigation and reporting rules. The design guidance itself is unchanged.
 - **ui-ux-pro-max:** the upstream catalog manifests (`data/*.json`), `validate_data.py` and
-  `scripts/tests/` are not shipped.
+  `scripts/tests/` are not shipped. The skill description marks it as deprecated.
 - **graphify skill:** Steps 0 to 9 moved from SKILL.md to `references/build.md`, unchanged.
 - **hallmark:** renamed to `st-hallmark` and given `disable-model-invocation: true`.
   `scripts/install.mjs`, `install-hook.mjs` and `lint-hook.mjs` are not shipped.

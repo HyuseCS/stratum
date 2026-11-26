@@ -174,6 +174,8 @@ dependency.
 
 - **D11. Design.** ui-ux-pro-max for build rules (it covers Flutter), impeccable for review at each
   story's end. The visual-direction skill was removed in 010 (D6).
+  `st-ui-ux` is deprecated since 2026-11-26: it is dated, and a replacement is planned. Until then
+  `st-build` still loads it for screen tasks.
 - **D12. Navigation.** Graphify is the first stop. Its post-commit hook rebuilds the code graph.
   `graphify-out/` stays out of git. The docs graph is updated once per feature in Close. The graph
   points to files; agents read a file before editing it.
