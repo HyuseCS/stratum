@@ -2525,6 +2525,20 @@ check "QR4 no --record, the pane shows another question when answer reads it: ex
 mk; states done working; dialogpane | sed 's/folder/dir/' > "$tmp/pane.txt"
 run bash "$script" answer T004 --screen "$qh" --keys 2
 check "QR5 no --record, a late answer to a newer question (old hash): exit 1, the other-prompt line, nothing sent" '[ $rc = 1 ] && [ "$out" = "$anotherprompt" ] && nosend'
+mk; states done working; dialogpane > "$tmp/pane.txt"; qh=$(qhash "$tmp/pane.txt"); qq=$(blk "$tmp/pane.txt"); rm -f "$qrec"
+dialogpane | sed -e 's/folder/dir/' -e 's/3\. Type something/4. Type something/' > "$tmp/swap.after"; echo 2 > "$tmp/swap.at"
+run bash "$script" answer T004 --screen "$qh" --record "$qrec" --text "use main"
+check "QR6 the pane shows another question (Type something is 4) on the third read, answer --screen <hash> --text: exit 0, the Type something key 3 of the hashed question, never key 4, the record holds the hashed question" '[ $rc = 0 ] && [ "$(sendlog)" = "$(printf "agent\tget\tworker-t004\nagent\tsend-keys\tworker-t004\t3\npane\tsend-text\t%s\tuse main\npane\tsend-keys\t%s\tenter\nagent\twait\tworker-t004\t--until\tworking\t--timeout\t5000\nagent\tget\tworker-t004" "$(pane)" "$(pane)")" ] && qrow answer "$qq" "text use main"'
+mk; states blocked; { printf '%s\n' "● I can add the allow rule, so the dialog does not ask again. I don't ask again after that."; seq -f '  line %g' 10; dialogpane; } > "$tmp/pane.txt"
+run bash "$script" wait T004; h=$(shash); states blocked working; reset
+run bash "$script" answer T004 --screen "$h" --text "use main"
+check "QA3 a question with don't ask again 19 lines above Enter to select, answer --screen <hash> --text: exit 0, the Type something key 3, then the text and Enter" '[ -n "$h" ] && [ $rc = 0 ] && [ "$(sendlog)" = "$(printf "agent\tget\tworker-t004\nagent\tsend-keys\tworker-t004\t3\npane\tsend-text\t%s\tuse main\npane\tsend-keys\t%s\tenter\nagent\twait\tworker-t004\t--until\tworking\t--timeout\t5000\nagent\tget\tworker-t004" "$(pane)" "$(pane)")" ]'
+mk; states done working; dialogpane > "$tmp/pane.txt"; rm -f "$qrec"
+run record="$qrec" bash "$script" answer T004 --keys 2
+check "EV4 exported record and no --record: answer exits 0, key 2 sent, no record file" '[ $rc = 0 ] && hascall "agent\tsend-keys\tworker-t004\t2" && [ ! -e "$qrec" ]'
+mk; states done working; dialogpane > "$tmp/pane.txt"
+run scr=000000000000 bash "$script" answer T004 --keys 2
+check "EV5 exported scr and no --screen: answer on a question exits 0, key 2 sent" '[ $rc = 0 ] && hascall "agent\tsend-keys\tworker-t004\t2"'
 mk; states done; { dialogpane; printf '%s\n' 'prior output'; dialogpane | sed 's/folder/dir/'; } > "$tmp/pane.txt"
 run bash "$script" wait T004
 check "QS4 two Enter to select lines: the block ends at the last one, not the first" '[ $rc = 4 ] && [ "$(shash)" = "$(qhashl "$tmp/pane.txt")" ] && [ "$(shash)" != "$(qhash "$tmp/pane.txt")" ]'
@@ -2686,6 +2700,10 @@ check "ND8 a push split after git over two dialog lines, --keys 1: exit 1, the n
 nans $'git \\\n  push origin worker-t004'
 run bash "$script" answer T004 --screen "$h" --keys 1
 check "ND9 git and a backslash at the line end, push origin worker-t004 on the next dialog line, --keys 1: exit 1, the never-list line, nothing sent" '[ $rc = 1 ] && [ "$out" = "$nnever" ] && [ "$(nsent)" = 0 ]'
+mk; states blocked; printf '%s\n' "$rule" ' Bash command' '' '   cat /home/u/Desktop/stratum-t004/specs/022-worker-monitors/contracts/../../.en' '   v.local' '   Show the local settings' '' ' Do you want to proceed?' ' ❯ 1. Yes' '   2. No' > "$tmp/pane.txt"
+run bash "$script" wait T004; h=$(shash); states blocked working
+run bash "$script" answer T004 --screen "$h" --keys 1
+check "ND10 a .env path broken inside the token over two dialog lines (.en, then v.local), --keys 1: exit 1, the never-list line, nothing sent" '[ -n "$h" ] && [ $rc = 1 ] && [ "$out" = "$nnever" ] && [ "$(nsent)" = 0 ]'
 
 sla="$tmp/slbeat"; mkdir -p "$sla"; slu=$'usage: st-worker.sh'
 slone() { awk -F'\t' -v f="$1" '$1 == "stale" && $2 == f && $3 ~ /^[0-9]+$/ && $3 >= 86400 && $3 <= 86460 { ok = 1 } END { exit !ok }' <<<"$out" && [ "$(grep -c . <<<"$out")" = 1 ]; }
@@ -2704,9 +2722,9 @@ check "SL4 stale, one fresh and one aged file: exit 4, only the aged one printed
 fresh
 NOENV=1 run bash "$script" stale
 check "SL5 stale with no argument: exit 2, the usage line naming stale <beat file>..., no herdr call" '[ $rc = 2 ] && [[ $out == "$slu"* ]] && [[ $out == *"stale <beat file>..."* ]] && [ ! -s "$tmp/calls" ]'
-fresh; : > "$sla/s600"; touch -d "@$(($(date +%s) - 600))" "$sla/s600"; : > "$sla/s720"; touch -d "@$(($(date +%s) - 720))" "$sla/s720"
-NOENV=1 run bash "$script" stale "$sla/s600" "$sla/s720"
-check "SL6 stale, the bound is 660 s: a beat file aged 600 s is not printed, one aged 720 s is" '[ $rc = 4 ] && [ "$(grep -c . <<<"$out")" = 1 ] && awk -F"\t" -v f="$sla/s720" "\$1 == \"stale\" && \$2 == f && \$3 >= 720 && \$3 <= 780 { ok = 1 } END { exit !ok }" <<<"$out"'
+fresh; : > "$sla/s655"; touch -d "@$(($(date +%s) - 655))" "$sla/s655"; : > "$sla/s665"; touch -d "@$(($(date +%s) - 665))" "$sla/s665"
+NOENV=1 run bash "$script" stale "$sla/s655" "$sla/s665"
+check "SL6 stale, the bound is 660 s and an age must be more than it: a beat file aged 655 s is not printed, one aged 665 s is" '[ $rc = 4 ] && [ "$(grep -c . <<<"$out")" = 1 ] && awk -F"\t" -v f="$sla/s665" "\$1 == \"stale\" && \$2 == f && \$3 >= 665 && \$3 <= 669 { ok = 1 } END { exit !ok }" <<<"$out"'
 rm -rf "$sla"
 
 sed -E '/must name branch/d' "$script" > "$tmp/NC20.sh" 2>/dev/null

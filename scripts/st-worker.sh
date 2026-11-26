@@ -27,7 +27,7 @@ case $cmd in
   *) usage ;;
 esac
 m= repo= auto= itask=
-unset proj envn issue bf
+unset proj envn issue bf record scr
 while [ $# -gt 0 ]; do
   case "$cmd $1" in
     "start --autonomous") auto=1; shift; continue ;;
@@ -585,7 +585,7 @@ answer)
     QT=$BT
   elif [ -n "${scr+x}" ]; then
     qblock && [ "$SH" = "$scr" ] || fail "The pane shows another prompt. Nothing sent. Tell the user the workspace, the tab and the prompt."
-    QT=$BT
+    QT=$BT q=1
   else
     QT=$(tail -n 15 <<<"$SC")
   fi
@@ -594,8 +594,8 @@ answer)
     a="keys ${keys[*]}"
   else
     if [ -n "$q" ]; then
-      readpane || fail "Cannot read the pane of $N."
-      k=$(sed -nE 's/^[^0-9]*([0-9]+)\. Type something\.[[:space:]]*$/\1/p' "$t" | tail -n 1)
+      if [ -n "${scr+x}" ]; then k=$BT; else readpane || fail "Cannot read the pane of $N."; k=$(<"$t"); fi
+      k=$(sed -nE 's/^[^0-9]*([0-9]+)\. Type something\.[[:space:]]*$/\1/p' <<<"$k" | tail -n 1)
       [ -n "$k" ] || fail "The question has no \"Type something.\" option. Answer with --keys."
       h agent send-keys "$N" "$k"
     fi
