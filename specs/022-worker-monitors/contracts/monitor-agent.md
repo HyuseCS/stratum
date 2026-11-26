@@ -28,9 +28,9 @@ Use the lists of `<plugin root>/skills/st-worker/SKILL.md` step 6: the allow lis
 
 ## Loop
 
-Pass `--machine <m>` on every call when the machine is not `local`. Pass `--record <record file>` on every `answer`, `approve`, `pass` and `resend`, and `--beat <beat file>` on every `wait`. Every command is for your own worker id, with paths in your own folder only. The hook ties your folder to you on your first call; a call that it denies for the folder's owner is a refused call like any other: end with `needs you` and the deny text.
+Pass `--machine <m>` right after the worker id on every call when the machine is not `local`. Pass `--record <record file>` on every `answer`, `approve`, `pass` and `resend`, and `--beat <beat file>` on every `wait`. Every command is for your own worker id, with paths in your own folder only. The hook ties your folder to you on your first call; a call that it denies for the folder's owner is a refused call like any other: end with `needs you` and the deny text.
 
-1. If the orchestrator passed the user's answer, send it first: `bash <plugin root>/scripts/st-worker.sh answer <id> --screen <hash> --record <record file> --keys <key>` (or `--text <text>`). If `answer` refuses it, end with `needs you` and the new screen. If the orchestrator says the user answers in the worker's pane (a dialog on the never list stays the user's, also after a yes), send nothing and go to 2.
+1. If the orchestrator passed the user's answer, send it first: `bash <plugin root>/scripts/st-worker.sh answer <id> --screen <hash> --record <record file> --keys <key>` (or `--text <text>`). Send the user's text word for word; never change it to get past the hook. If `answer` refuses it, end with `needs you` and the new screen. If the orchestrator says the user answers in the worker's pane (a dialog on the never list stays the user's, also after a yes), send nothing and go to 2.
 2. Run `bash <plugin root>/scripts/st-worker.sh wait <id> --beat <beat file>`.
 3. `state working` (exit 3): go to 2. A `stopped: <line>`: go to 2 once; the same line again: end with `gone`.
 4. `state finished`: end with `finished`. `state stopped`: end with `stopped`. `No worker ...`: end with `gone`.
@@ -42,7 +42,7 @@ Pass `--machine <m>` on every call when the machine is not `local`. Pass `--reco
 - A dialog that does not show the whole command or path: its No, the same way. Send a rerun request only as an answer with the `screen` hash of a later `wait`. Else end with `needs you`.
 - `state approval` with autonomous build mode on: when the request is small and safe by the rules of step 6, `approve <id> --request <rid> --input-hash <hash> --record <record file>`. Else `pass <id> --request <rid> --record <record file>`, then end with `needs you`.
 - `state unsent`: `resend <id> --record <record file>` one time. `unsent` again: end with `needs you`.
-- A small work question that the brief or the plan settles: naming, placement, or a choice the plan already settles, inside the task's own files. Answer it with `answer <id> --screen <hash> --record <record file> --keys <key>` or `--text <text>`. A typed answer has none of `;`, `&`, `|`, `<`, `>`, `` ` ``, `$`, `(`, `)`.
+- A small work question that the brief or the plan settles: naming, placement, or a choice the plan already settles, inside the task's own files. Answer it with `answer <id> --screen <hash> --record <record file> --keys <key>` or `--text <text>`. A typed answer holds only letters, digits, spaces and `_ . / : = @ % + , ' -`, on one line, in double quotes.
   On `sonnet` or `haiku`, call `advisor` first with the question and your answer. No `advisor` tool, a failed call, or an answer that is not a clear yes with no condition: end with `needs you`.
 - No `screen` line for the event: send nothing, end with `needs you`.
 - `not blocked`: the user answered in the pane. Send nothing more for it.
