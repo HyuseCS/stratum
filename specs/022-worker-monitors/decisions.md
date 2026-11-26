@@ -61,6 +61,23 @@ The user said yes to D20 to D27 after the Codex review of this file (`.stratum/a
   - The "Ready to submit your answers?" form of a question block is built to the contract and has no test row.
   - The new rows in the README and DESIGN agent tables are at the end of each table. The DESIGN row uses the README job text. The harness summary line is "Watches one pane worker and settles its routine events. It sends the rest up."
 
+- D42 (orchestrator, Build, 2026-11-26): the review of 92885da..8e05bcf before T013 (the st-review agent, a review workflow, and the `decisions` advisor point on the D41 list). D41 is accepted, with its missing contract lines and test rows added in fix round 1. Fixed in round 1 (scratchpad `fixround.md`, three lanes in a scratch clone):
+  - The never check also matches the dialog text with its line breaks joined, so a push shown on two lines is refused (high). It strips the plugin's `st-lock.sh` path only as the first word of a line, by real path.
+  - The monitor guard allows only a fixed set of characters in a command (letters, digits, space and `_ . / : = @ % + , ' " -`). This replaces the deny list of D41: the review found a second hole of the same kind (a glob such as `--b*`). The typed-answer sentence of the agent names the same set. A user's answer with another character goes to the worker's pane.
+  - The owner deny has its own reason text (`Another agent id owns this monitor folder`), and the skill keys the takeover branch on it. Before, every deny held the phrase the skill keyed on.
+  - The owner file is made in one atomic step, so two first calls of the same monitor are both allowed. The Read rule also refuses `result.md` with white space at the end or in another letter case.
+  - The `Ready to submit your answers?` block skips the empty lines before its options, so the options are in the hash.
+  - The main session starts a monitor once `start` is done: after the `goal` of an exit 4 and after the `resend` of an exit 7. This changes contract C1 ("right after its `start` (exit 0, 4 or 7)"); FR-001 does not change. On exit 4 or 7 the first event is the main session's, and a monitor cannot run `goal`.
+  - The main session continues a monitor only after the user says they answered in the worker's pane, for a dialog on the never list and for a report with no `screen` hash.
+  - `--machine` comes right after the worker id in a monitor's calls.
+  - Test rows that could not fail: the agent file is now compared with the contract block, and the skill rows pin whole sentences.
+  - Dropped: the beat file Write after a `touch` (a live check: the second Write passes); invalid JSON on the hook's stdin (Claude Code cannot send it).
+  - Known limits, not built: the never check has no path rule and misses obfuscated forms such as `git pu${x}sh` (SC-003 asks a code guard on push only, and the never list is a text match by plan). A hook that times out, or exits 1, does not block the call: the Claude Code docs say the call goes on through the normal permission flow, so the deny-on-error rule cannot hold for a timeout. `onFailure: "block"` would change the hook for every session (FR-032).
+  - Moved to the T020 list: a `stopped` report has no pane text; the autonomous entry path when the main session runs in a linked worktree; the task text of a follow-up round and of a worker that step 12 finds.
+  - The plan's Shortcuts trigger for the path rules ("one more hole in the path rule") did not fire: the glob hole was in the command parse, not in the path rule, and the fixed character set closes it.
+  - The parse attack checker of the review was stopped by the model's safeguards and did not run again.
+- D43 (user, Build, 2026-11-26): for T013 the user said "if it was add it again, one time permission grant only". The main session added the `permissions.ask` rule `Bash(test -f specs/022-worker-monitors/probe.txt)` to `~/.claude/settings.json` one time. As in D39, the permission covers that one add only, and D29 stays in force for every other settings change. The removal after T013 needs the user's word again.
+
 ## Queued research
 
 - fixed-tools-advisor: does a Stratum agent with a fixed `tools:` list in its agent file get the built-in `advisor` tool, and must the list name it?

@@ -24,3 +24,6 @@ summary: Use the existing startup probe to determine whether the orchestrator ca
 
 ## plan | 2026-11-26T07:10:00Z | sha256 0f609de9141640b023ff3ae6e0fdfff609bf30ecd74243f9ea67347c13f36936 | WAIVED
 reason: After round 5 the plan changed only by the fix of its one MEDIUM finding: T001 also checks the agent id in the hook input before any lock code is built. No task was added or removed, no file outside the plan's list is touched, and no design choice was replaced.
+
+## decisions | 2026-11-26T13:51:49Z | /advisor
+summary: D41 list: none blocks T013. Change 2a (agent file must name # { } for a typed answer) and 7 (add a test row for the Ready to submit form). 2b and 5 wait on the review workflow. 4 (660 s stale bound) needs a check against the Codex round call before T020. 1, 2c, 3, 6, 8, 9 sound.
