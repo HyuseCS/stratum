@@ -136,6 +136,7 @@ Read from the temporary log block in `hooks/st-approve.py` (five fields of the h
 
 - (i1) the id the Agent tool gave the main session for the probe subagent, (i2) the `agent_id` of the hook input for its first `st-worker.sh` call and for all 12 of its Bash calls, and (i3) the `agent_id` of its `st-worker.sh list` call after a SendMessage continue: all three are the same value. So (i1) equals (i2), and (i3) equals (i2).
 - The value is 17 characters: the letter `a` and 16 hex digits.
+- What this decides for the alternative in plan.md, Shortcuts (the main session writes `owner`, and the monitor's first command waits for it): the alternative is possible now, because (i1) equals (i2). It stays not taken. Its trigger has a second part, that the takeover branch fires in real runs or proves hard to keep right, and no run shows that yet.
 - A run before the worker probe, with a second general-purpose subagent that ran only `st-worker.sh list` before and after a SendMessage continue, gave the same three results.
 - The main session's own calls have no `agent_id` and no `agent_type` in the hook input (both keys are missing).
 - `agent_type` is `general-purpose` for a general-purpose subagent and `stratum:st-triage` for the Stratum agent `st-triage`. So the form for the shipped monitor is `stratum:st-monitor`, as the guard of R5 expects. T013 checks this for the shipped agent itself.

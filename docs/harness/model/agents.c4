@@ -278,5 +278,6 @@ model {
 
   agents.st-monitor -[reads]-> plugin.sr-opus-5-md 'report style rules'
   agents.st-monitor -[runs]-> scripts.st-worker-sh 'wait, answer, approve, pass or resend with a record or beat file'
+  agents.st-monitor -[runs]-> scripts.st-advisor-sh 'round decisions, headless, before a big decision'
   agents.st-monitor -[passes]-> skills.st-worker 'end state, answers and big decisions'
 }

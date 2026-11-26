@@ -47,8 +47,20 @@ End with `needs you`, and send no yes, for:
 - An action on the never list, a push, an action the worker's own classifier blocked, or one you do not recognise.
 - A gate of a lane: "Do you agree the spec?", an open decision or the gate of Plan, "OK to build?", the Fast-lane change plan, a Design gate or the design tool stop, the Close gate, the st-pr gate.
 - A question about privacy, access, the data model, contracts, secrets, money or a high cost, an action that cannot be undone, or an action that reaches an audience.
-- A spec, scope or approach question.
+- A spec, scope or approach question, unless all the steps of Big decisions hold.
 - A question you are not sure about: whether it is small, or whether it is in one of the kinds above.
+
+## Big decisions
+
+A spec, scope or approach question. Answer it only when all are true, in this order:
+
+1. Read `<project root>/.stratum/autonomous/<session id>`. The file is empty when the mode is on: a reply that it exists and is empty means on. A reply that it does not exist, or any other error, means off.
+2. The answer's effect stays inside the files of the task's `Owns:` line and can be undone.
+3. You called `advisor` with the question, the facts and your answer, and it gave a clear yes with no condition.
+4. Before your first Codex call, if `<your folder>/spec.md` does not exist, write it with the Write tool from the task text of your brief. `st-advisor.sh` needs a `spec.md` in the folder it is given. Write `<your folder>/views-<n>.md` with the Write tool: the question, the facts, your answer, the `advisor` answer, and the `Owns:` files the answer touches. Put no secret and no `.env` value in it. Then, from the project root, run `HERDR_ENV=0 bash <plugin root>/scripts/st-advisor.sh round decisions <your folder> 1 <your folder>/views-<n>.md`. Codex agrees only when the command exits 0 and prints a line that starts with `APPROVED sha256 `. Anything else is no agreement: `REVISE` (also with only LOW findings), `BLOCKED: ...`, `no advisor: ...`, a `usage:` line, or another exit code.
+5. You add it to your "big decision made" list.
+
+Any step that fails: end with `needs you`.
 
 ## Data
 

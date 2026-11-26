@@ -50,6 +50,16 @@ The user said yes to D20 to D27 after the Codex review of this file (`.stratum/a
 ## Build phase
 
 - D39 (user, Build, 2026-11-26): for the T001 probe the user said "add it yourself. I give you permission to do this 1 time". The main session added the `permissions.ask` rule of D29 to `~/.claude/settings.json` one time. The permission covers that one add only. D29 stays in force for every other settings change. After the probe the user said "remove it", and the main session removed the rule one time.
+- D40 (Q24, user, Build, 2026-11-26): O52. To build faster, the rest of the build is grouped by file, not by story: first all failing tests that remain (T005 to T007, then T010, T014, T016 and T017, one agent per test file), then all builds (T008, T009, T011, T012, T015, T018 and T019, one agent per source file), then the live runs T013 and T020. US3 and US4 are built before the P1 gate T013 runs. T013 still gates the use of monitors on real work. The checks of each wave stay. Rejected: O53 (keep the plan order, story by story, about two times longer).
+- D41 (orchestrator, Build, 2026-11-26): small decisions of the build of T002 to T019, not yet reviewed (the story review, the `decisions` advisor point and the review of the guard are still to run):
+  - Test row QD7b of `tests/test_st_worker.sh` expects exit 1, not exit 7, when the Enter of `resend` fails: the script exits 1 there since before this feature, and the contract says the other exit codes stay.
+  - The monitor guard is stricter than contracts/monitor-guard.md in three places: it also denies `#`, `{`, `}` and every control character in a command (a comment or a brace expansion lets bash see other words than the guard parsed); it reads flags in pairs the way `scripts/st-worker.sh` does, so a required flag in a value slot does not count; and the id in a folder name must match the script's id rule. The contract and the tests do not name these yet: add the rows and the contract lines after the review.
+  - In `hooks/st-approve.py`, `PLUGIN` is a constant now and the `lock2` deny output moved into a `deny()` helper. The output is the same.
+  - `stale` reads the file time with `date -r <file> +%s` (GNU and macOS). The bound is 660 s.
+  - `answer`, `resend` and `pass` print the same line when the record file cannot be written. The contract names that line for `answer` only.
+  - `resend --record` writes its line after the Enter is sent, also when the prompt then stays in the box (exit 7). No row tests this case.
+  - The "Ready to submit your answers?" form of a question block is built to the contract and has no test row.
+  - The new rows in the README and DESIGN agent tables are at the end of each table. The DESIGN row uses the README job text. The harness summary line is "Watches one pane worker and settles its routine events. It sends the rest up."
 
 ## Queued research
 
