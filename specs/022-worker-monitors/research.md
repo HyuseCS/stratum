@@ -99,7 +99,7 @@
 
 ### R11. A monitor is locked to its own worker (FR-035, D36)
 
-- Decision (D36, the user's pick for F24, F31 option O1): the lock is who makes the call. Every command the guard allows names a monitor folder (`--record`, `--beat`, the Write path, the round call's folder; `pass` gets `--record` for this), and the folder name holds the worker id of the same command. On a monitor call that passed every other check, the hook makes `<folder>/owner` with an exclusive create that does not follow a symlink when it is missing, and writes the hook input's `agent_id` into it; when `owner` exists, the call goes on only if it is a regular file whose content equals that `agent_id`. A call with no `agent_id` is denied, and an error on this path gives a deny. A monitor cannot write `owner`. Claude Code sets `agent_id` (`hooks.md` lines 256 and 766-771), so a monitor that knows another folder's full name still cannot use it.
+- Decision (D36, the user's pick for F24, option O51): the lock is who makes the call. Every command the guard allows names a monitor folder (`--record`, `--beat`, the Write path, the round call's folder; `pass` gets `--record` for this), and the folder name holds the worker id of the same command. On a monitor call that passed every other check, the hook makes `<folder>/owner` with an exclusive create that does not follow a symlink when it is missing, and writes the hook input's `agent_id` into it; when `owner` exists, the call goes on only if it is a regular file whose content equals that `agent_id`. A call with no `agent_id` is denied, and an error on this path gives a deny. A monitor cannot write `owner`. Claude Code sets `agent_id` (`hooks.md` lines 256 and 766-771), so a monitor that knows another folder's full name still cannot use it.
 - The folder name keeps its 16-character `mktemp` key. It is not the lock: it only makes the seconds before the right monitor's first call safe, because a different monitor cannot guess the name.
 - A continue with SendMessage keeps the same monitor, so the same `agent_id` and `owner`. A new monitor after a stopped one gets a new folder (contracts/st-worker-skill.md C1), so no `owner` file is ever removed, and the old record file stays and is shown.
 - Why: no secret has to stay secret after the first call, so the Read allow list of the earlier form is gone (it had the hole F30 found), and the rule is smaller. The first call needs no file that the main session writes later, so there is no race for the right monitor. A test turns it red (contracts/monitor-guard.md, FR-035 rows and negative controls). It works for a saved machine, because the folder is on this machine.
@@ -109,3 +109,35 @@
 - Alternatives considered: (1) a secret folder name alone, with a Read allow list: the name can reach a monitor through a session transcript in a config folder that is a git work tree (F30), through the answer of the Codex round call, and through the worker's pane (F31). (2) The main session writes the agent id into the folder: the id is known only after the start, so the first call races. (3) A key file and a `--key` flag: the same secret problem as (1).
 - Proved before the build, in T001: that the hook input holds an `agent_id` for a subagent's call, whether it is the id the Agent tool gives the main session, and that it stays the same after a SendMessage continue. A subagent's shell has `CLAUDE_CODE_SESSION_ID` (the main session's id), `CLAUDE_CODE_CHILD_SESSION=1` and `CLAUDE_CODE_SESSION_ATTENDED=1`, and no variable with its agent id (live test, 2026-11-26), so T001 reads the hook input through a temporary, off-by-default log block in `hooks/st-approve.py` that writes only outside the project and is removed at the end of T001 (quickstart section 1 steps 3, 6 and 10). No `agent_id`, or one that changes after a continue, stops the feature before T002. T001 writes the results under `## Probe results (T001)` at the end of this file.
 - Not tested live until T013: the same facts for the shipped `stratum:st-monitor`, and that a call naming another monitor's full folder is denied. The live checks are quickstart section 3 step 5, which must pass in T013.
+
+## Probe results (T001)
+
+Run on 2026-11-26, on this machine, in autonomous build mode, with the temporary `ask` rule of D29 (added by the main session one time, D39). Result: pass. No stop rule applied.
+
+### Approve from a subagent
+
+- Worker `probe3` (pane worker, `--autonomous`, branch `stratum-51_probe3`) ran `test -f specs/022-worker-monitors/probe.txt`. The dialog said `Rule Bash(test -f specs/022-worker-monitors/probe.txt) from user settings overrides auto mode.` and the approve hook wrote one request.
+- A general-purpose background subagent (model `opus`) ran `wait probe3`: exit 6, `state	approval	worker-probe3	w91:p1`, with a `request` line, a `tab` line, an `input` line and an `inputhash` line.
+- The `input` line is not the bare command. Its form is `Bash: {"command":"test -f specs/022-worker-monitors/probe.txt","description":"..."}`. A monitor reads the command from the `command` field.
+- The subagent ran `approve probe3 --request <rid> --input-hash <hash> --record <record file>` one time: exit 0, `approved	worker-probe3	<rid>`. The record file got one line. The worker went on, committed and wrote its result. The next `wait` gave `state	finished`.
+- No permission prompt and no block reached the user or the subagent for any `st-worker.sh` call: 2 `wait`, 1 `approve` and 1 `list`.
+- `answer` was not run in this probe: the worker showed no question. `pass` was not run: no other request came.
+
+### Measured
+
+- m1, from the `state approval` line (end of `wait`) to the `approved` line: 19 s. From the time the worker made the request to the `approved` line: 45 s.
+- m2, from the end of the `approve` call to the start of the next `wait` call, with one `advisor` call (29 s) between: 40 s. The subagent ran each `date +%s` as its own Bash call, so this gap is on the high side.
+- m3, `printenv HERDR_ENV HERDR_WORKSPACE_ID` in the subagent: `1` and `w8K` (the main session's workspace).
+- The bound of R6: 550 s plus two times 40 s is 630 s. Rounded up to a whole minute: 660 s. T018 writes this number.
+
+### Id check (D36)
+
+Read from the temporary log block in `hooks/st-approve.py` (five fields of the hook input, no tool input).
+
+- (i1) the id the Agent tool gave the main session for the probe subagent, (i2) the `agent_id` of the hook input for its first `st-worker.sh` call and for all 12 of its Bash calls, and (i3) the `agent_id` of its `st-worker.sh list` call after a SendMessage continue: all three are the same value. So (i1) equals (i2), and (i3) equals (i2).
+- The value is 17 characters: the letter `a` and 16 hex digits.
+- A run before the worker probe, with a second general-purpose subagent that ran only `st-worker.sh list` before and after a SendMessage continue, gave the same three results.
+- The main session's own calls have no `agent_id` and no `agent_type` in the hook input (both keys are missing).
+- `agent_type` is `general-purpose` for a general-purpose subagent and `stratum:st-triage` for the Stratum agent `st-triage`. So the form for the shipped monitor is `stratum:st-monitor`, as the guard of R5 expects. T013 checks this for the shipped agent itself.
+- `session_id` in a subagent's hook input is the main session's id.
+- The block logged the calls of every session on this machine while it was on, as planned. It is off and removed. The log folder `~/.local/state/stratum/probe-022/` is outside the project.
