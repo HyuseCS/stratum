@@ -6,6 +6,7 @@ import posixpath
 import re
 import shlex
 import signal
+import stat
 import subprocess
 import sys
 import time
@@ -46,7 +47,16 @@ def unjudgeable(command):
     return "\\\n" in command or "<<" in command or bool(SUBSTITUTION.search(command))
 
 
-LOCK = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "scripts", "st-lock.sh")
+PLUGIN = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+LOCK = os.path.join(PLUGIN, "scripts", "st-lock.sh")
+MONITOR = "stratum:st-monitor"
+MONITOR_REASON = ("st-monitor runs only st-worker.sh wait, answer, approve, pass and resend, and HERDR_ENV=0 "
+                  "st-advisor.sh round decisions <folder> 1 <file>. It acts only in the monitor folder that its own "
+                  "agent id owns, writes only spec.md and views-<n>.md there, and reads no result file.")
+MONITOR_SUBS = {"wait": ("--beat",), "answer": ("--screen", "--record"), "approve": ("--record",),
+                "pass": ("--record",), "resend": ("--record",)}
+MONITOR_ONCE = ("--record", "--beat", "--screen", "--machine", "--request")
+MONITOR_BAD = re.compile(r"[\x00-\x1f\x7f;&|<>`$(){}#]")
 
 
 def git(args, cwd):
@@ -343,6 +353,104 @@ def request(data, cwd):
                 pass
 
 
+def lexists(path):
+    try:
+        os.lstat(path)
+    except FileNotFoundError:
+        return False
+    return True
+
+
+def monitor_folder(folder, wid):
+    ident = re.escape(wid.lower()) if wid else "[a-z0-9][a-z0-9-]{0,24}"
+    if not re.fullmatch(f"monitor-{ident}-[A-Za-z0-9]{{16}}", posixpath.basename(folder)):
+        return False
+    if not stat.S_ISDIR(os.lstat(folder).st_mode) or lexists(os.path.join(folder, "revoked")):
+        return False
+    if not stat.S_ISREG(os.lstat(os.path.join(folder, "beat")).st_mode):
+        return False
+    return not any(lexists(os.path.join(d, ".git")) for d in up(os.path.realpath(folder)))
+
+
+def monitor_path(path, name, wid=None):
+    if not isinstance(path, str) or not path.startswith("/") or posixpath.normpath(path) != path:
+        return None
+    folder, base = posixpath.split(path)
+    if not re.fullmatch(name, base) or os.path.islink(path) or not monitor_folder(folder, wid):
+        return None
+    return folder
+
+
+def monitor_owner(folder, agent_id):
+    path = os.path.join(folder, "owner")
+    want = agent_id.encode("utf-8")
+    try:
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+    except FileExistsError:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        with os.fdopen(fd, "rb") as f:
+            return stat.S_ISREG(os.fstat(f.fileno()).st_mode) and f.read() == want
+    with os.fdopen(fd, "wb") as f:
+        f.write(want)
+    return True
+
+
+def monitor_folder_of(ti, cwd):
+    command = ti.get("command")
+    if not isinstance(command, str) or MONITOR_BAD.search(command):
+        return None
+    words = shlex.split(command)
+    if len(words) == 8 and words[:2] == ["HERDR_ENV=0", "bash"] \
+            and os.path.realpath(os.path.join(cwd, words[2])) == os.path.join(PLUGIN, "scripts", "st-advisor.sh") \
+            and words[3:5] == ["round", "decisions"] and words[6] == "1":
+        folder = monitor_path(words[7], r"views-[0-9]+\.md")
+        return folder if folder is not None and folder == words[5] else None
+    if len(words) < 4 or words[0] != "bash" or words[2] not in MONITOR_SUBS \
+            or os.path.realpath(os.path.join(cwd, words[1])) != os.path.join(PLUGIN, "scripts", "st-worker.sh"):
+        return None
+    wid, args = words[3], words[4:]
+    pairs = {}
+    for i in range(0, len(args) - 1, 2):
+        if args[i] == "--keys":
+            break
+        pairs[args[i]] = args[i + 1]
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9-]{0,24}", wid) or any(args.count(f) > 1 for f in MONITOR_ONCE) \
+            or not all(f in pairs for f in MONITOR_SUBS[words[2]]):
+        return None
+    folders = set()
+    for flag, name in (("--record", r"record\.tsv"), ("--beat", "beat")):
+        if flag in args:
+            folders.add(monitor_path(pairs.get(flag), name, wid))
+    return folders.pop() if len(folders) == 1 else None
+
+
+def monitor_ok(data, cwd):
+    agent_id = data.get("agent_id")
+    tool = data.get("tool_name")
+    ti = data.get("tool_input")
+    if not isinstance(agent_id, str) or not agent_id or CONTROL.search(agent_id) or not isinstance(ti, dict):
+        return False
+    if tool == "Read":
+        path = ti.get("file_path")
+        return isinstance(path, str) and not re.fullmatch(r"result(?:-round[0-9]+)?\.md",
+                                                         posixpath.basename(posixpath.normpath(path)))
+    if tool == "Write":
+        folder = monitor_path(ti.get("file_path"), r"spec\.md|views-[0-9]+\.md")
+    elif tool == "Bash":
+        folder = monitor_folder_of(ti, cwd)
+    else:
+        return False
+    return folder is not None and monitor_owner(folder, agent_id)
+
+
+def deny(reason):
+    sys.stdout.write(json.dumps({"hookSpecificOutput": {
+        "hookEventName": "PreToolUse",
+        "permissionDecision": "deny",
+        "permissionDecisionReason": reason,
+    }}) + "\n")
+
+
 def render(path):
     try:
         with open(path, "rb") as f:
@@ -363,22 +471,30 @@ def main():
         return
     if sys.argv[1:2] == ["--worker"]:
         sys.exit(0 if worker_session(os.getcwd()) else 3)
+    if sys.argv[1:2] == ["--never"]:
+        text = sys.stdin.buffer.read().decode("utf-8", "replace").replace(LOCK, "")
+        sys.exit(0 if NEVER.search(text) or NEVER.search(strip_quotes(text)) else 4)
+    monitor = False
     try:
         data = json.loads(sys.stdin.buffer.read())
         if not isinstance(data, dict):
             return
-        cwd = os.path.realpath(data.get("cwd") if isinstance(data.get("cwd"), str) else os.getcwd())
         event = data.get("hook_event_name")
+        monitor = event == "PreToolUse" and data.get("agent_type") == MONITOR
+        cwd = os.path.realpath(data.get("cwd") if isinstance(data.get("cwd"), str) else os.getcwd())
         if event == "PreToolUse":
             if worker_session(cwd) and lock2(data, cwd):
-                sys.stdout.write(json.dumps({"hookSpecificOutput": {
-                    "hookEventName": "PreToolUse",
-                    "permissionDecision": "deny",
-                    "permissionDecisionReason": REASON,
-                }}) + "\n")
+                deny(REASON)
+            elif monitor and not monitor_ok(data, cwd):
+                deny(MONITOR_REASON)
         elif event == "PermissionRequest":
             request(data, cwd)
     except Exception:
+        if monitor:
+            try:
+                deny(MONITOR_REASON)
+            except Exception:
+                sys.exit(2)
         return
 
 
