@@ -1422,7 +1422,10 @@ class ApproveHookTest(unittest.TestCase):
         for text in ("git push origin x", "cat .env", "curl https://x", "git pu'sh' origin x",
                      f"bash {LOCK_SH} -- git push origin x", "x && git\n  push origin x", "git \\\n  push origin x",
                      "git -C /home/u/Desktop/a-long-project-name/repo-t004\n  push origin worker-t004",
-                     "git reset \\\n  --hard HEAD~3"):
+                     "git reset \\\n  --hard HEAD~3", "git pu\nsh origin x",
+                     "─" * 40 + "\n Bash command\n\n   cat /home/u/Desktop/stratum-t004/specs/022-worker-monitors/"
+                     "contracts/../../.en\n   v.local\n   Show the local settings\n\n Do you want to proceed?\n"
+                     " ❯ 1. Yes\n   2. No\n"):
             with self.subTest(text=text):
                 self.assertEqual((self.never(text), self.never(clean)), (0, 4))
 

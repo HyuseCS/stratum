@@ -481,8 +481,9 @@ def main():
         sys.exit(0 if worker_session(os.getcwd()) else 3)
     if sys.argv[1:2] == ["--never"]:
         text = sys.stdin.buffer.read().decode("utf-8", "replace").replace(LOCK, "")
-        joined = re.sub(r"[ \t│]*\n[ \t│]*", " ", re.sub(r"\\\n[ \t│]*", "", text))
-        sys.exit(0 if any(NEVER.search(t) or NEVER.search(strip_quotes(t)) for t in (text, joined)) else 4)
+        flat = re.sub(r"\\\n[ \t│]*", "", text)
+        joined, glued = (re.sub(r"[ \t│]*\n[ \t│]*", s, flat) for s in (" ", ""))
+        sys.exit(0 if any(NEVER.search(t) or NEVER.search(strip_quotes(t)) for t in (text, joined, glued)) else 4)
     monitor = False
     try:
         data = json.loads(sys.stdin.buffer.read())
