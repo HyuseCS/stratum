@@ -12,7 +12,7 @@ One `stratum:st-monitor` background subagent of the main session.
 | machine | `local` or a saved machine label | Passed as `--machine <m>` on every `st-worker.sh` call when not `local` (FR-005). |
 | model | `opus` by default | From the `model:` line, or `.stratum/models.json` key `st-monitor` (FR-024). Weaker: `sonnet`, `haiku`. Not weaker: `opus`, `fable`. |
 | agent id | the id the Agent tool returns | The main session keeps it, to continue the monitor with SendMessage or stop it with `TaskStop`. |
-| folder | `<scratchpad>/monitor-<id>/` | Main session scratchpad, outside every git work tree (FR-014). It holds the beat file before the monitor's first start, so the monitor guard accepts it as a monitor folder. |
+| folder | `<folder>` = `<scratchpad>/monitor-<id>-<key>` | Made by the main session with `mktemp -d "<scratchpad>/monitor-<id>-XXXXXXXXXXXXXXXX"` before the first start: `<key>` is 16 random letters or digits (D36). Main session scratchpad, outside every git work tree (FR-014). Its path is only in that monitor's brief. It holds the beat file before the monitor's first start, so the monitor guard accepts it as a monitor folder. It belongs to the first monitor that uses it (its `owner` file). A monitor that takes over from a stopped one gets a new folder; the old one gets a `revoked` file, and it and its record stay. |
 
 States, from the main session's view:
 
@@ -42,13 +42,14 @@ While a `needs you` waits for the user, the worker stays at its dialog or questi
 
 ## Record file
 
-`<scratchpad>/monitor-<id>/record.tsv`. Written only by `scripts/st-worker.sh`. One line per action, fields split by TAB, control characters removed. It outlives the monitor (FR-008).
+`<folder>/record.tsv`. Written only by `scripts/st-worker.sh`. One line per action, fields split by TAB, control characters removed. It outlives the monitor (FR-008).
 
 | Line | Fields |
 |------|--------|
 | answer | UTC time, `worker-<id>`, `tab worker-<id>`, `answer`, the question, the answer (`keys <k>...` or `text <t>`) |
 | resend | UTC time, `worker-<id>`, `tab worker-<id>`, `resend`, `/goal prompt`, `Enter` |
 | approve | UTC time, `worker-<id>`, `tab worker-<id>`, tool, input (the line `approve` writes today, `scripts/st-worker.sh:771`) |
+| pass | UTC time, `worker-<id>`, `tab worker-<id>`, `pass`, the request id, `-` |
 
 - The question is the screen block that the hash covers, as one line: lines joined by ` | `, the last 600 characters.
 - A line is written only after the keys or text were sent, or the approval was written. A refused call writes nothing.
@@ -58,13 +59,21 @@ While a `needs you` waits for the user, the worker stays at its dialog or questi
 
 | File | Written by | Content |
 |------|------------|---------|
-| `spec.md` | the monitor (Write tool), just before its first Codex call | the text of its task file. Only there because every `st-advisor.sh` point needs a readable `spec.md` in its folder (`scripts/st-advisor.sh:73-76`) |
+| `spec.md` | the monitor (Write tool), just before its first Codex call | the task text of its brief. Only there because every `st-advisor.sh` point needs a readable `spec.md` in its folder (`scripts/st-advisor.sh:73-76`) |
 | `views-<n>.md` | the monitor (Write tool) | one big decision: the question, the facts, the answer, the `advisor` answer, the `Owns:` files it touches |
 | `advisor.md` | `scripts/st-advisor.sh` | the record of each `round decisions` run (`:77`) |
 
+## Owner file
+
+`<folder>/owner`. Made by the monitor guard in `hooks/st-approve.py` on the first monitor call for the folder, with an exclusive create that does not follow a symlink, and holds that call's `agent_id` (D36). Every later monitor call on the folder must carry the same `agent_id`, compared as exact bytes. No one else writes or removes it.
+
+## Revoked file
+
+`<folder>/revoked`. Written by the main session with the Write tool when it stops using a monitor folder, for any reason (a takeover, or a new monitor after a stopped one). The monitor guard denies every monitor call on a folder where any entry named `revoked` exists, whatever its kind (a file, a folder, a symlink, also a broken one). Its content is not read. A monitor cannot write it.
+
 ## Beat file
 
-`<scratchpad>/monitor-<id>/beat`. The one sign of life of the monitor (FR-021, research.md R6): its mtime. Written by the main session with the Write tool just before each start or continue of the monitor, and refreshed by `wait --beat <file>` at its start and at each 10 s slice. Its content is not read.
+`<folder>/beat`. The one sign of life of the monitor (FR-021, research.md R6): its mtime. Written by the main session with the Write tool just before each start or continue of the monitor, and refreshed by `wait --beat <file>` at its start and at each 10 s slice. Its content is not read.
 
 ## Monitor report
 

@@ -17,3 +17,10 @@ summary: The revised plan addresses the four earlier findings. One small change 
 
 ## plan | 2026-11-26T06:29:30Z | sha256 0069dfb942a0d206f03c3ee93da1da13bea5f42d4d363a304cf5a8146cf8276c | APPROVED
 summary: The revised plan keeps one decision list per worker and adds each decision once, including decisions from a replacement monitor. This resolves the remaining planning finding.
+
+## plan | 2026-11-26T07:05:18Z | sha256 4bf96029577096cb523f7102a24833a57aed7553fcd9a33c91f2032fa38a1caa | REVISE
+summary: Use the existing startup probe to determine whether the orchestrator can assign monitor ownership directly. That could remove the first-call ownership claim and its recovery procedure.
+- [MEDIUM] specs/022-worker-monitors/plan.md:101: Extend T001 to compare the agent ID returned at background launch with the ID the hook receives, both initially and after SendMessage. If they match, have the orchestrator register the worker-to-agent assignment and let the first worker command wait briefly for registration. Evidence: T001 already launches a background agent. The plan postpones the live identity check until T013, after T006 and T009 implement and test first-call ownership. With orchestrator registration, the hook can check the assignment before allowing a command, and the plan can drop the random key and the recovery branch for a folder claimed by the wrong monitor. T013 can still exercise the shipped monitor end to end.
+
+## plan | 2026-11-26T07:10:00Z | sha256 0f609de9141640b023ff3ae6e0fdfff609bf30ecd74243f9ea67347c13f36936 | WAIVED
+reason: After round 5 the plan changed only by the fix of its one MEDIUM finding: T001 also checks the agent id in the hook input before any lock code is built. No task was added or removed, no file outside the plan's list is touched, and no design choice was replaced.

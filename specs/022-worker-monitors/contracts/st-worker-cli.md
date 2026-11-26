@@ -5,7 +5,7 @@ Only the parts below change. Every other command, line and exit code stays as it
 ## Usage line
 
 ```text
-... | wait <id> [--machine <m>] [--beat <file>] | answer <id> [--machine <m>] [--screen <hash>] [--record <file>] --keys <key>... | --text <text> | ... | resend <id> [--machine <m>] [--record <file>] | ... | stale <beat file>...
+... | wait <id> [--machine <m>] [--beat <file>] | answer <id> [--machine <m>] [--screen <hash>] [--record <file>] --keys <key>... | --text <text> | ... | resend <id> [--machine <m>] [--record <file>] | ... | pass <id> --request <rid> [--record <file>] [--machine <m>] | ... | stale <beat file>...
 ```
 
 `--record` comes before `--keys`, as `--screen` does today (`--keys` takes the rest of the line).
@@ -35,6 +35,7 @@ Only the parts below change. Every other command, line and exit code stays as it
 - `answer`: after the keys or the text were sent (after `send-keys` or the `enter` of a typed answer), add one line: `<UTC time>\tworker-<id>\ttab worker-<id>\tanswer\t<question>\t<answer>`. `<question>` is the dialog block or the question block that the hash covers, or with no `--screen` the last 15 screen lines; lines joined by ` | `, control characters removed, the last 600 characters. `<answer>` is `keys <k>...` or `text <t>`. A line that cannot be written prints `Sent, but cannot write the record file <file>.` and exits 1.
 - `resend`: after Enter was pressed, add `<UTC time>\tworker-<id>\ttab worker-<id>\tresend\t/goal prompt\tEnter`.
 - `approve --record`: no change.
+- `pass`: takes `--record <file>` too (D36: every monitor command names a path in its own folder). After it writes `<rid>.user`, add `<UTC time>\tworker-<id>\ttab worker-<id>\tpass\t<rid>\t-`. With no `--record`, as today.
 - The record file changes only when an answer or an approval is recorded.
 - For a worker on a saved machine the record file is on this machine, the same as for a local worker (FR-005).
 
