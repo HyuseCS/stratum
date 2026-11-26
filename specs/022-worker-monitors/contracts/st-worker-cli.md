@@ -13,8 +13,8 @@ Only the parts below change. Every other command, line and exit code stays as it
 ## `screen` line for a work question (FR-007)
 
 - `wait` and `watch` print `screen\t<hash>` in the `state blocked` block for an open work question too, in the same place as for a dialog (`scripts/st-worker.sh:168`).
-- The question block: in the screen lines (`recent-unwrapped`, 40 lines, colour codes removed, the same lines as for a dialog), find the last line with `Enter to select` or `Ready to submit your answers?`. The block is the 15 lines that end at that line, plus, after `Ready to submit your answers?`, the numbered option lines that follow it. The hash is the first 12 hex characters of the block's sha256.
-- A status line or input box below the block does not change the hash.
+- The question block: in the screen lines (`recent-unwrapped`, 40 lines, colour codes removed, the same lines as for a dialog), find the last line with `Enter to select` or `Ready to submit your answers?`. The block is the 15 lines that end at that line, plus, after `Ready to submit your answers?`, the numbered option lines that follow it. Empty lines between that line and the first option are skipped: they are not in the block. The hash is the first 12 hex characters of the block's sha256.
+- A status line below the block does not change the hash. A block with an input box (a `❯` line that is not an option) below it is not an open question: no `screen` line is printed.
 - A `state blocked` screen that is neither a dialog with a block nor a question prints no `screen` line, as today.
 
 ## `answer --screen` on a work question (FR-007, SC-004)
@@ -25,7 +25,7 @@ Only the parts below change. Every other command, line and exit code stays as it
 
 ## Never check on a one-time yes (FR-011)
 
-- When `answer` is about to send a one-time yes to a dialog (`y=1` at `scripts/st-worker.sh:541`), it checks the dialog block (the lines the screen hash covers) with `python3 <plugin root>/hooks/st-approve.py --never`, which reads the text on stdin, removes every copy of this plugin's own `scripts/st-lock.sh` path (the strip `bash_ok` makes, `hooks/st-approve.py:153-155`), and exits 0 when what is left matches the hook's `NEVER` pattern (`hooks/st-approve.py:27-38`), on the text or on the text with quotes removed, and 4 when it does not. Exit 4 is the only "clean" code: a crash or the SIGTERM handler (`hooks/st-approve.py:358-360`) exits 1, and `answer` must never read that as clean.
+- When `answer` is about to send a one-time yes to a dialog (`y=1` at `scripts/st-worker.sh:541`), it checks the dialog block (the lines the screen hash covers) with `python3 <plugin root>/hooks/st-approve.py --never`, which reads the text on stdin, removes every copy of this plugin's own `scripts/st-lock.sh` path (the strip `bash_ok` makes, `hooks/st-approve.py:153-155`), and exits 0 when what is left matches the hook's `NEVER` pattern (`hooks/st-approve.py:27-38`), on the text or on the text with quotes removed, and 4 when it does not. The match also runs on a joined copy of the text, with and without quotes: a backslash at a line end is removed with its line break and the spaces, tabs and `│` after it, and each other line break with the spaces, tabs and `│` around it becomes one space, so an action split over two screen lines still matches. The join also puts a description or option line next to the command, so a never-list word there refuses the yes too: the user then answers in the pane. Known limits: a plugin root reached through a symlink is not stripped, so its [lock] test dialog is refused; a command that writes to the plugin's own `st-lock.sh` is not on the never list, like any other path outside the worktree (no path rule, D42). Exit 4 is the only "clean" code: a crash or the SIGTERM handler (`hooks/st-approve.py:358-360`) exits 1, and `answer` must never read that as clean.
 - Exit 0 prints `The dialog's action is on the never list. Nothing sent. Tell the user the workspace, the tab and the prompt.`, exits 1 and sends nothing.
 - Any exit other than 0 and 4 prints `The never check did not run. Nothing sent. Tell the user the workspace, the tab and the prompt.`, exits 1 and sends nothing. `answer` sends the yes only on exit 4.
 - A "No" option is never checked: it is always allowed when the rest of the rules allow it.
@@ -33,9 +33,9 @@ Only the parts below change. Every other command, line and exit code stays as it
 ## `--record <file>` (FR-008)
 
 - `answer`: after the keys or the text were sent (after `send-keys` or the `enter` of a typed answer), add one line: `<UTC time>\tworker-<id>\ttab worker-<id>\tanswer\t<question>\t<answer>`. `<question>` is the dialog block or the question block that the hash covers, or with no `--screen` the last 15 screen lines; lines joined by ` | `, control characters removed, the last 600 characters. `<answer>` is `keys <k>...` or `text <t>`. A line that cannot be written prints `Sent, but cannot write the record file <file>.` and exits 1.
-- `resend`: after Enter was pressed, add `<UTC time>\tworker-<id>\ttab worker-<id>\tresend\t/goal prompt\tEnter`.
+- `resend`: after Enter was pressed, add `<UTC time>\tworker-<id>\ttab worker-<id>\tresend\t/goal prompt\tEnter`. The line is written also when the prompt then stays in the input box (exit 7, `state unsent`). An Enter that herdr refuses prints a `stopped: ` line, exits 1 and writes no line. A line that cannot be written prints `Sent, but cannot write the record file <file>.` and exits 1.
 - `approve --record`: no change.
-- `pass`: takes `--record <file>` too (D36: every monitor command names a path in its own folder). After it writes `<rid>.user`, add `<UTC time>\tworker-<id>\ttab worker-<id>\tpass\t<rid>\t-`. With no `--record`, as today.
+- `pass`: takes `--record <file>` too (D36: every monitor command names a path in its own folder). After it writes `<rid>.user`, add `<UTC time>\tworker-<id>\ttab worker-<id>\tpass\t<rid>\t-`. A line that cannot be written prints `Sent, but cannot write the record file <file>.` and exits 1; `<rid>.user` stays. With no `--record`, as today.
 - The record file changes only when an answer or an approval is recorded.
 - For a worker on a saved machine the record file is on this machine, the same as for a local worker (FR-005).
 

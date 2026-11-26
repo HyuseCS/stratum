@@ -52,7 +52,7 @@ While a `needs you` waits for the user, the worker stays at its dialog or questi
 | pass | UTC time, `worker-<id>`, `tab worker-<id>`, `pass`, the request id, `-` |
 
 - The question is the screen block that the hash covers, as one line: lines joined by ` | `, the last 600 characters.
-- A line is written only after the keys or text were sent, or the approval was written. A refused call writes nothing.
+- An answer, resend or pass line is written only after the keys, the text or `<rid>.user` were sent or written. The approve line is written just before `<rid>.ok` (as today, `Approve nothing` when the line cannot be written); when `.ok` then cannot be written, approve exits 1 and the line stays.
 - The file changes only when an answer or an approval is recorded.
 
 ## Codex files in the monitor folder

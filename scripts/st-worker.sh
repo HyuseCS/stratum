@@ -218,7 +218,7 @@ qblock() {
   [ -n "$en" ] && live "$en" "$SC" || return 1
   BT=$(head -n "$en" <<<"$SC" | tail -n 15)
   if sed -n "${en}p" <<<"$SC" | grep -qa 'Ready to submit your answers?'; then
-    o=$(tail -n "+$((en + 1))" <<<"$SC" | awk '/^([[:space:]]|❯)*[0-9]+\.[[:space:]]/ { print; next } { exit }')
+    o=$(tail -n "+$((en + 1))" <<<"$SC" | awk '!s && /^[[:space:]]*$/ { next } /^([[:space:]]|❯)*[0-9]+\.[[:space:]]/ { s = 1; print; next } { exit }')
     [ -z "$o" ] || BT+=$'\n'$o
   fi
   SH=$(sha256sum <<<"$BT")
