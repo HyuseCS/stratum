@@ -102,6 +102,8 @@ K26|skills/st-worker/SKILL.md|Keep one list of "big decision made" lines for eac
 K27|skills/st-worker/SKILL.md|Each report repeats the monitor's whole list, so add each new line one time, also a line from a monitor that took over from a stopped one.
 K28|skills/st-worker/SKILL.md|Watch the monitors with the Monitor tool: `while bash <plugin root>/scripts/st-worker.sh stale <beat file>...; do sleep 60; done`, with the beat file of every live monitor and a deadline of 30 minutes. Start it again with the new list when a monitor starts or ends, and at its deadline.
 K29|skills/st-worker/SKILL.md|A `stale` line: stop that monitor with `TaskStop`, then run `TaskStop` on the same id again and check that it finds no task. Then continue the same monitor with SendMessage. Only when that fails, start a new `stratum:st-monitor` with a new folder.
+K30|skills/st-worker/SKILL.md|Only when that fails, start a new `stratum:st-monitor` with a new folder. When SendMessage says the monitor was stopped and won't be resumed, ask the user first, with the worker's name, and start the new monitor only on their yes; with no yes, the worker has no monitor and this session watches it.
+K30c|specs/022-worker-monitors/contracts/st-worker-skill.md|Only when that fails, start a new `stratum:st-monitor` with a new folder. When SendMessage says the monitor was stopped and won't be resumed, ask the user first, with the worker's name, and start the new monitor only on their yes; with no yes, the worker has no monitor and this session watches it.
 D3a|hooks/st-approve.py|Another agent id owns this monitor folder
 D3b|hooks/st-approve.py|[A-Za-z0-9 _./:=@%+,'\"-]
 TABLE

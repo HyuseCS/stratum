@@ -69,7 +69,7 @@ The approval request comes from a temporary `ask` rule (D29). No agent changes a
 
 ## 5. A failed monitor (US4, SC-005, SC-006)
 
-1. User: stop one monitor from `/tasks` while its worker waits at a dialog. Expect inside the bound: a `stale` line in the main session's Monitor watch, `TaskStop`, a second `TaskStop` that finds no task, a new write of its beat file, then the same monitor continued with SendMessage, and the dialog answered. The record file still has every earlier answer.
+1. User: stop one monitor from `/tasks` while its worker waits at a dialog. Expect inside the bound: a `stale` line in the main session's Monitor watch, `TaskStop`, a second `TaskStop` that finds no task, then a SendMessage that says the monitor won't be resumed, and a question to the user with the worker's name. On yes: `revoked` in the old folder, a new monitor with a new folder and its beat file, and the dialog answered. The old record file still has every earlier answer.
 2. A monitor that ended with `needs you` and is continued an hour later: expect no `stale` line for it after the continue (the main session wrote its beat file just before the continue).
 3. A monitor that ends with no `end:` line (continue one with "end your run now with no report"): expect the main session continues it.
 4. No second monitor (FR-003): while worker-<id> has a live monitor, the user says "start a monitor for worker-<id>". Expect: no new `stratum:st-monitor` Agent call, and a line that its monitor is live.
