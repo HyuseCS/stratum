@@ -160,3 +160,27 @@ Run on 2026-11-27 from base `c655d6b`, with six local pane workers (t013a to t01
 - Never list cost: the `\.stratum` rule matches the st-git agent's read-only check `ls -la .stratum/commit-standard`. So a commit check that shows a dialog goes to the user (t013b, t013d). The dialog showed only because the `ask` rule also matches that command.
 - Record cut (script-1 of the T020 list, now seen live): for a dialog taller than 15 lines, the record's screen block starts mid-dialog (`╌╌╌`, `mmit contents`), so the head of the command is not in the record.
 - Guard side effect: a monitor's first Bash `cat` of `sr-opus-5.md` was denied. The monitor used the Read tool.
+
+## Live run results (T020)
+
+Run on 2026-11-27 from base `d9c0311`, with 12 local pane workers (t020a to t020p) and one headless worker. All closed with no merge. Sections 2 and 3 passed in T013. The three items left from T013 are the first three lines below.
+
+- Enter fix (`4256d2c`), live: pass. The user's typed answer went through `answer --screen --text` in one call, with no extra Enter, and the record has `text Use a bash loop`.
+- 2.5, headless half: pass. `headless` from a clean detached worktree printed `success`, exit 0, and no monitor started.
+- Never-list cost of `.stratum`: seen again in T020 (read-only st-git checks). It stays a known cost. The `ask` rule of D43 causes the dialogs.
+- 4.1: pass. The monitor got an advisor yes, then the round call printed `APPROVED sha256 b99d4170...` and ended with `codex: headless (not in herdr)`. Only then did it answer. `advisor.md` holds a `decisions round 1` record, the main checkout shows no new file, and the report lists the decision.
+- 4.2: pass. With `.stratum/advisor.json` set to mode off, the round call printed `no advisor: mode off`, and the monitor ended with `needs you`. The file was set back after.
+- 4.3: failed, then fixed (`92c16d7`), then passed. A normal-mode worker's monitor ran the advisor and Codex, because step 1 read only the session's mode file. Step 1 now also needs the brief to say the mode is on for this worker. On the rerun the monitor ended with `needs you`, with no advisor and no Codex call.
+- 4.4: pass. A data model question gave `needs you`, with no advisor and no Codex call.
+- 4.5: pass. After `/advisor off`, the monitor had no advisor tool and ended with `needs you`, with no Codex call.
+- 4.6: pass. A yes with a condition gave `needs you`, with no Codex call and no answer.
+- 4.7: pass. A forced views file gave `REVISE` with two HIGH findings, and `needs you`.
+- 4.8: pass. The user said no to a shown big decision. A `followup` round undid it (`git rm`, commit `25c2083`), and nothing was merged.
+- 5.1: the stale line came at 678 s, inside the bound, and both TaskStop calls found no task. The continue path failed: SendMessage to a monitor the user stopped says it "won't be resumed", and a new agent needs the user's word. Fixed in the skill (`ask the user first`, rows K30 and K30c). On the user's yes, a new monitor with a new folder (the old one revoked) answered the waiting dialog.
+- 5.2: pass, with a shorter pause than the quickstart's hour. A monitor continued 12 minutes after `needs you` got no stale line, because the beat was written before the continue.
+- 5.3: cannot happen here. A monitor told to end with no report still ends through the hand-back call with a full report and an `end:` line.
+- 5.4: pass. "Start a monitor for worker-t020k", asked while its monitor was live, started no second monitor.
+- 5.5: pass. An unknown monitor model in `models.json` got the Agent call denied. The main session said `worker-t020n has no monitor: this session watches it.` and ran its own `wait` and `answer`.
+- 5.6: not run. The user chose to skip it (a second machine and a settings change there).
+- 6: the `sonnet` monitor got the advisor tool (`advisor_20260301` in its request). It sent a small question, which the brief settles, up with no advisor call and no answer. That is safe, but the advisor-first branch did not run on `sonnet`.
+- Found on the way: a relayed user answer to a big-decision question was blocked once by the auto mode classifier ("Undermining Oversight"). The monitor tried no other way, and the user answered in the pane. A pane resize changes the screen hash (the divider lines get longer), so an answer for the old hash is refused. This fails safe and costs one more round trip.

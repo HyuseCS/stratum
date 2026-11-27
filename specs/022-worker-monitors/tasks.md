@@ -105,7 +105,7 @@ Decisions used: D29 (the probe request), D30 (the Codex round call), D31 (no mon
 
 ## Phase 8: Polish & Cross-Cutting Concerns
 
-- [ ] T020 Run quickstart.md sections 2 to 6 live and write the results in the PR. Test: operator check, quickstart.md sections 2 to 6; gates the first release (the merge of the `stratum-51` PR).
+- [x] T020 Run quickstart.md sections 2 to 6 live and write the results in the PR. Test: operator check, quickstart.md sections 2 to 6; gates the first release (the merge of the `stratum-51` PR).
 
 ---
 
