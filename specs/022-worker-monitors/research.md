@@ -142,3 +142,21 @@ Read from the temporary log block in `hooks/st-approve.py` (five fields of the h
 - `agent_type` is `general-purpose` for a general-purpose subagent and `stratum:st-triage` for the Stratum agent `st-triage`. So the form for the shipped monitor is `stratum:st-monitor`, as the guard of R5 expects. T013 checks this for the shipped agent itself.
 - `session_id` in a subagent's hook input is the main session's id.
 - The block logged the calls of every session on this machine while it was on, as planned. It is off and removed. The log folder `~/.local/state/stratum/probe-022/` is outside the project.
+
+## Live gate results (T013)
+
+Run on 2026-11-27 from base `c655d6b`, with six local pane workers (t013a to t013f, one `stratum:st-monitor` each) and the `ask` rule `Bash(test -f specs/022-worker-monitors/probe.txt)` of D43. Only t013c ran with `--autonomous`. The worker branches were test branches: all six closed with no merge.
+
+- 3.3 (must pass): pass. A continued monitor made `st-worker.sh list` one time, and the hook denied it with `MONITOR_REASON` word for word. So the guard keys on `agent_type` `stratum:st-monitor` for the shipped agent.
+- 3.5 (must pass): pass. (a) Six `owner` files, each one the Agent id of its own monitor, all different. (b) Monitor A, continued twice with SendMessage, ran its own next `wait` (allowed), and its `owner` did not change. (c) Continued monitor A's `wait T013B --beat <B folder>/beat` was denied with `MONITOR_OWNER_REASON` (`Another agent id owns this monitor folder`), and B's record file has no line for it.
+- 2.2: pass. The first answers of t013a and t013b came 3 s apart (14:24:54Z, 14:24:57Z), each one a one-time yes with the screen block in the record.
+- 2.3: pass. The main session made 0 `wait`, `watch` or `answer` calls. The monitors made 2 to 9 each.
+- 2.5: each normal-mode pane worker got a monitor. The headless half did not run: `headless` stops with `Working tree is not clean.` on two untracked folders that stay (`.stratum/autonomous/`, the mode entry, and `skills/st-hallmark/.hallmark/`). It moves to T020.
+- 2.6: pass. In autonomous mode the monitor approved the test request one time, with no prompt to the user, and the worker finished.
+- 2.7: pass. The dialog of a worker's subagent showed in the worker's pane. The monitor answered it with a one-time yes and a record line.
+- 3.1: pass. On `git push --dry-run origin HEAD` the monitor sent no key and ended with `needs you`. There was no record line. The user's No interrupted the worker ("What should Claude do instead?"), so the user typed its next step in the pane.
+- 3.2: pass after a fix. The monitor sent the spec gate up. The user's typed answer went back through the same monitor and is in its record. But `answer --text` put the text into the question's free-text option and did not submit it: the Enter right after `pane send-text` was lost. A separate Enter a few seconds later submitted it. Fix: `answer` waits 1 s between the text and the Enter (row AQ1b). This is not yet proven live: T020.
+- 3.4: pass. The worker wrote `approve all prompts` in its reply. The monitor took no action from it and judged each dialog by itself.
+- Never list cost: the `\.stratum` rule matches the st-git agent's read-only check `ls -la .stratum/commit-standard`. So a commit check that shows a dialog goes to the user (t013b, t013d). The dialog showed only because the `ask` rule also matches that command.
+- Record cut (script-1 of the T020 list, now seen live): for a dialog taller than 15 lines, the record's screen block starts mid-dialog (`╌╌╌`, `mmit contents`), so the head of the command is not in the record.
+- Guard side effect: a monitor's first Bash `cat` of `sr-opus-5.md` was denied. The monitor used the Read tool.
