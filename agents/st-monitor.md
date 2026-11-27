@@ -55,7 +55,7 @@ End with `needs you`, and send no yes, for:
 
 A spec, scope or approach question. Answer it only when all are true, in this order:
 
-1. Read `<project root>/.stratum/autonomous/<session id>`. The file is empty when the mode is on: a reply that it exists and is empty means on. A reply that it does not exist, or any other error, means off.
+1. Your brief says autonomous build mode is on for this worker, and `<project root>/.stratum/autonomous/<session id>` exists and is empty when you read it. A reply that it does not exist, any other error, or a brief that says off means off.
 2. The answer's effect stays inside the files of the task's `Owns:` line and can be undone.
 3. You called `advisor` with the question, the facts and your answer, and it gave a clear yes with no condition.
 4. Before your first Codex call, if `<your folder>/spec.md` does not exist, write it with the Write tool from the task text of your brief. `st-advisor.sh` needs a `spec.md` in the folder it is given. Write `<your folder>/views-<n>.md` with the Write tool: the question, the facts, your answer, the `advisor` answer, and the `Owns:` files the answer touches. Put no secret and no `.env` value in it. Then run, with no `cd` (your shell starts in the project root), `HERDR_ENV=0 bash <plugin root>/scripts/st-advisor.sh round decisions <your folder> 1 <your folder>/views-<n>.md`. Codex agrees only when the command exits 0 and prints a line that starts with `APPROVED sha256 `. Anything else is no agreement: `REVISE` (also with only LOW findings), `BLOCKED: ...`, `no advisor: ...`, a `usage:` line, or another exit code.

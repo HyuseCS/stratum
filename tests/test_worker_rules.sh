@@ -75,7 +75,7 @@ M16|agents/st-monitor.md|Every command is for your own worker id, with paths in 
 M17|agents/st-monitor.md|pass <id> --request <rid> --record <record file>
 M18|agents/st-monitor.md|the worker id and machine (`local` or a saved machine), its workspace name, tab, worktree, branch, task text, test command and lane
 K1|skills/st-worker/SKILL.md|Start one `stratum:st-monitor` in the background for each pane worker, once its `start` is done: right after exit 0, after the `goal` of an exit 4, and after the `resend` of an exit 7, and for each worker that step 12 finds.
-K2|skills/st-worker/SKILL.md|Give it: the plugin root, the project root, the worker's id, machine, workspace name, tab, worktree, branch, task text, test command and lane, its record file `<folder>/record.tsv`, its beat file `<folder>/beat` and its folder `<folder>`, its model (`.stratum/models.json`, else `opus`), and whether autonomous build mode is on with this session's id. Keep its agent id with the worker's roster row.
+K2|skills/st-worker/SKILL.md|Give it: the plugin root, the project root, the worker's id, machine, workspace name, tab, worktree, branch, task text, test command and lane, its record file `<folder>/record.tsv`, its beat file `<folder>/beat` and its folder `<folder>`, its model (`.stratum/models.json`, else `opus`), and whether autonomous build mode is on for this worker (on only when its `start` had `--autonomous`) with this session's id. Keep its agent id with the worker's roster row.
 K3|skills/st-worker/SKILL.md|Never start a second monitor for a worker whose monitor is live.
 K4|skills/st-worker/SKILL.md|A headless worker and a Codex tab get no monitor.
 K5|skills/st-worker/SKILL.md|While a worker has a monitor, run no `wait` and no `watch` for it, read none of its pane text, and send it no answer yourself.
@@ -114,7 +114,7 @@ M9|Always up|- A question you are not sure about: whether it is small, or whethe
 M10|Always up|- A spec, scope or approach question
 M10a|Always up|- A spec, scope or approach question, unless all the steps of Big decisions hold.
 B0|Big decisions|A spec, scope or approach question. Answer it only when all are true, in this order:
-B1|Big decisions|1. Read `<project root>/.stratum/autonomous/<session id>`. The file is empty when the mode is on: a reply that it exists and is empty means on. A reply that it does not exist, or any other error, means off.
+B1|Big decisions|1. Your brief says autonomous build mode is on for this worker, and `<project root>/.stratum/autonomous/<session id>` exists and is empty when you read it. A reply that it does not exist, any other error, or a brief that says off means off.
 B2|Big decisions|2. The answer's effect stays inside the files of the task's `Owns:` line and can be undone.
 B3|Big decisions|3. You called `advisor` with the question, the facts and your answer, and it gave a clear yes with no condition.
 B4a|Big decisions|4. Before your first Codex call, if `<your folder>/spec.md` does not exist, write it with the Write tool from the task text of your brief. `st-advisor.sh` needs a `spec.md` in the folder it is given.
