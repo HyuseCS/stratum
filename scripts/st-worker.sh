@@ -600,6 +600,7 @@ answer)
       h agent send-keys "$N" "$k"
     fi
     h pane send-text "$PANE" "$text"
+    sleep 1 # ponytail: fixed 1 s for pasted text to settle before Enter (live T013 lost the Enter with none), raise it if a live run loses it again
     h pane send-keys "$PANE" enter
     a="text $text"
   fi

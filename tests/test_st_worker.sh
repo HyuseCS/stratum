@@ -905,6 +905,7 @@ a3 "$script"
 mk; states done working; dialogpane > "$tmp/pane.txt"
 run bash "$script" answer T004 --text "use main"
 check "AQ1 open question while done: --text picks Type something, types and sends, in one call" '[ $rc = 0 ] && [ "$(sendlog)" = "$(printf "agent\tget\tworker-t004\nagent\tsend-keys\tworker-t004\t3\npane\tsend-text\t%s\tuse main\npane\tsend-keys\t%s\tenter\nagent\twait\tworker-t004\t--until\tworking\t--timeout\t5000\nagent\tget\tworker-t004" "$(pane)" "$(pane)")" ]'
+check "AQ1b --text waits sleep 1 after the send-text and before the Enter" '[ "$(grep -P "^(pane\tsend-(text|keys)|sleep)\t" "$tmp/calls")" = "$(printf "pane\tsend-text\t%s\tuse main\nsleep\t1\npane\tsend-keys\t%s\tenter" "$(pane)" "$(pane)")" ]'
 mk; states done working; dialogpane > "$tmp/pane.txt"
 run bash "$script" answer T004 --keys 2
 check "AQ2 open question while done: --keys sends the key" '[ $rc = 0 ] && hascall "agent\tsend-keys\tworker-t004\t2"'
@@ -970,7 +971,7 @@ rfresh() { fresh; : > "$tmp/ssh"; : > "$tmp/gitlog"; rm -f "$tmp"/ssh_in.* "$tmp
 rrun() { HENV=0 run "$@"; }
 rmk() { rfresh; rrun bash "$script" start "${rsargs[@]}"; printf 't004\n' > "$tmp/rmarker"; reset; : > "$tmp/ssh"; rm -f "$tmp"/ssh_in.* "$tmp/n_ssh"; }
 sshs() { tr '\t' ' ' < "$tmp/ssh"; }
-mach() { awk -F'\t' '$0=="machine\tlist\t--json"{next} !($1=="--machine"&&$2=="laptop"){bad=1} END{exit bad}' "$tmp/calls"; }
+mach() { awk -F'\t' '$0=="machine\tlist\t--json"||$1=="sleep"{next} !($1=="--machine"&&$2=="laptop"){bad=1} END{exit bad}' "$tmp/calls"; }
 rcnt() { grep -cP "^--machine\tlaptop\t$1" "$tmp/calls"; }
 rcall() { local f=$1; shift; grep -qxF -- "$(printf -- "--machine\tlaptop\t$f" "$@")" "$tmp/calls"; }
 rnorm() { sed -E 's/^--machine\tlaptop\t//' "$tmp/calls"; }
