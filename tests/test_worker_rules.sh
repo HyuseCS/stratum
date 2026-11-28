@@ -79,7 +79,8 @@ K2|skills/st-worker/SKILL.md|Give it: the plugin root, the project root, the mai
 K3|skills/st-worker/SKILL.md|Never start a second monitor for a worker whose monitor is live.
 K4|skills/st-worker/SKILL.md|A headless worker and a Codex tab get no monitor.
 K5|skills/st-worker/SKILL.md|While a worker has a monitor, run no `wait` and no `watch` for it, read none of its pane text, and send it no answer yourself.
-K6|skills/st-worker/SKILL.md|Before a monitor's first start, make its folder with `mktemp -d "<scratchpad>/monitor-<machine>-<id in lower case>-XXXXXXXXXXXXXXXX"`, with `<machine>` the machine field of the worker's roster row in lower case; that path is `<folder>`.
+K6|skills/st-worker/SKILL.md|Before a monitor's first start, make its folder with `mktemp -d "<scratchpad>/monitor-<machine>-<id in lower case>-XXXXXXXXXXXXXXXX"`, with `<machine>` the machine field of the worker's roster row as is; that path is `<folder>`.
+K6c|specs/022-worker-monitors/contracts/st-worker-skill.md|Before a monitor's first start, make its folder with `mktemp -d "<scratchpad>/monitor-<machine>-<id in lower case>-XXXXXXXXXXXXXXXX"`, with `<machine>` the machine field of the worker's roster row as is; that path is `<folder>`.
 K7|skills/st-worker/SKILL.md|Give `<folder>` only in that monitor's brief, put the worker's task text in the brief itself, and write `<folder>` in no file.
 K8|skills/st-worker/SKILL.md|A new monitor that takes over from a stopped one gets a new `<folder>` made the same way; the old folder and its record file stay, and are shown with the others.
 K9|skills/st-worker/SKILL.md|A new monitor whose report holds the guard's owner deny (`Another agent id owns this monitor folder`): read `<folder>/owner` with the Read tool. Only when it exists and holds another agent id than the one you keep with that worker's roster row, another monitor took that folder first: stop the new monitor, write `revoked` in that folder, start one with a new folder, and tell the user in one line: `worker-<id>: another monitor took its monitor folder first; that folder is revoked and the worker has a new monitor.`
@@ -98,9 +99,11 @@ K21|skills/st-worker/SKILL.md|When the session ends while workers still run (the
 K23|skills/st-worker/SKILL.md|Then go back to step 6 for that worker: continue its monitor with SendMessage with the new round's task text, with its `Owns:` line, and its test command.
 K24|skills/st-worker/SKILL.md|Before the merge, and before `gh pr merge` for a branch that goes to main, show the user each "big decision made" of that worker's monitor.
 K31|skills/st-worker/SKILL.md|show the user each "big decision made" of that worker's monitor. Also show, for each old monitor folder of that worker (a folder you revoked), each `decisions round` record in its `advisor.md`, with its `views-<n>.md` files, as a possible big decision.
-K32|skills/st-worker/SKILL.md|A worker whose machine label is not only letters, digits and `-` gets no monitor: tell the user in one line `worker-<id> has no monitor: this session watches it.` Then watch that worker yourself with the rest of this step.
-P1|specs/022-worker-monitors/plan.md|so inside one main session a worker has one usable folder at a time (FR-003). Two main sessions that find the same worker can each give it a monitor. The screen hash and the live request still refuse a stale answer.
-R1|specs/022-worker-monitors/research.md|So inside one main session one worker has at most one usable folder at any time, which also holds FR-003 there. Two main sessions that find the same worker can each give it a monitor. The screen hash and the live request still refuse a stale answer.
+K32|skills/st-worker/SKILL.md|A worker whose machine label is not 1 to 25 lower-case letters or digits, or is `local` on a saved machine, gets no monitor: tell the user in one line `worker-<id> has no monitor: this session watches it.` Then watch that worker yourself with the rest of this step.
+K32c|specs/022-worker-monitors/contracts/st-worker-skill.md|A worker whose machine label is not 1 to 25 lower-case letters or digits, or is `local` on a saved machine, gets no monitor:
+MG1|specs/022-worker-monitors/contracts/monitor-guard.md|The screen hash refuses an answer for a screen that changed before the check, but not two answers checked against the same screen at the same time, so FR-003 holds inside one main session only (D48).
+P1|specs/022-worker-monitors/plan.md|so inside one main session a worker has one usable folder at a time (FR-003). Two main sessions that find the same worker can each give it a monitor.
+R1|specs/022-worker-monitors/research.md|So inside one main session one worker has at most one usable folder at any time, which also holds FR-003 there. Two main sessions that find the same worker can each give it a monitor.
 K25|skills/st-worker/SKILL.md|On the user's "no", send a follow-up round that undoes it, with the decision and the user's words in the task file, and merge nothing before that round is `finished`.
 K26|skills/st-worker/SKILL.md|Keep one list of "big decision made" lines for each worker, for step 8.
 K27|skills/st-worker/SKILL.md|Each report repeats the monitor's whole list, so add each new line one time, also a line from a monitor that took over from a stopped one.
@@ -197,6 +200,13 @@ G35|specs/022-worker-monitors/research.md|monitor-<id>-<key>
 G36|specs/022-worker-monitors/quickstart.md|monitor-<id>-<key>
 G37|specs/022-worker-monitors/plan.md|FR-003 by code
 G38|specs/022-worker-monitors/research.md|FR-003 by code
+G39|skills/st-worker/SKILL.md|the machine field of the worker's roster row in lower case
+G40|specs/022-worker-monitors/contracts/st-worker-skill.md|the machine field of the worker's roster row in lower case
+G41|skills/st-worker/SKILL.md|not only letters, digits and `-` gets no monitor
+G42|specs/022-worker-monitors/contracts/st-worker-skill.md|not only letters, digits and `-` gets no monitor
+G43|specs/022-worker-monitors/contracts/monitor-guard.md|still refuse a stale answer
+G44|specs/022-worker-monitors/contracts/monitor-guard.md|label in lower case
+G45|specs/022-worker-monitors/data-model.md|label in lower case
 TABLE
 if sed -n '/^12\. /,$p' "$root/skills/st-worker/SKILL.md" | grep -qF -- 'The records of the earlier session were shown by that session and are not shown again.'; then echo "ok   K22 earlier records line in step 12"; else echo "FAIL K22 earlier records line in step 12"; fail=1; fi
 if head -n 5 "$root/skills/st-autonomous/SKILL.md" | grep -qx "name: st-autonomous" && head -n 5 "$root/skills/st-autonomous/SKILL.md" | grep -qx "disable-model-invocation: true"; then echo "ok   AU4 frontmatter"; else echo "FAIL AU4 frontmatter"; fail=1; fi

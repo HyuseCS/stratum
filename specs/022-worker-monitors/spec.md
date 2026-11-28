@@ -148,7 +148,7 @@ the dead monitor are still in its record.
 
 - **FR-001**: The orchestrator MUST start one monitor for each pane worker, for a worker on one task and for a worker on a whole issue, in normal mode and in autonomous build mode, also when there is one worker.
 - **FR-002**: The orchestrator MUST start no monitor for a headless worker and no monitor for a Codex tab.
-- **FR-003**: A monitor MUST watch exactly one worker, and one worker MUST have at most one monitor at any time.
+- **FR-003**: A monitor MUST watch exactly one worker, and one worker MUST have at most one monitor at any time inside one main session (D48).
 - **FR-004**: While a worker has a monitor, the main orchestrator MUST run no `wait` and no `watch` for that worker and MUST read no pane text of it.
 - **FR-005**: A monitor MUST work the same way for a worker on a saved machine as for a worker on this machine.
 

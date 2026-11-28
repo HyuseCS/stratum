@@ -1052,10 +1052,13 @@ class ApproveHookTest(unittest.TestCase):
     def test_monitor_binds_the_folder_to_the_machine(self):
         self.monitors()
         laptop = self.mon_dir("t004", "M1", owner=ID_A, machine="laptop")
-        for machine in ("laptop", "LAPTOP", "Laptop"):
-            for label, tool, tool_input in self.machine_forms(laptop, machine):
-                with self.subTest("laptop folder " + label):
-                    self.assertSilent(self.monitor(tool, tool_input))
+        for label, tool, tool_input in self.machine_forms(laptop, "laptop"):
+            with self.subTest("laptop folder " + label):
+                self.assertSilent(self.monitor(tool, tool_input))
+        longest = self.mon_dir("t004", "M5", owner=ID_A, machine="a" * 25)
+        for label, tool, tool_input in self.machine_forms(longest, "a" * 25):
+            with self.subTest("25-character label " + label):
+                self.assertSilent(self.monitor(tool, tool_input))
         with self.subTest("laptop folder Write spec.md"):
             self.assertSilent(self.monitor("Write", {"file_path": laptop + "/spec.md", "content": "x"}))
         with self.subTest("laptop folder round call"):
@@ -1063,11 +1066,14 @@ class ApproveHookTest(unittest.TestCase):
         self.deny_rows(self.machine_forms(self.A, "laptop"))
         self.deny_rows(self.machine_forms(laptop, "desk"))
         self.deny_rows(self.machine_forms(laptop, "local"))
+        self.deny_rows(self.machine_forms(laptop, "LAPTOP"))
+        self.deny_rows(self.machine_forms(laptop, "Laptop"))
+        self.deny_rows(self.machine_forms(self.A, "local"))
         self.deny_rows([self.bash_row(c) for c in [
             self.sh("wait", "T004", "--beat", laptop + "/beat"),
             self.sh("answer", "T004", "--screen", "h1", "--record", laptop + "/record.tsv", "--keys", "2"),
         ]])
-        for machine in ("a.b", "a_b", "-ab", "a" * 26):
+        for machine in ("a.b", "a_b", "-ab", "a" * 26, "a-b", "ab-", "LAPTOP"):
             folder = self.mon_dir("t004", "M2", owner=ID_A, machine=machine)
             with self.subTest(machine=machine):
                 self.deny_rows(self.machine_forms(folder, machine))
