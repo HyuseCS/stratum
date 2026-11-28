@@ -12,7 +12,7 @@ One `stratum:st-monitor` background subagent of the main session.
 | machine | `local` or a saved machine label | Passed as `--machine <m>` on every `st-worker.sh` call when not `local` (FR-005). |
 | model | `opus` by default | From the `model:` line, or `.stratum/models.json` key `st-monitor` (FR-024). Weaker: `sonnet`, `haiku`. Not weaker: `opus`, `fable`. |
 | agent id | the id the Agent tool returns | The main session keeps it, to continue the monitor with SendMessage or stop it with `TaskStop`. |
-| folder | `<folder>` = `<scratchpad>/monitor-<id>-<key>` | Made by the main session with `mktemp -d "<scratchpad>/monitor-<id>-XXXXXXXXXXXXXXXX"` before the first start: `<key>` is 16 random letters or digits (D36). Main session scratchpad, outside every git work tree (FR-014). Its path is only in that monitor's brief. It holds the beat file before the monitor's first start, so the monitor guard accepts it as a monitor folder. It belongs to the first monitor that uses it (its `owner` file). A monitor that takes over from a stopped one gets a new folder; the old one gets a `revoked` file, and it and its record stay. |
+| folder | `<folder>` = `<scratchpad>/monitor-<machine>-<id>-<key>` | Made by the main session with `mktemp -d "<scratchpad>/monitor-<machine>-<id>-XXXXXXXXXXXXXXXX"` before the first start: `<machine>` is the `--machine` label in lower case, or `local`, `<id>` is the worker id in lower case, and `<key>` is 16 random letters or digits (D36). Main session scratchpad, outside every git work tree (FR-014). Its path is only in that monitor's brief. It holds the beat file before the monitor's first start, so the monitor guard accepts it as a monitor folder. It belongs to the first monitor that uses it (its `owner` file). A monitor that takes over from a stopped one gets a new folder; the old one gets a `revoked` file, and it and its record stay. |
 
 States, from the main session's view:
 
@@ -50,7 +50,7 @@ While a `needs you` waits for the user, the worker stays at its dialog or questi
 |------|--------|
 | answer | UTC time, `worker-<id>`, `tab worker-<id>`, `answer`, the question, the answer (`keys <k>...` or `text <t>`) |
 | resend | UTC time, `worker-<id>`, `tab worker-<id>`, `resend`, `/goal prompt`, `Enter` |
-| approve | UTC time, `worker-<id>`, `tab worker-<id>`, tool, input (the line `approve` writes today, `scripts/st-worker.sh:825`) |
+| approve | UTC time, `worker-<id>`, `tab worker-<id>`, tool, input (the line `approve` writes today, `scripts/st-worker.sh:827`) |
 | pass | UTC time, `worker-<id>`, `tab worker-<id>`, `pass`, the request id, `-` |
 
 - The question is the screen block that the hash covers, as one line: lines joined by ` | `, the last 600 characters.

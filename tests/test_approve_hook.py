@@ -892,8 +892,8 @@ class ApproveHookTest(unittest.TestCase):
         self.assertSent(self.bash("git add src/a.py && git commit -m x"))
         self.assertFalse(os.path.exists(os.path.join(self.approve, "dropped")))
 
-    def mon_dir(self, wid, tag, beat=True, owner=None, parent=None):
-        folder = os.path.join(parent or self.tmp, f"monitor-{wid}-{(tag + 'k' * 16)[:16]}")
+    def mon_dir(self, wid, tag, beat=True, owner=None, parent=None, machine="local"):
+        folder = os.path.join(parent or self.tmp, f"monitor-{machine}-{wid}-{(tag + 'k' * 16)[:16]}")
         os.makedirs(folder)
         if beat:
             write(os.path.join(folder, "beat"))
@@ -958,6 +958,7 @@ class ApproveHookTest(unittest.TestCase):
                                             "agent_type": MONITOR, "agent_id": agent_id}).encode()
         first.stdin.write(body(agent_ids[0]))
         first.stdin.close()
+        first.stdin = None
         deadline = time.monotonic() + 20
         while first.poll() is None and not any(n.startswith("owner") for n in listing(folder)):
             if time.monotonic() > deadline:
@@ -967,6 +968,7 @@ class ApproveHookTest(unittest.TestCase):
             time.sleep(0.001)
         second.stdin.write(body(agent_ids[1]))
         second.stdin.close()
+        second.stdin = None
         runs = []
         for proc in (first, second):
             out, err = proc.communicate(timeout=20)
@@ -1030,15 +1032,52 @@ class ApproveHookTest(unittest.TestCase):
             self.sh("answer", "T004", "--screen", "h1", "--record", record, "--keys", "1"),
             self.sh("answer", "T004", "--screen", "h1", "--record", record, "--keys", "1", "2"),
             self.sh("answer", "T004", "--screen", "h1", "--record", record, "--text", '"use main"'),
-            self.sh("answer", "T004", "--machine", "laptop", "--screen", "h1", "--record", record, "--keys", "2"),
-            self.sh("wait", "T004", "--machine", "laptop", "--beat", beat),
-            self.sh("pass", "T004", "--machine", "laptop", "--request", "1-1", "--record", record),
-            self.sh("resend", "T004", "--machine", "laptop", "--record", record),
+            self.sh("wait", "T004", "--beat", beat),
         ]:
             with self.subTest(command):
                 self.assertSilent(self.monitor("Bash", {"command": command}))
         with self.subTest("B round call"):
             self.assertSilent(self.monitor("Bash", {"command": self.rnd(self.B)}, agent_id=ID_B))
+
+    def machine_forms(self, folder, machine):
+        record, beat = folder + "/record.tsv", folder + "/beat"
+        return [self.bash_row(c) for c in [
+            self.sh("answer", "T004", "--machine", machine, "--screen", "h1", "--record", record, "--keys", "2"),
+            self.sh("wait", "T004", "--machine", machine, "--beat", beat),
+            self.sh("approve", "T004", "--request", "1-1", "--input-hash", "h1", "--record", record, "--machine", machine),
+            self.sh("pass", "T004", "--machine", machine, "--request", "1-1", "--record", record),
+            self.sh("resend", "T004", "--machine", machine, "--record", record),
+        ]]
+
+    def test_monitor_binds_the_folder_to_the_machine(self):
+        self.monitors()
+        laptop = self.mon_dir("t004", "M1", owner=ID_A, machine="laptop")
+        for machine in ("laptop", "LAPTOP", "Laptop"):
+            for label, tool, tool_input in self.machine_forms(laptop, machine):
+                with self.subTest("laptop folder " + label):
+                    self.assertSilent(self.monitor(tool, tool_input))
+        with self.subTest("laptop folder Write spec.md"):
+            self.assertSilent(self.monitor("Write", {"file_path": laptop + "/spec.md", "content": "x"}))
+        with self.subTest("laptop folder round call"):
+            self.assertSilent(self.monitor("Bash", {"command": self.rnd(laptop)}))
+        self.deny_rows(self.machine_forms(self.A, "laptop"))
+        self.deny_rows(self.machine_forms(laptop, "desk"))
+        self.deny_rows(self.machine_forms(laptop, "local"))
+        self.deny_rows([self.bash_row(c) for c in [
+            self.sh("wait", "T004", "--beat", laptop + "/beat"),
+            self.sh("answer", "T004", "--screen", "h1", "--record", laptop + "/record.tsv", "--keys", "2"),
+        ]])
+        for machine in ("a.b", "a_b", "-ab", "a" * 26):
+            folder = self.mon_dir("t004", "M2", owner=ID_A, machine=machine)
+            with self.subTest(machine=machine):
+                self.deny_rows(self.machine_forms(folder, machine))
+        empty = self.mon_dir("t004", "M3", owner=ID_A, machine="")
+        self.deny_rows(self.machine_forms(empty, "''"))
+        self.deny_rows(self.machine_forms(self.A, "''"))
+        old = os.path.join(self.tmp, "monitor-t004-" + ("O1" + "k" * 16)[:16])
+        write(os.path.join(old, "beat"))
+        write(os.path.join(old, "owner"), ID_A)
+        self.deny_rows(self.forms(old, "T004"))
 
     def test_monitor_allows_a_folder_under_a_symlinked_parent(self):
         self.monitors()
@@ -1084,17 +1123,17 @@ class ApproveHookTest(unittest.TestCase):
         sym_beat = self.mon_dir("t004", "T1", beat=False, owner=ID_A)
         write(os.path.join(self.tmp, "beat-target"))
         os.symlink(os.path.join(self.tmp, "beat-target"), os.path.join(sym_beat, "beat"))
-        sym_folder = os.path.join(self.tmp, "monitor-t004-" + ("S1" + "k" * 16)[:16])
+        sym_folder = os.path.join(self.tmp, "monitor-local-t004-" + ("S1" + "k" * 16)[:16])
         os.symlink(self.A, sym_folder)
         in_tree = self.mon_dir("t004", "G1", owner=ID_A, parent=self.root)
         os.makedirs(os.path.join(self.tmp, "y", "z"))
         os.symlink(os.path.join(self.tmp, "y", "z"), os.path.join(self.tmp, "x"))
         self.mon_dir("t004", "A1", owner=ID_A, parent=os.path.join(self.tmp, "y"))
         os.makedirs(os.path.join(self.tmp, "q"))
-        write(os.path.join(self.tmp, "monitor-t005", "beat"))
-        keyless = os.path.join(self.tmp, "monitor-t004")
+        write(os.path.join(self.tmp, "monitor-local-t005", "beat"))
+        keyless = os.path.join(self.tmp, "monitor-local-t004")
         write(os.path.join(keyless, "beat"))
-        short = os.path.join(self.tmp, "monitor-t004-short")
+        short = os.path.join(self.tmp, "monitor-local-t004-short")
         write(os.path.join(short, "beat"))
         write(os.path.join(self.tmp, "anyname", "beat"))
         os.symlink(os.path.join(self.tmp, "spec-target"), os.path.join(self.A, "spec.md"))
@@ -1104,7 +1143,7 @@ class ApproveHookTest(unittest.TestCase):
         rows = [self.bash_row(c) for c in [
             "bash -c 'echo x > f'", "cp a b",
             answer(os.path.expanduser("~/.bashrc")),
-            answer(os.path.join(self.tmp, "monitor-t005", "record.tsv")),
+            answer(os.path.join(self.tmp, "monitor-local-t005", "record.tsv")),
             self.sh("wait", "T004", "--beat", self.A + "/other"),
             self.sh("wait", "T004", "--beat", no_beat + "/beat"),
             answer(no_beat + "/record.tsv"),

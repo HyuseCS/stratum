@@ -364,7 +364,7 @@ def lexists(path):
 
 # ponytail: the guard judges monitor paths by rules; on one more hole let the main session record one base folder and compare exact paths (plan.md Shortcuts)
 def monitor_folder(folder, wid):
-    ident = re.escape(wid.lower()) if wid else "[a-z0-9][a-z0-9-]{0,24}"
+    ident = re.escape(wid.lower()) if wid else "[a-z0-9][a-z0-9-]{0,24}-[a-z0-9][a-z0-9-]{0,24}"
     if not re.fullmatch(f"monitor-{ident}-[A-Za-z0-9]{{16}}", posixpath.basename(folder)):
         return False
     if not stat.S_ISDIR(os.lstat(folder).st_mode) or lexists(os.path.join(folder, "revoked")):
@@ -425,10 +425,13 @@ def monitor_folder_of(ti, cwd):
     if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9-]{0,24}", wid) or any(args.count(f) > 1 for f in MONITOR_ONCE) \
             or not all(f in pairs for f in MONITOR_SUBS[words[2]]):
         return None
+    machine = pairs.get("--machine", "local").lower()
+    if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,24}", machine):
+        return None
     folders = set()
     for flag, name in (("--record", r"record\.tsv"), ("--beat", "beat")):
         if flag in args:
-            folders.add(monitor_path(pairs.get(flag), name, wid))
+            folders.add(monitor_path(pairs.get(flag), name, f"{machine}-{wid}"))
     return folders.pop() if len(folders) == 1 else None
 
 

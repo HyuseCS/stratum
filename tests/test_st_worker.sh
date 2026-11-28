@@ -2530,6 +2530,21 @@ mk; states done working; dialogpane > "$tmp/pane.txt"; qh=$(qhash "$tmp/pane.txt
 dialogpane | sed -e 's/folder/dir/' -e 's/3\. Type something/4. Type something/' > "$tmp/swap.after"; echo 2 > "$tmp/swap.at"
 run bash "$script" answer T004 --screen "$qh" --record "$qrec" --text "use main"
 check "QR6 the pane shows another question (Type something is 4) on the third read, answer --screen <hash> --text: exit 0, the Type something key 3 of the hashed question, never key 4, the record holds the hashed question" '[ $rc = 0 ] && [ "$(sendlog)" = "$(printf "agent\tget\tworker-t004\nagent\tsend-keys\tworker-t004\t3\npane\tsend-text\t%s\tuse main\npane\tsend-keys\t%s\tenter\nagent\twait\tworker-t004\t--until\tworking\t--timeout\t5000\nagent\tget\tworker-t004" "$(pane)" "$(pane)")" ] && qrow answer "$qq" "text use main"'
+mk; states done working; dialogpane > "$tmp/pane.txt"; rm -f "$qrec"
+run bash "$script" answer T004 --screen "$qh" --record "$qrec" --keys 2 1
+check "QK1 a question with --screen and two keys: exit 1, the one-key line, nothing sent, no record line" '[ $rc = 1 ] && [ "$out" = "A question with --screen takes one key. Nothing sent." ] && nosend && [ ! -s "$qrec" ]'
+mk; states done working; dialogpane > "$tmp/pane.txt"; rm -f "$qrec"
+printf '%s\n' 'Done. Ran the tests.' 'All green.' > "$tmp/swap.after"; echo 2 > "$tmp/swap.at"
+run bash "$script" answer T004 --screen "$qh" --record "$qrec" --text "use main"
+check "QC1 the question closes after the typed text, answer --screen <hash> --text: exit 1, the closed line, key 3 and the text sent, no Enter, no record line" '[ $rc = 1 ] && [ "$out" = "Text sent, Enter not sent: the question closed." ] && [ "$(sendlog)" = "$(printf "agent\tget\tworker-t004\nagent\tsend-keys\tworker-t004\t3\npane\tsend-text\t%s\tuse main" "$(pane)")" ] && [ ! -s "$qrec" ]'
+mk; states done working; dialogpane > "$tmp/pane.txt"; rm -f "$qrec"
+{ dialogpane; printf '%s\n' "$rule" ' Do you want to proceed?' '❯ 1. Yes' '  2. No, and tell Claude what to do differently (esc)'; } > "$tmp/swap.after"; echo 2 > "$tmp/swap.at"
+run bash "$script" answer T004 --screen "$qh" --record "$qrec" --text "use main"
+check "QC3 a permission dialog opens below the question after the typed text, answer --screen <hash> --text: exit 1, the closed line, no Enter, no record line" '[ $rc = 1 ] && [ "$out" = "Text sent, Enter not sent: the question closed." ] && [ "$(cnt "^pane\tsend-keys\t[^\t]*\tenter$")" = 0 ] && [ ! -s "$qrec" ]'
+mk; states done working; dialogpane > "$tmp/pane.txt"
+printf '%s\n' 'Done. Ran the tests.' 'All green.' > "$tmp/swap.after"; echo 3 > "$tmp/swap.at"
+run bash "$script" answer T004 --text "use main"
+check "QC2 the question closes after the typed text, answer --text with no --screen: exit 1, the closed line, key 3 and the text sent, no Enter" '[ $rc = 1 ] && [ "$out" = "Text sent, Enter not sent: the question closed." ] && [ "$(sendlog)" = "$(printf "agent\tget\tworker-t004\nagent\tsend-keys\tworker-t004\t3\npane\tsend-text\t%s\tuse main" "$(pane)")" ]'
 mk; states blocked; { printf '%s\n' "● I can add the allow rule, so the dialog does not ask again. I don't ask again after that."; seq -f '  line %g' 10; dialogpane; } > "$tmp/pane.txt"
 run bash "$script" wait T004; h=$(shash); states blocked working; reset
 run bash "$script" answer T004 --screen "$h" --text "use main"

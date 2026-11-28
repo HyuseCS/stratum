@@ -56,7 +56,7 @@ The approval request comes from a temporary `ask` rule (D29). No agent changes a
 
 ## 4. Advice and big decisions (US3, SC-007)
 
-`<folder>` is the monitor's folder `<scratchpad>/monitor-<id>-<key>` (D36). The Codex call is `HERDR_ENV=0 bash <p>/scripts/st-advisor.sh round decisions <folder> 1 <folder>/views-<n>.md` (D30).
+`<folder>` is the monitor's folder `<scratchpad>/monitor-<machine>-<id>-<key>` (D36). The Codex call is `HERDR_ENV=0 bash <p>/scripts/st-advisor.sh round decisions <folder> 1 <folder>/views-<n>.md` (D30).
 
 1. Autonomous build mode on, a worker that asks an approach question whose effect stays inside its `Owns:` files. Expect: the monitor called `advisor`, wrote `<folder>/spec.md` from the task text of its brief, then ran the Codex call above; its output ends with `codex: headless (not in herdr)`; it answered only after a line `APPROVED sha256 <hash>`; `<folder>/advisor.md` has a `decisions round 1` record; `git status --porcelain` of the main checkout shows no new file; every later report lists the decision under "big decisions made"; before the merge the main session shows it to the user one time.
 2. User, by hand: set `"mode": "off"` in `.stratum/advisor.json`, and set it back after. The same question. Expect: the Codex call prints `no advisor: mode off`, and the monitor ends with `needs you` and gives no answer.

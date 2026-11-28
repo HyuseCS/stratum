@@ -586,6 +586,7 @@ answer)
   elif [ -n "${scr+x}" ]; then
     qblock && [ "$SH" = "$scr" ] || fail "The pane shows another prompt. Nothing sent. Tell the user the workspace, the tab and the prompt."
     QT=$BT q=1
+    [ -z "${keys+x}" ] || [ ${#keys[@]} = 1 ] || fail "A question with --screen takes one key. Nothing sent."
   else
     QT=$(tail -n 15 <<<"$SC")
   fi
@@ -601,6 +602,7 @@ answer)
     fi
     h pane send-text "$PANE" "$text"
     sleep 1 # ponytail: fixed 1 s for pasted text to settle before Enter (live T013 lost the Enter with none), raise it if a live run loses it again
+    [ -z "$q" ] || { screen && ! perm && qblock; } || fail "Text sent, Enter not sent: the question closed."
     h pane send-keys "$PANE" enter
     a="text $text"
   fi

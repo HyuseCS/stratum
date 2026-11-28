@@ -20,8 +20,9 @@ Only the parts below change. Every other command, line and exit code stays as it
 ## `answer --screen` on a work question (FR-007, SC-004)
 
 - With `--screen <hash>` and a screen that is not a permission dialog: `answer` takes the question block again just before it sends. A different hash, or no question block, prints `The pane shows another prompt. Nothing sent. Tell the user the workspace, the tab and the prompt.`, exits 1 and sends nothing.
+- With `--screen <hash>`, `--keys` and a question: more than one key prints `A question with --screen takes one key. Nothing sent.`, exits 1 and sends nothing.
 - With `--screen <hash>` and `--text`, `answer` sends the `Type something.` key first. It takes this key from the hashed question block. It does not read the pane again for it.
-- `answer --text`, with or without `--screen`: the text goes in with `pane send-text`, then `answer` waits 1 s, then sends `enter` with `pane send-keys`. The wait is a fixed sleep (`scripts/st-worker.sh:603`): a live run lost the Enter when it came at once (research.md, T013 3.2).
+- `answer --text`, with or without `--screen`: the text goes in with `pane send-text`, then `answer` waits 1 s, then sends `enter` with `pane send-keys`. The wait is a fixed sleep (`scripts/st-worker.sh:604`): a live run lost the Enter when it came at once (research.md, T013 3.2). For a question, `answer` reads the screen again after the wait. When the question block is gone, or a permission dialog shows, it prints `Text sent, Enter not sent: the question closed.`, exits 1, sends no `enter` and writes no record line.
 - With no `--screen`: as today, with the wait above for `--text`.
 - The permission dialog path does not change, except the never check below.
 
