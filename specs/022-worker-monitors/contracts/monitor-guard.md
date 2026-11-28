@@ -5,7 +5,7 @@ A PreToolUse rule for one agent only. It is the guard that the checks of SC-003 
 ## When it runs
 
 - Event `PreToolUse` and `agent_type` equal to `stratum:st-monitor` (the plugin-scoped name, `hooks.md` line 2740). The hook already runs for Bash, Edit, Write, MultiEdit, NotebookEdit, Read, Grep and Glob (`hooks/commands.json`).
-- In `main()` it runs after `lock2` (`hooks/st-approve.py:372-378`). When `lock2` denies a call, that deny and its reason stand, and the monitor rule is not reached. A worker session that starts a `stratum:st-monitor` subagent so gets no call that `lock2` denies today.
+- In `main()` it runs after `lock2` (`hooks/st-approve.py:496-497`). When `lock2` denies a call, that deny and its reason stand, and the monitor rule is not reached. A worker session that starts a `stratum:st-monitor` subagent so gets no call that `lock2` denies today.
 - It adds denies only, and its only writes are the `owner` file of the owner check below and the temp file that check removes. For a call it allows it prints nothing: no `permissionDecision: allow`. So the user's own permission rules and the classifier still judge that call.
 - For every other agent and for the main session nothing changes. `lock2` and `request` do not change (FR-032).
 - For a call with `agent_type` `stratum:st-monitor`, any error on its path through `main()` gives a deny: an error in `worker_session`, in `lock2` or in the monitor rule itself. `lock2` itself, and what the hook does for every other caller, do not change (FR-032).
@@ -65,7 +65,7 @@ Another agent id owns this monitor folder.
 
 Every other deny gives `MONITOR_REASON`, an error on the monitor path included (for example a symlinked `owner`). The skill keys on the phrase `Another agent id owns this monitor folder`.
 
-The output is the same deny shape the hook uses for `lock2` (`hooks/st-approve.py:372-378`).
+The output is the same deny shape the hook uses for `lock2` (`hooks/st-approve.py:454`, `deny`).
 
 ## Where it fails open
 

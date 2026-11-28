@@ -20,6 +20,8 @@ States, from the main session's view:
 started --report with an end state--> ended
 started --report with no end state--> started again (SendMessage)          FR-020
 started --stale line--> TaskStop --confirmed--> started again (SendMessage) FR-021
+started --stale line--> TaskStop --confirmed, SendMessage says won't be resumed--> user's yes--> new monitor, new folder, old folder revoked   C1
+user's no--> no monitor: the main session runs wait for that worker                                                   FR-022
 ended (needs you) --user's answer--> started again (SendMessage)            FR-020
 ended (finished) --follow-up round sent by the main session--> started again FR-020
 Agent call fails --> no monitor: the main session runs wait for that worker  FR-022
@@ -38,7 +40,7 @@ One of `finished`, `stopped`, `gone`, `needs you` (FR-018). Each worker state ma
 | `state working` (exit 3) | none: run `wait` again |
 | `state blocked`, `state approval`, `state unsent` that the monitor cannot settle | `needs you` |
 
-While a `needs you` waits for the user, the worker stays at its dialog or question. An approval request waits at most 300 s in the worker's hook (`hooks/st-approve.py:319`); after `pass` or that time, the worker shows its own dialog in its pane.
+While a `needs you` waits for the user, the worker stays at its dialog or question. An approval request waits at most 300 s in the worker's hook (`hooks/st-approve.py:330`); after `pass` or that time, the worker shows its own dialog in its pane.
 
 ## Record file
 
@@ -48,7 +50,7 @@ While a `needs you` waits for the user, the worker stays at its dialog or questi
 |------|--------|
 | answer | UTC time, `worker-<id>`, `tab worker-<id>`, `answer`, the question, the answer (`keys <k>...` or `text <t>`) |
 | resend | UTC time, `worker-<id>`, `tab worker-<id>`, `resend`, `/goal prompt`, `Enter` |
-| approve | UTC time, `worker-<id>`, `tab worker-<id>`, tool, input (the line `approve` writes today, `scripts/st-worker.sh:771`) |
+| approve | UTC time, `worker-<id>`, `tab worker-<id>`, tool, input (the line `approve` writes today, `scripts/st-worker.sh:825`) |
 | pass | UTC time, `worker-<id>`, `tab worker-<id>`, `pass`, the request id, `-` |
 
 - The question is the screen block that the hash covers, as one line: lines joined by ` | `, the last 600 characters.
@@ -91,7 +93,7 @@ text:                   (needs you: the exact dialog, question or request text)
 answers:
 - <question> -> <answer>    (or: none)
 big decisions made:
-- <question> -> <answer>. /advisor: <one line>. Codex: <verdict line>.    (or: none)
+- <question> -> <answer>. advisor: <one line>. Codex: <verdict line>.    (or: none)
 record: <path>
 ```
 

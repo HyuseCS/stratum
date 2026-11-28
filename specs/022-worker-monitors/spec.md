@@ -91,7 +91,7 @@ and check that the question goes up.
 2. **Given** a monitor on `sonnet` or `haiku` and a small work question, **When** the monitor is about to answer, **Then** it asks `/advisor` first.
 3. **Given** a monitor on `sonnet` or `haiku` that cannot get advice first (the tool is not there, no advisor is set, or the call fails), **When** a small work question comes, **Then** the question goes up and the monitor does not answer it.
 4. **Given** a question about privacy, access, the data model, contracts, secrets, money or a high cost, an action that cannot be undone, or an action that reaches an audience, **When** a monitor sees it, **Then** it goes up, in every mode and with every advisor answer.
-5. **Given** autonomous build mode on, a spec, scope or approach question whose effect stays inside the worker's own task files and can be undone, and `/advisor` and Codex both agree, **When** the monitor answers it, **Then** every later report of that monitor lists it as "big decision made".
+5. **Given** autonomous build mode on for this worker, a spec, scope or approach question whose effect stays inside the worker's own task files and can be undone, and `/advisor` and Codex both agree, **When** the monitor answers it, **Then** every later report of that monitor lists it as "big decision made".
 6. **Given** the same question with no Codex verdict (Codex is off or not found, the advisor point gives no advisor, or it is blocked), or with one advisor that does not agree, **When** the monitor sees it, **Then** the question goes up.
 7. **Given** a "big decision made" in a report, **When** the main orchestrator comes to the merge, **Then** it shows the decision to the user first, and the user's "no" undoes it.
 8. **Given** normal mode, **When** a spec, scope or approach question comes, **Then** it goes up.
@@ -112,7 +112,8 @@ at a dialog with no watcher. It does not block a first run of the first two stor
 
 **Independent Test**: Stop a monitor in the middle of its run with no report. Check that the
 main orchestrator notices inside the bound, that the worker has a watcher again with no user
-action, and that the answers of the dead monitor are still in its record.
+action (or, when the user stopped the monitor, after the user's yes), and that the answers of
+the dead monitor are still in its record.
 
 **Acceptance Scenarios**:
 
@@ -185,7 +186,7 @@ action, and that the answers of the dead monitor are still in its record.
 - **FR-025**: A monitor on `sonnet` or `haiku` MUST ask `/advisor` before it answers a small work question. When it cannot get that advice first, the question MUST go up.
 - **FR-026**: The allow list and the never list MUST decide a permission dialog, with no advisor call.
 - **FR-027**: A monitor MUST never settle a decision about privacy, access, the data model, contracts, secrets, money or a high cost, an action that cannot be undone, or an action that reaches an audience.
-- **FR-028**: A monitor MUST settle a decision about the spec, the scope or the approach only when all of these are true: autonomous build mode is on; it asked `/advisor` and Codex first and both agree; the effect stays inside the worker's own task files and can be undone; and the decision is in its "big decision made" list.
+- **FR-028**: A monitor MUST settle a decision about the spec, the scope or the approach only when all of these are true: autonomous build mode is on for this worker; it asked `/advisor` and Codex first and both agree; the effect stays inside the worker's own task files and can be undone; and the decision is in its "big decision made" list.
 - **FR-029**: With no Codex verdict or no `/advisor` answer, a decision of FR-028 MUST go up. An advisor answer that is not a clear yes, or that sets a condition, MUST count as no agreement.
 - **FR-030**: Before the merge, the main orchestrator MUST show each "big decision made" to the user. On the user's "no", the main orchestrator MUST send the worker a follow-up round that undoes it, and nothing MUST merge before that round is done.
 
@@ -212,7 +213,7 @@ action, and that the answers of the dead monitor are still in its record.
 - **SC-002**: Two workers that show a safe dialog at the same time both get their answers with no action from the main session or the user, and neither waits for the other.
 - **SC-003**: For each kind of action a monitor must never do (FR-010 to FR-016 and FR-035), a monitor sends no yes and ends with `needs you`. The check for each kind goes red when its guard is removed, except the gate part of FR-012: a gate question has no script guard, only the agent rule (D32), and it is checked by that rule and the live check of quickstart section 3 step 2. The push part of FR-012 keeps its script guard.
 - **SC-004**: An answer made for one question never reaches a newer question. The check goes red when the tie to the screen is removed.
-- **SC-005**: A monitor that ends with no end state, and a monitor that goes silent, are each detected, and the worker has a watcher again with no user action.
+- **SC-005**: A monitor that ends with no end state, and a monitor that goes silent, are each detected, and the worker has a watcher again with no user action. One case needs the user's yes: the user stopped the monitor, so SendMessage cannot continue it and a new monitor starts only on that yes; with no yes, the main session watches the worker.
 - **SC-006**: When a monitor cannot start, the worker is still watched, and the user sees one line that says so.
 - **SC-007**: A spec, scope or approach question is settled by a monitor only when both advisors agreed first. With one of them missing, it goes up in 100% of runs.
 - **SC-008**: Every answer of every monitor in a session is in the records that the main orchestrator shows before that session ends.
