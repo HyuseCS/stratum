@@ -25,6 +25,26 @@ MATCHER = "Bash|Edit|Write|MultiEdit|NotebookEdit|Read|Grep|Glob"
 RID_FILE = re.compile(r"[0-9]+-[0-9]+\.(req|ok|user)")
 RID_REQ = r"^[0-9]+-[0-9]+\.req$"
 Run = collections.namedtuple("Run", "rc out err reqs leftover")
+MONITOR_REASON = ("st-monitor runs only st-worker.sh wait, answer, approve, pass and resend, and HERDR_ENV=0 "
+                  "st-advisor.sh round decisions <folder> 1 <file>. It acts only in the monitor folder that its own "
+                  "agent id owns, writes only spec.md and views-<n>.md there, and reads no result file.")
+MONITOR_OWNER_REASON = MONITOR_REASON + " Another agent id owns this monitor folder."
+MONITOR = "stratum:st-monitor"
+ID_A = "a0123456789abcdef"
+ID_B = "afedcba9876543210"
+WORKER_SH = os.path.join(os.path.realpath(PLUGIN), "scripts", "st-worker.sh")
+ADVISOR_SH = os.path.join(os.path.realpath(PLUGIN), "scripts", "st-advisor.sh")
+LOCK_SH = os.path.join(os.path.realpath(PLUGIN), "scripts", "st-lock.sh")
+SLOW_CREATE = ("import os, runpy, sys, time\n"
+               "real = os.open\n"
+               "def slow(path, flags, *args, **kw):\n"
+               "    fd = real(path, flags, *args, **kw)\n"
+               "    if flags & os.O_EXCL:\n"
+               "        time.sleep(0.05)\n"
+               "    return fd\n"
+               "os.open = slow\n"
+               "sys.argv = sys.argv[1:]\n"
+               "runpy.run_path(sys.argv[0], run_name='__main__')\n")
 
 NEVER_BASH = [
     "git push",
@@ -871,6 +891,604 @@ class ApproveHookTest(unittest.TestCase):
         write(os.path.join(self.approve, "dropped"), "x\t\t\n")
         self.assertSent(self.bash("git add src/a.py && git commit -m x"))
         self.assertFalse(os.path.exists(os.path.join(self.approve, "dropped")))
+
+    def mon_dir(self, wid, tag, beat=True, owner=None, parent=None, machine="local"):
+        folder = os.path.join(parent or self.tmp, f"monitor-{machine}-{wid}-{(tag + 'k' * 16)[:16]}")
+        os.makedirs(folder)
+        if beat:
+            write(os.path.join(folder, "beat"))
+        if owner is not None:
+            write(os.path.join(folder, "owner"), owner)
+        return folder
+
+    def monitors(self, owner_a=ID_A):
+        self.A = self.mon_dir("t004", "A1", owner=owner_a)
+        self.B = self.mon_dir("t005", "B1", owner=ID_B)
+        self.plain = os.path.join(self.tmp, "plain")
+        os.makedirs(self.plain, exist_ok=True)
+
+    def monitor(self, tool, tool_input, agent_id=ID_A, agent_type=MONITOR, cwd=None):
+        cwd = cwd or self.plain
+        body = {"hook_event_name": "PreToolUse", "session_id": "S1", "cwd": cwd,
+                "tool_name": tool, "tool_input": tool_input}
+        if agent_type is not None:
+            body["agent_type"] = agent_type
+        if agent_id is not None:
+            body["agent_id"] = agent_id
+        return self.run_hook(json.dumps(body).encode(), cwd)
+
+    def assertMonitorDeny(self, run, reason=MONITOR_REASON):
+        self.assertEqual((run.rc, run.err, run.reqs, run.leftover), (0, "", {}, []))
+        self.assertTrue(run.out.strip(), "no output")
+        self.assertEqual(json.loads(run.out), {"hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "deny",
+            "permissionDecisionReason": reason,
+        }})
+
+    def sh(self, sub, wid, *args):
+        return " ".join(["bash", WORKER_SH, sub, wid, *args])
+
+    def bash_row(self, command):
+        return (command, "Bash", {"command": command})
+
+    def forms(self, folder, wid):
+        record = os.path.join(folder, "record.tsv")
+        return [self.bash_row(c) for c in [
+            self.sh("wait", wid, "--beat", os.path.join(folder, "beat")),
+            self.sh("answer", wid, "--screen", "h1", "--record", record),
+            self.sh("approve", wid, "--request", "1-1", "--input-hash", "h1", "--record", record),
+            self.sh("pass", wid, "--request", "1-1", "--record", record),
+            self.sh("resend", wid, "--record", record),
+        ]] + [("Write views-1.md", "Write", {"file_path": os.path.join(folder, "views-1.md"), "content": "x"})]
+
+    def deny_rows(self, rows, reason=MONITOR_REASON, **kw):
+        for label, tool, tool_input, *cwd in rows:
+            with self.subTest(label):
+                self.assertMonitorDeny(self.monitor(tool, tool_input, cwd=cwd[0] if cwd else None, **kw), reason)
+
+    def at_once(self, folder, agent_ids):
+        env = {k: v for k, v in os.environ.items() if k not in ("CLAUDE_PROJECT_DIR", "ST_APPROVE_WAIT")}
+        command = self.sh("wait", "T004", "--beat", folder + "/beat")
+        second, first = [subprocess.Popen(args, cwd=self.plain, env=env, stdin=subprocess.PIPE,
+                                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                          for args in ([sys.executable, HOOK], [sys.executable, "-c", SLOW_CREATE, HOOK])]
+        body = lambda agent_id: json.dumps({"hook_event_name": "PreToolUse", "session_id": "S1", "cwd": self.plain,
+                                            "tool_name": "Bash", "tool_input": {"command": command},
+                                            "agent_type": MONITOR, "agent_id": agent_id}).encode()
+        first.stdin.write(body(agent_ids[0]))
+        first.stdin.close()
+        first.stdin = None
+        deadline = time.monotonic() + 20
+        while first.poll() is None and not any(n.startswith("owner") for n in listing(folder)):
+            if time.monotonic() > deadline:
+                first.kill()
+                second.kill()
+                self.fail("the first call made no owner file within 20 s")
+            time.sleep(0.001)
+        second.stdin.write(body(agent_ids[1]))
+        second.stdin.close()
+        second.stdin = None
+        runs = []
+        for proc in (first, second):
+            out, err = proc.communicate(timeout=20)
+            runs.append((proc.returncode, out.decode(), err.decode()))
+        return runs
+
+    def test_monitor_first_call_makes_owner(self):
+        self.monitors(owner_a=None)
+        self.assertSilent(self.monitor("Bash", {"command": self.sh("wait", "T004", "--beat", self.A + "/beat")}))
+        owner = os.path.join(self.A, "owner")
+        self.assertTrue(os.path.isfile(owner) and not os.path.islink(owner), "no owner file")
+        with open(owner, "rb") as f:
+            self.assertEqual(f.read(), ID_A.encode())
+        for label, tool, tool_input in self.forms(self.A, "T004"):
+            with self.subTest(label):
+                self.assertSilent(self.monitor(tool, tool_input))
+
+    def test_monitor_first_call_makes_owner_through_a_symlinked_parent(self):
+        self.monitors()
+        real = os.path.join(self.tmp, "real")
+        os.makedirs(real)
+        os.symlink(real, os.path.join(self.tmp, "link"))
+        folder = self.mon_dir("t004", "P1", parent=real)
+        via = os.path.join(self.tmp, "link", os.path.basename(folder))
+        self.assertSilent(self.monitor("Bash", {"command": self.sh("wait", "T004", "--beat", via + "/beat")}))
+        self.assertTrue(os.path.isfile(os.path.join(folder, "owner")), "no owner file")
+
+    def test_monitor_same_id_first_calls_at_once_are_both_allowed(self):
+        self.monitors()
+        for i in range(100):
+            folder = self.mon_dir("t004", f"R{i}")
+            runs = self.at_once(folder, [ID_A, ID_A])
+            self.assertEqual(runs, [(0, "", "")] * 2, f"round {i}")
+            self.assertEqual(sorted(n for n in listing(folder) if n.startswith("owner")), ["owner"], f"round {i}")
+
+    def test_monitor_two_ids_at_once_are_never_both_allowed(self):
+        self.monitors()
+        for i in range(100):
+            folder = self.mon_dir("t004", f"R{i}")
+            runs = self.at_once(folder, [ID_A, ID_B])
+            self.assertLessEqual(runs.count((0, "", "")), 1, f"round {i}: {runs}")
+            self.assertEqual(sorted(n for n in listing(folder) if n.startswith("owner")), ["owner"], f"round {i}")
+
+    def test_monitor_allows_its_own_calls_with_empty_stdout(self):
+        self.monitors()
+        for label, tool, tool_input in self.forms(self.A, "T004"):
+            with self.subTest("A " + label):
+                self.assertSilent(self.monitor(tool, tool_input))
+        with self.subTest("A spec.md"):
+            self.assertSilent(self.monitor("Write", {"file_path": self.A + "/spec.md", "content": "x"}))
+        for label, tool, tool_input in self.forms(self.B, "T005"):
+            with self.subTest("B " + label):
+                self.assertSilent(self.monitor(tool, tool_input, agent_id=ID_B))
+        with self.subTest("B spec.md"):
+            self.assertSilent(self.monitor("Write", {"file_path": self.B + "/spec.md", "content": "x"}, agent_id=ID_B))
+        for path in (os.path.join(self.root, "src", "a.py"), os.path.join(self.tmp, "any.txt"), "/etc/hostname"):
+            with self.subTest(path=path):
+                self.assertSilent(self.monitor("Read", {"file_path": path}))
+        record, beat = self.A + "/record.tsv", self.A + "/beat"
+        for command in [
+            self.sh("answer", "T004", "--screen", "h1", "--record", record, "--keys", "1"),
+            self.sh("answer", "T004", "--screen", "h1", "--record", record, "--keys", "1", "2"),
+            self.sh("answer", "T004", "--screen", "h1", "--record", record, "--text", '"use main"'),
+            self.sh("wait", "T004", "--beat", beat),
+        ]:
+            with self.subTest(command):
+                self.assertSilent(self.monitor("Bash", {"command": command}))
+        with self.subTest("B round call"):
+            self.assertSilent(self.monitor("Bash", {"command": self.rnd(self.B)}, agent_id=ID_B))
+
+    def machine_forms(self, folder, machine):
+        record, beat = folder + "/record.tsv", folder + "/beat"
+        return [self.bash_row(c) for c in [
+            self.sh("answer", "T004", "--machine", machine, "--screen", "h1", "--record", record, "--keys", "2"),
+            self.sh("wait", "T004", "--machine", machine, "--beat", beat),
+            self.sh("approve", "T004", "--request", "1-1", "--input-hash", "h1", "--record", record, "--machine", machine),
+            self.sh("pass", "T004", "--machine", machine, "--request", "1-1", "--record", record),
+            self.sh("resend", "T004", "--machine", machine, "--record", record),
+        ]]
+
+    def test_monitor_binds_the_folder_to_the_machine(self):
+        self.monitors()
+        laptop = self.mon_dir("t004", "M1", owner=ID_A, machine="laptop")
+        for label, tool, tool_input in self.machine_forms(laptop, "laptop"):
+            with self.subTest("laptop folder " + label):
+                self.assertSilent(self.monitor(tool, tool_input))
+        longest = self.mon_dir("t004", "M5", owner=ID_A, machine="a" * 25)
+        for label, tool, tool_input in self.machine_forms(longest, "a" * 25):
+            with self.subTest("25-character label " + label):
+                self.assertSilent(self.monitor(tool, tool_input))
+        with self.subTest("laptop folder Write spec.md"):
+            self.assertSilent(self.monitor("Write", {"file_path": laptop + "/spec.md", "content": "x"}))
+        with self.subTest("laptop folder round call"):
+            self.assertSilent(self.monitor("Bash", {"command": self.rnd(laptop)}))
+        self.deny_rows(self.machine_forms(self.A, "laptop"))
+        self.deny_rows(self.machine_forms(laptop, "desk"))
+        self.deny_rows(self.machine_forms(laptop, "local"))
+        self.deny_rows(self.machine_forms(laptop, "LAPTOP"))
+        self.deny_rows(self.machine_forms(laptop, "Laptop"))
+        self.deny_rows(self.machine_forms(self.A, "local"))
+        self.deny_rows([self.bash_row(c) for c in [
+            self.sh("wait", "T004", "--beat", laptop + "/beat"),
+            self.sh("answer", "T004", "--screen", "h1", "--record", laptop + "/record.tsv", "--keys", "2"),
+        ]])
+        for machine in ("a.b", "a_b", "-ab", "a" * 26, "a-b", "ab-", "LAPTOP"):
+            folder = self.mon_dir("t004", "M2", owner=ID_A, machine=machine)
+            with self.subTest(machine=machine):
+                self.deny_rows(self.machine_forms(folder, machine))
+        empty = self.mon_dir("t004", "M3", owner=ID_A, machine="")
+        self.deny_rows(self.machine_forms(empty, "''"))
+        self.deny_rows(self.machine_forms(self.A, "''"))
+        old = os.path.join(self.tmp, "monitor-t004-" + ("O1" + "k" * 16)[:16])
+        write(os.path.join(old, "beat"))
+        write(os.path.join(old, "owner"), ID_A)
+        self.deny_rows(self.forms(old, "T004"))
+
+    def test_monitor_allows_a_folder_under_a_symlinked_parent(self):
+        self.monitors()
+        real = os.path.join(self.tmp, "real")
+        os.makedirs(real)
+        os.symlink(real, os.path.join(self.tmp, "link"))
+        folder = self.mon_dir("t004", "P2", owner=ID_A, parent=real)
+        via = os.path.join(self.tmp, "link", os.path.basename(folder))
+        for label, tool, tool_input in self.forms(via, "T004"):
+            with self.subTest(label):
+                self.assertSilent(self.monitor(tool, tool_input))
+
+    def test_monitor_denies_fr010_end_of_a_worker(self):
+        self.monitors()
+        self.deny_rows([self.bash_row(c) for c in [
+            self.sh("result", "T004"), self.sh("followup", "T004", "--task", "t"), self.sh("close", "T004"),
+            "git merge b", "gh pr merge 1",
+        ]] + [
+            ("Write tasks.md", "Write", {"file_path": os.path.join(self.root, "specs", "x", "tasks.md"), "content": "x"}),
+            ("Read result.md", "Read", {"file_path": os.path.join(self.tmp, "wt", "result.md")}),
+            ("Read result-round2.md", "Read", {"file_path": os.path.join(self.tmp, "wt", "result-round2.md")}),
+        ])
+
+    def test_monitor_denies_a_result_read_with_end_space_or_any_case(self):
+        self.monitors()
+        wt = os.path.join(self.tmp, "wt")
+        self.deny_rows([("Read " + repr(name), "Read", {"file_path": wt + "/" + name})
+                        for name in ("result.md ", "result.md\n", "Result.md", "RESULT-ROUND2.MD")])
+
+    def test_monitor_denies_fr013_control_commands(self):
+        self.monitors()
+        self.deny_rows([self.bash_row(self.sh(sub, "T004")) for sub in
+                        ("start", "goal", "autonomous-on", "autonomous-off", "watch", "list", "headless")]
+                       + [self.bash_row(self.sh("close", "T004", "--record", self.A + "/record.tsv")),
+                          self.bash_row(self.sh("start", "T004", "--beat", self.A + "/beat"))])
+
+    def test_monitor_denies_fr014_paths_and_tools(self):
+        self.monitors()
+        no_beat = self.mon_dir("t004", "C1", beat=False)
+        sym_record = self.mon_dir("t004", "D1", owner=ID_A)
+        write(os.path.join(self.tmp, "record-target"))
+        os.symlink(os.path.join(self.tmp, "record-target"), os.path.join(sym_record, "record.tsv"))
+        sym_beat = self.mon_dir("t004", "T1", beat=False, owner=ID_A)
+        write(os.path.join(self.tmp, "beat-target"))
+        os.symlink(os.path.join(self.tmp, "beat-target"), os.path.join(sym_beat, "beat"))
+        sym_folder = os.path.join(self.tmp, "monitor-local-t004-" + ("S1" + "k" * 16)[:16])
+        os.symlink(self.A, sym_folder)
+        in_tree = self.mon_dir("t004", "G1", owner=ID_A, parent=self.root)
+        os.makedirs(os.path.join(self.tmp, "y", "z"))
+        os.symlink(os.path.join(self.tmp, "y", "z"), os.path.join(self.tmp, "x"))
+        self.mon_dir("t004", "A1", owner=ID_A, parent=os.path.join(self.tmp, "y"))
+        os.makedirs(os.path.join(self.tmp, "q"))
+        write(os.path.join(self.tmp, "monitor-local-t005", "beat"))
+        keyless = os.path.join(self.tmp, "monitor-local-t004")
+        write(os.path.join(keyless, "beat"))
+        short = os.path.join(self.tmp, "monitor-local-t004-short")
+        write(os.path.join(short, "beat"))
+        write(os.path.join(self.tmp, "anyname", "beat"))
+        os.symlink(os.path.join(self.tmp, "spec-target"), os.path.join(self.A, "spec.md"))
+        os.symlink(os.path.join(self.tmp, "spec-target"), os.path.join(self.A, "views-1.md"))
+        name_a = os.path.basename(self.A)
+        answer = lambda record: self.sh("answer", "T004", "--screen", "h1", "--record", record)
+        rows = [self.bash_row(c) for c in [
+            "bash -c 'echo x > f'", "cp a b",
+            answer(os.path.expanduser("~/.bashrc")),
+            answer(os.path.join(self.tmp, "monitor-local-t005", "record.tsv")),
+            self.sh("wait", "T004", "--beat", self.A + "/other"),
+            self.sh("wait", "T004", "--beat", no_beat + "/beat"),
+            answer(no_beat + "/record.tsv"),
+            answer(sym_record + "/record.tsv"),
+            self.sh("wait", "T004", "--beat", sym_beat + "/beat"),
+            self.sh("wait", "T004", "--beat", sym_folder + "/beat"),
+            answer(sym_folder + "/record.tsv"),
+            self.sh("wait", "T004", "--beat", in_tree + "/beat"),
+            self.sh("wait", "T004", "--beat", keyless + "/beat"),
+            self.sh("wait", "T004", "--beat", short + "/beat"),
+            answer(keyless + "/record.tsv"),
+            f"bash {self.root}/scripts/st-worker.sh wait T004 --beat {self.A}/beat",
+        ]] + [
+            ("Write symlinked spec.md", "Write", {"file_path": self.A + "/spec.md", "content": "x"}),
+            ("Write symlinked views-1.md", "Write", {"file_path": self.A + "/views-1.md", "content": "x"}),
+            ("Write anyname spec.md", "Write", {"file_path": os.path.join(self.tmp, "anyname", "spec.md"), "content": "x"}),
+            ("Write repo a.txt", "Write", {"file_path": os.path.join(self.root, "a.txt"), "content": "x"}),
+            ("Write settings.json", "Write", {"file_path": os.path.expanduser("~/.claude/settings.json"), "content": "x"}),
+            ("Write A/x.sh", "Write", {"file_path": self.A + "/x.sh", "content": "x"}),
+            ("Write no-beat spec.md", "Write", {"file_path": no_beat + "/spec.md", "content": "x"}),
+            ("Write symlinked folder views-2.md", "Write", {"file_path": sym_folder + "/views-2.md", "content": "x"}),
+            ("Write in-tree spec.md", "Write", {"file_path": in_tree + "/spec.md", "content": "x"}),
+            ("Edit A/spec.md", "Edit", {"file_path": self.A + "/spec.md", "old_string": "a", "new_string": "b"}),
+            ("MultiEdit A/spec.md", "MultiEdit", {"file_path": self.A + "/spec.md", "edits": []}),
+            ("NotebookEdit A/n.ipynb", "NotebookEdit", {"notebook_path": self.A + "/spec.md", "new_source": "x"}),
+            ("Grep", "Grep", {"pattern": "x", "path": self.A}),
+            ("Glob", "Glob", {"pattern": "*", "path": self.A}),
+            ("Write relative", "Write", {"file_path": name_a + "/views-2.md", "content": "x"}, self.tmp),
+            self.bash_row(answer(name_a + "/record.tsv")) + (self.tmp,),
+            self.bash_row(self.sh("wait", "T004", "--beat", name_a + "/beat")) + (self.tmp,),
+            self.bash_row(answer(os.path.join(self.tmp, "x", "..", name_a, "record.tsv"))),
+            self.bash_row(self.sh("wait", "T004", "--beat", os.path.join(self.tmp, "x", "..", name_a, "beat"))),
+            self.bash_row(self.sh("wait", "T004", "--beat", os.path.join(self.tmp, "q", "..", name_a, "beat"))),
+            self.bash_row(self.sh("wait", "T004", "--beat", os.path.join(self.tmp, ".", name_a, "beat"))),
+            self.bash_row(answer(os.path.join(self.tmp, ".", name_a, "record.tsv"))),
+        ]
+        self.deny_rows(rows)
+
+    def test_monitor_denies_a_doubled_slash_in_a_path(self):
+        self.monitors()
+        self.deny_rows([
+            ("Write A//spec.md", "Write", {"file_path": self.A + "//spec.md", "content": "x"}),
+            self.bash_row(self.sh("answer", "T004", "--screen", "h1", "--record", self.A + "//record.tsv")),
+        ])
+
+    def test_monitor_denies_fr015_other_advisor_points_and_scripts(self):
+        self.monitors()
+        self.deny_rows([self.bash_row(f"bash {ADVISOR_SH} {point} x") for point in
+                        ("review", "diff", "plan", "change", "test")]
+                       + [self.bash_row(f"bash {LOCK_SH} -- true"), self.bash_row("bash tests/x.sh")])
+
+    def test_monitor_denies_fr007_missing_required_flags(self):
+        self.monitors()
+        record = self.A + "/record.tsv"
+        self.deny_rows([self.bash_row(c) for c in [
+            self.sh("answer", "T004", "--record", record),
+            self.sh("answer", "T004", "--screen", "h1"),
+            self.sh("answer", "T004"),
+            self.sh("approve", "T004", "--request", "1-1"),
+            self.sh("resend", "T004"),
+            self.sh("pass", "T004", "--request", "1-1"),
+            self.sh("wait", "T004"),
+            self.sh("answer", "T004", "--screen", "h1", "--text", "--record", record),
+            self.sh("answer", "T004", "--text", "--screen", "--record", record),
+            self.sh("wait", "T004", "--machine", "--beat", self.A + "/beat"),
+            self.sh("pass", "T004", "--machine", "--record", record, "--request", "1-1"),
+            self.sh("pass", "T004", "--request", "1-1", "--machine", "--record", record),
+            self.sh("pass", "T004", "--request", "1-1", "x", "--record", record),
+            self.sh("pass", "T004", "--request", "--record", record, "1-1"),
+            self.sh("answer", "T004", "--screen", "h1", "--keys", "1", "--record", record),
+            self.sh("answer", "T004", "--record", record, "--keys", "1", "--screen", "h1"),
+            self.sh("wait", "T004", "--keys", "--beat", self.A + "/beat"),
+            self.sh("pass", "T004", "--request", "1-1", "--beat", self.A + "/beat"),
+            self.sh("approve", "T004", "--request", "1-1", "--input-hash", "a" * 64, "--beat", self.A + "/beat"),
+            self.sh("resend", "T004", "--beat", self.A + "/beat"),
+            self.sh("answer", "T004", "--screen", "h1", "--beat", self.A + "/beat", "--keys", "1"),
+        ]])
+
+    def test_monitor_denies_shell_operators_and_unparsable_input(self):
+        self.monitors()
+        base = self.sh("wait", "T004", "--beat", self.A + "/beat")
+        self.deny_rows([self.bash_row(base + tail) for tail in (" ; echo x", " | cat", " $(echo x)", "\necho x",
+                                                          " & touch x", " > out", " < in", " `id`", " ( true )",
+                                                          " #x", " --machine {a,b}", "\r", " --machine a\x01b",
+                                                          " --machine a\x7fb")])
+        self.deny_rows([self.bash_row(base.replace(" --beat", "\t--beat"))])
+        answer = self.sh("answer", "T004", "--screen", "h1", "--record", self.A + "/record.tsv", "--text")
+        self.deny_rows([self.bash_row(answer + text) for text in (' "see #51"', ' "a (b)"')])
+        self.deny_rows([self.bash_row(base + " '")])
+        self.deny_rows([("tool_input is a string", "Bash", "x"), ("command is a list", "Bash", {"command": ["a"]})])
+
+    def test_monitor_denies_a_character_outside_the_command_set(self):
+        self.monitors()
+        base = self.sh("wait", "T004", "--beat", self.A + "/beat")
+        self.deny_rows([self.bash_row(base + tail) for tail in (
+            " --machine m*", " --machine m?", " --machine [m]", " --machine ~m", " --machine m!", " --machine é",
+            " --machine a\\b")])
+        self.deny_rows([self.bash_row(self.sh("answer", "T004", "--screen", "h1", "--record", self.A + "/record.tsv",
+                                              "--text", '"x?"'))])
+        write(os.path.join(self.plain, "--beat"))
+        self.deny_rows([self.bash_row(base + " --machine m --b* " + self.tmp + "/x")])
+
+    def test_monitor_denies_another_agents_folder(self):
+        self.monitors()
+        self.deny_rows(self.forms(self.B, "T005"), MONITOR_OWNER_REASON, agent_id=ID_A)
+
+    def test_monitor_other_denies_keep_the_general_reason(self):
+        self.monitors()
+        self.deny_rows([self.bash_row(c) for c in [
+            f"bash {WORKER_SH} list",
+            self.sh("answer", "T004", "--record", self.A + "/record.tsv"),
+            self.sh("answer", "T004", "--screen", "h1", "--record", self.A + "/record.tsv", "--text", '"see #51"'),
+        ]])
+        fresh = self.mon_dir("t004", "F2")
+        self.deny_rows([self.bash_row(self.sh("answer", "T004", "--record", fresh + "/record.tsv"))],
+                       agent_id="a5555555555555555")
+        self.assertFalse(os.path.lexists(os.path.join(fresh, "owner")), "owner was made")
+
+    def test_monitor_denies_a_call_with_no_agent_id_or_an_empty_one(self):
+        self.monitors(owner_a="")
+        for label, agent_id in (("no agent_id", None), ("empty agent_id", "")):
+            with self.subTest(label):
+                self.deny_rows(self.forms(self.A, "T004"), agent_id=agent_id)
+
+    def test_monitor_denies_a_symlinked_owner(self):
+        self.monitors()
+        folder = self.mon_dir("t004", "E1")
+        write(os.path.join(self.tmp, "owner-target"), ID_A)
+        os.symlink(os.path.join(self.tmp, "owner-target"), os.path.join(folder, "owner"))
+        self.deny_rows(self.forms(folder, "T004"))
+
+    def test_monitor_compares_the_owner_as_exact_bytes(self):
+        self.monitors(owner_a=ID_A + "\n")
+        self.deny_rows(self.forms(self.A, "T004"), MONITOR_OWNER_REASON)
+        write(os.path.join(self.A, "owner"), ID_A)
+        for agent_id in (" " + ID_A, ID_A + " "):
+            with self.subTest(agent_id=agent_id):
+                self.deny_rows(self.forms(self.A, "T004"), MONITOR_OWNER_REASON, agent_id=agent_id)
+
+    def test_monitor_denies_worker_id_and_record_mismatch(self):
+        self.monitors()
+        self.deny_rows([self.bash_row(c) for c in [
+            self.sh("pass", "T004", "--request", "1-1"),
+            self.sh("wait", "T005", "--beat", self.A + "/beat"),
+            self.sh("answer", "T005", "--screen", "h1", "--record", self.A + "/record.tsv"),
+        ]])
+        dot = self.mon_dir("t.4", "D2", owner=ID_A)
+        long = self.mon_dir("a" * 26, "L1", owner=ID_A)
+        upper = self.mon_dir("T004", "U1", owner=ID_A)
+        under = self.mon_dir("t_04", "G4", owner=ID_A)
+        self.deny_rows([self.bash_row(c) for c in [
+            self.sh("wait", "t.4", "--beat", dot + "/beat"),
+            self.sh("wait", "a" * 26, "--beat", long + "/beat"),
+            self.sh("wait", "T004", "--beat", upper + "/beat"),
+            self.sh("wait", "t_04", "--beat", under + "/beat"),
+        ]] + [
+            ("Write spec.md in monitor-t.4", "Write", {"file_path": dot + "/spec.md", "content": "x"}),
+            ("Write spec.md in monitor-T004", "Write", {"file_path": upper + "/spec.md", "content": "x"}),
+        ])
+
+    def test_monitor_denies_a_revoked_folder_of_any_kind(self):
+        self.monitors()
+        write(os.path.join(self.tmp, "revoked-target"))
+        makers = [
+            ("file", write),
+            ("folder", os.makedirs),
+            ("broken symlink", lambda p: os.symlink(os.path.join(self.tmp, "nothing"), p)),
+            ("symlink to a file", lambda p: os.symlink(os.path.join(self.tmp, "revoked-target"), p)),
+        ]
+        for i, (kind, make) in enumerate(makers):
+            folder = self.mon_dir("t004", f"Rv{i}", owner=ID_A)
+            make(os.path.join(folder, "revoked"))
+            with self.subTest(kind):
+                self.deny_rows(self.forms(folder, "T004"))
+
+    def test_monitor_denies_a_flag_given_twice(self):
+        self.monitors()
+        a, b = self.A, self.B
+        self.deny_rows([self.bash_row(c) for c in [
+            self.sh("wait", "T004", "--beat", a + "/beat", "--beat", b + "/beat"),
+            self.sh("answer", "T004", "--screen", "h1", "--record", a + "/record.tsv", "--record", b + "/record.tsv"),
+            self.sh("answer", "T004", "--screen", "h1", "--screen", "h2", "--record", a + "/record.tsv"),
+            self.sh("wait", "T004", "--beat", a + "/beat", "--machine", "m1", "--machine", "m2"),
+            self.sh("pass", "T004", "--request", "1-1", "--request", "1-2", "--record", a + "/record.tsv"),
+            self.sh("wait", "T004", "--beat", b + "/beat", "--beat", a + "/beat"),
+            self.sh("answer", "T004", "--screen", "h1", "--record", b + "/record.tsv", "--record", a + "/record.tsv"),
+        ]])
+
+    def test_monitor_denies_an_agent_id_with_a_control_character(self):
+        self.monitors()
+        for label, bad in (("newline", "a0123\n456"), ("other control", "a01\x01zz"), ("delete", "a01\x7fzz")):
+            write(os.path.join(self.A, "owner"), bad)
+            with self.subTest(label):
+                self.deny_rows(self.forms(self.A, "T004"), agent_id=bad)
+        write(os.path.join(self.A, "owner"), ID_A)
+        with self.subTest("trailing newline"):
+            self.deny_rows(self.forms(self.A, "T004"), agent_id=ID_A + "\n")
+
+    def test_monitor_leaves_no_owner_after_a_deny(self):
+        self.monitors()
+        with_beat = self.mon_dir("t004", "N1")
+        no_beat = self.mon_dir("t004", "N2", beat=False)
+        with self.subTest("; on a folder with beat and no owner"):
+            self.assertMonitorDeny(self.monitor("Bash", {"command": self.sh(
+                "wait", "T004", "--beat", with_beat + "/beat") + " ; true"}))
+            self.assertFalse(os.path.lexists(os.path.join(with_beat, "owner")), "owner was made")
+        with self.subTest("folder with no beat"):
+            self.assertMonitorDeny(self.monitor("Bash", {"command": self.sh("wait", "T004", "--beat", no_beat + "/beat")}))
+            self.assertFalse(os.path.lexists(os.path.join(no_beat, "owner")), "owner was made")
+        sym_beat = self.mon_dir("t004", "N4", beat=False)
+        write(os.path.join(self.tmp, "beat-target"))
+        os.symlink(os.path.join(self.tmp, "beat-target"), os.path.join(sym_beat, "beat"))
+        for label, tool, tool_input in [
+            self.bash_row(self.sh("answer", "T004", "--screen", "h1", "--record", sym_beat + "/record.tsv")),
+            ("Write spec.md", "Write", {"file_path": sym_beat + "/spec.md", "content": "x"}),
+        ]:
+            with self.subTest("beat is a symlink: " + label):
+                self.assertMonitorDeny(self.monitor(tool, tool_input))
+                self.assertFalse(os.path.lexists(os.path.join(sym_beat, "owner")), "owner was made")
+
+    def test_monitor_fails_closed_when_lock2_raises(self):
+        self.monitors()
+        with self.subTest("monitor"):
+            self.assertMonitorDeny(self.monitor("Bash", ["x"], cwd=self.root))
+        with self.subTest("st-build"):
+            self.assertSilent(self.monitor("Bash", ["x"], cwd=self.root, agent_type="stratum:st-build"))
+
+    def test_lock2_reason_stands_for_a_monitor_in_a_worker_session(self):
+        self.monitors()
+        folder = self.mon_dir("x", "F1")
+        command = {"command": self.sh("wait", "x", "--beat", folder + "/beat")}
+        for label, agent_type in (("st-monitor", MONITOR), ("st-build", "stratum:st-build"), ("no agent_type", None)):
+            with self.subTest(label):
+                self.assertDenied(self.monitor("Bash", command, cwd=self.root, agent_type=agent_type,
+                                               agent_id=None if agent_type is None else ID_A))
+                self.assertFalse(os.path.lexists(os.path.join(folder, "owner")), "monitor rule was reached")
+
+    def rnd(self, folder, views=None, rnd="1", point="decisions", env="HERDR_ENV=0", extra=""):
+        views = views if views is not None else os.path.join(folder, "views-1.md")
+        return " ".join(w for w in (env, "bash", ADVISOR_SH, "round", point, folder, rnd, views, extra) if w)
+
+    def test_monitor_allows_the_round_call_on_its_own_folder(self):
+        self.monitors()
+        self.assertSilent(self.monitor("Bash", {"command": self.rnd(self.A)}))
+
+    def test_monitor_denies_the_round_call_on_another_agents_folder(self):
+        self.monitors()
+        self.assertMonitorDeny(self.monitor("Bash", {"command": self.rnd(self.B)}, agent_id=ID_A), MONITOR_OWNER_REASON)
+
+    def test_monitor_denies_other_forms_of_the_round_call(self):
+        self.monitors()
+        no_beat = self.mon_dir("t004", "N3", beat=False, owner=ID_A)
+        in_tree = self.mon_dir("t004", "G2", owner=ID_A, parent=self.root)
+        a = self.A
+        self.deny_rows([self.bash_row(c) for c in [
+            self.rnd(a, rnd="2"),
+            self.rnd(a, rnd="3"),
+            self.rnd(a, point="plan"),
+            self.rnd(a, env=""),
+            self.rnd(a, env="HERDR_ENV=1"),
+            self.rnd(no_beat),
+            self.rnd(in_tree),
+            self.rnd(a, views=a + "/spec.md"),
+            self.rnd(a, views=a + "/views-x.md"),
+            self.rnd(a, views=a + "/views-1.md.bak"),
+            self.rnd(a, views=a + "/sub/views-1.md"),
+            self.rnd(a, extra="extra"),
+            self.rnd(self.B, views=a + "/views-1.md"),
+            self.rnd(self.plain, views=a + "/views-1.md"),
+            self.rnd(self.root, views=a + "/views-1.md"),
+            self.rnd(a + "/", views=a + "/views-1.md"),
+            f"bash {ADVISOR_SH} review main",
+            f"HERDR_ENV=0 bash {ADVISOR_SH} review main",
+        ]])
+
+    def test_monitor_denies_the_round_call_with_a_shell_character(self):
+        self.monitors()
+        a = self.A
+        scripts = os.path.dirname(ADVISOR_SH)
+        good = self.rnd(a)
+        self.deny_rows([self.bash_row(c) for c in [
+            good.replace(scripts + "/", scripts + "/$(id)/../"),
+            good.replace(" " + a + "/views-1.md", "\n" + a + "/views-1.md"),
+            good.replace(" round ", " round; "),
+            good.replace(" round ", " round & "),
+            good.replace(" round ", " round | "),
+            good.replace(" round ", " round `id` "),
+        ]])
+
+    def test_monitor_denies_the_round_call_with_no_agent_id_or_an_empty_one(self):
+        self.monitors(owner_a="")
+        for label, agent_id in (("no agent_id", None), ("empty agent_id", "")):
+            with self.subTest(label):
+                self.deny_rows([self.bash_row(self.rnd(self.A))], agent_id=agent_id)
+
+    def test_monitor_denies_the_round_call_on_a_symlinked_owner(self):
+        self.monitors()
+        folder = self.mon_dir("t004", "E2")
+        write(os.path.join(self.tmp, "owner-target"), ID_A)
+        os.symlink(os.path.join(self.tmp, "owner-target"), os.path.join(folder, "owner"))
+        self.deny_rows([self.bash_row(self.rnd(folder))])
+
+    def test_monitor_denies_the_round_call_on_a_revoked_folder(self):
+        self.monitors()
+        write(os.path.join(self.A, "revoked"))
+        self.deny_rows([self.bash_row(self.rnd(self.A))])
+
+    def never(self, text, hook=HOOK):
+        self.assertTrue(os.path.isfile(hook), "hooks/st-approve.py does not exist yet")
+        return subprocess.run([sys.executable, hook, "--never"], input=text.encode(), capture_output=True,
+                              timeout=20).returncode
+
+    def test_never_exits_0_on_the_never_list(self):
+        clean = "bash tests/test_x.sh"
+        for text in ("git push origin x", "cat .env", "curl https://x", "git pu'sh' origin x",
+                     f"bash {LOCK_SH} -- git push origin x", "x && git\n  push origin x", "git \\\n  push origin x",
+                     "git -C /home/u/Desktop/a-long-project-name/repo-t004\n  push origin worker-t004",
+                     "git reset \\\n  --hard HEAD~3", "git pu\nsh origin x",
+                     "─" * 40 + "\n Bash command\n\n   cat /home/u/Desktop/stratum-t004/specs/022-worker-monitors/"
+                     "contracts/../../.en\n   v.local\n   Show the local settings\n\n Do you want to proceed?\n"
+                     " ❯ 1. Yes\n   2. No\n"):
+            with self.subTest(text=text):
+                self.assertEqual((self.never(text), self.never(clean)), (0, 4))
+
+    def test_never_exits_4_when_clean(self):
+        for text in ("bash tests/test_x.sh", f"bash {LOCK_SH} -- bash tests/test_x.sh",
+                     "Bash command\n  bash tests/test_x.sh\n  Run the tests\nDo you want to proceed?\n❯ 1. Yes\n  2. No",
+                     "Rule Bash(test -f specs/022-worker-monitors/probe.txt) from user settings overrides auto mode.\n"
+                     "Bash command\n  test -f specs/022-worker-monitors/probe.txt\n  Check the probe file\n"
+                     "Do you want to proceed?\n❯ 1. Yes\n  2. No"):
+            with self.subTest(text=text):
+                self.assertEqual(self.never(text), 4)
+
+    def test_never_strips_a_plugin_root_under_dot_claude(self):
+        copy = os.path.join(self.tmp, ".claude", "plug", "hooks", "st-approve.py")
+        os.makedirs(os.path.dirname(copy))
+        shutil.copy(HOOK, copy)
+        lock = os.path.join(self.tmp, ".claude", "plug", "scripts", "st-lock.sh")
+        self.assertEqual(self.never(f"bash {lock} -- bash tests/test_x.sh", hook=copy), 4)
 
 
 if __name__ == "__main__":

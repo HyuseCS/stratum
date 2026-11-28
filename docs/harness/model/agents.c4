@@ -96,6 +96,12 @@ model {
         path 'agents/st-research.md'
       }
     }
+    st-monitor = agent 'st-monitor agent' {
+      summary 'Watches one pane worker and settles its routine events. It sends the rest up.'
+      metadata {
+        path 'agents/st-monitor.md'
+      }
+    }
   }
 
   agents.st-build -[reads]-> plugin.sr-opus-5-md 'report style rules'
@@ -269,4 +275,9 @@ model {
   agents.st-research -[writes]-> feature.research-files 'one file per scope in a feature'
   agents.st-research -[writes]-> stratum.research 'rounds of facts with no feature'
   agents.st-research -[passes]-> skills.st-research 'answers, open questions and the file path'
+
+  agents.st-monitor -[reads]-> plugin.sr-opus-5-md 'report style rules'
+  agents.st-monitor -[runs]-> scripts.st-worker-sh 'wait, answer, approve, pass or resend with a record or beat file'
+  agents.st-monitor -[runs]-> scripts.st-advisor-sh 'round decisions, headless, before a big decision'
+  agents.st-monitor -[passes]-> skills.st-worker 'end state, answers and big decisions'
 }

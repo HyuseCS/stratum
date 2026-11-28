@@ -173,6 +173,7 @@ All skills are called as `/stratum:<name>`.
 | `st-ponytail-debt` | Sonnet | Background ponytail debt ledger, read-only |
 | `st-triage` | Opus | Checks a GitHub issue against the code and git history, read-only |
 | `st-research` | Opus | Answers numbered research questions with cites and writes one research file, read-only otherwise |
+| `st-monitor` | Opus | Watches one pane worker and settles its routine events; sends the rest up |
 
 The Model column is the plugin default. `st-init`'s template runs `st-build`, `st-debug`,
 `st-quick`, `st-plan`, and `st-fast` on Opus with effort high, and `st-close`, `st-git`, and
@@ -306,13 +307,13 @@ read the `.c4` text, or run `npx -y likec4@1.60.0 export json docs/harness`.
   whose branch goes to main opens its own PR.
 - **Model overrides.** `.stratum/models.json` maps an agent name to an optional `model` and
   `effort`, for example `{ "st-close": { "model": "haiku", "effort": "xhigh" } }`. Agents:
-  `st-build`, `st-close`, `st-debug`, `st-design`, `st-fast`, `st-git`, `st-impeccable`, `st-inspect`,
+  `st-build`, `st-close`, `st-debug`, `st-design`, `st-fast`, `st-git`, `st-impeccable`, `st-inspect`, `st-monitor`,
   `st-plan`, `st-ponytail-audit`, `st-ponytail-debt`, `st-quick`, `st-research`, `st-review`, `st-test`, `st-triage`. Models:
   `sonnet`, `opus`, `haiku`, `fable`. Efforts: `low`, `medium`, `high`, `xhigh`, `max`. `st-init` writes it from `templates/models.json`:
   `st-build`, `st-debug`, `st-quick`, `st-plan`, `st-fast` on opus with effort high, and
   `st-close`, `st-git`, `st-test` on haiku with effort xhigh.
   `st-inspect` and `st-review` have no entry and keep the plugin default.
-  `st-design`, `st-impeccable`, `st-ponytail-audit`, `st-ponytail-debt`, `st-research` and `st-triage` have no entry either. A hook applies
+  `st-design`, `st-impeccable`, `st-monitor`, `st-ponytail-audit`, `st-ponytail-debt`, `st-research` and `st-triage` have no entry either. A hook applies
   the file each time a Stratum agent starts, so the next start picks up an edit. A bad file blocks every
   Stratum agent start with a message that names the problem. Only Stratum agents are affected.
   `CLAUDE_CODE_EFFORT_LEVEL` beats the file's effort.

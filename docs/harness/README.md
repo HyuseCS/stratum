@@ -539,6 +539,7 @@ graph TB
   AgentsSt_test@{ shape: rectangle, label: "st-test agent" }
   AgentsSt_debug@{ shape: rectangle, label: "st-debug agent" }
   AgentsSt_triage@{ shape: rectangle, label: "st-triage agent" }
+  AgentsSt_monitor@{ shape: rectangle, label: "st-monitor agent" }
   SkillsSt_impeccable@{ shape: rectangle, label: "/st-impeccable" }
   SkillsSt_ponytail_audit@{ shape: rectangle, label: "/st-ponytail-audit" }
   SkillsSt_ponytail_debt@{ shape: rectangle, label: "/st-ponytail-debt" }
@@ -595,6 +596,7 @@ file list`" .-> AgentsSt_git
   SkillsSt_triage -. "`plugin root, project root and one issue 
 number`" .-> AgentsSt_triage
   SkillsSt_worker -. "`task tick or headless changes to commit`" .-> AgentsSt_git
+  SkillsSt_worker -. "`one per pane worker`" .-> AgentsSt_monitor
   SkillsSt_constitution -. "`constitution.md to commit`" .-> AgentsSt_git
   AgentsSt_build -. "`brief-mode build report`" .-> SkillsSt
   AgentsSt_build -. "`build report: files, tests, findings`" .-> SkillsSt_fast
@@ -639,6 +641,7 @@ lane`" .-> SkillsSt_quick
 step`" .-> SkillsSt_triage
   AgentsSt_research -. "`answers, open questions and the file 
 path`" .-> SkillsSt_research
+  AgentsSt_monitor -. "`end state, answers and big decisions`" .-> SkillsSt_worker
   AgentsSt_impeccable -. "`audit report`" .-> User
   AgentsSt_ponytail_audit -. "`ranked cut list and net line`" .-> User
   AgentsSt_ponytail_debt -. "`ledger rows by file`" .-> User
